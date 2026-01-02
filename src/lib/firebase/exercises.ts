@@ -142,3 +142,16 @@ export const getExercisesCount = async (): Promise<number> => {
   const snapshot = await getDocs(collection(db, COLLECTION))
   return snapshot.size
 }
+
+// Delete all exercises
+export const deleteAllExercises = async (): Promise<number> => {
+  const snapshot = await getDocs(collection(db, COLLECTION))
+  const batch = writeBatch(db)
+
+  snapshot.docs.forEach((docSnapshot) => {
+    batch.delete(docSnapshot.ref)
+  })
+
+  await batch.commit()
+  return snapshot.size
+}

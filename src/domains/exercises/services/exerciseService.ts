@@ -7,6 +7,7 @@ import {
   updateExercise as firebaseUpdateExercise,
   deleteExercise as firebaseDeleteExercise,
   bulkImportExercises as firebaseBulkImport,
+  deleteAllExercises as firebaseDeleteAllExercises,
 } from '@/lib/firebase/exercises'
 
 export const exerciseService = {
@@ -48,6 +49,11 @@ export const exerciseService = {
   // Export all exercises
   async exportExercises(): Promise<Exercise[]> {
     return firebaseGetExercises()
+  },
+
+  // Delete all exercises
+  async deleteAllExercises(): Promise<number> {
+    return firebaseDeleteAllExercises()
   },
 
   // Get metadata

@@ -42,10 +42,33 @@ export default function ExerciseList() {
     },
   })
 
+  // Delete all mutation
+  const deleteAllMutation = useMutation({
+    mutationFn: () => exerciseService.deleteAllExercises(),
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['exercises'] })
+      toast.success(`${count} תרגילים נמחקו בהצלחה`)
+    },
+    onError: () => {
+      toast.error('שגיאה במחיקת התרגילים')
+    },
+  })
+
   // Handle delete
   const handleDelete = (id: string, name: string) => {
     if (window.confirm(`האם אתה בטוח שברצונך למחוק את "${name}"?`)) {
       deleteMutation.mutate(id)
+    }
+  }
+
+  // Handle delete all
+  const handleDeleteAll = () => {
+    if (exercises.length === 0) {
+      toast.error('אין תרגילים למחיקה')
+      return
+    }
+    if (window.confirm(`האם אתה בטוח שברצונך למחוק את כל ${exercises.length} התרגילים? פעולה זו בלתי הפיכה!`)) {
+      deleteAllMutation.mutate()
     }
   }
 
@@ -147,6 +170,14 @@ export default function ExerciseList() {
           <p className="text-text-muted mt-1">{exercises.length} תרגילים במערכת</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={handleDeleteAll}
+            disabled={deleteAllMutation.isPending || exercises.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 rounded-xl text-red-400 hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span className="hidden sm:inline">מחק הכל</span>
+          </button>
           <button
             onClick={handleImport}
             className="flex items-center gap-2 px-4 py-2 bg-dark-card hover:bg-dark-border rounded-xl text-text-secondary hover:text-text-primary transition-colors"
