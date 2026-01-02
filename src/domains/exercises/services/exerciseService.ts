@@ -1,126 +1,53 @@
 import type { Exercise, ExerciseFilters, CreateExerciseDto, UpdateExerciseDto } from '../types'
-import { mockExercises, categories, equipment, muscles } from '../data/mockExercises'
-
-// Simulate API delay
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-// In-memory storage (will be replaced with Firebase)
-let exercises = [...mockExercises]
+import { categories, equipment, muscles } from '../data/mockExercises'
+import {
+  getExercises as firebaseGetExercises,
+  getExerciseById as firebaseGetExerciseById,
+  createExercise as firebaseCreateExercise,
+  updateExercise as firebaseUpdateExercise,
+  deleteExercise as firebaseDeleteExercise,
+  bulkImportExercises as firebaseBulkImport,
+} from '@/lib/firebase/exercises'
 
 export const exerciseService = {
   // Get all exercises with optional filtering
   async getExercises(filters?: ExerciseFilters): Promise<Exercise[]> {
-    await delay(300) // Simulate network delay
-
-    let result = [...exercises]
-
-    if (filters) {
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase()
-        result = result.filter(
-          (ex) =>
-            ex.name.toLowerCase().includes(searchLower) ||
-            ex.nameHe.includes(filters.search!) ||
-            ex.category.includes(searchLower)
-        )
-      }
-
-      if (filters.category) {
-        result = result.filter((ex) => ex.category === filters.category)
-      }
-
-      if (filters.difficulty) {
-        result = result.filter((ex) => ex.difficulty === filters.difficulty)
-      }
-
-      if (filters.equipment) {
-        result = result.filter((ex) => ex.equipment === filters.equipment)
-      }
-
-      if (filters.muscle) {
-        result = result.filter(
-          (ex) => ex.primaryMuscle === filters.muscle || ex.secondaryMuscles.includes(filters.muscle!)
-        )
-      }
-    }
-
-    return result
+    return firebaseGetExercises(filters)
   },
 
   // Get single exercise by ID
   async getExerciseById(id: string): Promise<Exercise | null> {
-    await delay(200)
-    return exercises.find((ex) => ex.id === id) || null
+    return firebaseGetExerciseById(id)
   },
 
   // Create new exercise
   async createExercise(data: CreateExerciseDto): Promise<Exercise> {
-    await delay(300)
-
-    const newExercise: Exercise = {
-      ...data,
-      id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-
-    exercises.push(newExercise)
-    return newExercise
+    return firebaseCreateExercise(data)
   },
 
   // Update existing exercise
   async updateExercise(id: string, data: UpdateExerciseDto): Promise<Exercise> {
-    await delay(300)
-
-    const index = exercises.findIndex((ex) => ex.id === id)
-    if (index === -1) {
+    await firebaseUpdateExercise(id, data)
+    const updated = await firebaseGetExerciseById(id)
+    if (!updated) {
       throw new Error('תרגיל לא נמצא')
     }
-
-    exercises[index] = {
-      ...exercises[index],
-      ...data,
-      updatedAt: new Date(),
-    }
-
-    return exercises[index]
+    return updated
   },
 
   // Delete exercise
   async deleteExercise(id: string): Promise<void> {
-    await delay(300)
-
-    const index = exercises.findIndex((ex) => ex.id === id)
-    if (index === -1) {
-      throw new Error('תרגיל לא נמצא')
-    }
-
-    exercises.splice(index, 1)
+    return firebaseDeleteExercise(id)
   },
 
   // Bulk import exercises
   async bulkImport(data: CreateExerciseDto[]): Promise<{ success: number; failed: number }> {
-    await delay(500)
-
-    let success = 0
-    let failed = 0
-
-    for (const exerciseData of data) {
-      try {
-        await this.createExercise(exerciseData)
-        success++
-      } catch {
-        failed++
-      }
-    }
-
-    return { success, failed }
+    return firebaseBulkImport(data)
   },
 
   // Export all exercises
   async exportExercises(): Promise<Exercise[]> {
-    await delay(200)
-    return [...exercises]
+    return firebaseGetExercises()
   },
 
   // Get metadata
