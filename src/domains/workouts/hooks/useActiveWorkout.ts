@@ -80,7 +80,7 @@ export function useActiveWorkout() {
           exerciseNameHe: ex.exerciseNameHe,
           imageUrl: ex.imageUrl,
           primaryMuscle: ex.primaryMuscle || 'other',
-          isExpanded: index === 0, // First exercise is expanded
+          isExpanded: false, // All exercises start collapsed
           isCompleted: false,
           reportedSets: [
             {
@@ -291,12 +291,6 @@ export function useActiveWorkout() {
           completedAt: set.reps > 0 ? new Date() : undefined,
         }))
 
-        // Find next uncompleted exercise to expand
-        const currentIndex = prev.exercises.findIndex((ex) => ex.id === exerciseId)
-        const nextExercise = prev.exercises.find(
-          (ex, i) => i > currentIndex && !ex.isCompleted
-        )
-
         const newCompletedCount = prev.stats.completedExercises + 1
 
         return {
@@ -309,9 +303,6 @@ export function useActiveWorkout() {
                 isCompleted: true,
                 reportedSets: updatedSets,
               }
-            }
-            if (nextExercise && ex.id === nextExercise.id) {
-              return { ...ex, isExpanded: true }
             }
             return ex
           }),

@@ -80,6 +80,25 @@ service cloud.firestore {
       // TODO: Implement trainer-trainee relationship
     }
 
+    // ============ WORKOUT HISTORY ============
+    match /workoutHistory/{historyId} {
+      // Users can read their own workout history
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+
+      // Users can create their own workout history
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+
+      // Users can update their own workout history
+      allow update: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+
+      // Users can delete their own workout history
+      allow delete: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+    }
+
     // ============ WORKOUT TEMPLATES ============
     match /workoutTemplates/{templateId} {
       // Anyone authenticated can read public templates
