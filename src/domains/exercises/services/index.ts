@@ -1,0 +1,1 @@
+export { exerciseService } from './exerciseService'

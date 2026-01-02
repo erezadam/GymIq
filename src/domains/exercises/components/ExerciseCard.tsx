@@ -1,0 +1,205 @@
+import type { Exercise } from '../types'
+import { useWorkoutBuilderStore } from '@/domains/workouts/store'
+import { Check, Plus } from 'lucide-react'
+
+interface ExerciseCardProps {
+  exercise: Exercise
+}
+
+export function ExerciseCard({ exercise }: ExerciseCardProps) {
+  const { addExercise, removeExercise, selectedExercises } = useWorkoutBuilderStore()
+
+  const isSelected = selectedExercises.some((e) => e.exerciseId === exercise.id)
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (isSelected) {
+      removeExercise(exercise.id)
+    } else {
+      addExercise({
+        exerciseId: exercise.id,
+        exerciseName: exercise.name,
+        exerciseNameHe: exercise.nameHe,
+        imageUrl: exercise.imageUrl,
+        primaryMuscle: exercise.primaryMuscle || exercise.category,
+      })
+    }
+  }
+
+  // Difficulty stars
+  const difficultyStars = {
+    beginner: 1,
+    intermediate: 2,
+    advanced: 3,
+  }
+  const stars = difficultyStars[exercise.difficulty]
+
+  return (
+    <div
+      onClick={handleToggle}
+      className={`card-exercise ${isSelected ? 'selected' : ''}`}
+    >
+      {/* Selection Badge */}
+      {isSelected && (
+        <div className="selection-badge">
+          <Check className="w-5 h-5 text-neon-dark" strokeWidth={3} />
+        </div>
+      )}
+
+      {/* Exercise Image */}
+      <div className="image-container h-36 sm:h-44">
+        {exercise.imageUrl ? (
+          <img
+            src={exercise.imageUrl}
+            alt={exercise.nameHe}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              // Hide broken image and show fallback
+              const target = e.currentTarget
+              target.style.display = 'none'
+              const fallback = target.nextElementSibling as HTMLElement
+              if (fallback) fallback.style.display = 'flex'
+            }}
+          />
+        ) : null}
+        <div
+          className="image-placeholder"
+          style={{ display: exercise.imageUrl ? 'none' : 'flex' }}
+        >
+          <span className="text-5xl opacity-50">💪</span>
+        </div>
+
+        {/* Gradient overlay */}
+        <div className="image-overlay" />
+
+        {/* Difficulty Stars - Top Right */}
+        <div className="stars-container">
+          {[1, 2, 3].map((i) => (
+            <span key={i} className={i <= stars ? 'star-active' : 'star-inactive'}>
+              ★
+            </span>
+          ))}
+        </div>
+
+        {/* Category Badge - Bottom */}
+        <div className="absolute bottom-3 right-3">
+          <span className="badge-category">{getCategoryHe(exercise.category)}</span>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-4">
+        {/* Exercise Name */}
+        <h3 className="text-lg font-bold text-white mb-1 leading-tight">{exercise.nameHe}</h3>
+        <p className="text-neon-gray-400 text-sm mb-3">{exercise.name}</p>
+
+        {/* Primary Muscles */}
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          <span className="badge-muscle-primary">{getMuscleHe(exercise.primaryMuscle)}</span>
+          {exercise.secondaryMuscles.slice(0, 2).map((muscle) => (
+            <span key={muscle} className="badge-muscle-secondary">
+              {getMuscleHe(muscle)}
+            </span>
+          ))}
+        </div>
+
+        {/* Equipment */}
+        <div className="flex items-center gap-2 text-neon-gray-400 text-sm mb-4">
+          <span className="text-base">{getEquipmentEmoji(exercise.equipment)}</span>
+          <span>{getEquipmentHe(exercise.equipment)}</span>
+        </div>
+
+        {/* Add Button */}
+        <button
+          onClick={handleToggle}
+          className={`w-full py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+            isSelected
+              ? 'bg-neon-cyan text-neon-dark'
+              : 'bg-neon-gray-700 hover:bg-neon-gray-600 text-white'
+          }`}
+        >
+          {isSelected ? (
+            <>
+              <Check className="w-5 h-5" />
+              נבחר
+            </>
+          ) : (
+            <>
+              <Plus className="w-5 h-5" />
+              הוסף לאימון
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Helper functions for Hebrew translations
+function getCategoryHe(category: string): string {
+  const map: Record<string, string> = {
+    chest: 'חזה',
+    back: 'גב',
+    legs: 'רגליים',
+    shoulders: 'כתפיים',
+    arms: 'זרועות',
+    core: 'ליבה',
+    cardio: 'קרדיו',
+    functional: 'פונקציונלי',
+    stretching: 'מתיחות',
+  }
+  return map[category] || category
+}
+
+function getMuscleHe(muscle: string): string {
+  const map: Record<string, string> = {
+    chest: 'חזה',
+    lats: 'גב רחב',
+    quadriceps: 'ארבע ראשי',
+    hamstrings: 'ירך אחורי',
+    glutes: 'ישבן',
+    triceps: 'טרייספס',
+    biceps: 'ביספס',
+    shoulders: 'כתפיים',
+    core: 'ליבה',
+    calves: 'שוקיים',
+    traps: 'טרפז',
+    lower_back: 'גב תחתון',
+    forearms: 'אמות',
+    rhomboids: 'רומבואידים',
+    middle_traps: 'טרפז אמצעי',
+  }
+  return map[muscle] || muscle
+}
+
+function getEquipmentHe(equipment: string): string {
+  const map: Record<string, string> = {
+    barbell: 'מוט ברזל',
+    dumbbell: 'משקולות יד',
+    bodyweight: 'משקל גוף',
+    pull_up_bar: 'מתח',
+    cable_machine: 'כבלים',
+    kettlebell: 'קטלבל',
+    machine: 'מכונה',
+    bench: 'ספסל',
+    resistance_band: 'גומייה',
+  }
+  return map[equipment] || equipment
+}
+
+function getEquipmentEmoji(equipment: string): string {
+  const map: Record<string, string> = {
+    barbell: '🏋️',
+    dumbbell: '💪',
+    bodyweight: '🤸',
+    pull_up_bar: '🔩',
+    cable_machine: '⚙️',
+    kettlebell: '🔔',
+    machine: '🎰',
+    bench: '🪑',
+    resistance_band: '🔗',
+  }
+  return map[equipment] || '💪'
+}
+
+export default ExerciseCard

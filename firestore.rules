@@ -1,0 +1,119 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isTrainer() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['trainer', 'admin'];
+    }
+
+    // ============ USERS ============
+    match /users/{userId} {
+      // Users can read their own profile
+      allow read: if isOwner(userId);
+
+      // Allow checking if collection is empty (for first user = admin logic)
+      allow list: if isAuthenticated();
+
+      // Users can create their own profile on registration
+      allow create: if isOwner(userId);
+
+      // Users can update their own profile (but not role)
+      allow update: if isOwner(userId) &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
+
+      // Only admins can delete users
+      allow delete: if isAdmin();
+
+      // Admins can read all users
+      allow read: if isAdmin();
+
+      // Admins can update any user including role
+      allow update: if isAdmin();
+    }
+
+    // ============ EXERCISES ============
+    match /exercises/{exerciseId} {
+      // Anyone can read exercises (for initial load before auth)
+      allow read: if true;
+
+      // Allow create if no exercises exist (initial seeding) OR if admin
+      allow create: if isAdmin();
+
+      // Only admins can update/delete exercises
+      allow update, delete: if isAdmin();
+    }
+
+    // ============ WORKOUT SESSIONS ============
+    match /workoutSessions/{sessionId} {
+      // Users can read their own workout sessions
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+
+      // Users can create their own workout sessions
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+
+      // Users can update their own workout sessions
+      allow update: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+
+      // Users can delete their own workout sessions
+      allow delete: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+
+      // Trainers can read their trainees' sessions (if trainee relationship exists)
+      // TODO: Implement trainer-trainee relationship
+    }
+
+    // ============ WORKOUT TEMPLATES ============
+    match /workoutTemplates/{templateId} {
+      // Anyone authenticated can read public templates
+      allow read: if isAuthenticated() &&
+        (resource.data.isPublic == true || resource.data.createdBy == request.auth.uid);
+
+      // Trainers and admins can create templates
+      allow create: if isTrainer();
+
+      // Only template owner or admin can update/delete
+      allow update, delete: if isAuthenticated() &&
+        (resource.data.createdBy == request.auth.uid || isAdmin());
+    }
+
+    // ============ TRAINEE-TRAINER RELATIONSHIPS ============
+    match /trainerRelationships/{relationshipId} {
+      // Both trainer and trainee can read
+      allow read: if isAuthenticated() &&
+        (resource.data.trainerId == request.auth.uid ||
+         resource.data.traineeId == request.auth.uid);
+
+      // Trainers can create relationships
+      allow create: if isTrainer() &&
+        request.resource.data.trainerId == request.auth.uid;
+
+      // Both parties can update (for acceptance/status)
+      allow update: if isAuthenticated() &&
+        (resource.data.trainerId == request.auth.uid ||
+         resource.data.traineeId == request.auth.uid);
+
+      // Both parties can delete
+      allow delete: if isAuthenticated() &&
+        (resource.data.trainerId == request.auth.uid ||
+         resource.data.traineeId == request.auth.uid);
+    }
+  }
+}

@@ -1,0 +1,299 @@
+{
+  "exercises": [
+    {
+      "id": "1",
+      "name": "Bench Press",
+      "nameHe": "לחיצת חזה במישור",
+      "category": "chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": ["triceps", "shoulders"],
+      "equipment": "barbell",
+      "difficulty": "beginner",
+      "instructions": [
+        "Lie on the bench with your eyes under the bar",
+        "Grip the bar with hands wider than shoulder-width",
+        "Lower the bar to your chest with control",
+        "Press the bar back up to starting position"
+      ],
+      "instructionsHe": [
+        "שכב על הספסל כאשר העיניים מתחת למוט",
+        "אחז במוט עם הידיים רחבות מרוחב הכתפיים",
+        "הורד את המוט לחזה בשליטה",
+        "דחף את המוט חזרה למצב התחלתי"
+      ],
+      "targetMuscles": ["pectoralis_major", "triceps_brachii", "anterior_deltoid"],
+      "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/bench_press.jpg",
+      "tips": [
+        "Keep your feet flat on the floor",
+        "Maintain natural arch in your back",
+        "Control the weight throughout the movement"
+      ],
+      "tipsHe": [
+        "שמור על הרגליים שטוחות על הרצפה",
+        "שמור על עקמומיות טבעית בגב",
+        "שלוט במשקל לאורך כל התנועה"
+      ]
+    },
+    {
+      "id": "2", 
+      "name": "Squat",
+      "nameHe": "כפיפת ברכיים",
+      "category": "legs",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": ["glutes", "hamstrings", "calves"],
+      "equipment": "barbell",
+      "difficulty": "beginner",
+      "instructions": [
+        "Place the bar on your upper back",
+        "Stand with feet shoulder-width apart",
+        "Lower by pushing hips back and bending knees",
+        "Drive through heels to return to standing"
+      ],
+      "instructionsHe": [
+        "הנח את המוט על החלק העליון של הגב",
+        "עמוד עם הרגליים ברוחב הכתפיים",
+        "רד על ידי דחיפת הישבן אחורה וכיפוף הברכיים",
+        "דחף דרך העקבים כדי לחזור לעמידה"
+      ],
+      "targetMuscles": ["quadriceps", "gluteus_maximus", "hamstrings"],
+      "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/squat.jpg",
+      "tips": [
+        "Keep your chest up throughout the movement",
+        "Don't let knees cave inward",
+        "Go down until thighs are parallel to floor"
+      ],
+      "tipsHe": [
+        "שמור על החזה למעלה לאורך התנועה",
+        "אל תיתן לברכיים ליפול פנימה",
+        "רד עד שהירכיים מקבילות לרצפה"
+      ]
+    },
+    {
+      "id": "3",
+      "name": "Deadlift",
+      "nameHe": "הרמת משקל מת",
+      "category": "back",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": ["glutes", "lower_back", "traps"],
+      "equipment": "barbell",
+      "difficulty": "intermediate",
+      "instructions": [
+        "Stand with feet hip-width apart, bar over mid-foot",
+        "Bend at hips and knees to grab the bar",
+        "Keep chest up and back straight",
+        "Drive through heels and extend hips to lift"
+      ],
+      "instructionsHe": [
+        "עמוד עם הרגליים ברוחב הירכיים, המוט מעל אמצע הרגל",
+        "התכופף בירכיים ובברכיים כדי לאחוז במוט",
+        "שמור על החזה למעלה והגב ישר",
+        "דחף דרך העקבים והרחב את הירכיים כדי להרים"
+      ],
+      "targetMuscles": ["hamstrings", "gluteus_maximus", "erector_spinae", "trapezius"],
+      "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/deadlift.jpg",
+      "tips": [
+        "Keep the bar close to your body",
+        "Don't round your back",
+        "Engage your core throughout"
+      ],
+      "tipsHe": [
+        "שמור את המוט קרוב לגוף",
+        "אל תעגל את הגב",
+        "הפעל את השרירים המרכזיים לאורך התנועה"
+      ]
+    },
+    {
+      "id": "4",
+      "name": "Push-up",
+      "nameHe": "שכיבות שמיכה",
+      "category": "chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": ["triceps", "shoulders", "core"],
+      "equipment": "bodyweight",
+      "difficulty": "beginner",
+      "instructions": [
+        "Start in plank position with hands under shoulders",
+        "Lower your body until chest nearly touches floor",
+        "Push back up to starting position",
+        "Keep body in straight line throughout"
+      ],
+      "instructionsHe": [
+        "התחל במצב פלאנק עם הידיים מתחת לכתפיים",
+        "הורד את הגוף עד שהחזה כמעט נוגע ברצפה",
+        "דחף חזרה למצב התחלתי",
+        "שמור על הגוף בקו ישר לאורך התנועה"
+      ],
+      "targetMuscles": ["pectoralis_major", "triceps_brachii", "anterior_deltoid"],
+      "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/push_up.jpg",
+      "tips": [
+        "Don't let hips sag or pike up",
+        "Keep core engaged",
+        "Full range of motion for best results"
+      ],
+      "tipsHe": [
+        "אל תיתן לירכיים לצנוח או להתרומם",
+        "שמור על השרירים המרכזיים פעילים",
+        "טווח תנועה מלא לתוצאות הטובות ביותר"
+      ]
+    },
+    {
+      "id": "5",
+      "name": "Pull-up",
+      "nameHe": "מתח",
+      "category": "back",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": ["biceps", "rhomboids", "middle_traps"],
+      "equipment": "pull_up_bar",
+      "difficulty": "intermediate",
+      "instructions": [
+        "Hang from bar with arms fully extended",
+        "Pull yourself up until chin clears the bar",
+        "Lower yourself with control to starting position",
+        "Avoid swinging or using momentum"
+      ],
+      "instructionsHe": [
+        "תלה מהמוט כאשר הידיים מפושטות לחלוטין",
+        "משוך את עצמך למעלה עד שהסנטר עובר את המוט",
+        "הורד את עצמך בשליטה למצב התחלתי",
+        "הימנע מתנדנוד או שימוש במומנטום"
+      ],
+      "targetMuscles": ["latissimus_dorsi", "biceps_brachii", "rhomboids"],
+      "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/pull_up.jpg",
+      "tips": [
+        "Use full range of motion",
+        "Focus on pulling with your back muscles",
+        "Start with assisted variations if needed"
+      ],
+      "tipsHe": [
+        "השתמש בטווח תנועה מלא",
+        "התמקד במשיכה עם שרירי הגב",
+        "התחל עם וריאציות בסיוע במידת הצורך"
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "id": "chest",
+      "name": "Chest",
+      "nameHe": "חזה",
+      "description": "Exercises targeting chest muscles",
+      "descriptionHe": "תרגילים המטרגטים את שרירי החזה"
+    },
+    {
+      "id": "back",
+      "name": "Back", 
+      "nameHe": "גב",
+      "description": "Exercises targeting back muscles",
+      "descriptionHe": "תרגילים המטרגטים את שרירי הגב"
+    },
+    {
+      "id": "legs",
+      "name": "Legs",
+      "nameHe": "רגליים", 
+      "description": "Exercises targeting leg muscles",
+      "descriptionHe": "תרגילים המטרגטים את שרירי הרגליים"
+    },
+    {
+      "id": "shoulders",
+      "name": "Shoulders",
+      "nameHe": "כתפיים",
+      "description": "Exercises targeting shoulder muscles", 
+      "descriptionHe": "תרגילים המטרגטים את שרירי הכתפיים"
+    },
+    {
+      "id": "arms",
+      "name": "Arms",
+      "nameHe": "זרועות",
+      "description": "Exercises targeting arm muscles",
+      "descriptionHe": "תרגילים המטרגטים את שרירי הזרועות"
+    }
+  ],
+  "equipment": [
+    {
+      "id": "barbell",
+      "name": "Barbell",
+      "nameHe": "מוט ברזל"
+    },
+    {
+      "id": "dumbbell", 
+      "name": "Dumbbell",
+      "nameHe": "משקולת יד"
+    },
+    {
+      "id": "bodyweight",
+      "name": "Bodyweight", 
+      "nameHe": "משקל גוף"
+    },
+    {
+      "id": "pull_up_bar",
+      "name": "Pull-up Bar",
+      "nameHe": "מוט מתח"
+    },
+    {
+      "id": "cable_machine",
+      "name": "Cable Machine",
+      "nameHe": "מכונת כבלים"
+    },
+    {
+      "id": "kettlebell",
+      "name": "Kettlebell", 
+      "nameHe": "קטלבל"
+    }
+  ],
+  "muscles": [
+    {
+      "id": "chest",
+      "name": "Chest",
+      "nameHe": "חזה",
+      "scientificName": "Pectoralis"
+    },
+    {
+      "id": "lats",
+      "name": "Latissimus Dorsi",
+      "nameHe": "שריר הגב הרחב",
+      "scientificName": "Latissimus Dorsi"
+    },
+    {
+      "id": "quadriceps", 
+      "name": "Quadriceps",
+      "nameHe": "ארבע ראשי",
+      "scientificName": "Quadriceps Femoris"
+    },
+    {
+      "id": "hamstrings",
+      "name": "Hamstrings", 
+      "nameHe": "שרירי הירך האחורי",
+      "scientificName": "Biceps Femoris"
+    },
+    {
+      "id": "glutes",
+      "name": "Glutes",
+      "nameHe": "ישבן", 
+      "scientificName": "Gluteus Maximus"
+    },
+    {
+      "id": "triceps",
+      "name": "Triceps",
+      "nameHe": "תלת ראשי",
+      "scientificName": "Triceps Brachii"
+    },
+    {
+      "id": "biceps", 
+      "name": "Biceps",
+      "nameHe": "דו ראשי",
+      "scientificName": "Biceps Brachii"
+    },
+    {
+      "id": "shoulders",
+      "name": "Shoulders",
+      "nameHe": "כתפיים",
+      "scientificName": "Deltoids"
+    },
+    {
+      "id": "core",
+      "name": "Core",
+      "nameHe": "שרירי הליבה", 
+      "scientificName": "Abdominals"
+    }
+  ]
+}

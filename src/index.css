@@ -1,0 +1,1212 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================
+   GYMIQ DESIGN SYSTEM
+   ======================================== */
+
+/* ===================
+   CSS CUSTOM PROPERTIES
+   (For JS access and dynamic theming)
+   =================== */
+:root {
+  /* Dark Theme Surfaces */
+  --color-dark-bg: #0F172A;
+  --color-dark-surface: #1E293B;
+  --color-dark-card: #334155;
+  --color-dark-border: #475569;
+
+  /* Text Colors */
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #CBD5E1;
+  --color-text-muted: #64748B;
+
+  /* Status Colors */
+  --color-status-success: #22C55E;
+  --color-status-error: #EF4444;
+  --color-status-warning: #F59E0B;
+  --color-status-info: #3B82F6;
+
+  /* Neon Colors */
+  --color-neon-dark: #0a0a0a;
+  --color-neon-cyan: #00FFFF;
+  --color-neon-blue: #00BFFF;
+
+  /* Workout Colors */
+  --color-workout-completed: #14B8A6;
+  --color-workout-timer: #FF6B6B;
+}
+
+/* ===================
+   BASE STYLES
+   =================== */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-dark-bg text-text-primary font-sans antialiased;
+    min-height: 100vh;
+  }
+
+  /* RTL Support */
+  [dir="rtl"] {
+    text-align: right;
+  }
+}
+
+/* ===================
+   COMPONENT CLASSES
+   =================== */
+@layer components {
+  /* ----- BUTTONS ----- */
+
+  /* Primary Button - Neon gradient */
+  .btn-primary {
+    @apply bg-gradient-primary border-2 border-transparent rounded-xl px-8 py-4 font-semibold text-white;
+    @apply shadow-neon transition-all duration-300 ease-out;
+    @apply hover:shadow-neon-hover hover:-translate-y-0.5;
+    @apply active:shadow-neon-active active:translate-y-0;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0;
+  }
+
+  /* Secondary Button */
+  .btn-secondary {
+    @apply bg-dark-surface border border-dark-border rounded-xl px-6 py-3 font-medium text-text-primary;
+    @apply transition-all duration-200;
+    @apply hover:bg-dark-card hover:border-primary-400/50;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Ghost Button */
+  .btn-ghost {
+    @apply bg-transparent rounded-xl px-4 py-2 font-medium text-text-secondary;
+    @apply transition-colors duration-200;
+    @apply hover:bg-dark-surface hover:text-text-primary;
+  }
+
+  /* Danger Button */
+  .btn-danger {
+    @apply bg-red-500/20 border border-red-500/30 rounded-xl px-4 py-2 font-medium text-red-400;
+    @apply transition-all duration-200;
+    @apply hover:bg-red-500/30;
+  }
+
+  /* Icon Button */
+  .btn-icon {
+    @apply p-2 rounded-lg text-text-muted;
+    @apply transition-colors duration-200;
+    @apply hover:bg-dark-surface hover:text-text-primary;
+  }
+
+  /* Legacy alias */
+  .btn-neon {
+    @apply btn-primary;
+  }
+
+  /* ----- INPUTS ----- */
+
+  /* Primary Input */
+  .input-primary {
+    @apply w-full px-4 py-3 bg-dark-surface border border-dark-border rounded-xl;
+    @apply text-text-primary placeholder-text-muted;
+    @apply transition-all duration-200;
+    @apply focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400/30;
+  }
+
+  /* Neon Input */
+  .input-neon {
+    @apply bg-dark-surface/80 border-2 border-dark-border/50 rounded-xl px-5 py-4 text-base text-text-primary;
+    @apply transition-all duration-300 ease-out backdrop-blur-sm;
+    @apply focus:outline-none focus:border-neon-blue focus:shadow-neon;
+    @apply placeholder:text-text-muted;
+  }
+
+  /* Search Input */
+  .input-search {
+    @apply w-full px-4 py-3 pr-12 bg-neon-gray-800 border border-neon-gray-700 rounded-xl;
+    @apply text-white placeholder-neon-gray-500;
+    @apply transition-colors duration-200;
+    @apply focus:outline-none focus:border-neon-cyan;
+  }
+
+  /* Select Dropdown */
+  .select-primary {
+    @apply px-4 py-2.5 bg-neon-gray-800 border border-neon-gray-700 rounded-xl;
+    @apply text-white text-sm cursor-pointer;
+    @apply transition-all duration-200;
+  }
+
+  .select-active {
+    @apply bg-neon-magenta/20 text-neon-magenta border-neon-magenta/30;
+  }
+
+  /* ----- CARDS ----- */
+
+  /* Basic Card */
+  .card {
+    @apply bg-dark-surface border border-dark-border rounded-2xl p-4;
+  }
+
+  /* Neon Card */
+  .card-neon {
+    @apply bg-gradient-card border-2 border-neon-blue/30 rounded-2xl backdrop-blur-xl p-8;
+    @apply shadow-card;
+  }
+
+  /* Stat Card */
+  .card-stat {
+    @apply bg-dark-surface border border-dark-border rounded-2xl p-4 text-center;
+  }
+
+  /* Action Card - clickable with hover */
+  .card-action {
+    @apply bg-dark-surface border border-dark-border rounded-2xl p-5 text-center;
+    @apply transition-colors duration-200;
+    @apply hover:border-primary-400/50;
+  }
+
+  /* Hero Card - gradient background */
+  .card-hero {
+    @apply bg-gradient-primary rounded-2xl p-6 text-center shadow-neon;
+  }
+
+  /* Exercise Card */
+  .card-exercise {
+    @apply relative rounded-2xl overflow-hidden cursor-pointer;
+    @apply bg-neon-gray-800 transition-all duration-300;
+    @apply hover:scale-[1.02] hover:bg-neon-gray-750;
+  }
+
+  .card-exercise.selected {
+    @apply ring-3 ring-neon-cyan bg-neon-cyan/10 shadow-lg shadow-neon-cyan/20;
+  }
+
+  /* ----- STAT ICON ----- */
+  .stat-icon {
+    @apply w-10 h-10 mx-auto mb-2 rounded-xl flex items-center justify-center;
+  }
+
+  .stat-icon-primary {
+    @apply stat-icon bg-primary-400/20;
+  }
+
+  .stat-icon-accent {
+    @apply stat-icon bg-accent-400/20;
+  }
+
+  .stat-icon-warning {
+    @apply stat-icon bg-orange-400/20;
+  }
+
+  /* ----- ACTION ICON BOX ----- */
+  .action-icon {
+    @apply mx-auto mb-4 rounded-2xl flex items-center justify-center;
+  }
+
+  .action-icon-lg {
+    @apply action-icon w-16 h-16 bg-white/20;
+  }
+
+  .action-icon-md {
+    @apply action-icon w-14 h-14;
+  }
+
+  /* ----- BADGES ----- */
+  .badge {
+    @apply px-3 py-1 rounded-full text-xs font-medium;
+  }
+
+  .badge-primary {
+    @apply badge bg-primary-400/20 text-primary-400;
+  }
+
+  .badge-category {
+    @apply badge bg-black/50 backdrop-blur-sm text-white;
+  }
+
+  .badge-muscle-primary {
+    @apply px-2.5 py-1 bg-neon-magenta/20 text-neon-magenta rounded-lg text-xs font-medium;
+  }
+
+  .badge-muscle-secondary {
+    @apply px-2.5 py-1 bg-neon-gray-700 text-neon-gray-300 rounded-lg text-xs;
+  }
+
+  /* ----- PILLS (Filter buttons) ----- */
+  .pill {
+    @apply flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap;
+    @apply transition-all duration-200;
+  }
+
+  .pill-default {
+    @apply pill bg-neon-gray-800 text-neon-gray-300;
+    @apply hover:bg-neon-gray-700;
+  }
+
+  .pill-active {
+    @apply pill bg-neon-cyan text-neon-dark font-semibold;
+  }
+
+  /* ----- NAVIGATION ----- */
+
+  /* Sidebar Link */
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-text-secondary;
+    @apply transition-all duration-200;
+    @apply hover:bg-dark-card hover:text-text-primary;
+  }
+
+  .sidebar-link.active {
+    @apply bg-gradient-primary text-white shadow-neon;
+  }
+
+  /* Bottom Nav Item */
+  .nav-item {
+    @apply flex flex-col items-center gap-1 px-3 py-2 rounded-lg;
+    @apply transition-colors duration-200;
+  }
+
+  .nav-item-active {
+    @apply nav-item text-primary-400;
+  }
+
+  .nav-item-default {
+    @apply nav-item text-text-muted;
+  }
+
+  /* ----- TABLES ----- */
+  .table-admin {
+    @apply w-full text-sm;
+  }
+
+  .table-admin th {
+    @apply text-text-muted font-medium text-right px-4 py-3 border-b border-dark-border;
+  }
+
+  .table-admin td {
+    @apply px-4 py-4 border-b border-dark-border/50;
+  }
+
+  .table-admin tr:hover td {
+    @apply bg-dark-surface/50;
+  }
+
+  /* ----- MODALS ----- */
+  .modal-backdrop {
+    @apply fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4;
+  }
+
+  .modal-content {
+    @apply bg-dark-surface rounded-2xl w-full max-w-md p-6;
+  }
+
+  /* ----- LAYOUT ----- */
+
+  /* Page Container */
+  .page-container {
+    @apply min-h-screen bg-neon-dark pb-28;
+  }
+
+  /* Page Header */
+  .page-header {
+    @apply sticky top-0 z-20 bg-neon-dark border-b border-neon-gray-800;
+  }
+
+  .page-header-content {
+    @apply max-w-6xl mx-auto px-4 py-4;
+  }
+
+  /* Content Container */
+  .content-container {
+    @apply max-w-6xl mx-auto px-4;
+  }
+
+  /* Bottom Action Bar */
+  .bottom-bar {
+    @apply fixed bottom-0 left-0 right-0 z-20;
+    @apply bg-neon-gray-900/95 backdrop-blur-md border-t border-neon-gray-800;
+  }
+
+  .bottom-bar-content {
+    @apply max-w-6xl mx-auto px-4 py-4;
+  }
+
+  /* ----- IMAGE CONTAINERS ----- */
+  .image-container {
+    @apply relative bg-neon-gray-700;
+  }
+
+  .image-placeholder {
+    @apply w-full h-full flex items-center justify-center;
+    @apply bg-gradient-to-br from-neon-gray-700 to-neon-gray-800;
+  }
+
+  .image-overlay {
+    @apply absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent;
+  }
+
+  /* ----- SELECTION INDICATOR ----- */
+  .selection-badge {
+    @apply absolute top-3 left-3 z-10 w-8 h-8;
+    @apply bg-neon-cyan rounded-full flex items-center justify-center shadow-lg;
+  }
+
+  /* ----- DIFFICULTY STARS ----- */
+  .stars-container {
+    @apply absolute top-3 right-3 flex gap-0.5;
+  }
+
+  .star-active {
+    @apply text-lg text-yellow-400;
+  }
+
+  .star-inactive {
+    @apply text-lg text-neon-gray-600;
+  }
+
+  /* ----- LOADING ----- */
+  .spinner {
+    @apply animate-spin rounded-full h-12 w-12 border-b-2 border-neon-cyan;
+  }
+
+  /* ----- EMPTY STATE ----- */
+  .empty-state {
+    @apply text-center py-20;
+  }
+
+  .empty-state-icon {
+    @apply text-6xl mb-4 block;
+  }
+
+  .empty-state-title {
+    @apply text-xl font-semibold text-white mb-2;
+  }
+
+  .empty-state-text {
+    @apply text-neon-gray-400 mb-4;
+  }
+
+  /* ----- COUNTER BADGE ----- */
+  .counter-badge {
+    @apply flex items-center gap-2 bg-neon-cyan/20 px-4 py-2 rounded-full;
+  }
+
+  /* ----- EXERCISE THUMBNAILS ----- */
+  .thumbnail-stack {
+    @apply hidden xs:flex -space-x-2;
+  }
+
+  .thumbnail {
+    @apply w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-neon-gray-700;
+    @apply border-2 border-neon-gray-900 overflow-hidden;
+  }
+
+  /* ----- WORKOUT SESSION ----- */
+
+  /* Exercise Card in Session */
+  .exercise-session-card {
+    @apply p-3 rounded-xl border transition-all duration-300;
+  }
+
+  .exercise-session-card.active {
+    @apply border-neon-cyan bg-neon-cyan/10;
+  }
+
+  .exercise-session-card.completed {
+    @apply border-green-500/30 bg-green-500/5;
+  }
+
+  .exercise-session-card.pending {
+    @apply border-neon-gray-700 bg-neon-gray-800 cursor-pointer hover:border-neon-gray-600;
+  }
+
+  .exercise-session-card.collapsed {
+    @apply py-2 opacity-75;
+  }
+
+  /* Exercise Name with Strikethrough */
+  .exercise-name-completed {
+    @apply line-through text-neon-gray-400;
+  }
+
+  /* Complete Exercise Button */
+  .btn-complete-exercise {
+    @apply w-full py-3 rounded-xl font-semibold transition-all duration-200;
+    @apply bg-green-600 hover:bg-green-700 text-white;
+    @apply flex items-center justify-center gap-2;
+  }
+
+  /* Complete Exercise Button (in list) */
+  .btn-complete-exercise-sm {
+    @apply w-full py-2.5 rounded-lg font-medium transition-all;
+    @apply bg-green-600/20 hover:bg-green-600/30 text-green-400;
+    @apply border border-green-600/30;
+    @apply flex items-center justify-center gap-2;
+  }
+
+  /* Finish Workout Button */
+  .btn-finish-workout {
+    @apply w-full py-4 rounded-xl font-semibold transition-colors;
+    @apply bg-green-600 hover:bg-green-700 text-white;
+    @apply flex items-center justify-center gap-2;
+  }
+
+  /* ----- CONFIRMATION MODAL ----- */
+  .modal-confirmation {
+    @apply fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4;
+  }
+
+  .modal-confirmation-content {
+    @apply bg-neon-gray-900 rounded-2xl p-6 w-full max-w-sm text-center;
+    @apply border border-neon-gray-700;
+  }
+
+  .modal-confirmation-icon {
+    @apply w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center;
+    @apply bg-yellow-500/20;
+  }
+
+  .modal-confirmation-title {
+    @apply text-xl font-bold text-white mb-2;
+  }
+
+  .modal-confirmation-text {
+    @apply text-neon-gray-400 mb-6;
+  }
+
+  .modal-confirmation-stats {
+    @apply bg-neon-gray-800 rounded-xl p-4 mb-6;
+  }
+
+  .modal-confirmation-stat {
+    @apply flex justify-between items-center py-2;
+  }
+
+  .modal-confirmation-stat-label {
+    @apply text-neon-gray-400;
+  }
+
+  .modal-confirmation-stat-value {
+    @apply text-white font-semibold;
+  }
+
+  .modal-confirmation-buttons {
+    @apply flex gap-3;
+  }
+
+  .btn-modal-confirm {
+    @apply flex-1 py-3 rounded-xl font-semibold transition-colors;
+    @apply bg-neon-gradient text-neon-dark;
+  }
+
+  .btn-modal-cancel {
+    @apply flex-1 py-3 rounded-xl font-semibold transition-colors;
+    @apply bg-neon-gray-700 hover:bg-neon-gray-600 text-white;
+  }
+
+  /* ----- WORKOUT COMPLETION BADGE ----- */
+  .badge-completed {
+    @apply badge bg-green-500/20 text-green-400;
+  }
+
+  .badge-partial {
+    @apply badge bg-yellow-500/20 text-yellow-400;
+  }
+
+  .badge-cancelled {
+    @apply badge bg-red-500/20 text-red-400;
+  }
+
+  /* ================================================
+     WORKOUT SESSION SCREEN
+     Based on workout-session-screen-spec.md
+     ================================================ */
+
+  /* Main Container */
+  .workout-session-screen {
+    @apply min-h-screen bg-neon-dark pb-24;
+  }
+
+  /* Exercise Navigation Header */
+  .exercise-nav-header {
+    @apply flex items-center justify-between px-4 py-3;
+    @apply bg-neon-gray-900 border-b border-neon-gray-800;
+  }
+
+  .exercise-nav-btn {
+    @apply p-2 text-neon-gray-400 hover:text-white transition-colors;
+  }
+
+  .exercise-nav-center {
+    @apply flex items-center gap-4;
+  }
+
+  .exercise-nav-arrow {
+    @apply p-2 text-neon-cyan disabled:text-neon-gray-600 disabled:cursor-not-allowed;
+    @apply transition-colors;
+  }
+
+  .exercise-nav-counter {
+    @apply text-white text-lg font-medium;
+  }
+
+  .exercise-nav-menu {
+    @apply absolute top-full left-0 mt-2 w-48;
+    @apply bg-neon-gray-800 border border-neon-gray-700 rounded-xl overflow-hidden;
+    @apply shadow-lg z-50;
+  }
+
+  .exercise-nav-menu-item {
+    @apply w-full px-4 py-3 text-right text-white;
+    @apply flex items-center gap-3 hover:bg-neon-gray-700 transition-colors;
+  }
+
+  /* Stats Bar */
+  .workout-session-stats {
+    @apply flex justify-around py-3 bg-neon-gray-800/50 border-b border-neon-gray-800;
+  }
+
+  .workout-session-stat {
+    @apply flex items-center gap-2 text-sm;
+  }
+
+  /* Main Content */
+  .workout-session-content {
+    @apply px-4 py-4 space-y-4;
+  }
+
+  /* Exercise Details */
+  .workout-session-exercise-details {
+    @apply py-2;
+  }
+
+  /* Exercise Media */
+  .exercise-media-placeholder {
+    @apply flex flex-col items-center justify-center h-48 mx-auto;
+    @apply bg-neon-gray-800 rounded-xl;
+  }
+
+  .exercise-media-thumbnail {
+    @apply relative h-48 rounded-xl overflow-hidden cursor-pointer;
+    @apply bg-neon-gray-800;
+  }
+
+  .exercise-media-play-overlay {
+    @apply absolute inset-0 flex items-center justify-center;
+    @apply bg-black/30;
+  }
+
+  .exercise-media-play-btn {
+    @apply w-16 h-16 rounded-full flex items-center justify-center;
+    @apply bg-black/50 backdrop-blur-sm;
+  }
+
+  .exercise-media-gradient {
+    @apply absolute inset-0 bg-gradient-to-t from-black/40 to-transparent;
+  }
+
+  .exercise-media-modal {
+    @apply fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4;
+  }
+
+  .exercise-media-modal-close {
+    @apply absolute top-4 right-4 p-2 text-white hover:text-neon-gray-300;
+  }
+
+  .exercise-media-modal-content {
+    @apply max-w-lg w-full;
+  }
+
+  /* Sets List */
+  .workout-session-sets {
+    @apply space-y-3;
+  }
+
+  /* Set Row - Completed */
+  .set-row-completed {
+    @apply flex items-center justify-between p-3 rounded-xl;
+    @apply bg-transparent;
+  }
+
+  .set-row-fields {
+    @apply flex items-center gap-3 flex-1;
+  }
+
+  .set-row-field {
+    @apply flex flex-col items-center;
+  }
+
+  .set-row-divider {
+    @apply w-px h-8 bg-neon-gray-600;
+  }
+
+  .set-row-badge {
+    @apply w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold;
+  }
+
+  .set-row-badge.completed {
+    @apply bg-neon-cyan text-neon-dark;
+  }
+
+  .set-row-badge.upcoming {
+    @apply bg-neon-gray-600 text-neon-gray-400;
+  }
+
+  /* Set Row - Upcoming */
+  .set-row-upcoming {
+    @apply flex items-center justify-between p-3 rounded-xl opacity-50;
+  }
+
+  /* Active Set Card */
+  .active-set-card {
+    @apply relative p-4 rounded-xl;
+    @apply border-2 border-neon-cyan bg-neon-gray-800/50;
+  }
+
+  .active-set-header {
+    @apply flex items-center justify-between px-3 py-2 -mx-4 -mt-4 mb-4;
+    @apply bg-neon-gray-700 rounded-t-xl;
+  }
+
+  .active-set-fields {
+    @apply flex items-stretch justify-around mb-4;
+  }
+
+  .active-set-field {
+    @apply flex flex-col items-center;
+  }
+
+  .active-set-divider {
+    @apply w-px bg-neon-gray-600;
+  }
+
+  .active-set-input-group {
+    @apply flex items-center gap-2;
+  }
+
+  .active-set-btn {
+    @apply w-10 h-10 rounded-lg flex items-center justify-center;
+    @apply bg-neon-gray-700 hover:bg-neon-gray-600 text-white transition-colors;
+  }
+
+  .active-set-value {
+    @apply text-2xl font-bold text-white min-w-[60px] text-center;
+  }
+
+  .active-set-badge {
+    @apply absolute top-4 left-4 w-8 h-8 rounded-full;
+    @apply flex items-center justify-center text-sm font-bold;
+    @apply border-2 border-neon-cyan text-neon-cyan;
+  }
+
+  .active-set-complete-btn {
+    @apply w-full py-3 mt-4 rounded-xl font-semibold;
+    @apply bg-neon-gradient text-neon-dark;
+    @apply flex items-center justify-center gap-2;
+    @apply hover:shadow-lg hover:shadow-neon-cyan/30 transition-all;
+  }
+
+  /* Rest Timer */
+  .rest-timer-container {
+    @apply py-6;
+  }
+
+  .rest-timer-content {
+    @apply flex items-center justify-center gap-8;
+  }
+
+  .rest-timer-skip {
+    @apply flex items-center gap-1 text-white underline text-sm;
+  }
+
+  .rest-timer-circle-wrapper {
+    @apply relative;
+  }
+
+  .rest-timer-svg {
+    @apply transform -rotate-90;
+  }
+
+  .rest-timer-display {
+    @apply absolute inset-0 flex items-center justify-center;
+  }
+
+  .rest-timer-target {
+    @apply flex items-center gap-1 text-neon-gray-400 text-sm;
+  }
+
+  .rest-timer-selector-backdrop {
+    @apply fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4;
+  }
+
+  .rest-timer-selector {
+    @apply bg-neon-gray-900 rounded-2xl p-6 w-full max-w-xs;
+    @apply border border-neon-gray-700;
+  }
+
+  /* Bottom Bar */
+  .workout-session-bottom {
+    @apply fixed bottom-0 left-0 right-0 p-4;
+    @apply bg-neon-gray-900 border-t border-neon-gray-800;
+  }
+
+  /* ================================================
+     ACTIVE WORKOUT SCREEN (NEW)
+     Based on active-workout-screen-spec.md
+     ================================================ */
+
+  /* Main Container */
+  .active-workout-screen {
+    @apply min-h-screen bg-neon-dark pb-24;
+  }
+
+  .active-workout-screen--loading {
+    @apply flex items-center justify-center;
+  }
+
+  .active-workout-screen--empty {
+    @apply flex items-center justify-center;
+  }
+
+  /* Empty State */
+  .active-workout-empty {
+    @apply text-center px-6;
+  }
+
+  .active-workout-empty-icon {
+    @apply text-6xl mb-6 block;
+  }
+
+  .active-workout-empty-title {
+    @apply text-2xl font-bold text-white mb-4;
+  }
+
+  .active-workout-empty-text {
+    @apply text-neon-gray-400 mb-6;
+  }
+
+  .active-workout-empty-btn {
+    @apply bg-neon-gradient text-neon-dark px-6 py-3 rounded-xl font-semibold;
+  }
+
+  /* Workout Header */
+  .workout-header {
+    @apply flex items-center justify-between px-4 h-14;
+    @apply bg-transparent;
+  }
+
+  .workout-header-exit {
+    @apply flex items-center gap-2 text-white text-sm font-medium;
+    @apply transition-colors hover:text-neon-gray-300;
+  }
+
+  .workout-header-timer {
+    @apply flex items-center gap-2 text-white text-lg font-medium;
+  }
+
+  /* Title Section */
+  .workout-title-section {
+    @apply text-center py-4 px-4;
+  }
+
+  .workout-title {
+    @apply text-2xl font-bold text-white mb-1;
+  }
+
+  .workout-counter {
+    @apply text-lg text-neon-gray-400;
+  }
+
+  /* Main Content */
+  .active-workout-content {
+    @apply px-4 pb-4 space-y-8;
+  }
+
+  /* Muscle Group Section */
+  .muscle-group-section {
+    @apply space-y-4;
+  }
+
+  .muscle-group-header {
+    @apply text-lg font-semibold text-white text-right pb-2;
+    @apply border-b-2 border-teal-500;
+  }
+
+  .muscle-group-list {
+    @apply space-y-3;
+  }
+
+  /* Exercise Card */
+  .exercise-card {
+    @apply rounded-xl overflow-hidden transition-all duration-300;
+    @apply bg-neon-gray-900 border border-neon-gray-700;
+  }
+
+  .exercise-card--completed {
+    @apply border-teal-500 bg-teal-900/20;
+  }
+
+  .exercise-card--expanded {
+    @apply border-neon-gray-600;
+  }
+
+  .exercise-card-header {
+    @apply flex items-center gap-3 p-4 cursor-pointer;
+  }
+
+  .exercise-card--completed .exercise-card-header {
+    @apply bg-teal-900/10;
+  }
+
+  .exercise-card-info {
+    @apply flex-1 min-w-0;
+  }
+
+  .exercise-card-name {
+    @apply text-white font-medium truncate;
+  }
+
+  .exercise-card--completed .exercise-card-name {
+    @apply text-teal-300;
+  }
+
+  .exercise-card-last-workout {
+    @apply text-neon-gray-400 text-sm mt-0.5;
+  }
+
+  .exercise-card-image {
+    @apply w-16 h-16 rounded-lg object-cover bg-neon-gray-700;
+  }
+
+  .exercise-card-image--placeholder {
+    @apply flex items-center justify-center text-2xl;
+  }
+
+  .exercise-card-content {
+    @apply px-4 pb-4 space-y-3;
+    @apply border-t border-neon-gray-700;
+  }
+
+  /* Completion Indicator */
+  .exercise-completion-indicator {
+    @apply w-6 h-6 rounded-full border-2 border-neon-gray-600;
+    @apply flex items-center justify-center;
+  }
+
+  .exercise-completion-indicator--done {
+    @apply bg-teal-500 border-teal-500 text-white;
+  }
+
+  /* Buttons in Exercise Card */
+  .expand-btn {
+    @apply p-1 text-neon-gray-400 hover:text-white transition-colors;
+  }
+
+  .delete-exercise-btn {
+    @apply p-1.5 text-neon-gray-500 hover:text-red-400 transition-colors;
+  }
+
+  /* Set Report Row */
+  .set-report-row {
+    @apply flex items-center gap-3 p-3;
+    @apply bg-neon-gray-800 rounded-lg;
+  }
+
+  .set-badge {
+    @apply w-8 h-8 rounded-full flex items-center justify-center;
+    @apply bg-neon-gray-700 text-white text-sm font-bold;
+  }
+
+  .set-input-group {
+    @apply flex-1 flex flex-col items-center;
+  }
+
+  .set-label {
+    @apply text-neon-gray-400 text-xs mb-1;
+  }
+
+  .set-input {
+    @apply w-20 h-10 rounded-lg text-center text-lg font-semibold;
+    @apply bg-neon-gray-700 text-white border border-neon-gray-600;
+    @apply focus:outline-none focus:border-neon-cyan;
+  }
+
+  /* Remove spinner from number inputs */
+  .set-input::-webkit-outer-spin-button,
+  .set-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .set-input[type='number'] {
+    -moz-appearance: textfield;
+  }
+
+  .set-delete-btn {
+    @apply p-2 text-neon-gray-500 hover:text-red-400 transition-colors;
+  }
+
+  /* Exercise Sets List */
+  .exercise-sets-list {
+    @apply space-y-2 pt-3;
+  }
+
+  /* Add Set Button */
+  .add-set-btn {
+    @apply w-full py-3 rounded-lg;
+    @apply border-2 border-dashed border-neon-gray-600;
+    @apply text-neon-gray-400 text-sm font-medium;
+    @apply flex items-center justify-center gap-2;
+    @apply hover:border-neon-gray-500 hover:text-neon-gray-300 transition-colors;
+  }
+
+  /* Finish Exercise Button */
+  .finish-exercise-btn {
+    @apply w-full py-3 rounded-lg;
+    @apply text-neon-gray-300 text-sm font-medium;
+    @apply flex items-center justify-center gap-2;
+    @apply hover:text-white transition-colors;
+  }
+
+  /* Finish Workout Container */
+  .finish-workout-container {
+    @apply fixed bottom-0 left-0 right-0 p-4;
+    @apply bg-neon-gray-900/95 backdrop-blur-md border-t border-neon-gray-800;
+  }
+
+  /* Finish Workout Button */
+  .finish-workout-btn {
+    @apply w-full py-4 rounded-xl font-bold text-lg;
+    @apply bg-green-500 text-white;
+    @apply flex items-center justify-center gap-2;
+    @apply hover:bg-green-600 transition-colors;
+  }
+
+  /* Confirmation Modal */
+  .confirmation-modal-backdrop {
+    @apply fixed inset-0 z-50 bg-black/80;
+    @apply flex items-center justify-center p-4;
+  }
+
+  .confirmation-modal {
+    @apply relative bg-neon-gray-900 rounded-2xl p-6 w-full max-w-sm;
+    @apply border border-neon-gray-700 text-center;
+  }
+
+  .confirmation-modal-close {
+    @apply absolute top-4 left-4 p-1;
+    @apply text-neon-gray-400 hover:text-white transition-colors;
+  }
+
+  .confirmation-modal-icon {
+    @apply w-16 h-16 mx-auto mb-4 rounded-full;
+    @apply bg-amber-500/20 flex items-center justify-center;
+  }
+
+  .confirmation-modal-title {
+    @apply text-xl font-bold text-white mb-2;
+  }
+
+  .confirmation-modal-text {
+    @apply text-neon-gray-400 mb-6;
+  }
+
+  .confirmation-modal-stats {
+    @apply flex justify-around bg-neon-gray-800 rounded-xl p-4 mb-6;
+  }
+
+  .confirmation-modal-stat {
+    @apply flex flex-col items-center;
+  }
+
+  .confirmation-modal-stat-value {
+    @apply text-white font-bold text-lg;
+  }
+
+  .confirmation-modal-stat-label {
+    @apply text-neon-gray-400 text-sm;
+  }
+
+  .confirmation-modal-buttons {
+    @apply flex gap-3;
+  }
+
+  .confirmation-modal-btn-cancel {
+    @apply flex-1 py-3 rounded-xl font-semibold;
+    @apply bg-neon-gray-700 hover:bg-neon-gray-600 text-white transition-colors;
+  }
+
+  .confirmation-modal-btn-confirm {
+    @apply flex-1 py-3 rounded-xl font-semibold;
+    @apply bg-green-500 hover:bg-green-600 text-white transition-colors;
+  }
+
+  .confirmation-modal-btn-danger {
+    @apply flex-1 py-3 rounded-xl font-semibold;
+    @apply bg-red-500 hover:bg-red-600 text-white transition-colors;
+  }
+}
+
+/* ===================
+   UTILITY CLASSES
+   =================== */
+@layer utilities {
+  /* ----- STATUS COLOR UTILITIES ----- */
+  /* Use these semantic classes for consistent status styling */
+
+  /* Success */
+  .text-status-success {
+    @apply text-status-success-text;
+  }
+
+  .bg-status-success {
+    @apply bg-status-success-light;
+  }
+
+  .border-status-success {
+    @apply border-status-success;
+  }
+
+  /* Error */
+  .text-status-error {
+    @apply text-status-error-text;
+  }
+
+  .bg-status-error {
+    @apply bg-status-error-light;
+  }
+
+  .border-status-error {
+    @apply border-status-error;
+  }
+
+  /* Warning */
+  .text-status-warning {
+    @apply text-status-warning-text;
+  }
+
+  .bg-status-warning {
+    @apply bg-status-warning-light;
+  }
+
+  .border-status-warning {
+    @apply border-status-warning;
+  }
+
+  /* Info */
+  .text-status-info {
+    @apply text-status-info-text;
+  }
+
+  .bg-status-info {
+    @apply bg-status-info-light;
+  }
+
+  .border-status-info {
+    @apply border-status-info;
+  }
+
+  /* ----- WORKOUT STATUS UTILITIES ----- */
+
+  .border-workout-completed {
+    @apply border-workout-completed-border;
+  }
+
+  .bg-workout-completed {
+    @apply bg-workout-completed-bg;
+  }
+
+  .text-workout-completed {
+    @apply text-workout-completed-text;
+  }
+
+  /* ----- ROLE COLOR UTILITIES ----- */
+
+  .text-role-admin {
+    @apply text-role-admin;
+  }
+
+  .bg-role-admin {
+    @apply bg-role-admin-bg;
+  }
+
+  .text-role-trainer {
+    @apply text-role-trainer;
+  }
+
+  .bg-role-trainer {
+    @apply bg-role-trainer-bg;
+  }
+
+  .text-role-user {
+    @apply text-role-user;
+  }
+
+  .bg-role-user {
+    @apply bg-role-user-bg;
+  }
+
+  /* Text gradient */
+  .text-gradient {
+    @apply bg-gradient-primary bg-clip-text text-transparent;
+  }
+
+  /* Glow text */
+  .glow-text {
+    text-shadow: 0 0 20px rgba(0, 191, 255, 0.5);
+  }
+
+  /* Hide scrollbar */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Neon Gradient Background */
+  .bg-neon-gradient {
+    background: linear-gradient(135deg, #00FFFF 0%, #00FF7F 100%);
+  }
+
+  /* Safe area for iPhone notch */
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-inset-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Ring for selection */
+  .ring-3 {
+    --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+    --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+  }
+
+  /* Animation */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
