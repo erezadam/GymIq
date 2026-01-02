@@ -92,6 +92,23 @@ export function ExerciseCard({
       {/* Card Content (expanded only) */}
       {exercise.isExpanded && (
         <div className="exercise-card-content">
+          {/* Large Exercise Image */}
+          <div className="relative rounded-xl overflow-hidden bg-neon-gray-700 aspect-video mb-4">
+            {exercise.imageUrl ? (
+              <img
+                src={exercise.imageUrl}
+                alt={exercise.exerciseNameHe}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-neon-gray-700 to-neon-gray-800">
+                <span className="text-5xl opacity-50">💪</span>
+              </div>
+            )}
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+          </div>
+
           {/* Set rows */}
           <div className="exercise-sets-list">
             {exercise.reportedSets.map((set: ReportedSet) => (
