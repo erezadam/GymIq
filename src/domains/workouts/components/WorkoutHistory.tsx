@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Calendar, Dumbbell, TrendingUp, Trophy, ChevronDown, ChevronUp, CheckCircle, AlertCircle, XCircle, Flame, Play, X, Clock, Zap } from 'lucide-react'
-import { getUserWorkoutHistory, getWorkoutById } from '@/lib/firebase/workoutHistory'
+import { getUserWorkoutHistory, getWorkoutById, updateWorkoutHistory } from '@/lib/firebase/workoutHistory'
 import { useAuthStore } from '@/domains/authentication/store'
 import { useWorkoutBuilderStore } from '../store'
 import type { WorkoutHistorySummary, WorkoutHistoryEntry, WorkoutCompletionStatus } from '../types'
@@ -167,9 +167,9 @@ export default function WorkoutHistory() {
     setContinueDialog({ isOpen: true, workout })
   }
 
-  // Confirm and navigate to workout
+  // Confirm and navigate to workout - 3 cases per spec 11.2
   const handleConfirmContinue = async () => {
-    if (!continueDialog.workout) return
+    if (!continueDialog.workout || !user?.uid) return
 
     const workoutSummary = continueDialog.workout
 
@@ -186,26 +186,104 @@ export default function WorkoutHistory() {
       // Clear any existing workout in the store
       clearWorkout()
 
-      // Add exercises to the store
-      fullWorkout.exercises.forEach(exercise => {
-        addExercise({
-          exerciseId: exercise.exerciseId,
-          exerciseName: exercise.exerciseName,
-          exerciseNameHe: exercise.exerciseNameHe || '',
-          imageUrl: '',
-          primaryMuscle: '',
-        })
-      })
+      // Handle the 3 different cases based on status
+      switch (workoutSummary.status) {
+        case 'completed': {
+          // Case 1: Completed workout - create NEW workout with exercises but EMPTY sets
+          console.log('📋 Creating new workout from completed - exercises only, no set data')
 
-      if (workoutSummary.status === 'completed') {
-        // Completed workout: start fresh with same exercises
-        // The workout in store already has the exercises, navigate to active workout
-        navigate('/workout/active')
-      } else {
-        // In progress or planned: continue the existing workout
-        // Store the workout ID so we can update the same record
-        localStorage.setItem('continueWorkoutId', workoutSummary.id)
-        navigate('/workout/active')
+          fullWorkout.exercises.forEach(exercise => {
+            addExercise({
+              exerciseId: exercise.exerciseId,
+              exerciseName: exercise.exerciseName,
+              exerciseNameHe: exercise.exerciseNameHe || '',
+              imageUrl: '',
+              primaryMuscle: '',
+            })
+          })
+
+          // Navigate to active workout - store will create new workout
+          navigate('/workout/session')
+          break
+        }
+
+        case 'in_progress':
+        case 'partial': {
+          // Case 2: In-progress workout - create NEW workout copying ALL set data
+          console.log('📋 Creating new workout from in-progress - copying all set data')
+
+          // Store the exercise data with sets for the active workout to use
+          const exercisesWithSets = fullWorkout.exercises.map(exercise => ({
+            exerciseId: exercise.exerciseId,
+            exerciseName: exercise.exerciseName,
+            exerciseNameHe: exercise.exerciseNameHe || '',
+            imageUrl: '',
+            primaryMuscle: '',
+            sets: exercise.sets || [],
+          }))
+
+          // Store in localStorage for ActiveWorkoutScreen to pick up
+          localStorage.setItem('continueWorkoutData', JSON.stringify(exercisesWithSets))
+          localStorage.setItem('continueWorkoutMode', 'in_progress')
+
+          // Add exercises to store (basic info)
+          fullWorkout.exercises.forEach(exercise => {
+            addExercise({
+              exerciseId: exercise.exerciseId,
+              exerciseName: exercise.exerciseName,
+              exerciseNameHe: exercise.exerciseNameHe || '',
+              imageUrl: '',
+              primaryMuscle: '',
+            })
+          })
+
+          navigate('/workout/session')
+          break
+        }
+
+        case 'planned': {
+          // Case 3: Planned workout - UPDATE existing workout, change status to in_progress
+          console.log('📋 Starting planned workout - updating existing record')
+
+          // Update the existing workout status to in_progress
+          await updateWorkoutHistory(workoutSummary.id, {
+            status: 'in_progress',
+            startTime: new Date(),
+            date: new Date(),
+          })
+
+          // Store the workout ID so we can update the same record when finishing
+          localStorage.setItem('continueWorkoutId', workoutSummary.id)
+          localStorage.setItem('continueWorkoutMode', 'planned')
+
+          // Store exercise data with target sets
+          const exercisesWithSets = fullWorkout.exercises.map(exercise => ({
+            exerciseId: exercise.exerciseId,
+            exerciseName: exercise.exerciseName,
+            exerciseNameHe: exercise.exerciseNameHe || '',
+            imageUrl: '',
+            primaryMuscle: '',
+            sets: exercise.sets || [],
+          }))
+          localStorage.setItem('continueWorkoutData', JSON.stringify(exercisesWithSets))
+
+          // Add exercises to store
+          fullWorkout.exercises.forEach(exercise => {
+            addExercise({
+              exerciseId: exercise.exerciseId,
+              exerciseName: exercise.exerciseName,
+              exerciseNameHe: exercise.exerciseNameHe || '',
+              imageUrl: '',
+              primaryMuscle: '',
+            })
+          })
+
+          navigate('/workout/session')
+          break
+        }
+
+        default:
+          navigate('/workout/session')
       }
     } catch (error) {
       console.error('Failed to continue workout:', error)
@@ -219,12 +297,34 @@ export default function WorkoutHistory() {
     setContinueDialog({ isOpen: false, workout: null })
   }
 
-  // Get dialog message based on workout status
+  // Get dialog message based on workout status (per spec 11.5)
   const getDialogMessage = (status: WorkoutCompletionStatus) => {
-    if (status === 'completed') {
-      return 'שים לב: אתה מתחיל אימון מהתחלה'
+    switch (status) {
+      case 'completed':
+        return 'שים לב: אתה מתחיל אימון חדש מאפס עם אותם תרגילים'
+      case 'in_progress':
+      case 'partial':
+        return 'שים לב: אתה ממשיך את האימון הקיים עם כל הנתונים שדיווחת'
+      case 'planned':
+        return 'שים לב: אתה מתחיל את האימון המתוכנן'
+      default:
+        return ''
     }
-    return 'שים לב: אתה ממשיך את האימון הקיים'
+  }
+
+  // Get dialog title based on workout status
+  const getDialogTitle = (status: WorkoutCompletionStatus) => {
+    switch (status) {
+      case 'completed':
+        return 'התחל אימון חדש'
+      case 'in_progress':
+      case 'partial':
+        return 'המשך אימון'
+      case 'planned':
+        return 'התחל אימון מתוכנן'
+      default:
+        return 'התחל אימון'
+    }
   }
 
   // Filter and sort workouts
@@ -676,17 +776,21 @@ export default function WorkoutHistory() {
               <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${
                 continueDialog.workout.status === 'completed'
                   ? 'bg-workout-status-completed-bg'
-                  : 'bg-workout-status-in-progress-bg'
+                  : continueDialog.workout.status === 'planned'
+                    ? 'bg-workout-status-planned-bg'
+                    : 'bg-workout-status-in-progress-bg'
               }`}>
                 <Play className={`w-8 h-8 ${
                   continueDialog.workout.status === 'completed'
                     ? 'text-workout-status-completed-text'
-                    : 'text-workout-status-in-progress-text'
+                    : continueDialog.workout.status === 'planned'
+                      ? 'text-workout-status-planned-text'
+                      : 'text-workout-status-in-progress-text'
                 }`} />
               </div>
 
               <h3 className="text-xl font-bold text-text-primary mb-2">
-                {continueDialog.workout.status === 'completed' ? 'התחל אימון חדש' : 'המשך אימון'}
+                {getDialogTitle(continueDialog.workout.status)}
               </h3>
 
               <p className="text-text-muted mb-6">

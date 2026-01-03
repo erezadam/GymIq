@@ -7,6 +7,7 @@ import {
   addDoc,
   getDoc,
   getDocs,
+  updateDoc,
   query,
   where,
   orderBy,
@@ -346,5 +347,41 @@ export async function getUserWorkoutStats(userId: string): Promise<{
     thisWeekWorkouts,
     totalVolume,
     currentStreak,
+  }
+}
+
+// Update an existing workout (used for starting a planned workout)
+export async function updateWorkoutHistory(
+  workoutId: string,
+  updates: Partial<{
+    status: string
+    startTime: Date
+    date: Date
+  }>
+): Promise<void> {
+  const docRef = doc(db, COLLECTION_NAME, workoutId)
+
+  const updateData: Record<string, any> = {}
+
+  if (updates.status) {
+    updateData.status = updates.status
+  }
+
+  if (updates.startTime) {
+    updateData.startTime = Timestamp.fromDate(updates.startTime)
+  }
+
+  if (updates.date) {
+    updateData.date = Timestamp.fromDate(updates.date)
+  }
+
+  console.log('📝 Updating workout:', workoutId, updateData)
+
+  try {
+    await updateDoc(docRef, updateData)
+    console.log('✅ Workout updated successfully')
+  } catch (error: any) {
+    console.error('❌ Failed to update workout:', error)
+    throw error
   }
 }
