@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Play, Trash2, GripVertical, Plus, Minus, ChevronDown, ChevronUp, ArrowRight, Calendar, Save } from 'lucide-react'
 import { useWorkoutBuilderStore } from '../store'
+import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '@/domains/exercises/utils'
 import type { SetType } from '../types'
 
 export default function WorkoutBuilder() {
@@ -107,9 +108,9 @@ export default function WorkoutBuilder() {
   }
 
   return (
-    <div className="min-h-screen bg-neon-dark pb-32">
+    <div className="page-container">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-neon-dark/95 backdrop-blur-sm border-b border-neon-gray-800">
+      <div className="page-header">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center gap-3 mb-4">
             <button
@@ -167,8 +168,9 @@ export default function WorkoutBuilder() {
         </div>
       </div>
 
-      {/* Exercise List */}
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+      {/* Scrollable Exercise List */}
+      <div className="page-content">
+        <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
         {selectedExercises.map((exercise, index) => (
           <div
             key={exercise.exerciseId}
@@ -190,15 +192,16 @@ export default function WorkoutBuilder() {
               </div>
 
               <div className="w-12 h-12 rounded-lg bg-neon-gray-700 overflow-hidden flex-shrink-0">
-                {exercise.imageUrl ? (
-                  <img
-                    src={exercise.imageUrl}
-                    alt={exercise.exerciseNameHe}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-2xl">💪</div>
-                )}
+                <img
+                  src={getExerciseImageUrl({ imageUrl: exercise.imageUrl, name: exercise.exerciseName })}
+                  alt={exercise.exerciseNameHe}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement
+                    target.onerror = null
+                    target.src = EXERCISE_PLACEHOLDER_IMAGE
+                  }}
+                />
               </div>
 
               <div className="flex-1 min-w-0">
@@ -322,10 +325,11 @@ export default function WorkoutBuilder() {
             )}
           </div>
         ))}
+        </div>
       </div>
 
       {/* Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-neon-gray-900/95 backdrop-blur-sm border-t border-neon-gray-800">
+      <div className="bottom-bar">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             <button

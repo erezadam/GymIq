@@ -6,6 +6,7 @@
 import { ChevronDown, ChevronUp, Trash2, Check, Plus } from 'lucide-react'
 import type { ActiveWorkoutExercise, ReportedSet } from '../../types/active-workout.types'
 import { SetReportRow } from './SetReportRow'
+import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '@/domains/exercises/utils'
 import { workoutLabels } from '@/styles/design-tokens'
 
 interface ExerciseCardProps {
@@ -67,17 +68,16 @@ export function ExerciseCard({
         </div>
 
         {/* Exercise image */}
-        {exercise.imageUrl ? (
-          <img
-            src={exercise.imageUrl}
-            alt={exercise.exerciseNameHe}
-            className="exercise-card-image"
-          />
-        ) : (
-          <div className="exercise-card-image exercise-card-image--placeholder">
-            <span>💪</span>
-          </div>
-        )}
+        <img
+          src={getExerciseImageUrl({ imageUrl: exercise.imageUrl, name: exercise.exerciseName })}
+          alt={exercise.exerciseNameHe}
+          className="exercise-card-image"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement
+            target.onerror = null
+            target.src = EXERCISE_PLACEHOLDER_IMAGE
+          }}
+        />
 
         {/* Completion indicator */}
         <div
@@ -94,17 +94,16 @@ export function ExerciseCard({
         <div className="exercise-card-content">
           {/* Large Exercise Image */}
           <div className="relative rounded-xl overflow-hidden bg-neon-gray-700 aspect-video mb-4">
-            {exercise.imageUrl ? (
-              <img
-                src={exercise.imageUrl}
-                alt={exercise.exerciseNameHe}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-neon-gray-700 to-neon-gray-800">
-                <span className="text-5xl opacity-50">💪</span>
-              </div>
-            )}
+            <img
+              src={getExerciseImageUrl({ imageUrl: exercise.imageUrl, name: exercise.exerciseName })}
+              alt={exercise.exerciseNameHe}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement
+                target.onerror = null
+                target.src = EXERCISE_PLACEHOLDER_IMAGE
+              }}
+            />
             {/* Gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
           </div>

@@ -171,15 +171,21 @@ export default function MainLayout() {
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="lg:mr-64 pt-16 lg:pt-0 min-h-screen">
-        <div className="p-4 lg:p-6">
+      {/* Main content - Mobile-first 3-part layout */}
+      <main
+        className="lg:mr-64 pt-16 lg:pt-0 flex flex-col h-screen"
+      >
+        {/* Scrollable content area */}
+        <div
+          className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6 pb-20 lg:pb-6"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           <Outlet />
         </div>
       </main>
 
-      {/* Mobile bottom navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-dark-surface border-t border-dark-border safe-area-inset-bottom">
+      {/* Mobile bottom navigation - Sticky */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-dark-surface border-t border-dark-border safe-area-inset-bottom">
         <div className="flex justify-around py-2">
           {navigation.slice(0, 4).map((item) => (
             <NavLink
@@ -187,7 +193,7 @@ export default function MainLayout() {
               to={item.href}
               className={({ isActive }) =>
                 `flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
-                  isActive ? 'text-primary-400' : 'text-text-muted'
+                  isActive ? 'text-primary-main' : 'text-text-muted'
                 }`
               }
             >

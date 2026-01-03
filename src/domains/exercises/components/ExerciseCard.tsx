@@ -1,5 +1,6 @@
 import type { Exercise } from '../types'
 import { useWorkoutBuilderStore } from '@/domains/workouts/store'
+import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '../utils'
 import { Check, Plus } from 'lucide-react'
 
 interface ExerciseCardProps {
@@ -48,26 +49,16 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
 
       {/* Exercise Image */}
       <div className="image-container h-36 sm:h-44">
-        {exercise.imageUrl ? (
-          <img
-            src={exercise.imageUrl}
-            alt={exercise.nameHe}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              // Hide broken image and show fallback
-              const target = e.currentTarget
-              target.style.display = 'none'
-              const fallback = target.nextElementSibling as HTMLElement
-              if (fallback) fallback.style.display = 'flex'
-            }}
-          />
-        ) : null}
-        <div
-          className="image-placeholder"
-          style={{ display: exercise.imageUrl ? 'none' : 'flex' }}
-        >
-          <span className="text-5xl opacity-50">💪</span>
-        </div>
+        <img
+          src={getExerciseImageUrl(exercise)}
+          alt={exercise.nameHe}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement
+            target.onerror = null
+            target.src = EXERCISE_PLACEHOLDER_IMAGE
+          }}
+        />
 
         {/* Gradient overlay */}
         <div className="image-overlay" />

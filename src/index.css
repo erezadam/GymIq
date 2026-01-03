@@ -80,7 +80,7 @@
   .btn-secondary {
     @apply bg-dark-surface border border-dark-border rounded-xl px-6 py-3 font-medium text-text-primary;
     @apply transition-all duration-200;
-    @apply hover:bg-dark-card hover:border-primary-400/50;
+    @apply hover:bg-dark-card hover:border-primary-main/50;
     @apply disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
@@ -117,7 +117,7 @@
     @apply w-full px-4 py-3 bg-dark-surface border border-dark-border rounded-xl;
     @apply text-text-primary placeholder-text-muted;
     @apply transition-all duration-200;
-    @apply focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400/30;
+    @apply focus:outline-none focus:border-primary-main focus:ring-1 focus:ring-primary-main/30;
   }
 
   /* Neon Input */
@@ -169,7 +169,7 @@
   .card-action {
     @apply bg-dark-surface border border-dark-border rounded-2xl p-5 text-center;
     @apply transition-colors duration-200;
-    @apply hover:border-primary-400/50;
+    @apply hover:border-primary-main/50;
   }
 
   /* Hero Card - gradient background */
@@ -194,11 +194,11 @@
   }
 
   .stat-icon-primary {
-    @apply stat-icon bg-primary-400/20;
+    @apply stat-icon bg-primary-main/20;
   }
 
   .stat-icon-accent {
-    @apply stat-icon bg-accent-400/20;
+    @apply stat-icon bg-accent-gold/20;
   }
 
   .stat-icon-warning {
@@ -224,7 +224,7 @@
   }
 
   .badge-primary {
-    @apply badge bg-primary-400/20 text-primary-400;
+    @apply badge bg-primary-main/20 text-primary-main;
   }
 
   .badge-category {
@@ -274,7 +274,7 @@
   }
 
   .nav-item-active {
-    @apply nav-item text-primary-400;
+    @apply nav-item text-primary-main;
   }
 
   .nav-item-default {
@@ -309,13 +309,19 @@
 
   /* ----- LAYOUT ----- */
 
-  /* Page Container */
+  /* Page Container - Mobile-first 3-part layout */
   .page-container {
-    @apply min-h-screen bg-neon-dark pb-28;
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    @apply bg-neon-dark;
   }
 
-  /* Page Header */
+  /* Page Header - Sticky top */
   .page-header {
+    flex-shrink: 0;
     @apply sticky top-0 z-20 bg-neon-dark border-b border-neon-gray-800;
   }
 
@@ -323,14 +329,23 @@
     @apply max-w-6xl mx-auto px-4 py-4;
   }
 
+  /* Page Content - Scrollable middle */
+  .page-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
   /* Content Container */
   .content-container {
     @apply max-w-6xl mx-auto px-4;
   }
 
-  /* Bottom Action Bar */
+  /* Bottom Action Bar - Sticky bottom */
   .bottom-bar {
-    @apply fixed bottom-0 left-0 right-0 z-20;
+    flex-shrink: 0;
+    @apply z-20;
     @apply bg-neon-gray-900/95 backdrop-blur-md border-t border-neon-gray-800;
   }
 
@@ -751,9 +766,10 @@
     @apply border border-neon-gray-700;
   }
 
-  /* Bottom Bar */
+  /* Bottom Bar - Sticky bottom in flex layout */
   .workout-session-bottom {
-    @apply fixed bottom-0 left-0 right-0 p-4;
+    flex-shrink: 0;
+    @apply p-4;
     @apply bg-neon-gray-900 border-t border-neon-gray-800;
   }
 
@@ -762,9 +778,14 @@
      Based on active-workout-screen-spec.md
      ================================================ */
 
-  /* Main Container */
+  /* Main Container - Mobile-first 3-part layout */
   .active-workout-screen {
-    @apply min-h-screen bg-neon-dark pb-24;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    @apply bg-neon-dark;
   }
 
   .active-workout-screen--loading {
@@ -773,6 +794,15 @@
 
   .active-workout-screen--empty {
     @apply flex items-center justify-center;
+  }
+
+  /* Active Workout Content - Scrollable */
+  .active-workout-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    @apply px-4 pb-4 space-y-8;
   }
 
   /* Empty State */
@@ -975,9 +1005,10 @@
     @apply hover:text-white transition-colors;
   }
 
-  /* Finish Workout Container */
+  /* Finish Workout Container - Sticky bottom in flex layout */
   .finish-workout-container {
-    @apply fixed bottom-0 left-0 right-0 p-4;
+    flex-shrink: 0;
+    @apply p-4;
     @apply bg-neon-gray-900/95 backdrop-blur-md border-t border-neon-gray-800;
   }
 
@@ -1058,61 +1089,6 @@
    UTILITY CLASSES
    =================== */
 @layer utilities {
-  /* ----- STATUS COLOR UTILITIES ----- */
-  /* Use these semantic classes for consistent status styling */
-
-  /* Success */
-  .text-status-success {
-    @apply text-status-success-text;
-  }
-
-  .bg-status-success {
-    @apply bg-status-success-light;
-  }
-
-  .border-status-success {
-    @apply border-status-success;
-  }
-
-  /* Error */
-  .text-status-error {
-    @apply text-status-error-text;
-  }
-
-  .bg-status-error {
-    @apply bg-status-error-light;
-  }
-
-  .border-status-error {
-    @apply border-status-error;
-  }
-
-  /* Warning */
-  .text-status-warning {
-    @apply text-status-warning-text;
-  }
-
-  .bg-status-warning {
-    @apply bg-status-warning-light;
-  }
-
-  .border-status-warning {
-    @apply border-status-warning;
-  }
-
-  /* Info */
-  .text-status-info {
-    @apply text-status-info-text;
-  }
-
-  .bg-status-info {
-    @apply bg-status-info-light;
-  }
-
-  .border-status-info {
-    @apply border-status-info;
-  }
-
   /* ----- WORKOUT STATUS UTILITIES ----- */
 
   .border-workout-completed {

@@ -5,6 +5,7 @@
 
 import { useState } from 'react'
 import { Play, X } from 'lucide-react'
+import { EXERCISE_PLACEHOLDER_IMAGE } from '@/domains/exercises/utils'
 
 interface ExerciseMediaProps {
   imageUrl?: string
@@ -20,11 +21,14 @@ export function ExerciseMedia({ imageUrl, videoUrl, exerciseName }: ExerciseMedi
   const hasVideo = !!videoUrl
 
   if (!hasMedia || imageError) {
-    // Placeholder
+    // Placeholder with fallback image
     return (
       <div className="exercise-media-placeholder">
-        <span className="text-5xl">💪</span>
-        <span className="text-neon-gray-500 text-sm mt-2">{exerciseName}</span>
+        <img
+          src={EXERCISE_PLACEHOLDER_IMAGE}
+          alt={exerciseName}
+          className="w-full h-full object-cover"
+        />
       </div>
     )
   }

@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+const tokens = require('./src/theme/tailwind-tokens.js');
+
 export default {
   content: [
     "./index.html",
@@ -17,52 +19,30 @@ export default {
     extend: {
       colors: {
         // ============================================
-        // PRIMARY BRAND COLORS
+        // DESIGN TOKENS - from src/theme/tokens.ts
         // ============================================
-        primary: {
-          50: '#E6F7FF',
-          100: '#BAE7FF',
-          200: '#7DD3FC',
-          300: '#38BDF8',
-          400: '#0EA5E9',
-          500: '#0284C7',
-          600: '#0369A1',
-          700: '#1E40AF',
-          800: '#1E3A8A',
-          900: '#1E293B',
-        },
+        background: tokens.colors.background,
+        primary: tokens.colors.primary,
+        secondary: tokens.colors.secondary,
+        accent: tokens.colors.accent,
+        text: tokens.colors.text,
+        border: tokens.colors.border,
+        status: tokens.colors.status,
+        workout: tokens.colors.workout,
+        muscles: tokens.colors.muscles,
 
         // ============================================
-        // ACCENT COLORS (Green/Cyan)
-        // ============================================
-        accent: {
-          50: '#ECFDF5',
-          100: '#A7F3D0',
-          200: '#6EE7B7',
-          300: '#34D399',
-          400: '#10B981',
-          500: '#059669',
-          600: '#047857',
-          700: '#065F46',
-          800: '#064E3B',
-          900: '#022C22',
-        },
-
-        // ============================================
-        // NEON EFFECTS (Brand Identity)
+        // LEGACY COLORS (for backwards compatibility)
         // ============================================
         neon: {
-          dark: '#0a0a0a',       // Main background
+          dark: tokens.colors.background.main,
           blue: '#00BFFF',
-          cyan: '#00FFFF',
+          cyan: tokens.colors.primary.main,
           green: '#00FF7F',
-          purple: '#8A2BE2',
+          purple: tokens.colors.accent.purple,
           magenta: '#FF00FF',
         },
 
-        // ============================================
-        // GRAY SCALE (Neon Theme)
-        // ============================================
         'neon-gray': {
           50: '#FAFAFA',
           100: '#F4F4F5',
@@ -71,101 +51,26 @@ export default {
           400: '#9CA3AF',
           500: '#6B7280',
           600: '#4B5563',
-          700: '#374151',
-          750: '#2D3748',
-          800: '#1F2937',
-          900: '#111827',
+          700: tokens.colors.border.light,
+          750: tokens.colors.secondary.light,
+          800: tokens.colors.secondary.main,
+          900: tokens.colors.secondary.dark,
         },
 
-        // ============================================
-        // DARK THEME SURFACES
-        // ============================================
         dark: {
-          bg: '#0F172A',
-          surface: '#1E293B',
-          card: '#334155',
-          border: '#475569',
+          bg: tokens.colors.background.main,
+          surface: tokens.colors.background.card,
+          card: tokens.colors.background.elevated,
+          border: tokens.colors.border.light,
         },
 
-        // ============================================
-        // TEXT COLORS
-        // ============================================
-        text: {
-          primary: '#F8FAFC',
-          secondary: '#CBD5E1',
-          muted: '#64748B',
-          accent: '#00BFFF',
-        },
-
-        // ============================================
-        // STATUS COLORS (Semantic)
-        // ============================================
-        status: {
-          // Success
-          success: '#22C55E',         // green-500
-          'success-light': '#22C55E1A', // 10% opacity
-          'success-text': '#4ADE80',   // green-400
-
-          // Error
-          error: '#EF4444',           // red-500
-          'error-light': '#EF44441A',  // 10% opacity
-          'error-text': '#F87171',     // red-400
-
-          // Warning
-          warning: '#F59E0B',         // amber-500
-          'warning-light': '#F59E0B1A', // 10% opacity
-          'warning-text': '#FBBF24',   // amber-400
-
-          // Info
-          info: '#3B82F6',            // blue-500
-          'info-light': '#3B82F61A',   // 10% opacity
-          'info-text': '#60A5FA',      // blue-400
-        },
-
-        // ============================================
-        // WORKOUT SPECIFIC COLORS
-        // ============================================
-        workout: {
-          // Completed state (legacy - teal)
-          'completed-bg': '#14B8A61A',    // teal with 10% opacity
-          'completed-border': '#14B8A6',  // teal-500
-          'completed-text': '#5EEAD4',    // teal-300
-
-          // Active state
-          'active-border': '#00FFFF',     // neon-cyan
-          'active-bg': '#00FFFF1A',       // 10% opacity
-
-          // Timer
-          'timer-active': '#FF6B6B',      // coral
-          'timer-overtime': '#EF4444',    // red-500
-
-          // ========== WORKOUT STATUS COLORS ==========
-          // Completed - Blue (אימון שהושלם)
-          'status-completed': '#3B82F6',        // blue-500
-          'status-completed-bg': '#3B82F61A',   // blue-500 with 10% opacity
-          'status-completed-text': '#60A5FA',   // blue-400
-
-          // In Progress - Yellow (אימון בתהליך)
-          'status-in-progress': '#EAB308',        // yellow-500
-          'status-in-progress-bg': '#EAB3081A',   // yellow-500 with 10% opacity
-          'status-in-progress-text': '#FACC15',   // yellow-400
-
-          // Planned - Red (אימון מתוכנן)
-          'status-planned': '#EF4444',        // red-500
-          'status-planned-bg': '#EF44441A',   // red-500 with 10% opacity
-          'status-planned-text': '#F87171',   // red-400
-        },
-
-        // ============================================
-        // ROLE COLORS (Admin/User)
-        // ============================================
         role: {
-          admin: '#FBBF24',        // yellow/gold
-          'admin-bg': '#FBBF241A',
-          trainer: '#3B82F6',      // blue
-          'trainer-bg': '#3B82F61A',
-          user: '#22C55E',         // green
-          'user-bg': '#22C55E1A',
+          admin: tokens.colors.accent.gold,
+          'admin-bg': 'rgba(196, 160, 82, 0.1)',
+          trainer: tokens.colors.status.info,
+          'trainer-bg': 'rgba(59, 130, 246, 0.1)',
+          user: tokens.colors.status.success,
+          'user-bg': 'rgba(16, 185, 129, 0.1)',
         },
       },
 
@@ -173,46 +78,64 @@ export default {
       // FONT FAMILIES
       // ============================================
       fontFamily: {
-        sans: ['Inter', 'Rubik', 'sans-serif'],
-        display: ['Poppins', 'Assistant', 'sans-serif'],
+        sans: ['Heebo', 'Inter', 'sans-serif'],
+        display: ['Heebo', 'Assistant', 'sans-serif'],
       },
 
       // ============================================
       // BOX SHADOWS
       // ============================================
       boxShadow: {
-        'neon': '0 0 20px rgba(0, 191, 255, 0.3), 0 4px 20px rgba(0, 0, 0, 0.3)',
-        'neon-hover': '0 0 30px rgba(0, 191, 255, 0.5), 0 8px 30px rgba(0, 0, 0, 0.3)',
-        'neon-active': '0 0 15px rgba(0, 191, 255, 0.3), 0 2px 10px rgba(0, 0, 0, 0.3)',
-        'card': '0 0 40px rgba(0, 191, 255, 0.1), 0 8px 32px rgba(0, 0, 0, 0.3)',
+        'sm': tokens.shadows.sm,
+        'md': tokens.shadows.md,
+        'lg': tokens.shadows.lg,
+        'xl': tokens.shadows.xl,
+        'card': tokens.shadows.card,
+        'card-hover': tokens.shadows.cardHover,
+        'button': tokens.shadows.button,
+        'button-hover': tokens.shadows.buttonHover,
+        'button-pressed': tokens.shadows.buttonPressed,
+        'glow-orange': tokens.shadows.glowOrange,
+        'glow-cyan': tokens.shadows.glowCyan,
+        'glow-gold': tokens.shadows.glowGold,
+        'neon': '0 0 20px rgba(0, 212, 170, 0.3), 0 4px 20px rgba(0, 0, 0, 0.3)',
+        'neon-hover': '0 0 30px rgba(0, 212, 170, 0.5), 0 8px 30px rgba(0, 0, 0, 0.3)',
+        'neon-active': '0 0 15px rgba(0, 212, 170, 0.3), 0 2px 10px rgba(0, 0, 0, 0.3)',
         'modal': '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-      },
-
-      // ============================================
-      // GRADIENTS
-      // ============================================
-      backgroundImage: {
-        'gradient-primary': 'linear-gradient(135deg, #0EA5E9 0%, #10B981 100%)',
-        'gradient-secondary': 'linear-gradient(135deg, #1E40AF 0%, #059669 100%)',
-        'gradient-neon': 'linear-gradient(135deg, #00BFFF 0%, #00FF7F 100%)',
-        'gradient-dark': 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-        'gradient-card': 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(51, 65, 85, 0.9) 100%)',
-      },
-
-      // ============================================
-      // SPACING (Custom values)
-      // ============================================
-      spacing: {
-        '18': '4.5rem',   // 72px
-        '88': '22rem',    // 352px
-        '128': '32rem',   // 512px
       },
 
       // ============================================
       // BORDER RADIUS
       // ============================================
       borderRadius: {
-        '4xl': '2rem',    // 32px
+        'xs': tokens.borderRadius.xs,
+        'sm': tokens.borderRadius.sm,
+        'md': tokens.borderRadius.md,
+        'lg': tokens.borderRadius.lg,
+        'xl': tokens.borderRadius.xl,
+        '2xl': tokens.borderRadius['2xl'],
+        '4xl': '2rem',
+        'full': tokens.borderRadius.full,
+      },
+
+      // ============================================
+      // GRADIENTS
+      // ============================================
+      backgroundImage: {
+        'gradient-primary': `linear-gradient(135deg, ${tokens.colors.primary.dark} 0%, ${tokens.colors.primary.main} 50%, ${tokens.colors.primary.light} 100%)`,
+        'gradient-secondary': `linear-gradient(180deg, ${tokens.colors.secondary.light} 0%, ${tokens.colors.secondary.main} 100%)`,
+        'gradient-neon': `linear-gradient(135deg, ${tokens.colors.primary.dark} 0%, ${tokens.colors.primary.light} 100%)`,
+        'gradient-dark': `linear-gradient(135deg, ${tokens.colors.background.main} 0%, ${tokens.colors.background.card} 100%)`,
+        'gradient-card': `linear-gradient(135deg, ${tokens.colors.background.card} 0%, ${tokens.colors.background.elevated} 100%)`,
+      },
+
+      // ============================================
+      // SPACING (Custom values)
+      // ============================================
+      spacing: {
+        '18': '4.5rem',
+        '88': '22rem',
+        '128': '32rem',
       },
 
       // ============================================
@@ -238,8 +161,8 @@ export default {
       },
       keyframes: {
         'pulse-glow': {
-          from: { filter: 'drop-shadow(0 0 20px rgba(0, 191, 255, 0.8))' },
-          to: { filter: 'drop-shadow(0 0 30px rgba(0, 191, 255, 1))' },
+          from: { filter: `drop-shadow(0 0 20px rgba(0, 212, 170, 0.8))` },
+          to: { filter: `drop-shadow(0 0 30px rgba(0, 212, 170, 1))` },
         },
         fadeIn: {
           from: { opacity: '0' },

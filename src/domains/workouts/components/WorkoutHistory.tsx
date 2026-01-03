@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Calendar, Dumbbell, TrendingUp, Trophy, ChevronDown, ChevronUp, CheckCircle, AlertCircle, XCircle, Flame, Play, X, Clock, Zap } from 'lucide-react'
+import { Calendar, Dumbbell, Trophy, ChevronDown, ChevronUp, CheckCircle, AlertCircle, XCircle, Flame, Play, X, Clock, Zap } from 'lucide-react'
 import { getUserWorkoutHistory, getWorkoutById, updateWorkoutHistory } from '@/lib/firebase/workoutHistory'
 import { useAuthStore } from '@/domains/authentication/store'
 import { useWorkoutBuilderStore } from '../store'
+import { exerciseService } from '@/domains/exercises/services'
 import type { WorkoutHistorySummary, WorkoutHistoryEntry, WorkoutCompletionStatus } from '../types'
 
 // Confirmation dialog for continuing workout
@@ -58,13 +59,6 @@ export default function WorkoutHistory() {
       day: 'numeric',
       month: 'short',
     })
-  }
-
-  const formatVolume = (kg: number) => {
-    if (kg >= 1000) {
-      return `${(kg / 1000).toFixed(1)}T`
-    }
-    return `${kg}kg`
   }
 
   // Get status config for styling (using design tokens)
@@ -183,6 +177,24 @@ export default function WorkoutHistory() {
         return
       }
 
+      // Fetch exercise details to get imageUrl for each exercise
+      const exerciseDetailsMap = new Map<string, { imageUrl: string; primaryMuscle: string }>()
+      await Promise.all(
+        fullWorkout.exercises.map(async (ex) => {
+          try {
+            const exerciseDetails = await exerciseService.getExerciseById(ex.exerciseId)
+            if (exerciseDetails) {
+              exerciseDetailsMap.set(ex.exerciseId, {
+                imageUrl: exerciseDetails.imageUrl || '',
+                primaryMuscle: exerciseDetails.primaryMuscle || '',
+              })
+            }
+          } catch (err) {
+            console.warn(`Could not fetch details for exercise ${ex.exerciseId}:`, err)
+          }
+        })
+      )
+
       // Clear any existing workout in the store
       clearWorkout()
 
@@ -193,12 +205,13 @@ export default function WorkoutHistory() {
           console.log('📋 Creating new workout from completed - exercises only, no set data')
 
           fullWorkout.exercises.forEach(exercise => {
+            const details = exerciseDetailsMap.get(exercise.exerciseId)
             addExercise({
               exerciseId: exercise.exerciseId,
               exerciseName: exercise.exerciseName,
               exerciseNameHe: exercise.exerciseNameHe || '',
-              imageUrl: '',
-              primaryMuscle: '',
+              imageUrl: details?.imageUrl || '',
+              primaryMuscle: details?.primaryMuscle || '',
             })
           })
 
@@ -213,14 +226,17 @@ export default function WorkoutHistory() {
           console.log('📋 Creating new workout from in-progress - copying all set data')
 
           // Store the exercise data with sets for the active workout to use
-          const exercisesWithSets = fullWorkout.exercises.map(exercise => ({
-            exerciseId: exercise.exerciseId,
-            exerciseName: exercise.exerciseName,
-            exerciseNameHe: exercise.exerciseNameHe || '',
-            imageUrl: '',
-            primaryMuscle: '',
-            sets: exercise.sets || [],
-          }))
+          const exercisesWithSets = fullWorkout.exercises.map(exercise => {
+            const details = exerciseDetailsMap.get(exercise.exerciseId)
+            return {
+              exerciseId: exercise.exerciseId,
+              exerciseName: exercise.exerciseName,
+              exerciseNameHe: exercise.exerciseNameHe || '',
+              imageUrl: details?.imageUrl || '',
+              primaryMuscle: details?.primaryMuscle || '',
+              sets: exercise.sets || [],
+            }
+          })
 
           // Store in localStorage for ActiveWorkoutScreen to pick up
           localStorage.setItem('continueWorkoutData', JSON.stringify(exercisesWithSets))
@@ -228,12 +244,13 @@ export default function WorkoutHistory() {
 
           // Add exercises to store (basic info)
           fullWorkout.exercises.forEach(exercise => {
+            const details = exerciseDetailsMap.get(exercise.exerciseId)
             addExercise({
               exerciseId: exercise.exerciseId,
               exerciseName: exercise.exerciseName,
               exerciseNameHe: exercise.exerciseNameHe || '',
-              imageUrl: '',
-              primaryMuscle: '',
+              imageUrl: details?.imageUrl || '',
+              primaryMuscle: details?.primaryMuscle || '',
             })
           })
 
@@ -257,24 +274,28 @@ export default function WorkoutHistory() {
           localStorage.setItem('continueWorkoutMode', 'planned')
 
           // Store exercise data with target sets
-          const exercisesWithSets = fullWorkout.exercises.map(exercise => ({
-            exerciseId: exercise.exerciseId,
-            exerciseName: exercise.exerciseName,
-            exerciseNameHe: exercise.exerciseNameHe || '',
-            imageUrl: '',
-            primaryMuscle: '',
-            sets: exercise.sets || [],
-          }))
+          const exercisesWithSets = fullWorkout.exercises.map(exercise => {
+            const details = exerciseDetailsMap.get(exercise.exerciseId)
+            return {
+              exerciseId: exercise.exerciseId,
+              exerciseName: exercise.exerciseName,
+              exerciseNameHe: exercise.exerciseNameHe || '',
+              imageUrl: details?.imageUrl || '',
+              primaryMuscle: details?.primaryMuscle || '',
+              sets: exercise.sets || [],
+            }
+          })
           localStorage.setItem('continueWorkoutData', JSON.stringify(exercisesWithSets))
 
           // Add exercises to store
           fullWorkout.exercises.forEach(exercise => {
+            const details = exerciseDetailsMap.get(exercise.exerciseId)
             addExercise({
               exerciseId: exercise.exerciseId,
               exerciseName: exercise.exerciseName,
               exerciseNameHe: exercise.exerciseNameHe || '',
-              imageUrl: '',
-              primaryMuscle: '',
+              imageUrl: details?.imageUrl || '',
+              primaryMuscle: details?.primaryMuscle || '',
             })
           })
 
@@ -470,18 +491,6 @@ export default function WorkoutHistory() {
           </div>
         </div>
 
-        {/* Cube 4: Total volume */}
-        <div className="card-neon !p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-accent-400/20 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-accent-400" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-text-primary">{formatVolume(stats.totalVolume)}</p>
-              <p className="text-text-muted text-xs">נפח כולל</p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Planned workouts section - pinned to top */}
@@ -662,10 +671,6 @@ export default function WorkoutHistory() {
                             {formatDate(workout.date)} • {workout.duration} דקות • {workout.completedExercises}/{workout.totalExercises} תרגילים
                           </p>
                         </div>
-                      </div>
-                      <div className="text-left">
-                        <p className="font-semibold text-text-primary">{formatVolume(workout.totalVolume)}</p>
-                        <p className="text-text-muted text-sm">נפח</p>
                       </div>
                     </div>
                   </div>
