@@ -126,3 +126,30 @@ export async function initializeMuscles(): Promise<void> {
     throw error
   }
 }
+
+// Sync missing muscles - adds any muscles from defaults that don't exist in Firebase
+export async function syncMissingMuscles(): Promise<number> {
+  try {
+    const musclesRef = collection(db, COLLECTION_NAME)
+    const snapshot = await getDocs(musclesRef)
+
+    // Get existing muscle IDs
+    const existingIds = new Set(snapshot.docs.map(doc => doc.id))
+
+    // Find and add missing muscles
+    let addedCount = 0
+    for (const muscle of defaultMuscleMapping) {
+      if (!existingIds.has(muscle.id)) {
+        await saveMuscle(muscle)
+        console.log(`Added missing muscle: ${muscle.nameHe} (${muscle.id})`)
+        addedCount++
+      }
+    }
+
+    console.log(`Sync complete. Added ${addedCount} muscles.`)
+    return addedCount
+  } catch (error) {
+    console.error('Error syncing muscles:', error)
+    throw error
+  }
+}

@@ -13,6 +13,7 @@ const ExerciseList = lazy(() => import('@/domains/admin/components/ExerciseList'
 const ExerciseForm = lazy(() => import('@/domains/admin/components/ExerciseForm'))
 const UsersList = lazy(() => import('@/domains/admin/components/UsersList'))
 const MuscleManager = lazy(() => import('@/domains/admin/components/MuscleManager'))
+const EquipmentManager = lazy(() => import('@/domains/admin/components/EquipmentManager'))
 
 // User
 const MainLayout = lazy(() => import('@/design-system/layouts/MainLayout'))
@@ -75,6 +76,7 @@ function App() {
           <Route path="exercises/new" element={<ExerciseForm />} />
           <Route path="exercises/:id/edit" element={<ExerciseForm />} />
           <Route path="muscles" element={<MuscleManager />} />
+          <Route path="equipment" element={<EquipmentManager />} />
           <Route path="users" element={<UsersList />} />
         </Route>
 

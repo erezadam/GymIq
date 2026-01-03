@@ -47,3 +47,25 @@ export {
   deleteUserFromFirestore,
   getUserStats,
 } from './users'
+
+// Equipment
+export {
+  getEquipment,
+  saveEquipment,
+  addEquipment,
+  deleteEquipment,
+  isEquipmentInUse,
+  initializeEquipment,
+  syncMissingEquipment,
+  type Equipment,
+} from './equipment'
+
+// Muscles
+export {
+  getMuscles,
+  saveMuscle,
+  addPrimaryMuscle,
+  deletePrimaryMuscle,
+  initializeMuscles,
+  syncMissingMuscles,
+} from './muscles'

@@ -61,7 +61,7 @@ export default function UserDashboard() {
         </Link>
 
         {/* Secondary CTA - Training Programs */}
-        <Link to="/programs" className="card-action block">
+        <Link to="/workout/history" className="card-action block">
           <div className="action-icon-md bg-accent-400/20">
             <ClipboardList className="w-7 h-7 text-accent-400" />
           </div>

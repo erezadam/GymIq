@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Edit2, Save, X, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Trash2, Edit2, Save, X, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
 import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
-import { getMuscles, saveMuscle, addPrimaryMuscle, deletePrimaryMuscle, initializeMuscles } from '@/lib/firebase/muscles'
+import { getMuscles, saveMuscle, addPrimaryMuscle, deletePrimaryMuscle, initializeMuscles, syncMissingMuscles } from '@/lib/firebase/muscles'
 
 export default function MuscleManager() {
   const [muscles, setMuscles] = useState<PrimaryMuscle[]>([])
@@ -40,6 +40,24 @@ export default function MuscleManager() {
       } catch (error) {
         console.error('Error initializing:', error)
       }
+    }
+  }
+
+  const handleSyncMissing = async () => {
+    try {
+      setLoading(true)
+      const addedCount = await syncMissingMuscles()
+      if (addedCount > 0) {
+        alert(`נוספו ${addedCount} שרירים חסרים`)
+      } else {
+        alert('כל השרירים כבר קיימים')
+      }
+      await loadMuscles()
+    } catch (error) {
+      console.error('Error syncing:', error)
+      alert('שגיאה בסנכרון שרירים')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -152,6 +170,10 @@ export default function MuscleManager() {
               אתחל ברירות מחדל
             </button>
           )}
+          <button onClick={handleSyncMissing} className="btn-secondary text-sm flex items-center gap-2">
+            <RefreshCw className="w-4 h-4" />
+            סנכרן שרירים חסרים
+          </button>
           <button onClick={() => setShowAddMuscle(true)} className="btn-primary text-sm flex items-center gap-2">
             <Plus className="w-4 h-4" />
             הוסף שריר
