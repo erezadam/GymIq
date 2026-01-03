@@ -126,7 +126,7 @@ export default {
         // WORKOUT SPECIFIC COLORS
         // ============================================
         workout: {
-          // Completed state
+          // Completed state (legacy - teal)
           'completed-bg': '#14B8A61A',    // teal with 10% opacity
           'completed-border': '#14B8A6',  // teal-500
           'completed-text': '#5EEAD4',    // teal-300
@@ -138,6 +138,22 @@ export default {
           // Timer
           'timer-active': '#FF6B6B',      // coral
           'timer-overtime': '#EF4444',    // red-500
+
+          // ========== WORKOUT STATUS COLORS ==========
+          // Completed - Blue (אימון שהושלם)
+          'status-completed': '#3B82F6',        // blue-500
+          'status-completed-bg': '#3B82F61A',   // blue-500 with 10% opacity
+          'status-completed-text': '#60A5FA',   // blue-400
+
+          // In Progress - Yellow (אימון בתהליך)
+          'status-in-progress': '#EAB308',        // yellow-500
+          'status-in-progress-bg': '#EAB3081A',   // yellow-500 with 10% opacity
+          'status-in-progress-text': '#FACC15',   // yellow-400
+
+          // Planned - Red (אימון מתוכנן)
+          'status-planned': '#EF4444',        // red-500
+          'status-planned-bg': '#EF44441A',   // red-500 with 10% opacity
+          'status-planned-text': '#F87171',   // red-400
         },
 
         // ============================================

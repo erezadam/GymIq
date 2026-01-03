@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, X, ChevronLeft, Dumbbell } from 'lucide-react'
+import { Search, X, ChevronLeft, Dumbbell, Calendar } from 'lucide-react'
 import type { Exercise, MuscleGroup } from '../types'
 import type { PrimaryMuscle } from '../types/muscles'
 import { defaultMuscleMapping } from '../types/muscles'
@@ -8,6 +8,8 @@ import { exerciseService } from '../services'
 import { ExerciseCard } from './ExerciseCard'
 import { useWorkoutBuilderStore } from '@/domains/workouts/store'
 import { getMuscles } from '@/lib/firebase/muscles'
+import { saveWorkoutHistory } from '@/lib/firebase/workoutHistory'
+import { useAuthStore } from '@/domains/authentication/store'
 
 // Equipment options
 const equipmentOptions = [
@@ -22,6 +24,7 @@ const equipmentOptions = [
 
 export function ExerciseLibrary() {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [muscles, setMuscles] = useState<PrimaryMuscle[]>(defaultMuscleMapping)
   const [loading, setLoading] = useState(true)
@@ -29,8 +32,30 @@ export function ExerciseLibrary() {
   const [selectedPrimaryMuscle, setSelectedPrimaryMuscle] = useState<string>('all')
   const [selectedSubMuscle, setSelectedSubMuscle] = useState<string>('all')
   const [selectedEquipment, setSelectedEquipment] = useState<string>('all')
+  const [scheduledDate, setScheduledDate] = useState<string>('')
+  const [isSaving, setIsSaving] = useState(false)
 
-  const { selectedExercises, clearWorkout } = useWorkoutBuilderStore()
+  const { selectedExercises, clearWorkout, setScheduledDate: setStoreDate } = useWorkoutBuilderStore()
+
+  // Get today's date in YYYY-MM-DD format for min attribute
+  const today = new Date().toISOString().split('T')[0]
+
+  // Check if selected date is in the future
+  const isPlannedWorkout = (): boolean => {
+    if (!scheduledDate) return false
+    const todayDate = new Date()
+    todayDate.setHours(0, 0, 0, 0)
+    const selected = new Date(scheduledDate)
+    selected.setHours(0, 0, 0, 0)
+    return selected > todayDate
+  }
+
+  // Format date for display (DD/MM/YYYY)
+  const formatDateDisplay = (dateStr: string): string => {
+    if (!dateStr) return ''
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  }
 
   useEffect(() => {
     loadData()
@@ -113,8 +138,62 @@ export function ExerciseLibrary() {
 
   const hasActiveFilters = selectedPrimaryMuscle !== 'all' || selectedSubMuscle !== 'all' || selectedEquipment !== 'all' || searchQuery
 
-  const handleContinue = () => {
-    if (selectedExercises.length > 0) {
+  const handleContinue = async () => {
+    if (selectedExercises.length === 0 || !user?.uid) return
+
+    const isPlanned = isPlannedWorkout()
+
+    if (isPlanned) {
+      // Save as planned workout to Firebase
+      setIsSaving(true)
+      try {
+        const workoutDate = new Date(scheduledDate)
+
+        await saveWorkoutHistory({
+          userId: user.uid,
+          name: 'אימון מתוכנן',
+          date: workoutDate,
+          startTime: workoutDate,
+          endTime: workoutDate,
+          duration: 0,
+          status: 'planned',
+          exercises: selectedExercises.map(ex => ({
+            exerciseId: ex.exerciseId,
+            exerciseName: ex.exerciseName,
+            exerciseNameHe: ex.exerciseNameHe,
+            isCompleted: false,
+            sets: ex.sets.map(set => ({
+              type: set.type,
+              targetReps: set.targetReps || 10,
+              targetWeight: set.targetWeight || 0,
+              actualReps: 0,
+              actualWeight: 0,
+              completed: false,
+            })),
+          })),
+          completedExercises: 0,
+          totalExercises: selectedExercises.length,
+          completedSets: 0,
+          totalSets: selectedExercises.reduce((sum, ex) => sum + ex.sets.length, 0),
+          totalVolume: 0,
+          personalRecords: 0,
+        })
+
+        // Show toast and navigate to workout planning
+        alert(`האימון נשמר לתאריך ${formatDateDisplay(scheduledDate)}`)
+        clearWorkout()
+        navigate('/workout-history')
+      } catch (error) {
+        console.error('Failed to save planned workout:', error)
+        alert('שגיאה בשמירת האימון')
+      } finally {
+        setIsSaving(false)
+      }
+    } else {
+      // Today or no date selected - navigate to active workout
+      if (scheduledDate) {
+        setStoreDate(new Date(scheduledDate))
+      }
       navigate('/workout/session')
     }
   }
@@ -143,6 +222,40 @@ export function ExerciseLibrary() {
                 <span className="text-neon-cyan font-bold">{selectedExercises.length}</span>
                 <span className="text-neon-cyan/80 text-sm">נבחרו</span>
               </div>
+            )}
+          </div>
+
+          {/* Date Picker Field */}
+          <div className="mb-4">
+            <label className="flex items-center gap-2 text-neon-gray-400 text-sm mb-2">
+              <Calendar className="w-4 h-4" />
+              <span>תאריך לאימון (אופציונלי)</span>
+            </label>
+            <div className="relative">
+              <input
+                type="date"
+                value={scheduledDate}
+                onChange={(e) => setScheduledDate(e.target.value)}
+                min={today}
+                className="w-full px-4 py-3 bg-neon-gray-800/50 border border-neon-gray-700 rounded-xl text-white focus:outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan/50 transition-colors"
+                style={{ colorScheme: 'dark' }}
+              />
+              {scheduledDate && (
+                <button
+                  onClick={() => setScheduledDate('')}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 p-1 text-neon-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            {scheduledDate && (
+              <p className="text-xs mt-1 text-neon-gray-500">
+                {isPlannedWorkout()
+                  ? `📅 אימון מתוכנן ל-${formatDateDisplay(scheduledDate)}`
+                  : `▶️ אימון להיום`
+                }
+              </p>
             )}
           </div>
 
@@ -315,16 +428,30 @@ export function ExerciseLibrary() {
             {/* Continue Button */}
             <button
               onClick={handleContinue}
-              disabled={selectedExercises.length === 0}
+              disabled={selectedExercises.length === 0 || isSaving}
               className={`px-4 sm:px-8 py-3.5 rounded-xl font-bold text-base sm:text-lg transition-all flex items-center gap-2 whitespace-nowrap ${
-                selectedExercises.length > 0
-                  ? 'bg-neon-gradient text-neon-dark hover:shadow-lg hover:shadow-neon-cyan/30 hover:scale-105'
-                  : 'bg-neon-gray-700 text-neon-gray-500 cursor-not-allowed'
+                selectedExercises.length === 0 || isSaving
+                  ? 'bg-neon-gray-700 text-neon-gray-500 cursor-not-allowed'
+                  : isPlannedWorkout()
+                    ? 'bg-workout-status-planned text-white hover:shadow-lg hover:shadow-red-500/30 hover:scale-105'
+                    : 'bg-neon-gradient text-neon-dark hover:shadow-lg hover:shadow-neon-cyan/30 hover:scale-105'
               }`}
             >
-              <span className="hidden sm:inline">התחל תרגול</span>
-              <span className="sm:hidden">התחל</span>
-              <ChevronLeft className="w-5 h-5" />
+              {isSaving ? (
+                <span>שומר...</span>
+              ) : isPlannedWorkout() ? (
+                <>
+                  <Calendar className="w-5 h-5" />
+                  <span className="hidden sm:inline">שמור אימון מתוכנן ({selectedExercises.length})</span>
+                  <span className="sm:hidden">שמור ({selectedExercises.length})</span>
+                </>
+              ) : (
+                <>
+                  <span className="hidden sm:inline">התחל להתאמן ({selectedExercises.length} תרגילים)</span>
+                  <span className="sm:hidden">התחל ({selectedExercises.length})</span>
+                  <ChevronLeft className="w-5 h-5" />
+                </>
+              )}
             </button>
           </div>
         </div>

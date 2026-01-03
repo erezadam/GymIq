@@ -19,10 +19,12 @@ export interface SelectedExercise {
 interface WorkoutBuilderState {
   workoutName: string
   selectedExercises: SelectedExercise[]
+  scheduledDate: Date | null // null = today, Date = scheduled for that date
 }
 
 interface WorkoutBuilderActions {
   setWorkoutName: (name: string) => void
+  setScheduledDate: (date: Date | null) => void
   addExercise: (exercise: Omit<SelectedExercise, 'order' | 'sets' | 'restTime'>) => void
   removeExercise: (exerciseId: string) => void
   reorderExercise: (fromIndex: number, toIndex: number) => void
@@ -83,9 +85,11 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
   // State
   workoutName: '',
   selectedExercises: [],
+  scheduledDate: null,
 
   // Actions
   setWorkoutName: (name) => set({ workoutName: name }),
+  setScheduledDate: (date) => set({ scheduledDate: date }),
 
   addExercise: (exercise) => {
     set((state) => {
@@ -178,7 +182,7 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
   },
 
   clearWorkout: () => {
-    set({ workoutName: '', selectedExercises: [] })
+    set({ workoutName: '', selectedExercises: [], scheduledDate: null })
   },
 
   getWorkoutExercises: (): WorkoutExercise[] => {

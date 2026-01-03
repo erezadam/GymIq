@@ -37,9 +37,21 @@ export function useActiveWorkout() {
   const timerRef = useRef<number | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
+  // Track if we've already initialized to prevent duplicate creation
+  const hasInitialized = useRef(false)
+
   // Initialize workout from selected exercises or restore from storage
   useEffect(() => {
     const initWorkout = async () => {
+      console.log('🔄 initWorkout called, selectedExercises:', selectedExercises.length)
+
+      // Don't re-initialize if we already have a workout
+      if (workout && hasInitialized.current) {
+        console.log('⏭️ Already have workout, skipping init')
+        setIsLoading(false)
+        return
+      }
+
       setIsLoading(true)
 
       // Try to restore from localStorage
@@ -62,7 +74,9 @@ export function useActiveWorkout() {
               : undefined,
           }))
 
+          console.log('✅ Restored workout from localStorage')
           setWorkout(parsed)
+          hasInitialized.current = true
           setIsLoading(false)
           return
         } catch (e) {
@@ -73,6 +87,7 @@ export function useActiveWorkout() {
 
       // Create new workout from selected exercises
       if (selectedExercises.length > 0) {
+        console.log('🆕 Creating new workout from', selectedExercises.length, 'exercises')
         const exercises: ActiveWorkoutExercise[] = selectedExercises.map((ex, index) => ({
           id: `workout_ex_${index}_${Date.now()}`,
           exerciseId: ex.exerciseId,
@@ -126,13 +141,17 @@ export function useActiveWorkout() {
 
         setWorkout(newWorkout)
         saveToStorage(newWorkout)
+        hasInitialized.current = true
+        console.log('✅ New workout created and saved')
+      } else {
+        console.log('⚠️ No selectedExercises and no saved workout')
       }
 
       setIsLoading(false)
     }
 
     initWorkout()
-  }, [])
+  }, [selectedExercises, user?.uid, workout])
 
   // Update elapsed time every second
   useEffect(() => {
@@ -364,14 +383,28 @@ export function useActiveWorkout() {
     setConfirmModal({ type: 'exit_workout' })
   }, [])
 
-  // Show finish confirmation
-  const confirmFinish = useCallback(() => {
-    if (!workout) return
+  // Show finish confirmation - sets shouldFinish flag
+  const [shouldFinish, setShouldFinish] = useState(false)
 
-    // If all exercises completed, finish directly
+  const confirmFinish = useCallback(() => {
+    console.log('=== CONFIRM FINISH CLICKED ===')
+    console.log('workout:', workout)
+
+    if (!workout) {
+      console.log('❌ No workout - returning')
+      return
+    }
+
+    console.log('Stats:', workout.stats)
+    console.log('completedExercises:', workout.stats.completedExercises)
+    console.log('totalExercises:', workout.stats.totalExercises)
+
+    // If all exercises completed, trigger finish
     if (workout.stats.completedExercises === workout.stats.totalExercises) {
-      finishWorkout()
+      console.log('✅ All exercises completed - triggering finish')
+      setShouldFinish(true)
     } else {
+      console.log('⚠️ Not all completed - showing modal')
       setConfirmModal({ type: 'finish_workout' })
     }
   }, [workout])
@@ -381,22 +414,173 @@ export function useActiveWorkout() {
     setConfirmModal({ type: null })
   }, [])
 
-  // Exit workout (save state for later)
-  const exitWorkout = useCallback(() => {
-    // State is already saved in localStorage
+  // Effect to handle finishing workout when shouldFinish is true
+  // This is needed because finishWorkout is defined after confirmFinish
+  useEffect(() => {
+    if (shouldFinish) {
+      console.log('=== shouldFinish triggered, calling finishWorkout ===')
+      setShouldFinish(false)
+      // We need to call finishWorkout here, but it's not defined yet
+      // So we'll handle the finish logic inline
+      const doFinish = async () => {
+        console.log('=== FINISH WORKOUT START (from effect) ===')
+        if (!workout) {
+          console.error('=== FINISH WORKOUT FAILED - NO WORKOUT ===')
+          return
+        }
+
+        const endTime = new Date()
+        const duration = Math.floor((endTime.getTime() - workout.startedAt.getTime()) / 60000)
+        const status = workout.stats.completedExercises === workout.stats.totalExercises
+          ? 'completed'
+          : workout.stats.completedExercises === 0
+          ? 'cancelled'
+          : 'partial'
+
+        console.log('=== SAVING TO FIREBASE (from effect) ===')
+        console.log('userId:', workout.userId)
+        console.log('exercises:', workout.exercises.length)
+        console.log('status:', status)
+
+        try {
+          const workoutId = await saveWorkoutHistory({
+            userId: workout.userId,
+            name: `אימון ${new Date().toLocaleDateString('he-IL')}`,
+            date: workout.startedAt,
+            startTime: workout.startedAt,
+            endTime,
+            duration,
+            status,
+            exercises: workout.exercises.map((ex) => ({
+              exerciseId: ex.exerciseId,
+              exerciseName: ex.exerciseName,
+              exerciseNameHe: ex.exerciseNameHe,
+              isCompleted: ex.isCompleted,
+              sets: ex.reportedSets.map((set) => ({
+                type: 'working',
+                targetReps: 0,
+                targetWeight: 0,
+                actualReps: set.reps,
+                actualWeight: set.weight,
+                completed: set.reps > 0,
+              })),
+            })),
+            completedExercises: workout.stats.completedExercises,
+            totalExercises: workout.stats.totalExercises,
+            completedSets: workout.stats.completedSets,
+            totalSets: workout.stats.totalSets,
+            totalVolume: workout.stats.totalVolume,
+            personalRecords: 0,
+          })
+
+          console.log('=== SAVE WORKOUT SUCCESS (from effect) ===')
+          console.log('Saved workout ID:', workoutId)
+          toast.success('האימון נשמר!')
+        } catch (error: any) {
+          console.error('=== SAVE WORKOUT FAILED (from effect) ===')
+          console.error('Error:', error)
+          toast.error('שגיאה בשמירת האימון')
+        }
+
+        // Clear everything
+        clearStorage()
+        clearWorkout()
+        setWorkout(null)
+        hasInitialized.current = false
+        setConfirmModal({ type: null })
+        navigate('/workout/history')
+      }
+
+      doFinish()
+    }
+  }, [shouldFinish, workout, clearStorage, clearWorkout, navigate])
+
+  // Exit workout (save to Firebase as in_progress and clear)
+  const exitWorkout = useCallback(async () => {
+    console.log('🚪 exitWorkout called')
+
+    if (workout) {
+      const endTime = new Date()
+      const duration = Math.floor((endTime.getTime() - workout.startedAt.getTime()) / 60000)
+
+      console.log('💾 Saving workout as in_progress before exit')
+
+      try {
+        await saveWorkoutHistory({
+          userId: workout.userId,
+          name: `אימון ${new Date().toLocaleDateString('he-IL')}`,
+          date: workout.startedAt,
+          startTime: workout.startedAt,
+          endTime,
+          duration,
+          status: 'in_progress', // Always save as in_progress when exiting
+          exercises: workout.exercises.map((ex) => ({
+            exerciseId: ex.exerciseId,
+            exerciseName: ex.exerciseName,
+            exerciseNameHe: ex.exerciseNameHe,
+            isCompleted: ex.isCompleted,
+            sets: ex.reportedSets.map((set) => ({
+              type: 'working',
+              targetReps: 0,
+              targetWeight: 0,
+              actualReps: set.reps,
+              actualWeight: set.weight,
+              completed: set.reps > 0,
+            })),
+          })),
+          completedExercises: workout.stats.completedExercises,
+          totalExercises: workout.stats.totalExercises,
+          completedSets: workout.stats.completedSets,
+          totalSets: workout.stats.totalSets,
+          totalVolume: workout.stats.totalVolume,
+          personalRecords: 0,
+        })
+
+        console.log('✅ Workout saved as in_progress')
+        toast.success('האימון נשמר - תוכל להמשיך מאוחר יותר')
+      } catch (error) {
+        console.error('Failed to save workout on exit:', error)
+        toast.error('שגיאה בשמירת האימון')
+      }
+    }
+
+    // Clear everything
+    clearStorage()
+    clearWorkout()
+    setWorkout(null)
+    hasInitialized.current = false
     setConfirmModal({ type: null })
+
     navigate('/dashboard')
-  }, [navigate])
+  }, [workout, clearStorage, clearWorkout, navigate])
 
   // Finish workout (save to Firebase and clear)
   const finishWorkout = useCallback(async () => {
-    if (!workout) return
+    console.log('=== FINISH WORKOUT START ===')
+    console.log('workout:', workout)
+
+    if (!workout) {
+      console.error('=== FINISH WORKOUT FAILED - NO WORKOUT ===')
+      return
+    }
 
     const endTime = new Date()
     const duration = Math.floor((endTime.getTime() - workout.startedAt.getTime()) / 60000)
 
+    const status = workout.stats.completedExercises === workout.stats.totalExercises
+      ? 'completed'
+      : workout.stats.completedExercises === 0
+      ? 'cancelled'
+      : 'partial'
+
+    console.log('=== SAVING TO FIREBASE ===')
+    console.log('userId:', workout.userId)
+    console.log('exercises:', workout.exercises.length)
+    console.log('duration:', duration)
+    console.log('status:', status)
+
     try {
-      await saveWorkoutHistory({
+      const workoutId = await saveWorkoutHistory({
         userId: workout.userId,
         name: `אימון ${new Date().toLocaleDateString('he-IL')}`,
         date: workout.startedAt,
@@ -431,9 +615,14 @@ export function useActiveWorkout() {
         personalRecords: 0,
       })
 
+      console.log('=== SAVE WORKOUT SUCCESS ===')
+      console.log('Saved workout ID:', workoutId)
       toast.success('האימון נשמר!')
-    } catch (error) {
-      console.error('Failed to save workout:', error)
+    } catch (error: any) {
+      console.error('=== SAVE WORKOUT FAILED ===')
+      console.error('Error:', error)
+      console.error('Error code:', error?.code)
+      console.error('Error message:', error?.message)
       toast.error('שגיאה בשמירת האימון')
     }
 
@@ -441,6 +630,7 @@ export function useActiveWorkout() {
     clearStorage()
     clearWorkout()
     setWorkout(null)
+    hasInitialized.current = false
     setConfirmModal({ type: null })
 
     navigate('/workout/history')

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Play, Trash2, GripVertical, Plus, Minus, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react'
+import { Play, Trash2, GripVertical, Plus, Minus, ChevronDown, ChevronUp, ArrowRight, Calendar, Save } from 'lucide-react'
 import { useWorkoutBuilderStore } from '../store'
 import type { SetType } from '../types'
 
@@ -9,6 +9,8 @@ export default function WorkoutBuilder() {
   const {
     workoutName,
     setWorkoutName,
+    scheduledDate,
+    setScheduledDate,
     selectedExercises,
     removeExercise,
     reorderExercise,
@@ -43,9 +45,41 @@ export default function WorkoutBuilder() {
     )
   }
 
+  // Check if the selected date is in the future (planned workout)
+  const isPlannedWorkout = (): boolean => {
+    if (!scheduledDate) return false
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const selected = new Date(scheduledDate)
+    selected.setHours(0, 0, 0, 0)
+    return selected > today
+  }
+
   const handleStartWorkout = () => {
-    // Store workout data in session and navigate
-    navigate('/workout/session')
+    if (isPlannedWorkout()) {
+      // Future workout - navigate to workout planning screen
+      // TODO: Save workout to Firebase with 'planned' status
+      navigate('/workout-history')
+    } else {
+      // Immediate workout - navigate to active session
+      navigate('/workout/session')
+    }
+  }
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    if (value) {
+      setScheduledDate(new Date(value))
+    } else {
+      setScheduledDate(null)
+    }
+  }
+
+  // Format date for the input field
+  const formatDateForInput = (date: Date | null): string => {
+    if (!date) return ''
+    const d = new Date(date)
+    return d.toISOString().split('T')[0]
   }
 
   const handleDragStart = (index: number) => {
@@ -105,6 +139,31 @@ export default function WorkoutBuilder() {
             placeholder="שם האימון (אופציונלי)"
             className="w-full px-4 py-3 bg-neon-gray-800 border border-neon-gray-700 rounded-xl text-white placeholder-neon-gray-500 focus:outline-none focus:border-neon-cyan transition-colors"
           />
+
+          {/* Scheduled Date Picker */}
+          <div className="mt-3 relative">
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+              <Calendar className="w-5 h-5 text-neon-gray-400" />
+            </div>
+            <input
+              type="date"
+              value={formatDateForInput(scheduledDate)}
+              onChange={handleDateChange}
+              min={new Date().toISOString().split('T')[0]}
+              className="w-full px-4 py-3 pr-12 bg-neon-gray-800 border border-neon-gray-700 rounded-xl text-white placeholder-neon-gray-500 focus:outline-none focus:border-neon-cyan transition-colors [color-scheme:dark]"
+            />
+            {!scheduledDate && (
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neon-gray-500 pointer-events-none">
+                תאריך אימון (אופציונלי)
+              </span>
+            )}
+          </div>
+          {isPlannedWorkout() && (
+            <p className="mt-2 text-sm text-workout-status-planned-text flex items-center gap-1">
+              <span>⏰</span>
+              אימון זה יישמר כאימון מתוכנן
+            </p>
+          )}
         </div>
       </div>
 
@@ -277,10 +336,23 @@ export default function WorkoutBuilder() {
             </button>
             <button
               onClick={handleStartWorkout}
-              className="flex-1 max-w-xs bg-neon-gradient text-neon-dark py-3 rounded-xl font-semibold hover:shadow-neon-cyan/30 hover:shadow-lg transition-all flex items-center justify-center gap-2"
+              className={`flex-1 max-w-xs py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                isPlannedWorkout()
+                  ? 'bg-workout-status-planned text-white hover:bg-workout-status-planned/80'
+                  : 'bg-neon-gradient text-neon-dark hover:shadow-neon-cyan/30 hover:shadow-lg'
+              }`}
             >
-              <Play className="w-5 h-5" />
-              התחל אימון
+              {isPlannedWorkout() ? (
+                <>
+                  <Save className="w-5 h-5" />
+                  שמור אימון מתוכנן
+                </>
+              ) : (
+                <>
+                  <Play className="w-5 h-5" />
+                  התחל אימון
+                </>
+              )}
             </button>
           </div>
         </div>

@@ -46,6 +46,15 @@ service cloud.firestore {
       allow update: if isAdmin();
     }
 
+    // ============ MUSCLES ============
+    match /muscles/{muscleId} {
+      // Anyone can read muscles
+      allow read: if true;
+
+      // Only admins can write
+      allow create, update, delete: if isAdmin();
+    }
+
     // ============ EXERCISES ============
     match /exercises/{exerciseId} {
       // Anyone can read exercises (for initial load before auth)

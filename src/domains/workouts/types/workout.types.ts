@@ -57,7 +57,12 @@ export interface WorkoutSession {
 }
 
 // Workout completion status
-export type WorkoutCompletionStatus = 'completed' | 'partial' | 'cancelled'
+// - completed: all exercises finished (blue)
+// - in_progress: workout started but not finished (yellow)
+// - planned: future workout not started yet (red)
+// - partial: legacy - same as in_progress
+// - cancelled: workout was cancelled
+export type WorkoutCompletionStatus = 'completed' | 'in_progress' | 'planned' | 'partial' | 'cancelled'
 
 // Exercise completion state in session
 export interface ExerciseSessionState {

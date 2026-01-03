@@ -120,9 +120,22 @@ export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'
     (cleanWorkout as any).notes = workout.notes
   }
 
-  const docRef = await addDoc(historyRef, cleanWorkout)
+  console.log('💾 Saving workout to Firebase...')
+  console.log('📋 Collection:', COLLECTION_NAME)
+  console.log('📋 Data:', JSON.stringify(cleanWorkout, null, 2))
 
-  return docRef.id
+  try {
+    const docRef = await addDoc(historyRef, cleanWorkout)
+    console.log('✅ SUCCESS - Workout saved with ID:', docRef.id)
+    console.log('✅ Full path:', `${COLLECTION_NAME}/${docRef.id}`)
+    return docRef.id
+  } catch (error: any) {
+    console.error('❌ FAILED TO SAVE WORKOUT!')
+    console.error('❌ Error code:', error.code)
+    console.error('❌ Error message:', error.message)
+    console.error('❌ Full error:', error)
+    throw error
+  }
 }
 
 // Get user's workout history
@@ -130,6 +143,7 @@ export async function getUserWorkoutHistory(
   userId: string,
   limitCount: number = 50
 ): Promise<WorkoutHistorySummary[]> {
+  console.log('📖 getUserWorkoutHistory called for userId:', userId)
   const historyRef = collection(db, COLLECTION_NAME)
   const q = query(
     historyRef,
@@ -138,11 +152,19 @@ export async function getUserWorkoutHistory(
     limit(limitCount)
   )
 
-  const snapshot = await getDocs(q)
-  return snapshot.docs.map(doc => {
-    const entry = toWorkoutHistory(doc.id, doc.data())
-    return toSummary(entry)
-  })
+  try {
+    const snapshot = await getDocs(q)
+    console.log('📖 Found', snapshot.docs.length, 'workouts')
+    const results = snapshot.docs.map(doc => {
+      console.log('📖 Workout doc:', doc.id, doc.data())
+      const entry = toWorkoutHistory(doc.id, doc.data())
+      return toSummary(entry)
+    })
+    return results
+  } catch (error) {
+    console.error('❌ Error fetching workout history:', error)
+    throw error
+  }
 }
 
 // Get workout details by ID

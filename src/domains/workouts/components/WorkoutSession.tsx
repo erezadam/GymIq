@@ -240,8 +240,17 @@ export default function WorkoutSession() {
 
   // Finish workout
   const finishWorkout = async (status: WorkoutCompletionStatus) => {
+    console.log('🏋️ finishWorkout called with status:', status)
     const endTime = new Date()
     const duration = Math.floor((endTime.getTime() - sessionStartTime.getTime()) / 60000)
+
+    console.log('📊 Workout data:', {
+      userId: user?.uid,
+      workoutName,
+      exercisesCount: exercises.length,
+      duration,
+      status
+    })
 
     // Save to history
     try {
