@@ -4,14 +4,12 @@
  */
 
 import { useNavigate } from 'react-router-dom'
-import { Trophy } from 'lucide-react'
 
 import { useActiveWorkout } from '../../hooks/useActiveWorkout'
 import { WorkoutHeader } from './WorkoutHeader'
 import { ExerciseCounter } from './ExerciseCounter'
 import { MuscleGroupSection } from './MuscleGroupSection'
 import { ConfirmationModal } from './ConfirmationModal'
-import { workoutLabels } from '@/styles/design-tokens'
 
 export default function ActiveWorkoutScreen() {
   const navigate = useNavigate()
@@ -99,7 +97,7 @@ export default function ActiveWorkoutScreen() {
       />
 
       {/* Exercises by muscle group */}
-      <div className="active-workout-content">
+      <div className="active-workout-content" style={{ paddingBottom: '80px' }}>
         {exercisesByMuscle.map((group) => (
           <MuscleGroupSection
             key={group.muscleGroupHe}
@@ -114,13 +112,65 @@ export default function ActiveWorkoutScreen() {
         ))}
       </div>
 
-      {/* Finish Workout Button (fixed at bottom) */}
-      <div className="finish-workout-container">
-        <button className="finish-workout-btn" onClick={confirmFinish}>
-          <Trophy className="w-5 h-5" />
-          <span>{workoutLabels.finishWorkout}</span>
+      {/* Footer - Fixed at bottom with 2 buttons */}
+      <footer
+        className="fixed bottom-0 left-0 right-0 z-50"
+        style={{
+          padding: '12px 16px',
+          background: '#0B0D12',
+          borderTop: '1px solid #1E2430',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '12px',
+        }}
+      >
+        {/* Finish Workout Button - Left side with orange glow */}
+        <button
+          onClick={confirmFinish}
+          style={{
+            flex: 1,
+            padding: '14px 20px',
+            background: 'linear-gradient(180deg, #252B3A 0%, #1E2330 100%)',
+            border: '2px solid #FF6B35',
+            borderRadius: '16px',
+            color: '#FFFFFF',
+            fontWeight: 700,
+            fontSize: '16px',
+            cursor: 'pointer',
+            boxShadow: '0 4px 0 #0A0C10, 0 0 12px rgba(255, 107, 53, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+          }}
+        >
+          <span>🏁</span>
+          <span>סיים אימון</span>
         </button>
-      </div>
+
+        {/* Add Exercise Button - Right side */}
+        <button
+          onClick={() => navigate('/exercises?addToWorkout=true')}
+          style={{
+            padding: '14px 20px',
+            background: 'linear-gradient(180deg, #252B3A 0%, #1E2330 100%)',
+            border: '1px solid #2A3142',
+            borderRadius: '16px',
+            color: '#FFFFFF',
+            fontWeight: 600,
+            fontSize: '15px',
+            cursor: 'pointer',
+            boxShadow: '0 4px 0 #0A0C10',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
+          <span>+</span>
+          <span>הוספת תרגיל</span>
+        </button>
+      </footer>
 
       {/* Confirmation Modal */}
       <ConfirmationModal

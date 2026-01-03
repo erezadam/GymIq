@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronRight, Check, Home } from 'lucide-react'
 import type { Exercise, MuscleGroup } from '../types'
 import type { PrimaryMuscle } from '../types/muscles'
@@ -58,6 +58,9 @@ function getSubMuscleHe(muscle: string): string {
 
 export function ExerciseLibrary() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isAddingToWorkout = searchParams.get('addToWorkout') === 'true'
+
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [muscles, setMuscles] = useState<PrimaryMuscle[]>(defaultMuscleMapping)
   const [loading, setLoading] = useState(true)
@@ -152,10 +155,15 @@ export function ExerciseLibrary() {
   const handleStartWorkout = () => {
     if (selectedExercises.length === 0) return
 
-    // Clear any existing saved workout to ensure fresh start
-    localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY)
-
-    navigate('/workout/session')
+    if (isAddingToWorkout) {
+      // Adding exercises to existing workout - DON'T clear localStorage!
+      // The useActiveWorkout hook will merge the new exercises
+      navigate('/workout/session')
+    } else {
+      // Starting fresh workout - clear any existing saved workout
+      localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY)
+      navigate('/workout/session')
+    }
   }
 
   const handleImageClick = (e: React.MouseEvent, exercise: Exercise) => {
@@ -172,19 +180,21 @@ export function ExerciseLibrary() {
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate(isAddingToWorkout ? '/workout/session' : '/dashboard')}
               className="flex items-center gap-1 text-text-secondary hover:text-white transition-colors"
             >
               <ChevronRight className="w-5 h-5" />
-              <span className="text-sm">חזור</span>
+              <span className="text-sm">{isAddingToWorkout ? 'חזרה לאימון' : 'חזור'}</span>
             </button>
-            <h1 className="text-xl font-bold text-white">בחירת תרגילים</h1>
+            <h1 className="text-xl font-bold text-white">
+              {isAddingToWorkout ? 'הוספת תרגילים לאימון' : 'בחירת תרגילים'}
+            </h1>
           </div>
         </div>
       </header>
 
       {/* Scrollable Content */}
-      <div className="page-content">
+      <div className="page-content" style={{ paddingBottom: '80px' }}>
         <div className="max-w-2xl mx-auto px-4 py-4">
           {/* Muscle Title with Count */}
           <div className="mb-4">
@@ -323,40 +333,54 @@ export function ExerciseLibrary() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bottom-bar">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            {/* Selected Count */}
-            <div className="flex-1">
-              {selectedExercises.length > 0 ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-white font-semibold">{selectedExercises.length} תרגילים נבחרו</span>
-                  <button
-                    onClick={clearWorkout}
-                    className="text-status-error text-sm hover:underline"
-                  >
-                    נקה
-                  </button>
-                </div>
-              ) : (
-                <span className="text-text-muted">בחר תרגילים</span>
-              )}
-            </div>
+      {/* Footer - Fixed at bottom */}
+      <footer
+        className="fixed bottom-0 left-0 right-0 z-50 bg-background-main border-t border-border-default"
+        style={{ padding: '12px 16px' }}
+      >
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
+          {/* Start Workout Button - Left side with orange glow */}
+          <button
+            onClick={handleStartWorkout}
+            disabled={selectedExercises.length === 0}
+            className={`px-5 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all ${
+              selectedExercises.length === 0
+                ? 'bg-secondary-main text-text-disabled cursor-not-allowed'
+                : 'bg-secondary-main border-2 border-accent-orange text-white shadow-glow-orange hover:scale-105'
+            }`}
+            style={selectedExercises.length > 0 ? {
+              boxShadow: '0 4px 0 #0A0C10, 0 0 12px rgba(255, 107, 53, 0.5)'
+            } : {}}
+          >
+            {isAddingToWorkout ? (
+              <>
+                <span>+</span>
+                <span>הוסף לאימון</span>
+              </>
+            ) : (
+              <>
+                <Home className="w-5 h-5" />
+                <span>התחל אימון</span>
+              </>
+            )}
+          </button>
 
-            {/* Start Workout Button - Orange glow */}
-            <button
-              onClick={handleStartWorkout}
-              disabled={selectedExercises.length === 0}
-              className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all ${
-                selectedExercises.length === 0
-                  ? 'bg-secondary-main text-text-disabled cursor-not-allowed'
-                  : 'bg-secondary-main border-2 border-accent-orange text-white shadow-glow-orange hover:scale-105'
-              }`}
-            >
-              <Home className="w-5 h-5" />
-              <span>התחל אימון</span>
-            </button>
+          {/* Selected Count - Right side */}
+          <div className="flex items-center gap-4">
+            {selectedExercises.length > 0 && (
+              <button
+                onClick={clearWorkout}
+                className="text-status-error text-sm hover:underline"
+              >
+                נקה
+              </button>
+            )}
+            <span className="text-white font-semibold">
+              {selectedExercises.length > 0
+                ? `${selectedExercises.length} תרגילים נבחרו`
+                : 'בחר תרגילים'
+              }
+            </span>
           </div>
         </div>
       </footer>

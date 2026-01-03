@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   Home,
   Dumbbell,
@@ -24,10 +24,17 @@ const navigation = [
 
 export default function MainLayout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, logout } = useAuthStore()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const isAdmin = user?.role === 'admin'
+
+  // Hide BottomNav and header on screens with their own layout
+  const hideBottomNav = location.pathname === '/exercises' ||
+                        location.pathname === '/workout/new' ||
+                        location.pathname === '/workout/session'
+  const hideMobileHeader = location.pathname === '/workout/session'
 
   const handleLogout = () => {
     logout()
@@ -36,23 +43,25 @@ export default function MainLayout() {
 
   return (
     <div className="min-h-screen bg-dark-bg">
-      {/* Mobile header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-dark-surface border-b border-dark-border">
-        <div className="flex items-center justify-between px-4 h-16">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-              <Dumbbell className="w-5 h-5 text-white" />
+      {/* Mobile header (hidden on workout session) */}
+      {!hideMobileHeader && (
+        <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-dark-surface border-b border-dark-border">
+          <div className="flex items-center justify-between px-4 h-16">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
+                <Dumbbell className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-bold text-gradient">GymIQ</span>
             </div>
-            <span className="font-bold text-gradient">GymIQ</span>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 text-text-muted"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 text-text-muted"
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* Mobile menu */}
       {mobileMenuOpen && (
@@ -173,36 +182,38 @@ export default function MainLayout() {
 
       {/* Main content - Mobile-first 3-part layout */}
       <main
-        className="lg:mr-64 pt-16 lg:pt-0 flex flex-col h-screen"
+        className={`lg:mr-64 lg:pt-0 flex flex-col h-screen ${hideMobileHeader ? 'pt-0' : 'pt-16'}`}
       >
         {/* Scrollable content area */}
         <div
-          className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6 pb-20 lg:pb-6"
+          className={`flex-1 overflow-y-auto overflow-x-hidden lg:p-6 lg:pb-6 ${hideBottomNav ? 'p-0 pb-0' : 'p-4 pb-20'}`}
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
           <Outlet />
         </div>
       </main>
 
-      {/* Mobile bottom navigation - Sticky */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-dark-surface border-t border-dark-border safe-area-inset-bottom">
-        <div className="flex justify-around py-2">
-          {navigation.slice(0, 4).map((item) => (
-            <NavLink
-              key={item.href}
-              to={item.href}
-              className={({ isActive }) =>
-                `flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
-                  isActive ? 'text-primary-main' : 'text-text-muted'
-                }`
-              }
-            >
-              <item.icon className="w-5 h-5" />
-              <span className="text-xs">{item.name}</span>
-            </NavLink>
-          ))}
-        </div>
-      </nav>
+      {/* Mobile bottom navigation - Sticky (hidden on exercise selection screen) */}
+      {!hideBottomNav && (
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-dark-surface border-t border-dark-border safe-area-inset-bottom">
+          <div className="flex justify-around py-2">
+            {navigation.slice(0, 4).map((item) => (
+              <NavLink
+                key={item.href}
+                to={item.href}
+                className={({ isActive }) =>
+                  `flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+                    isActive ? 'text-primary-main' : 'text-text-muted'
+                  }`
+                }
+              >
+                <item.icon className="w-5 h-5" />
+                <span className="text-xs">{item.name}</span>
+              </NavLink>
+            ))}
+          </div>
+        </nav>
+      )}
     </div>
   )
 }

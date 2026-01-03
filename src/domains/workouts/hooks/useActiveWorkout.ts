@@ -40,6 +40,16 @@ export function useActiveWorkout() {
   // Track if we've already initialized to prevent duplicate creation
   const hasInitialized = useRef(false)
 
+  // Save to localStorage - defined early so it can be used in initWorkout
+  const saveToStorage = useCallback((workoutToSave: ActiveWorkout) => {
+    localStorage.setItem(ACTIVE_WORKOUT_STORAGE_KEY, JSON.stringify(workoutToSave))
+  }, [])
+
+  // Clear from localStorage
+  const clearStorage = useCallback(() => {
+    localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY)
+  }, [])
+
   // Initialize workout from selected exercises or restore from storage
   useEffect(() => {
     const initWorkout = async () => {
@@ -75,7 +85,71 @@ export function useActiveWorkout() {
           }))
 
           console.log('✅ Restored workout from localStorage')
+
+          // Check if there are new exercises to add (from addToWorkout flow)
+          const existingExerciseIds = new Set(parsed.exercises.map((ex: ActiveWorkoutExercise) => ex.exerciseId))
+          const newExercisesToAdd = selectedExercises.filter(ex => !existingExerciseIds.has(ex.exerciseId))
+
+          if (newExercisesToAdd.length > 0) {
+            console.log('🆕 Adding', newExercisesToAdd.length, 'new exercises to existing workout')
+
+            // Collapse all existing exercises
+            parsed.exercises = parsed.exercises.map((ex: ActiveWorkoutExercise) => ({
+              ...ex,
+              isExpanded: false,
+            }))
+
+            // Create new exercise entries
+            const newExercises: ActiveWorkoutExercise[] = newExercisesToAdd.map((ex, index) => ({
+              id: `workout_ex_${parsed.exercises.length + index}_${Date.now()}`,
+              exerciseId: ex.exerciseId,
+              exerciseName: ex.exerciseName,
+              exerciseNameHe: ex.exerciseNameHe,
+              imageUrl: ex.imageUrl,
+              primaryMuscle: ex.primaryMuscle || 'other',
+              isExpanded: index === newExercisesToAdd.length - 1, // Last new exercise is expanded
+              isCompleted: false,
+              reportedSets: [
+                {
+                  id: `set_${Date.now()}_${index}_1`,
+                  setNumber: 1,
+                  weight: 0,
+                  reps: 0,
+                },
+              ],
+            }))
+
+            // Fetch last workout data for new exercises
+            if (user?.uid) {
+              try {
+                const exerciseIds = newExercises.map((ex) => ex.exerciseId)
+                const lastWorkoutData = await getLastWorkoutForExercises(user.uid, exerciseIds)
+                newExercises.forEach((ex) => {
+                  if (lastWorkoutData[ex.exerciseId]) {
+                    ex.lastWorkoutData = lastWorkoutData[ex.exerciseId]
+                  }
+                })
+              } catch (e) {
+                console.error('Failed to fetch last workout data for new exercises:', e)
+              }
+            }
+
+            // Merge new exercises into parsed workout
+            parsed.exercises = [...parsed.exercises, ...newExercises]
+            parsed.stats = {
+              ...parsed.stats,
+              totalExercises: parsed.exercises.length,
+              totalSets: parsed.exercises.reduce((sum: number, ex: ActiveWorkoutExercise) => sum + ex.reportedSets.length, 0),
+            }
+
+            // Clear the selectedExercises store since we've added them
+            clearWorkout()
+
+            console.log('✅ Merged new exercises, total:', parsed.exercises.length)
+          }
+
           setWorkout(parsed)
+          saveToStorage(parsed)
           hasInitialized.current = true
           setIsLoading(false)
           return
@@ -151,7 +225,7 @@ export function useActiveWorkout() {
     }
 
     initWorkout()
-  }, [selectedExercises, user?.uid, workout])
+  }, [selectedExercises, user?.uid, workout, saveToStorage, clearWorkout])
 
   // Update elapsed time every second
   useEffect(() => {
@@ -167,16 +241,6 @@ export function useActiveWorkout() {
       }
     }
   }, [workout?.startedAt])
-
-  // Save to localStorage
-  const saveToStorage = useCallback((workoutToSave: ActiveWorkout) => {
-    localStorage.setItem(ACTIVE_WORKOUT_STORAGE_KEY, JSON.stringify(workoutToSave))
-  }, [])
-
-  // Clear from localStorage
-  const clearStorage = useCallback(() => {
-    localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY)
-  }, [])
 
   // Update workout state and persist
   const updateWorkout = useCallback(
