@@ -26,7 +26,7 @@ import { muscleGroupNames } from '@/styles/design-tokens'
 export function useActiveWorkout() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const { selectedExercises, clearWorkout } = useWorkoutBuilderStore()
+  const { selectedExercises, clearWorkout, removeExercise: removeFromStore } = useWorkoutBuilderStore()
 
   // State
   const [workout, setWorkout] = useState<ActiveWorkout | null>(null)
@@ -406,6 +406,9 @@ export function useActiveWorkout() {
   // Delete an exercise from the workout
   const deleteExercise = useCallback(
     (exerciseId: string) => {
+      // Find the exercise to get its Firebase exerciseId
+      const exerciseToDelete = workout?.exercises.find((ex) => ex.id === exerciseId)
+
       updateWorkout((prev) => {
         const exercise = prev.exercises.find((ex) => ex.id === exerciseId)
         if (!exercise) return prev
@@ -431,10 +434,15 @@ export function useActiveWorkout() {
         }
       })
 
+      // Also remove from the builder store so exercise library stays in sync
+      if (exerciseToDelete) {
+        removeFromStore(exerciseToDelete.exerciseId)
+      }
+
       setConfirmModal({ type: null })
       toast.success('התרגיל נמחק')
     },
-    [updateWorkout]
+    [updateWorkout, workout, removeFromStore]
   )
 
   // Show delete confirmation
@@ -519,6 +527,7 @@ export function useActiveWorkout() {
               exerciseId: ex.exerciseId,
               exerciseName: ex.exerciseName,
               exerciseNameHe: ex.exerciseNameHe,
+              imageUrl: ex.imageUrl || '',
               isCompleted: ex.isCompleted,
               sets: ex.reportedSets.map((set) => ({
                 type: 'working',
@@ -582,6 +591,7 @@ export function useActiveWorkout() {
             exerciseId: ex.exerciseId,
             exerciseName: ex.exerciseName,
             exerciseNameHe: ex.exerciseNameHe,
+            imageUrl: ex.imageUrl || '',
             isCompleted: ex.isCompleted,
             sets: ex.reportedSets.map((set) => ({
               type: 'working',
@@ -661,6 +671,7 @@ export function useActiveWorkout() {
           exerciseId: ex.exerciseId,
           exerciseName: ex.exerciseName,
           exerciseNameHe: ex.exerciseNameHe,
+          imageUrl: ex.imageUrl || '',
           isCompleted: ex.isCompleted,
           sets: ex.reportedSets.map((set) => ({
             type: 'working',

@@ -66,12 +66,28 @@ module.exports = {
       active: '#00D4AA',
     },
 
-    // Workout Status
+    // Workout Status (legacy)
     workout: {
       completed: '#10B981',
       inProgress: '#FFB020',
       planned: '#3B82F6',
       rest: '#5A6478',
+    },
+
+    // Workout Status Colors (for WorkoutHistory)
+    'workout-status': {
+      // Completed - Blue
+      'completed': '#3B82F6',
+      'completed-bg': 'rgba(59, 130, 246, 0.15)',
+      'completed-text': '#3B82F6',
+      // In Progress - Yellow/Orange
+      'in-progress': '#FFB020',
+      'in-progress-bg': 'rgba(255, 176, 32, 0.15)',
+      'in-progress-text': '#FFB020',
+      // Planned - Red
+      'planned': '#EF4444',
+      'planned-bg': 'rgba(239, 68, 68, 0.15)',
+      'planned-text': '#EF4444',
     },
 
     // Muscle Groups

@@ -13,6 +13,14 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '@/domains/authentication/store'
+import {
+  colors,
+  spacing,
+  borderRadius,
+  typography,
+  components,
+  getNavItemStyle,
+} from '@/styles/theme'
 
 const navigation = [
   { name: 'דשבורד', href: '/dashboard', icon: Home },
@@ -42,22 +50,58 @@ export default function MainLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-dark-bg">
+    <div style={{ minHeight: '100vh', background: colors.background.main }}>
       {/* Mobile header (hidden on workout session) */}
       {!hideMobileHeader && (
-        <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-dark-surface border-b border-dark-border">
-          <div className="flex items-center justify-between px-4 h-16">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-                <Dumbbell className="w-5 h-5 text-white" />
+        <header
+          className="lg:hidden fixed top-0 left-0 right-0 z-40"
+          style={{
+            background: colors.background.card,
+            borderBottom: `1px solid ${colors.border.default}`,
+          }}
+        >
+          <div
+            style={{
+              ...components.layout.header.container,
+              height: 64,
+              padding: `0 ${spacing.lg}px`,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
+              <div
+                style={{
+                  ...components.layout.header.logoIcon,
+                  width: 32,
+                  height: 32,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Dumbbell size={20} color={colors.text.primary} />
               </div>
-              <span className="font-bold text-gradient">GymIQ</span>
+              <span
+                style={{
+                  ...components.layout.header.logo,
+                  color: colors.primary.main,
+                }}
+              >
+                GymIQ
+              </span>
             </div>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-text-muted"
+              style={{
+                ...components.layout.header.menuButton,
+                border: 'none',
+                cursor: 'pointer',
+              }}
             >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {mobileMenuOpen ? (
+                <X size={24} color={colors.text.secondary} />
+              ) : (
+                <Menu size={24} color={colors.text.secondary} />
+              )}
             </button>
           </div>
         </header>
@@ -65,23 +109,36 @@ export default function MainLayout() {
 
       {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-30 bg-dark-bg pt-16">
-          <nav className="p-4 space-y-2">
+        <div
+          className="lg:hidden fixed inset-0 z-30"
+          style={{
+            background: colors.background.main,
+            paddingTop: 64,
+          }}
+        >
+          <nav style={{ padding: spacing.lg, display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
             {navigation.map((item) => (
               <NavLink
                 key={item.href}
                 to={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                    isActive
-                      ? 'bg-gradient-primary text-white shadow-neon'
-                      : 'text-text-secondary hover:bg-dark-surface'
-                  }`
-                }
+                style={({ isActive }) => ({
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.md,
+                  padding: `${spacing.md}px ${spacing.lg}px`,
+                  borderRadius: borderRadius.lg,
+                  textDecoration: 'none',
+                  transition: '0.2s ease',
+                  background: isActive
+                    ? `linear-gradient(135deg, ${colors.primary.main} 0%, ${colors.primary.dark} 100%)`
+                    : 'transparent',
+                  color: isActive ? colors.text.primary : colors.text.secondary,
+                  boxShadow: isActive ? '0 4px 16px rgba(45, 212, 191, 0.3)' : 'none',
+                })}
               >
-                <item.icon className="w-5 h-5" />
-                <span>{item.name}</span>
+                <item.icon size={20} />
+                <span style={{ fontWeight: typography.fontWeight.medium }}>{item.name}</span>
               </NavLink>
             ))}
             {/* Admin Link */}
@@ -89,23 +146,38 @@ export default function MainLayout() {
               <NavLink
                 to="/admin"
                 onClick={() => setMobileMenuOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                    isActive
-                      ? 'bg-yellow-500 text-black shadow-lg'
-                      : 'text-yellow-400 hover:bg-yellow-400/10 border border-yellow-400/30'
-                  }`
-                }
+                style={({ isActive }) => ({
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.md,
+                  padding: `${spacing.md}px ${spacing.lg}px`,
+                  borderRadius: borderRadius.lg,
+                  textDecoration: 'none',
+                  background: isActive ? colors.accent.gold : 'transparent',
+                  color: isActive ? colors.text.inverse : colors.accent.gold,
+                  border: isActive ? 'none' : `1px solid rgba(196, 160, 82, 0.3)`,
+                })}
               >
-                <Shield className="w-5 h-5" />
+                <Shield size={20} />
                 <span>ממשק ניהול</span>
               </NavLink>
             )}
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-400/10 transition-colors"
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.md,
+                padding: `${spacing.md}px ${spacing.lg}px`,
+                borderRadius: borderRadius.lg,
+                background: 'transparent',
+                border: 'none',
+                color: colors.status.error,
+                cursor: 'pointer',
+              }}
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut size={20} />
               <span>התנתקות</span>
             </button>
           </nav>
@@ -113,68 +185,167 @@ export default function MainLayout() {
       )}
 
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex fixed right-0 top-0 bottom-0 w-64 bg-dark-surface border-l border-dark-border flex-col">
+      <aside
+        className="hidden lg:flex fixed right-0 top-0 bottom-0 flex-col"
+        style={{
+          width: 256,
+          background: colors.background.card,
+          borderLeft: `1px solid ${colors.border.default}`,
+        }}
+      >
         {/* Logo */}
-        <div className="h-16 flex items-center px-6 border-b border-dark-border">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-neon">
-              <Dumbbell className="w-6 h-6 text-white" />
+        <div
+          style={{
+            height: 64,
+            display: 'flex',
+            alignItems: 'center',
+            padding: `0 ${spacing['2xl']}px`,
+            borderBottom: `1px solid ${colors.border.default}`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
+            <div
+              style={{
+                ...components.layout.header.logoIcon,
+                width: 40,
+                height: 40,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Dumbbell size={24} color={colors.text.primary} />
             </div>
-            <span className="text-xl font-bold text-gradient">GymIQ</span>
+            <span
+              style={{
+                fontSize: typography.fontSize.xl,
+                fontWeight: typography.fontWeight.bold,
+                color: colors.primary.main,
+              }}
+            >
+              GymIQ
+            </span>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2">
+        <nav style={{ flex: 1, padding: spacing.lg, display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
           {navigation.map((item) => (
             <NavLink
               key={item.href}
               to={item.href}
-              className={({ isActive }) =>
-                `sidebar-link ${isActive ? 'active' : ''}`
-              }
+              style={({ isActive }) => ({
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.md,
+                padding: `${spacing.md}px ${spacing.lg}px`,
+                borderRadius: borderRadius.lg,
+                textDecoration: 'none',
+                transition: '0.2s ease',
+                background: isActive
+                  ? `linear-gradient(135deg, ${colors.primary.main} 0%, ${colors.primary.dark} 100%)`
+                  : 'transparent',
+                color: isActive ? colors.text.primary : colors.text.secondary,
+                boxShadow: isActive ? '0 4px 16px rgba(45, 212, 191, 0.3)' : 'none',
+              })}
             >
-              <item.icon className="w-5 h-5" />
-              <span>{item.name}</span>
+              <item.icon size={20} />
+              <span style={{ fontWeight: typography.fontWeight.medium }}>{item.name}</span>
             </NavLink>
           ))}
           {/* Admin Link */}
           {isAdmin && (
             <NavLink
               to="/admin"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                  isActive
-                    ? 'bg-yellow-500 text-black font-semibold shadow-lg'
-                    : 'text-yellow-400 hover:bg-yellow-400/10 border border-yellow-400/30'
-                }`
-              }
+              style={({ isActive }) => ({
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.md,
+                padding: `${spacing.md}px ${spacing.lg}px`,
+                borderRadius: borderRadius.lg,
+                textDecoration: 'none',
+                transition: '0.2s ease',
+                background: isActive ? colors.accent.gold : 'transparent',
+                color: isActive ? colors.text.inverse : colors.accent.gold,
+                border: isActive ? 'none' : `1px solid rgba(196, 160, 82, 0.3)`,
+                fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.normal,
+              })}
             >
-              <Shield className="w-5 h-5" />
+              <Shield size={20} />
               <span>ממשק ניהול</span>
             </NavLink>
           )}
         </nav>
 
         {/* User section */}
-        <div className="p-4 border-t border-dark-border">
-          <div className="flex items-center gap-3 px-4 py-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center">
-              <span className="text-white font-medium">
+        <div
+          style={{
+            padding: spacing.lg,
+            borderTop: `1px solid ${colors.border.default}`,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.md,
+              padding: `${spacing.md}px ${spacing.lg}px`,
+            }}
+          >
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: borderRadius.full,
+                background: `linear-gradient(135deg, ${colors.primary.main} 0%, ${colors.primary.dark} 100%)`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <span style={{ color: colors.text.primary, fontWeight: typography.fontWeight.medium }}>
                 {user?.firstName?.charAt(0) || 'U'}
               </span>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-text-primary truncate">
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p
+                style={{
+                  fontSize: typography.fontSize.sm,
+                  fontWeight: typography.fontWeight.medium,
+                  color: colors.text.primary,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  margin: 0,
+                }}
+              >
                 {user?.displayName || 'משתמש'}
               </p>
-              <p className="text-xs text-text-muted">מתאמן</p>
+              <p
+                style={{
+                  fontSize: typography.fontSize.xs,
+                  color: colors.text.muted,
+                  margin: 0,
+                }}
+              >
+                מתאמן
+              </p>
             </div>
             <button
               onClick={handleLogout}
-              className="p-2 text-text-muted hover:text-red-400 transition-colors"
+              style={{
+                padding: spacing.sm,
+                background: 'transparent',
+                border: 'none',
+                color: colors.text.muted,
+                cursor: 'pointer',
+                borderRadius: borderRadius.sm,
+                transition: '0.2s ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = colors.status.error)}
+              onMouseLeave={(e) => (e.currentTarget.style.color = colors.text.muted)}
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut size={20} />
             </button>
           </div>
         </div>
@@ -182,12 +353,25 @@ export default function MainLayout() {
 
       {/* Main content - Mobile-first 3-part layout */}
       <main
-        className={`lg:mr-64 lg:pt-0 flex flex-col h-screen ${hideMobileHeader ? 'pt-0' : 'pt-16'}`}
+        className="lg:mr-64"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100vh',
+          paddingTop: hideMobileHeader ? 0 : 64,
+        }}
       >
         {/* Scrollable content area */}
         <div
-          className={`flex-1 overflow-y-auto overflow-x-hidden lg:p-6 lg:pb-6 ${hideBottomNav ? 'p-0 pb-0' : 'p-4 pb-20'}`}
-          style={{ WebkitOverflowScrolling: 'touch' }}
+          className="lg:p-6 lg:pb-6"
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            padding: hideBottomNav ? 0 : `${spacing.lg}px`,
+            paddingBottom: hideBottomNav ? 0 : 80,
+            WebkitOverflowScrolling: 'touch',
+          }}
         >
           <Outlet />
         </div>
@@ -195,22 +379,35 @@ export default function MainLayout() {
 
       {/* Mobile bottom navigation - Sticky (hidden on exercise selection screen) */}
       {!hideBottomNav && (
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-dark-surface border-t border-dark-border safe-area-inset-bottom">
-          <div className="flex justify-around py-2">
-            {navigation.slice(0, 4).map((item) => (
-              <NavLink
-                key={item.href}
-                to={item.href}
-                className={({ isActive }) =>
-                  `flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
-                    isActive ? 'text-primary-main' : 'text-text-muted'
-                  }`
-                }
-              >
-                <item.icon className="w-5 h-5" />
-                <span className="text-xs">{item.name}</span>
-              </NavLink>
-            ))}
+        <nav
+          className="lg:hidden fixed bottom-0 left-0 right-0 z-50 safe-area-inset-bottom"
+          style={{
+            ...components.layout.bottomNav.container,
+            background: colors.background.card,
+            borderTop: `1px solid ${colors.border.default}`,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-around', padding: `${spacing.sm}px 0` }}>
+            {navigation.slice(0, 4).map((item) => {
+              const isActive = location.pathname === item.href
+              const navStyle = getNavItemStyle(isActive)
+
+              return (
+                <NavLink
+                  key={item.href}
+                  to={item.href}
+                  style={{
+                    ...components.layout.bottomNav.item,
+                    textDecoration: 'none',
+                  }}
+                >
+                  <div style={navStyle.icon}>
+                    <item.icon size={20} color={isActive ? colors.primary.main : colors.text.secondary} />
+                  </div>
+                  <span style={navStyle.label}>{item.name}</span>
+                </NavLink>
+              )
+            })}
           </div>
         </nav>
       )}

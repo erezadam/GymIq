@@ -29,6 +29,7 @@ export default {
         border: tokens.colors.border,
         status: tokens.colors.status,
         workout: tokens.colors.workout,
+        'workout-status': tokens.colors['workout-status'],
         muscles: tokens.colors.muscles,
 
         // ============================================

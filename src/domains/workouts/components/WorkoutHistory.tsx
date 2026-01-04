@@ -49,11 +49,22 @@ export default function WorkoutHistory() {
 
   const formatDate = (date: Date) => {
     const now = new Date()
-    const diff = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+    // Reset time to midnight for accurate day comparison
+    const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const dateMidnight = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    const diffMs = nowMidnight.getTime() - dateMidnight.getTime()
+    const diff = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
+    // Today
     if (diff === 0) return 'היום'
+
+    // Past dates
     if (diff === 1) return 'אתמול'
-    if (diff < 7) return `לפני ${diff} ימים`
+    if (diff > 1 && diff < 7) return `לפני ${diff} ימים`
+
+    // Future dates
+    if (diff === -1) return 'מחר'
+    if (diff < -1 && diff > -7) return `בעוד ${Math.abs(diff)} ימים`
 
     return date.toLocaleDateString('he-IL', {
       day: 'numeric',
@@ -177,8 +188,8 @@ export default function WorkoutHistory() {
         return
       }
 
-      // Fetch exercise details to get imageUrl for each exercise
-      const exerciseDetailsMap = new Map<string, { imageUrl: string; primaryMuscle: string }>()
+      // Fetch exercise details to get imageUrl and English name for each exercise
+      const exerciseDetailsMap = new Map<string, { imageUrl: string; primaryMuscle: string; name: string; nameHe: string }>()
       await Promise.all(
         fullWorkout.exercises.map(async (ex) => {
           try {
@@ -187,6 +198,8 @@ export default function WorkoutHistory() {
               exerciseDetailsMap.set(ex.exerciseId, {
                 imageUrl: exerciseDetails.imageUrl || '',
                 primaryMuscle: exerciseDetails.primaryMuscle || '',
+                name: exerciseDetails.name || '',
+                nameHe: exerciseDetails.nameHe || '',
               })
             }
           } catch (err) {
@@ -208,9 +221,9 @@ export default function WorkoutHistory() {
             const details = exerciseDetailsMap.get(exercise.exerciseId)
             addExercise({
               exerciseId: exercise.exerciseId,
-              exerciseName: exercise.exerciseName,
-              exerciseNameHe: exercise.exerciseNameHe || '',
-              imageUrl: details?.imageUrl || '',
+              exerciseName: details?.name || exercise.exerciseName,
+              exerciseNameHe: details?.nameHe || exercise.exerciseNameHe || '',
+              imageUrl: details?.imageUrl || exercise.imageUrl || '',
               primaryMuscle: details?.primaryMuscle || '',
             })
           })
@@ -230,9 +243,9 @@ export default function WorkoutHistory() {
             const details = exerciseDetailsMap.get(exercise.exerciseId)
             return {
               exerciseId: exercise.exerciseId,
-              exerciseName: exercise.exerciseName,
-              exerciseNameHe: exercise.exerciseNameHe || '',
-              imageUrl: details?.imageUrl || '',
+              exerciseName: details?.name || exercise.exerciseName,
+              exerciseNameHe: details?.nameHe || exercise.exerciseNameHe || '',
+              imageUrl: details?.imageUrl || exercise.imageUrl || '',
               primaryMuscle: details?.primaryMuscle || '',
               sets: exercise.sets || [],
             }
@@ -247,9 +260,9 @@ export default function WorkoutHistory() {
             const details = exerciseDetailsMap.get(exercise.exerciseId)
             addExercise({
               exerciseId: exercise.exerciseId,
-              exerciseName: exercise.exerciseName,
-              exerciseNameHe: exercise.exerciseNameHe || '',
-              imageUrl: details?.imageUrl || '',
+              exerciseName: details?.name || exercise.exerciseName,
+              exerciseNameHe: details?.nameHe || exercise.exerciseNameHe || '',
+              imageUrl: details?.imageUrl || exercise.imageUrl || '',
               primaryMuscle: details?.primaryMuscle || '',
             })
           })
@@ -278,9 +291,9 @@ export default function WorkoutHistory() {
             const details = exerciseDetailsMap.get(exercise.exerciseId)
             return {
               exerciseId: exercise.exerciseId,
-              exerciseName: exercise.exerciseName,
-              exerciseNameHe: exercise.exerciseNameHe || '',
-              imageUrl: details?.imageUrl || '',
+              exerciseName: details?.name || exercise.exerciseName,
+              exerciseNameHe: details?.nameHe || exercise.exerciseNameHe || '',
+              imageUrl: details?.imageUrl || exercise.imageUrl || '',
               primaryMuscle: details?.primaryMuscle || '',
               sets: exercise.sets || [],
             }
@@ -292,9 +305,9 @@ export default function WorkoutHistory() {
             const details = exerciseDetailsMap.get(exercise.exerciseId)
             addExercise({
               exerciseId: exercise.exerciseId,
-              exerciseName: exercise.exerciseName,
-              exerciseNameHe: exercise.exerciseNameHe || '',
-              imageUrl: details?.imageUrl || '',
+              exerciseName: details?.name || exercise.exerciseName,
+              exerciseNameHe: details?.nameHe || exercise.exerciseNameHe || '',
+              imageUrl: details?.imageUrl || exercise.imageUrl || '',
               primaryMuscle: details?.primaryMuscle || '',
             })
           })

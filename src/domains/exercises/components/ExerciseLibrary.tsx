@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronRight, Check, Home } from 'lucide-react'
+import { ChevronRight, Check, Home, Calendar } from 'lucide-react'
 import type { Exercise, MuscleGroup } from '../types'
 import type { PrimaryMuscle } from '../types/muscles'
 import { defaultMuscleMapping } from '../types/muscles'
@@ -8,7 +8,10 @@ import { exerciseService } from '../services'
 import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '../utils'
 import { useWorkoutBuilderStore } from '@/domains/workouts/store'
 import { getMuscles } from '@/lib/firebase/muscles'
+import { saveWorkoutHistory } from '@/lib/firebase/workoutHistory'
+import { useAuthStore } from '@/domains/authentication/store'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '@/domains/workouts/types/active-workout.types'
+import type { WorkoutHistoryEntry } from '@/domains/workouts/types'
 
 // Equipment options
 const equipmentOptions = [
@@ -60,16 +63,39 @@ export function ExerciseLibrary() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const isAddingToWorkout = searchParams.get('addToWorkout') === 'true'
+  const { user } = useAuthStore()
 
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [muscles, setMuscles] = useState<PrimaryMuscle[]>(defaultMuscleMapping)
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [selectedPrimaryMuscle, setSelectedPrimaryMuscle] = useState<string>('all')
   const [selectedSubMuscle, setSelectedSubMuscle] = useState<string>('all')
   const [selectedEquipment, setSelectedEquipment] = useState<string>('all')
   const [imageModal, setImageModal] = useState<{ url: string; name: string } | null>(null)
 
-  const { selectedExercises, addExercise, removeExercise, clearWorkout } = useWorkoutBuilderStore()
+  const { selectedExercises, addExercise, removeExercise, clearWorkout, scheduledDate, setScheduledDate } = useWorkoutBuilderStore()
+
+  // Helper: Check if selected date is in the future
+  const isPlannedWorkout = useMemo(() => {
+    if (!scheduledDate) return false
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const selected = new Date(scheduledDate)
+    selected.setHours(0, 0, 0, 0)
+    return selected > today
+  }, [scheduledDate])
+
+  // Helper: Format date for input
+  const formatDateForInput = (date: Date | null) => {
+    if (!date) return ''
+    return date.toISOString().split('T')[0]
+  }
+
+  // Helper: Get minimum date (today)
+  const getMinDate = () => {
+    return new Date().toISOString().split('T')[0]
+  }
 
   useEffect(() => {
     loadData()
@@ -152,18 +178,69 @@ export function ExerciseLibrary() {
     }
   }
 
-  const handleStartWorkout = () => {
+  const handleStartWorkout = async () => {
     if (selectedExercises.length === 0) return
 
     if (isAddingToWorkout) {
       // Adding exercises to existing workout - DON'T clear localStorage!
       // The useActiveWorkout hook will merge the new exercises
       navigate('/workout/session')
-    } else {
-      // Starting fresh workout - clear any existing saved workout
-      localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY)
-      navigate('/workout/session')
+      return
     }
+
+    // Check if this is a planned workout (future date)
+    if (isPlannedWorkout && scheduledDate && user) {
+      setSaving(true)
+      try {
+        // Create planned workout entry
+        const plannedWorkout: Omit<WorkoutHistoryEntry, 'id'> = {
+          userId: user.uid,
+          name: 'אימון מתוכנן',
+          date: scheduledDate,
+          startTime: scheduledDate,
+          endTime: scheduledDate,
+          duration: 0,
+          status: 'planned',
+          exercises: selectedExercises.map(ex => ({
+            exerciseId: ex.exerciseId,
+            exerciseName: ex.exerciseName || '',
+            exerciseNameHe: ex.exerciseNameHe,
+            imageUrl: ex.imageUrl || '',
+            isCompleted: false,
+            sets: [
+              {
+                type: 'working' as const,
+                targetReps: 10,
+                targetWeight: 0,
+                actualReps: 0,
+                actualWeight: 0,
+                completed: false,
+              }
+            ],
+          })),
+          completedExercises: 0,
+          totalExercises: selectedExercises.length,
+          completedSets: 0,
+          totalSets: selectedExercises.length,
+          totalVolume: 0,
+          personalRecords: 0,
+        }
+
+        await saveWorkoutHistory(plannedWorkout)
+        clearWorkout()
+        setScheduledDate(null)
+        navigate('/workout/history')
+      } catch (error) {
+        console.error('Failed to save planned workout:', error)
+      } finally {
+        setSaving(false)
+      }
+      return
+    }
+
+    // Starting fresh workout today - clear any existing saved workout
+    localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY)
+    navigate('/workout/session')
   }
 
   const handleImageClick = (e: React.MouseEvent, exercise: Exercise) => {
@@ -190,6 +267,34 @@ export function ExerciseLibrary() {
               {isAddingToWorkout ? 'הוספת תרגילים לאימון' : 'בחירת תרגילים'}
             </h1>
           </div>
+
+          {/* Date Picker - Simple row under title */}
+          {!isAddingToWorkout && (
+            <div className="flex items-center gap-2 mt-3 bg-background-card border border-border-default rounded-lg px-3 py-2">
+              <Calendar className="w-4 h-4 text-text-secondary flex-shrink-0" />
+              <span className="text-sm text-text-secondary">בחר תאריך לאימון:</span>
+              <input
+                type="date"
+                min={getMinDate()}
+                value={formatDateForInput(scheduledDate) || getMinDate()}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    const selectedDate = new Date(e.target.value)
+                    const today = new Date()
+                    today.setHours(0, 0, 0, 0)
+                    selectedDate.setHours(0, 0, 0, 0)
+                    // If today is selected, set to null (default)
+                    if (selectedDate.getTime() === today.getTime()) {
+                      setScheduledDate(null)
+                    } else {
+                      setScheduledDate(selectedDate)
+                    }
+                  }
+                }}
+                className="flex-1 bg-transparent border-none text-white text-sm cursor-pointer focus:outline-none"
+              />
+            </div>
+          )}
         </div>
       </header>
 
@@ -338,49 +443,66 @@ export function ExerciseLibrary() {
         className="fixed bottom-0 left-0 right-0 z-50 bg-background-main border-t border-border-default"
         style={{ padding: '12px 16px' }}
       >
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          {/* Start Workout Button - Left side with orange glow */}
-          <button
-            onClick={handleStartWorkout}
-            disabled={selectedExercises.length === 0}
-            className={`px-5 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all ${
-              selectedExercises.length === 0
-                ? 'bg-secondary-main text-text-disabled cursor-not-allowed'
-                : 'bg-secondary-main border-2 border-accent-orange text-white shadow-glow-orange hover:scale-105'
-            }`}
-            style={selectedExercises.length > 0 ? {
-              boxShadow: '0 4px 0 #0A0C10, 0 0 12px rgba(255, 107, 53, 0.5)'
-            } : {}}
-          >
-            {isAddingToWorkout ? (
-              <>
-                <span>+</span>
-                <span>הוסף לאימון</span>
-              </>
-            ) : (
-              <>
-                <Home className="w-5 h-5" />
-                <span>התחל אימון</span>
-              </>
-            )}
-          </button>
+        <div className="max-w-2xl mx-auto">
+          <div className="flex items-center justify-between">
+            {/* Start Workout Button - Left side with orange glow */}
+            <button
+              onClick={handleStartWorkout}
+              disabled={selectedExercises.length === 0 || saving}
+              className={`px-5 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all ${
+                selectedExercises.length === 0 || saving
+                  ? 'bg-secondary-main text-text-disabled cursor-not-allowed'
+                  : isPlannedWorkout
+                    ? 'bg-workout-status-planned text-white hover:scale-105'
+                    : 'bg-secondary-main border-2 border-accent-orange text-white shadow-glow-orange hover:scale-105'
+              }`}
+              style={selectedExercises.length > 0 && !isPlannedWorkout && !saving ? {
+                boxShadow: '0 4px 0 #0A0C10, 0 0 12px rgba(255, 107, 53, 0.5)'
+              } : {}}
+            >
+              {saving ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>שומר...</span>
+                </>
+              ) : isAddingToWorkout ? (
+                <>
+                  <span>+</span>
+                  <span>הוסף לאימון</span>
+                </>
+              ) : isPlannedWorkout ? (
+                <>
+                  <Calendar className="w-5 h-5" />
+                  <span>שמור לתוכנית</span>
+                </>
+              ) : (
+                <>
+                  <Home className="w-5 h-5" />
+                  <span>התחל אימון</span>
+                </>
+              )}
+            </button>
 
-          {/* Selected Count - Right side */}
-          <div className="flex items-center gap-4">
-            {selectedExercises.length > 0 && (
-              <button
-                onClick={clearWorkout}
-                className="text-status-error text-sm hover:underline"
-              >
-                נקה
-              </button>
-            )}
-            <span className="text-white font-semibold">
-              {selectedExercises.length > 0
-                ? `${selectedExercises.length} תרגילים נבחרו`
-                : 'בחר תרגילים'
-              }
-            </span>
+            {/* Selected Count - Right side */}
+            <div className="flex items-center gap-4">
+              {selectedExercises.length > 0 && (
+                <button
+                  onClick={() => {
+                    clearWorkout()
+                    setScheduledDate(null)
+                  }}
+                  className="text-status-error text-sm hover:underline"
+                >
+                  נקה
+                </button>
+              )}
+              <span className="text-white font-semibold">
+                {selectedExercises.length > 0
+                  ? `${selectedExercises.length} תרגילים נבחרו`
+                  : 'בחר תרגילים'
+                }
+              </span>
+            </div>
           </div>
         </div>
       </footer>

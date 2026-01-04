@@ -90,6 +90,7 @@ export interface WorkoutHistoryEntry {
     exerciseId: string
     exerciseName: string
     exerciseNameHe: string
+    imageUrl?: string // Exercise image URL
     isCompleted: boolean
     sets: {
       type: SetType

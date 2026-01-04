@@ -97,6 +97,7 @@ export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'
       exerciseId: ex.exerciseId,
       exerciseName: ex.exerciseName,
       exerciseNameHe: ex.exerciseNameHe,
+      imageUrl: ex.imageUrl || '',
       isCompleted: ex.isCompleted,
       sets: ex.sets.map(set => ({
         type: set.type,
