@@ -3,8 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
     <meta name="description" content="GymIQ - פלטפורמת כושר חכמה למתאמנים ומאמנים" />
+
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0a0f14">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GymIQ">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Apple Touch Icons (using SVG fallback) -->
+    <link rel="apple-touch-icon" href="/icons/icon.svg">
+
+    <!-- Cache Prevention -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>GymIQ - כושר חכם</title>
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,5 +30,38 @@
   <body class="bg-dark-bg text-text-primary">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('[App] SW registered:', registration.scope);
+
+              // Check for updates every 5 minutes
+              setInterval(() => {
+                registration.update();
+              }, 5 * 60 * 1000);
+
+              // Handle updates
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // New version available - reload to update
+                    console.log('[App] New version available, reloading...');
+                    newWorker.postMessage('skipWaiting');
+                    window.location.reload();
+                  }
+                });
+              });
+            })
+            .catch((error) => {
+              console.error('[App] SW registration failed:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>

@@ -23,6 +23,7 @@ const UserDashboard = lazy(() => import('@/domains/dashboard/components/UserDash
 const WorkoutBuilder = lazy(() => import('@/domains/workouts/components/WorkoutBuilder'))
 const ActiveWorkoutScreen = lazy(() => import('@/domains/workouts/components/active-workout/ActiveWorkoutScreen'))
 const WorkoutHistory = lazy(() => import('@/domains/workouts/components/WorkoutHistory'))
+const PersonalRecords = lazy(() => import('@/domains/workouts/components/PersonalRecords'))
 
 // Exercises
 const ExerciseLibrary = lazy(() => import('@/domains/exercises/components/ExerciseLibrary'))
@@ -58,6 +59,7 @@ function App() {
           <Route path="workout/session" element={<ActiveWorkoutScreen />} />
           <Route path="workout/history" element={<WorkoutHistory />} />
           <Route path="workout/history/:id" element={<WorkoutHistory />} />
+          <Route path="personal-records" element={<PersonalRecords />} />
           <Route path="progress" element={<UserDashboard />} /> {/* TODO: Progress page */}
           <Route path="profile" element={<UserDashboard />} /> {/* TODO: Profile page */}
         </Route>

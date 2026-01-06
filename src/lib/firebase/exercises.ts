@@ -28,10 +28,14 @@ export const getExercises = async (filters?: ExerciseFilters): Promise<Exercise[
   }
 
   const snapshot = await getDocs(q)
-  let exercises = snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  })) as Exercise[]
+  let exercises = snapshot.docs.map((doc) => {
+    const data = doc.data()
+    // Use doc.id (Firebase document ID), not any stored id field
+    return {
+      ...data,
+      id: doc.id,
+    } as Exercise
+  })
 
   // Client-side filtering for additional filters
   if (filters) {
@@ -71,9 +75,11 @@ export const getExerciseById = async (id: string): Promise<Exercise | null> => {
 
   if (!docSnap.exists()) return null
 
+  const data = docSnap.data()
+  // Use docSnap.id (Firebase document ID), not any stored id field
   return {
+    ...data,
     id: docSnap.id,
-    ...docSnap.data(),
   } as Exercise
 }
 

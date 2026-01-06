@@ -1,0 +1,23 @@
+{
+  "name": "GymIQ - כושר חכם",
+  "short_name": "GymIQ",
+  "description": "פלטפורמת כושר חכמה למתאמנים ומאמנים",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0a0f14",
+  "background_color": "#0a0f14",
+  "dir": "rtl",
+  "lang": "he",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["fitness", "health", "sports"],
+  "prefer_related_applications": false
+}

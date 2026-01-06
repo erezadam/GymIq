@@ -93,7 +93,11 @@ export const useAuthStore = create<AuthStore>()(
             isLoading: false,
           })
         } catch (error: any) {
-          const errorMessage = getFirebaseErrorMessage(error.code)
+          console.error('Registration error in store:', error)
+          // Handle both Firebase errors (with code) and custom errors (with message)
+          const errorMessage = error.code
+            ? getFirebaseErrorMessage(error.code)
+            : error.message || 'שגיאה לא צפויה בהרשמה'
           set({ error: errorMessage, isLoading: false })
           throw new Error(errorMessage)
         }

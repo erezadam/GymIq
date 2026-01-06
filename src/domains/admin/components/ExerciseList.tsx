@@ -12,6 +12,7 @@ import {
   ChevronDown,
   X,
   Dumbbell,
+  ImageOff,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { exerciseService } from '@/domains/exercises/services'
@@ -23,12 +24,21 @@ export default function ExerciseList() {
   const queryClient = useQueryClient()
   const [filters, setFilters] = useState<ExerciseFilters>({})
   const [showFilters, setShowFilters] = useState(false)
+  const [showOnlyMissingImages, setShowOnlyMissingImages] = useState(false)
 
   // Fetch exercises
-  const { data: exercises = [], isLoading } = useQuery({
+  const { data: allExercises = [], isLoading } = useQuery({
     queryKey: ['exercises', filters],
     queryFn: () => exerciseService.getExercises(filters),
   })
+
+  // Filter exercises without images
+  const exercisesWithoutImages = useMemo(() => {
+    return allExercises.filter(ex => !ex.imageUrl || ex.imageUrl.trim() === '')
+  }, [allExercises])
+
+  // Display either all exercises or only those without images
+  const exercises = showOnlyMissingImages ? exercisesWithoutImages : allExercises
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -167,9 +177,35 @@ export default function ExerciseList() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">ניהול תרגילים</h1>
-          <p className="text-text-muted mt-1">{exercises.length} תרגילים במערכת</p>
+          <p className="text-text-muted mt-1">
+            {showOnlyMissingImages
+              ? `${exercisesWithoutImages.length} תרגילים ללא תמונה`
+              : `${allExercises.length} תרגילים במערכת`
+            }
+          </p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Missing images filter button */}
+          <button
+            onClick={() => setShowOnlyMissingImages(!showOnlyMissingImages)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors ${
+              showOnlyMissingImages
+                ? 'bg-orange-500/20 border-orange-500 text-orange-400'
+                : 'bg-dark-card hover:bg-dark-border border-dark-border text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            <ImageOff className="w-4 h-4" />
+            <span className="hidden sm:inline">ללא תמונה</span>
+            {exercisesWithoutImages.length > 0 && (
+              <span className={`px-2 py-0.5 text-xs rounded-full ${
+                showOnlyMissingImages
+                  ? 'bg-orange-500/30 text-orange-300'
+                  : 'bg-dark-border text-text-muted'
+              }`}>
+                {exercisesWithoutImages.length}
+              </span>
+            )}
+          </button>
           <button
             onClick={handleDeleteAll}
             disabled={deleteAllMutation.isPending || exercises.length === 0}

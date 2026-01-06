@@ -8,8 +8,10 @@ import { ArrowRight, Save, Plus, Trash2, Image } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { exerciseService } from '@/domains/exercises/services'
 import type { ExerciseCategory, MuscleGroup, EquipmentType } from '@/domains/exercises/types'
-import { categories, equipment, muscles, difficultyOptions } from '@/domains/exercises/data/mockExercises'
+import { equipment, difficultyOptions } from '@/domains/exercises/data/mockExercises'
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
+import { getMuscles } from '@/lib/firebase/muscles'
+import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
 
 // Validation schema
 const exerciseSchema = z.object({
@@ -43,6 +45,12 @@ export default function ExerciseForm() {
     enabled: isEditing,
   })
 
+  // Fetch muscles from Firebase
+  const { data: musclesData = [] } = useQuery<PrimaryMuscle[]>({
+    queryKey: ['muscles'],
+    queryFn: getMuscles,
+  })
+
   // Form setup
   const {
     register,
@@ -50,6 +58,7 @@ export default function ExerciseForm() {
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ExerciseFormData>({
     resolver: zodResolver(exerciseSchema),
@@ -99,19 +108,27 @@ export default function ExerciseForm() {
   useEffect(() => {
     if (existingExercise) {
       reset({
-        name: existingExercise.name,
-        nameHe: existingExercise.nameHe,
-        category: existingExercise.category,
-        primaryMuscle: existingExercise.primaryMuscle,
-        secondaryMuscles: existingExercise.secondaryMuscles,
-        equipment: existingExercise.equipment,
-        difficulty: existingExercise.difficulty,
-        instructions: existingExercise.instructions.map((v) => ({ value: v })),
-        instructionsHe: existingExercise.instructionsHe.map((v) => ({ value: v })),
-        targetMuscles: existingExercise.targetMuscles,
-        imageUrl: existingExercise.imageUrl,
-        tips: existingExercise.tips.map((v) => ({ value: v })),
-        tipsHe: existingExercise.tipsHe.map((v) => ({ value: v })),
+        name: existingExercise.name || '',
+        nameHe: existingExercise.nameHe || '',
+        category: existingExercise.category || '',
+        primaryMuscle: existingExercise.primaryMuscle || '',
+        secondaryMuscles: existingExercise.secondaryMuscles || [],
+        equipment: existingExercise.equipment || '',
+        difficulty: existingExercise.difficulty || 'beginner',
+        instructions: (existingExercise.instructions || []).length > 0
+          ? existingExercise.instructions.map((v) => ({ value: v }))
+          : [{ value: '' }],
+        instructionsHe: (existingExercise.instructionsHe || []).length > 0
+          ? existingExercise.instructionsHe.map((v) => ({ value: v }))
+          : [{ value: '' }],
+        targetMuscles: existingExercise.targetMuscles || [],
+        imageUrl: existingExercise.imageUrl || '',
+        tips: (existingExercise.tips || []).length > 0
+          ? existingExercise.tips.map((v) => ({ value: v }))
+          : [{ value: '' }],
+        tipsHe: (existingExercise.tipsHe || []).length > 0
+          ? existingExercise.tipsHe.map((v) => ({ value: v }))
+          : [{ value: '' }],
       })
     }
   }, [existingExercise, reset])
@@ -165,6 +182,18 @@ export default function ExerciseForm() {
   }
 
   const imageUrl = watch('imageUrl')
+  const selectedCategory = watch('category')
+
+  // Get selected primary muscle and its sub-muscles
+  const selectedPrimaryMuscle = musclesData.find((m) => m.id === selectedCategory)
+  const subMuscles = selectedPrimaryMuscle?.subMuscles || []
+
+  // Reset sub-muscle when main muscle changes
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newCategory = e.target.value
+    setValue('category', newCategory)
+    setValue('primaryMuscle', '') // Reset sub-muscle selection
+  }
 
   if (isEditing && isLoadingExercise) {
     return (
@@ -226,17 +255,18 @@ export default function ExerciseForm() {
               {errors.nameHe && <p className="text-red-400 text-sm mt-1">{errors.nameHe.message}</p>}
             </div>
 
-            {/* Category */}
+            {/* Category - Main Muscle */}
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-2">קטגוריה *</label>
+              <label className="block text-sm font-medium text-text-secondary mb-2">שריר ראשי *</label>
               <select
                 {...register('category')}
+                onChange={handleCategoryChange}
                 className={`input-neon w-full ${errors.category ? 'border-red-500' : ''}`}
               >
-                <option value="">בחר קטגוריה</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.nameHe}
+                <option value="">בחר שריר ראשי</option>
+                {musclesData.map((muscle) => (
+                  <option key={muscle.id} value={muscle.id}>
+                    {muscle.icon} {muscle.nameHe}
                   </option>
                 ))}
               </select>
@@ -279,17 +309,18 @@ export default function ExerciseForm() {
               )}
             </div>
 
-            {/* Primary Muscle */}
+            {/* Primary Muscle - Sub Muscle */}
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-2">שריר ראשי *</label>
+              <label className="block text-sm font-medium text-text-secondary mb-2">תת שריר *</label>
               <select
                 {...register('primaryMuscle')}
-                className={`input-neon w-full ${errors.primaryMuscle ? 'border-red-500' : ''}`}
+                disabled={!selectedCategory || subMuscles.length === 0}
+                className={`input-neon w-full ${errors.primaryMuscle ? 'border-red-500' : ''} ${!selectedCategory ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                <option value="">בחר שריר</option>
-                {muscles.map((muscle) => (
-                  <option key={muscle.id} value={muscle.id}>
-                    {muscle.nameHe}
+                <option value="">{selectedCategory ? 'בחר תת שריר' : 'בחר קודם שריר ראשי'}</option>
+                {subMuscles.map((subMuscle) => (
+                  <option key={subMuscle.id} value={subMuscle.id}>
+                    {subMuscle.nameHe}
                   </option>
                 ))}
               </select>

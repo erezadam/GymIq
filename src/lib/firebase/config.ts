@@ -12,14 +12,24 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
+// Debug: Log config status (not values for security)
+console.log('🔧 Firebase Config Status:', {
+  apiKey: firebaseConfig.apiKey ? '✓ Set' : '✗ Missing',
+  authDomain: firebaseConfig.authDomain ? `✓ ${firebaseConfig.authDomain}` : '✗ Missing',
+  projectId: firebaseConfig.projectId ? `✓ ${firebaseConfig.projectId}` : '✗ Missing',
+  storageBucket: firebaseConfig.storageBucket ? '✓ Set' : '✗ Missing',
+  appId: firebaseConfig.appId ? '✓ Set' : '✗ Missing',
+})
+
 // Validate that all required config values are present
 const requiredConfigKeys = ['apiKey', 'authDomain', 'projectId'] as const
 const missingKeys = requiredConfigKeys.filter(
   (key) => !firebaseConfig[key] || firebaseConfig[key] === `your_${key}`
 )
 
-if (missingKeys.length > 0 && import.meta.env.MODE !== 'development') {
-  console.error(`Missing Firebase config: ${missingKeys.join(', ')}`)
+if (missingKeys.length > 0) {
+  console.error(`❌ Missing Firebase config: ${missingKeys.join(', ')}`)
+  console.error('Please check your .env file has the correct VITE_FIREBASE_* variables')
 }
 
 // Initialize Firebase

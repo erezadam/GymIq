@@ -153,3 +153,21 @@ export async function syncMissingMuscles(): Promise<number> {
     throw error
   }
 }
+
+// Force update all muscles from defaultMuscleMapping (including subMuscles)
+export async function forceUpdateAllMuscles(): Promise<number> {
+  try {
+    let updatedCount = 0
+    for (const muscle of defaultMuscleMapping) {
+      await saveMuscle(muscle)
+      console.log(`Updated muscle: ${muscle.nameHe} (${muscle.id}) with ${muscle.subMuscles.length} subMuscles`)
+      updatedCount++
+    }
+
+    console.log(`Force update complete. Updated ${updatedCount} muscles.`)
+    return updatedCount
+  } catch (error) {
+    console.error('Error force updating muscles:', error)
+    throw error
+  }
+}

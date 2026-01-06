@@ -63,8 +63,11 @@ export default function LoginPage() {
     try {
       await login(data.email, data.password)
       toast.success('ברוך הבא!')
-    } catch {
-      // Error is handled in the store
+    } catch (err: any) {
+      // Show error via toast in addition to store state
+      const errorMessage = err?.message || 'שגיאה בהתחברות'
+      toast.error(errorMessage)
+      console.error('Login failed:', err)
     }
   }
 
@@ -79,8 +82,11 @@ export default function LoginPage() {
         lastName: data.lastName,
       })
       toast.success('ברוך הבא ל-GymIQ!')
-    } catch {
-      // Error is handled in the store
+    } catch (err: any) {
+      // Show error via toast in addition to store state
+      const errorMessage = err?.message || 'שגיאה בהרשמה'
+      toast.error(errorMessage)
+      console.error('Registration failed:', err)
     }
   }
 
@@ -344,12 +350,6 @@ export default function LoginPage() {
           )}
         </div>
 
-        {/* Firebase Setup Notice */}
-        <div className="mt-6 p-4 bg-yellow-500/10 rounded-xl border border-yellow-500/20">
-          <p className="text-yellow-400 text-sm text-center">
-            <strong>שים לב:</strong> יש להגדיר את Firebase credentials בקובץ .env
-          </p>
-        </div>
       </div>
     </div>
   )

@@ -1,12 +1,14 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/domains/authentication/store'
+import { getUserWorkoutStats } from '@/lib/firebase/workoutHistory'
 import { colors, spacing, borderRadius, typography } from '@/styles/theme'
 
-// User stats - will be fetched from Firebase later
-const userStats = {
-  totalWorkouts: 47,
-  thisWeek: 4,
-  currentStreak: 12,
+// Initial stats (will be replaced with Firebase data)
+const defaultStats = {
+  totalWorkouts: 0,
+  thisWeek: 0,
+  currentStreak: 0,
 }
 
 // Card styles
@@ -50,17 +52,62 @@ const actionCardStyles = {
     subtitleColor: colors.text.secondary,
     iconBg: 'rgba(139, 92, 246, 0.2)',
   },
+  trophy: {
+    background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(234, 179, 8, 0.05) 100%)',
+    border: '1px solid rgba(234, 179, 8, 0.2)',
+    titleColor: '#EAB308',
+    subtitleColor: colors.text.secondary,
+    iconBg: 'rgba(234, 179, 8, 0.2)',
+  },
+}
+
+// Get Sunday of current week (D/M format)
+function getSundayOfWeek(): string {
+  const now = new Date()
+  const dayOfWeek = now.getDay() // 0 = Sunday
+  const sunday = new Date(now)
+  sunday.setDate(now.getDate() - dayOfWeek)
+  return `${sunday.getDate()}/${sunday.getMonth() + 1}`
 }
 
 export default function UserDashboard() {
   const { user } = useAuthStore()
+  const sundayDate = getSundayOfWeek()
+  const [userStats, setUserStats] = useState(defaultStats)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch user stats from Firebase
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user?.uid) {
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        console.log('📊 Fetching stats for userId:', user.uid)
+        const stats = await getUserWorkoutStats(user.uid)
+        console.log('📊 Stats received:', stats)
+        setUserStats({
+          totalWorkouts: stats.totalWorkouts,
+          thisWeek: stats.thisWeekWorkouts,
+          currentStreak: stats.currentStreak,
+        })
+      } catch (error) {
+        console.error('Failed to fetch user stats:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchStats()
+  }, [user?.uid])
 
   return (
     <div
       style={{
         display: 'flex',
         flexDirection: 'column',
-        minHeight: 'calc(100vh - 10rem)',
         padding: `0 ${spacing.lg}px`,
         direction: 'rtl',
       }}
@@ -98,9 +145,10 @@ export default function UserDashboard() {
               fontSize: typography.fontSize['2xl'],
               fontWeight: typography.fontWeight.bold,
               color: statCardStyles.streak.valueColor,
+              opacity: isLoading ? 0.5 : 1,
             }}
           >
-            {userStats.currentStreak}
+            {isLoading ? '-' : userStats.currentStreak}
           </div>
           <div style={{ fontSize: typography.fontSize.xs, color: colors.text.secondary }}>
             ימי רצף
@@ -109,15 +157,25 @@ export default function UserDashboard() {
 
         {/* Weekly Card */}
         <div style={{ ...cardBase, ...statCardStyles.weekly }}>
-          <div style={{ fontSize: 20, marginBottom: 4 }}>📅</div>
+          <div
+            style={{
+              fontSize: typography.fontSize.lg,
+              fontWeight: typography.fontWeight.bold,
+              color: statCardStyles.weekly.valueColor,
+              marginBottom: 4,
+            }}
+          >
+            {sundayDate}
+          </div>
           <div
             style={{
               fontSize: typography.fontSize['2xl'],
               fontWeight: typography.fontWeight.bold,
               color: statCardStyles.weekly.valueColor,
+              opacity: isLoading ? 0.5 : 1,
             }}
           >
-            {userStats.thisWeek}
+            {isLoading ? '-' : userStats.thisWeek}
           </div>
           <div style={{ fontSize: typography.fontSize.xs, color: colors.text.secondary }}>
             השבוע
@@ -132,9 +190,10 @@ export default function UserDashboard() {
               fontSize: typography.fontSize['2xl'],
               fontWeight: typography.fontWeight.bold,
               color: statCardStyles.total.valueColor,
+              opacity: isLoading ? 0.5 : 1,
             }}
           >
-            {userStats.totalWorkouts}
+            {isLoading ? '-' : userStats.totalWorkouts}
           </div>
           <div style={{ fontSize: typography.fontSize.xs, color: colors.text.secondary }}>
             אימונים
@@ -142,7 +201,7 @@ export default function UserDashboard() {
         </div>
       </div>
 
-      {/* Action Cards Row - 2 cards, SAME SIZE as stats */}
+      {/* Action Cards Row - 3 cards */}
       <div style={{ display: 'flex', gap: 10 }}>
         {/* Primary CTA - Build Workout */}
         <Link to="/exercises" style={{ ...cardBase, ...actionCardStyles.primary, textDecoration: 'none' }}>
@@ -213,6 +272,34 @@ export default function UserDashboard() {
             }}
           >
             אימונים
+          </div>
+        </Link>
+
+        {/* Trophy - Personal Records */}
+        <Link to="/personal-records" style={{ ...cardBase, ...actionCardStyles.trophy, textDecoration: 'none' }}>
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: borderRadius.sm,
+              background: actionCardStyles.trophy.iconBg,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 8px',
+              fontSize: 18,
+            }}
+          >
+            🏆
+          </div>
+          <div
+            style={{
+              fontSize: typography.fontSize['2xl'],
+              fontWeight: typography.fontWeight.bold,
+              color: actionCardStyles.trophy.titleColor,
+            }}
+          >
+            Pr
           </div>
         </Link>
       </div>

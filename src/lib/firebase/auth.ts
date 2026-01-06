@@ -25,35 +25,59 @@ export interface AppUser {
 }
 
 // Convert Firebase user to App user
+// allowCreate: only set to true when called from registerUser with proper data
 const createAppUser = async (
   firebaseUser: FirebaseUser,
-  additionalData?: Partial<AppUser>
-): Promise<AppUser> => {
+  additionalData?: Partial<AppUser>,
+  allowCreate: boolean = false
+): Promise<AppUser | null> => {
   const userRef = doc(db, 'users', firebaseUser.uid)
   const userSnap = await getDoc(userRef)
 
   if (userSnap.exists()) {
-    return userSnap.data() as AppUser
+    const data = userSnap.data()
+    // Convert Firestore Timestamps to Dates if needed
+    return {
+      ...data,
+      createdAt: data.createdAt?.toDate?.() || data.createdAt || new Date(),
+      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt || new Date(),
+    } as AppUser
   }
 
-  // Create new user document
+  // Only create document if explicitly allowed (during registration)
+  // This prevents race condition where onAuthChange creates doc before registerUser
+  if (!allowCreate) {
+    console.log('User document not found and creation not allowed - waiting for registration to complete')
+    return null
+  }
+
+  // Create new user document - exclude undefined values for Firestore
   const newUser: AppUser = {
     uid: firebaseUser.uid,
     email: firebaseUser.email || '',
     displayName: additionalData?.displayName || firebaseUser.displayName || '',
     firstName: additionalData?.firstName || '',
     lastName: additionalData?.lastName || '',
-    phoneNumber: additionalData?.phoneNumber,
     role: additionalData?.role || 'user',
     createdAt: new Date(),
     updatedAt: new Date(),
   }
 
-  await setDoc(userRef, {
-    ...newUser,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  })
+  // Only add phoneNumber if it's defined (Firestore doesn't accept undefined)
+  if (additionalData?.phoneNumber) {
+    newUser.phoneNumber = additionalData.phoneNumber
+  }
+
+  // Prepare Firestore document (remove any remaining undefined values)
+  const firestoreData = Object.fromEntries(
+    Object.entries({
+      ...newUser,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }).filter(([_, value]) => value !== undefined)
+  )
+
+  await setDoc(userRef, firestoreData)
 
   return newUser
 }
@@ -79,44 +103,70 @@ export const registerUser = async (
   lastName: string,
   phoneNumber?: string
 ): Promise<AppUser> => {
-  console.log('Starting registration for:', email)
+  console.log('=== Starting registration for:', email)
 
-  // Check if this will be the first user (make them admin)
+  // Step 1: Create Firebase Auth user first
+  console.log('Step 1: Creating Firebase Auth user...')
+  console.log('Auth instance:', auth ? '✓ Initialized' : '✗ Not initialized')
+  console.log('Auth currentUser before:', auth.currentUser?.uid || 'None')
+
+  let userCredential: UserCredential
+  try {
+    userCredential = await createUserWithEmailAndPassword(auth, email, password)
+    console.log('✓ Firebase Auth user created:', userCredential.user.uid)
+    console.log('✓ User email:', userCredential.user.email)
+  } catch (error: any) {
+    console.error('✗ Failed to create Firebase Auth user')
+    console.error('Error code:', error?.code)
+    console.error('Error message:', error?.message)
+    console.error('Full error:', JSON.stringify(error, null, 2))
+    throw error // Re-throw to be handled by caller
+  }
+
+  // Step 2: Update display name
+  console.log('Step 2: Updating display name...')
+  try {
+    await updateProfile(userCredential.user, {
+      displayName: `${firstName} ${lastName}`,
+    })
+    console.log('✓ Display name updated')
+  } catch (error: any) {
+    console.error('✗ Failed to update display name:', error)
+    // Non-critical, continue
+  }
+
+  // Step 3: Check if first user (now that we're authenticated)
   let firstUser = false
   try {
     firstUser = await isFirstUser()
+    console.log('✓ First user check:', firstUser ? 'YES - will be admin' : 'NO - regular user')
   } catch (error) {
-    console.error('isFirstUser check failed:', error)
+    console.error('⚠ isFirstUser check failed (will default to regular user):', error)
   }
 
-  console.log('Creating Firebase Auth user...')
-  const userCredential: UserCredential = await createUserWithEmailAndPassword(
-    auth,
-    email,
-    password
-  )
-  console.log('Firebase Auth user created:', userCredential.user.uid)
-
-  // Update display name
-  await updateProfile(userCredential.user, {
-    displayName: `${firstName} ${lastName}`,
-  })
-  console.log('Display name updated')
-
-  // Create user in Firestore (first user becomes admin)
+  // Step 4: Create user document in Firestore
   const role = firstUser ? 'admin' : 'user'
-  console.log('Creating Firestore user document with role:', role)
+  console.log('Step 4: Creating Firestore user document with role:', role)
 
-  const appUser = await createAppUser(userCredential.user, {
-    firstName,
-    lastName,
-    displayName: `${firstName} ${lastName}`,
-    phoneNumber,
-    role,
-  })
-  console.log('User document created in Firestore!')
-
-  return appUser
+  try {
+    const appUser = await createAppUser(userCredential.user, {
+      firstName,
+      lastName,
+      displayName: `${firstName} ${lastName}`,
+      phoneNumber,
+      role,
+    }, true) // allowCreate = true for registration
+    if (!appUser) {
+      throw new Error('Failed to create user document')
+    }
+    console.log('✓ User document created in Firestore!')
+    return appUser
+  } catch (error: any) {
+    console.error('✗ Failed to create Firestore user document:', error)
+    // Auth user was created but Firestore failed - this is problematic
+    // The user exists in Auth but not in Firestore
+    throw new Error(`הרישום נכשל חלקית. אנא נסה להתחבר או פנה לתמיכה. (${error.code || error.message})`)
+  }
 }
 
 // Login with email/password
@@ -126,6 +176,25 @@ export const loginUser = async (
 ): Promise<AppUser> => {
   const userCredential = await signInWithEmailAndPassword(auth, email, password)
   const appUser = await createAppUser(userCredential.user)
+
+  // If user doc doesn't exist (edge case), create a basic one
+  if (!appUser) {
+    const firebaseUser = userCredential.user
+    // Create a basic user doc for existing Auth users without Firestore doc
+    const basicUser: AppUser = {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email || '',
+      displayName: firebaseUser.displayName || '',
+      firstName: firebaseUser.displayName?.split(' ')[0] || '',
+      lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
+      role: 'user',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+    // Create the missing doc with allowCreate=true
+    return await createAppUser(firebaseUser, basicUser, true) as AppUser
+  }
+
   return appUser
 }
 
@@ -152,17 +221,47 @@ export const onAuthChange = (callback: (user: AppUser | null) => void) => {
   return onAuthStateChanged(auth, async (firebaseUser) => {
     if (firebaseUser) {
       try {
-        const appUser = await createAppUser(firebaseUser)
-        callback(appUser)
+        // Try to get user doc - may not exist yet during registration
+        let appUser = await createAppUser(firebaseUser)
+
+        // If doc doesn't exist, retry a few times (registration might be in progress)
+        if (!appUser) {
+          console.log('User doc not found, retrying...')
+          for (let i = 0; i < 5; i++) {
+            await new Promise(resolve => setTimeout(resolve, 500))
+            appUser = await createAppUser(firebaseUser)
+            if (appUser) {
+              console.log('User doc found on retry', i + 1)
+              break
+            }
+          }
+        }
+
+        if (appUser) {
+          callback(appUser)
+        } else {
+          // Still no doc after retries - use basic info from Firebase Auth
+          console.log('User doc not found after retries, using Firebase Auth data')
+          callback({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email || '',
+            displayName: firebaseUser.displayName || '',
+            firstName: firebaseUser.displayName?.split(' ')[0] || '',
+            lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
+            role: 'user',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          })
+        }
       } catch (error) {
-        console.error('Error creating app user:', error)
+        console.error('Error getting app user:', error)
         // Still call callback with basic user info so app doesn't hang
         callback({
           uid: firebaseUser.uid,
           email: firebaseUser.email || '',
           displayName: firebaseUser.displayName || '',
-          firstName: '',
-          lastName: '',
+          firstName: firebaseUser.displayName?.split(' ')[0] || '',
+          lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
           role: 'user',
           createdAt: new Date(),
           updatedAt: new Date(),

@@ -251,10 +251,10 @@ export function ExerciseLibrary() {
   }
 
   return (
-    <div className="page-container">
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
       {/* Header */}
-      <header className="page-header">
-        <div className="max-w-2xl mx-auto px-4 py-4">
+      <header style={{ flexShrink: 0, marginBottom: 16 }}>
+        <div className="max-w-2xl mx-auto">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(isAddingToWorkout ? '/workout/session' : '/dashboard')}
@@ -298,9 +298,9 @@ export function ExerciseLibrary() {
         </div>
       </header>
 
-      {/* Scrollable Content */}
-      <div className="page-content" style={{ paddingBottom: '80px' }}>
-        <div className="max-w-2xl mx-auto px-4 py-4">
+      {/* Content */}
+      <div style={{ flex: 1, paddingBottom: '100px' }}>
+        <div className="max-w-2xl mx-auto">
           {/* Muscle Title with Count */}
           <div className="mb-4">
             <h2 className="text-lg font-bold text-white">

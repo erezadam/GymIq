@@ -19,7 +19,6 @@ import {
   borderRadius,
   typography,
   components,
-  getNavItemStyle,
 } from '@/styles/theme'
 
 const navigation = [
@@ -38,10 +37,7 @@ export default function MainLayout() {
 
   const isAdmin = user?.role === 'admin'
 
-  // Hide BottomNav and header on screens with their own layout
-  const hideBottomNav = location.pathname === '/exercises' ||
-                        location.pathname === '/workout/new' ||
-                        location.pathname === '/workout/session'
+  // Hide header on workout session screen
   const hideMobileHeader = location.pathname === '/workout/session'
 
   const handleLogout = () => {
@@ -50,7 +46,13 @@ export default function MainLayout() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.background.main }}>
+    <div style={{
+      height: '100dvh',
+      background: colors.background.main,
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
       {/* Mobile header (hidden on workout session) */}
       {!hideMobileHeader && (
         <header
@@ -319,7 +321,7 @@ export default function MainLayout() {
                   margin: 0,
                 }}
               >
-                {user?.displayName || 'משתמש'}
+                {user?.firstName || user?.displayName || 'משתמש'}
               </p>
               <p
                 style={{
@@ -351,14 +353,15 @@ export default function MainLayout() {
         </div>
       </aside>
 
-      {/* Main content - Mobile-first 3-part layout */}
+      {/* Main content - Mobile-first layout */}
       <main
         className="lg:mr-64"
         style={{
+          flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          height: '100vh',
           paddingTop: hideMobileHeader ? 0 : 64,
+          overflow: 'hidden',
         }}
       >
         {/* Scrollable content area */}
@@ -368,8 +371,7 @@ export default function MainLayout() {
             flex: 1,
             overflowY: 'auto',
             overflowX: 'hidden',
-            padding: hideBottomNav ? 0 : `${spacing.lg}px`,
-            paddingBottom: hideBottomNav ? 0 : 80,
+            padding: `${spacing.lg}px`,
             WebkitOverflowScrolling: 'touch',
           }}
         >
@@ -377,40 +379,6 @@ export default function MainLayout() {
         </div>
       </main>
 
-      {/* Mobile bottom navigation - Sticky (hidden on exercise selection screen) */}
-      {!hideBottomNav && (
-        <nav
-          className="lg:hidden fixed bottom-0 left-0 right-0 z-50 safe-area-inset-bottom"
-          style={{
-            ...components.layout.bottomNav.container,
-            background: colors.background.card,
-            borderTop: `1px solid ${colors.border.default}`,
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-around', padding: `${spacing.sm}px 0` }}>
-            {navigation.slice(0, 4).map((item) => {
-              const isActive = location.pathname === item.href
-              const navStyle = getNavItemStyle(isActive)
-
-              return (
-                <NavLink
-                  key={item.href}
-                  to={item.href}
-                  style={{
-                    ...components.layout.bottomNav.item,
-                    textDecoration: 'none',
-                  }}
-                >
-                  <div style={navStyle.icon}>
-                    <item.icon size={20} color={isActive ? colors.primary.main : colors.text.secondary} />
-                  </div>
-                  <span style={navStyle.label}>{item.name}</span>
-                </NavLink>
-              )
-            })}
-          </div>
-        </nav>
-      )}
     </div>
   )
 }

@@ -3,6 +3,7 @@
  * Main workout screen showing all exercises grouped by muscle
  */
 
+import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useActiveWorkout } from '../../hooks/useActiveWorkout'
@@ -10,9 +11,14 @@ import { WorkoutHeader } from './WorkoutHeader'
 import { ExerciseCounter } from './ExerciseCounter'
 import { MuscleGroupSection } from './MuscleGroupSection'
 import { ConfirmationModal } from './ConfirmationModal'
+import { RestTimer } from './RestTimer'
 
 export default function ActiveWorkoutScreen() {
   const navigate = useNavigate()
+
+  // Rest Timer state
+  const [showRestTimer, setShowRestTimer] = useState(false)
+  const [restTimerResetKey, setRestTimerResetKey] = useState(0)
 
   const {
     workout,
@@ -37,6 +43,31 @@ export default function ActiveWorkoutScreen() {
     finishWorkout,
     closeModal,
   } = useActiveWorkout()
+
+  // Wrap addSet to show rest timer - MUST be before early returns!
+  const handleAddSet = useCallback((exerciseId: string) => {
+    addSet(exerciseId)
+    // Show rest timer and reset it
+    setRestTimerResetKey((prev) => prev + 1)
+    setShowRestTimer(true)
+  }, [addSet])
+
+  // Close rest timer
+  const handleCloseRestTimer = useCallback(() => {
+    setShowRestTimer(false)
+  }, [])
+
+  // Wrap finishExercise to close timer
+  const handleFinishExercise = useCallback((exerciseId: string) => {
+    setShowRestTimer(false)
+    finishExercise(exerciseId)
+  }, [finishExercise])
+
+  // Wrap toggleExercise to close timer when collapsing
+  const handleToggleExercise = useCallback((exerciseId: string) => {
+    setShowRestTimer(false)
+    toggleExercise(exerciseId)
+  }, [toggleExercise])
 
   // Loading state
   if (isLoading) {
@@ -102,11 +133,11 @@ export default function ActiveWorkoutScreen() {
           <MuscleGroupSection
             key={group.muscleGroupHe}
             group={group}
-            onToggleExercise={toggleExercise}
-            onAddSet={addSet}
+            onToggleExercise={handleToggleExercise}
+            onAddSet={handleAddSet}
             onUpdateSet={updateSet}
             onDeleteSet={deleteSet}
-            onFinishExercise={finishExercise}
+            onFinishExercise={handleFinishExercise}
             onDeleteExercise={confirmDeleteExercise}
           />
         ))}
@@ -184,6 +215,13 @@ export default function ActiveWorkoutScreen() {
           totalSets: workout.stats.totalSets,
           formattedTime,
         }}
+      />
+
+      {/* Rest Timer */}
+      <RestTimer
+        isVisible={showRestTimer}
+        onClose={handleCloseRestTimer}
+        resetKey={restTimerResetKey}
       />
     </div>
   )

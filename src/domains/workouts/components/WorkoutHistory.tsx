@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Calendar, Dumbbell, Trophy, ChevronDown, ChevronUp, CheckCircle, AlertCircle, XCircle, Flame, Play, X, Clock, Zap } from 'lucide-react'
+import { Calendar, Dumbbell, Trophy, ChevronDown, ChevronUp, CheckCircle, AlertCircle, XCircle, Play, X, Clock, Zap } from 'lucide-react'
+// Note: Flame icon removed - can be re-added if stats cubes are restored
 import { getUserWorkoutHistory, getWorkoutById, updateWorkoutHistory } from '@/lib/firebase/workoutHistory'
 import { useAuthStore } from '@/domains/authentication/store'
 import { useWorkoutBuilderStore } from '../store'
@@ -387,65 +388,37 @@ export default function WorkoutHistory() {
     return { plannedWorkouts: planned, otherWorkouts: others }
   }, [workouts])
 
-  // Calculate stats
+  /* STATS CALCULATION - COMMENTED OUT FOR FUTURE USE
+   * To restore stats cubes, uncomment this block and add Flame to lucide-react imports
+   *
   const stats = useMemo(() => {
     const now = new Date()
-
-    // Start of current month (1st day at 00:00)
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
     monthStart.setHours(0, 0, 0, 0)
-
-    // Start of current week (Sunday at 00:00)
     const weekStart = new Date(now)
-    const dayOfWeek = weekStart.getDay() // 0 = Sunday
+    const dayOfWeek = weekStart.getDay()
     weekStart.setDate(weekStart.getDate() - dayOfWeek)
     weekStart.setHours(0, 0, 0, 0)
-
-    // Monthly workouts (from 1st of month)
-    const monthlyWorkouts = workouts.filter(w => {
-      const workoutDate = new Date(w.date)
-      return workoutDate >= monthStart
-    }).length
-
-    // Weekly workouts (from Sunday)
-    const weeklyWorkouts = workouts.filter(w => {
-      const workoutDate = new Date(w.date)
-      return workoutDate >= weekStart
-    }).length
-
-    // Calculate streak (consecutive days with workouts)
+    const monthlyWorkouts = workouts.filter(w => new Date(w.date) >= monthStart).length
+    const weeklyWorkouts = workouts.filter(w => new Date(w.date) >= weekStart).length
     let streakDays = 0
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-
     for (let i = 0; i < 365; i++) {
       const checkDate = new Date(today)
       checkDate.setDate(today.getDate() - i)
-
       const hasWorkout = workouts.some(w => {
         const workoutDate = new Date(w.date)
         workoutDate.setHours(0, 0, 0, 0)
         return workoutDate.getTime() === checkDate.getTime()
       })
-
-      if (hasWorkout) {
-        streakDays++
-      } else if (i > 0) {
-        // Allow today to not have a workout yet
-        break
-      }
+      if (hasWorkout) streakDays++
+      else if (i > 0) break
     }
-
-    // Total volume
     const totalVolume = workouts.reduce((sum, w) => sum + w.totalVolume, 0)
-
-    return {
-      monthlyWorkouts,
-      weeklyWorkouts,
-      streakDays,
-      totalVolume,
-    }
+    return { monthlyWorkouts, weeklyWorkouts, streakDays, totalVolume }
   }, [workouts])
+  */
 
   if (loading) {
     return (
@@ -463,48 +436,7 @@ export default function WorkoutHistory() {
         <p className="text-text-muted mt-1">האימונים שלך - עבר, הווה ועתיד</p>
       </div>
 
-      {/* Stats summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Cube 1: Monthly workouts */}
-        <div className="card-neon !p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary-400/20 flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-primary-400" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-text-primary">{stats.monthlyWorkouts}</p>
-              <p className="text-text-muted text-xs">אימונים החודש</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Cube 2: Weekly workouts */}
-        <div className="card-neon !p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-green-400/20 flex items-center justify-center">
-              <Dumbbell className="w-5 h-5 text-green-400" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-text-primary">{stats.weeklyWorkouts}</p>
-              <p className="text-text-muted text-xs">אימונים השבוע</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Cube 3: Streak days */}
-        <div className="card-neon !p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-400/20 flex items-center justify-center">
-              <Flame className="w-5 h-5 text-orange-400" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-text-primary">{stats.streakDays}</p>
-              <p className="text-text-muted text-xs">ימים ברצף</p>
-            </div>
-          </div>
-        </div>
-
-      </div>
+      {/* Stats summary - REMOVED per request, stats useMemo kept for future use */}
 
       {/* Planned workouts section - pinned to top */}
       {plannedWorkouts.length > 0 && (

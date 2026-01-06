@@ -351,6 +351,148 @@ export async function getUserWorkoutStats(userId: string): Promise<{
   }
 }
 
+// Personal Record type
+export interface PersonalRecord {
+  exerciseId: string
+  exerciseName: string
+  exerciseNameHe: string
+  imageUrl?: string
+  bestWeight: number
+  bestReps: number
+  bestDate: Date
+  previousWeight?: number
+  previousReps?: number
+  previousDate?: Date
+  workoutCount: number // How many times this exercise was performed
+  hasImproved: boolean // True if best > previous
+}
+
+// Get personal records for all exercises
+export async function getPersonalRecords(userId: string): Promise<PersonalRecord[]> {
+  const historyRef = collection(db, COLLECTION_NAME)
+
+  // Get all workouts for the user (filter status client-side to avoid composite index)
+  const q = query(
+    historyRef,
+    where('userId', '==', userId),
+    orderBy('date', 'desc')
+  )
+
+  const snapshot = await getDocs(q)
+
+  console.log('🏆 PR Query: Found', snapshot.docs.length, 'workouts for user')
+
+  // Track exercise data
+  const exerciseMap: Map<string, {
+    exerciseId: string
+    exerciseName: string
+    exerciseNameHe: string
+    imageUrl?: string
+    records: { weight: number; reps: number; date: Date }[]
+    workoutCount: number
+  }> = new Map()
+
+  // Process all workouts (filter completed client-side)
+  for (const docSnap of snapshot.docs) {
+    const data = docSnap.data()
+
+    // Skip non-completed workouts
+    if (data.status !== 'completed') {
+      console.log('🏆 Skipping workout with status:', data.status)
+      continue
+    }
+    console.log('🏆 Processing completed workout:', docSnap.id)
+
+    const workoutDate = data.date?.toDate() || new Date()
+    const exercises = data.exercises || []
+
+    for (const exercise of exercises) {
+      if (!exercise.sets || exercise.sets.length === 0) continue
+
+      // Find best set in this workout (highest weight with actual reps)
+      const validSets = exercise.sets.filter((set: any) =>
+        (set.actualReps && set.actualReps > 0) || set.completed
+      )
+
+      if (validSets.length === 0) continue
+
+      const bestSet = validSets.reduce((best: any, current: any) => {
+        const currentWeight = current.actualWeight || 0
+        const bestWeight = best.actualWeight || 0
+        return currentWeight > bestWeight ? current : best
+      }, validSets[0])
+
+      const weight = bestSet.actualWeight || 0
+      const reps = bestSet.actualReps || bestSet.targetReps || 0
+
+      if (weight === 0 && reps === 0) continue
+
+      const existing = exerciseMap.get(exercise.exerciseId)
+
+      if (existing) {
+        existing.records.push({ weight, reps, date: workoutDate })
+        existing.workoutCount++
+      } else {
+        exerciseMap.set(exercise.exerciseId, {
+          exerciseId: exercise.exerciseId,
+          exerciseName: exercise.exerciseName || '',
+          exerciseNameHe: exercise.exerciseNameHe || '',
+          imageUrl: exercise.imageUrl,
+          records: [{ weight, reps, date: workoutDate }],
+          workoutCount: 1,
+        })
+      }
+    }
+  }
+
+  // Convert to PersonalRecord array
+  const results: PersonalRecord[] = []
+
+  for (const [, data] of exerciseMap) {
+    // Sort records by WEIGHT descending to find best and second best PR
+    const sortedByWeight = [...data.records].sort((a, b) => b.weight - a.weight)
+    const bestRecord = sortedByWeight[0]
+    const secondBestRecord = sortedByWeight.length > 1 ? sortedByWeight[1] : undefined
+
+    // Sort by DATE to find most recent workout
+    const sortedByDate = [...data.records].sort((a, b) => b.date.getTime() - a.date.getTime())
+    const mostRecentRecord = sortedByDate[0]
+
+    // hasImproved = the most recent workout achieved the current best (new PR!)
+    // AND there was a previous best to compare against
+    const hasImproved = secondBestRecord
+      ? (mostRecentRecord.weight === bestRecord.weight &&
+         mostRecentRecord.date.getTime() === bestRecord.date.getTime() &&
+         bestRecord.weight > secondBestRecord.weight)
+      : false
+
+    console.log(`🏆 ${data.exerciseNameHe}: best=${bestRecord.weight}kg, secondBest=${secondBestRecord?.weight}kg, mostRecent=${mostRecentRecord.weight}kg, improved=${hasImproved}`)
+
+    results.push({
+      exerciseId: data.exerciseId,
+      exerciseName: data.exerciseName,
+      exerciseNameHe: data.exerciseNameHe,
+      imageUrl: data.imageUrl,
+      bestWeight: bestRecord.weight,
+      bestReps: bestRecord.reps,
+      bestDate: bestRecord.date,
+      previousWeight: secondBestRecord?.weight,
+      previousReps: secondBestRecord?.reps,
+      previousDate: secondBestRecord?.date,
+      workoutCount: data.workoutCount,
+      hasImproved,
+    })
+  }
+
+  // Sort by workout count (most frequent first)
+  results.sort((a, b) => b.workoutCount - a.workoutCount)
+
+  console.log('🏆 PR Results:', results.length, 'exercises with records')
+  console.log('🏆 Improvements:', results.filter(r => r.hasImproved).length)
+
+  return results
+}
+
 // Update an existing workout (used for starting a planned workout)
 export async function updateWorkoutHistory(
   workoutId: string,

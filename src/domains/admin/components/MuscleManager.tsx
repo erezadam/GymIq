@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Trash2, Edit2, Save, X, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
 import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
-import { getMuscles, saveMuscle, addPrimaryMuscle, deletePrimaryMuscle, initializeMuscles, syncMissingMuscles } from '@/lib/firebase/muscles'
+import { getMuscles, saveMuscle, addPrimaryMuscle, deletePrimaryMuscle, initializeMuscles, syncMissingMuscles, forceUpdateAllMuscles } from '@/lib/firebase/muscles'
 
 export default function MuscleManager() {
   const [muscles, setMuscles] = useState<PrimaryMuscle[]>([])
@@ -58,6 +58,22 @@ export default function MuscleManager() {
       alert('שגיאה בסנכרון שרירים')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleForceUpdate = async () => {
+    if (confirm('האם לעדכן את כל השרירים ותתי השרירים מברירת המחדל? זה ידרוס שינויים קיימים!')) {
+      try {
+        setLoading(true)
+        const updatedCount = await forceUpdateAllMuscles()
+        alert(`עודכנו ${updatedCount} שרירים כולל תתי שרירים`)
+        await loadMuscles()
+      } catch (error) {
+        console.error('Error force updating:', error)
+        alert('שגיאה בעדכון שרירים')
+      } finally {
+        setLoading(false)
+      }
     }
   }
 
@@ -172,7 +188,11 @@ export default function MuscleManager() {
           )}
           <button onClick={handleSyncMissing} className="btn-secondary text-sm flex items-center gap-2">
             <RefreshCw className="w-4 h-4" />
-            סנכרן שרירים חסרים
+            סנכרן חסרים
+          </button>
+          <button onClick={handleForceUpdate} className="btn-secondary text-sm flex items-center gap-2 text-orange-400 border-orange-400/30">
+            <RefreshCw className="w-4 h-4" />
+            עדכן הכל
           </button>
           <button onClick={() => setShowAddMuscle(true)} className="btn-primary text-sm flex items-center gap-2">
             <Plus className="w-4 h-4" />
