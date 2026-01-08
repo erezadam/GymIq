@@ -8,6 +8,7 @@ import {
   getDoc,
   getDocs,
   updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -525,6 +526,21 @@ export async function updateWorkoutHistory(
     console.log('✅ Workout updated successfully')
   } catch (error: any) {
     console.error('❌ Failed to update workout:', error)
+    throw error
+  }
+}
+
+// Delete a workout from history
+export async function deleteWorkoutHistory(workoutId: string): Promise<void> {
+  const docRef = doc(db, COLLECTION_NAME, workoutId)
+
+  console.log('🗑️ Deleting workout:', workoutId)
+
+  try {
+    await deleteDoc(docRef)
+    console.log('✅ Workout deleted successfully')
+  } catch (error: any) {
+    console.error('❌ Failed to delete workout:', error)
     throw error
   }
 }

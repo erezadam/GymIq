@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Calendar, Dumbbell, Trophy, ChevronDown, ChevronUp, CheckCircle, AlertCircle, XCircle, Play, X, Clock, Zap, ArrowRight } from 'lucide-react'
+import { Calendar, Dumbbell, Trophy, ChevronDown, ChevronUp, CheckCircle, AlertCircle, XCircle, Play, X, Clock, Zap, ArrowRight, Trash2 } from 'lucide-react'
 // Note: Flame icon removed - can be re-added if stats cubes are restored
-import { getUserWorkoutHistory, getWorkoutById, updateWorkoutHistory } from '@/lib/firebase/workoutHistory'
+import { getUserWorkoutHistory, getWorkoutById, updateWorkoutHistory, deleteWorkoutHistory } from '@/lib/firebase/workoutHistory'
+import toast from 'react-hot-toast'
 import { useAuthStore } from '@/domains/authentication/store'
 import { useWorkoutBuilderStore } from '../store'
 import { exerciseService } from '@/domains/exercises/services'
@@ -10,6 +11,12 @@ import type { WorkoutHistorySummary, WorkoutHistoryEntry, WorkoutCompletionStatu
 
 // Confirmation dialog for continuing workout
 interface ContinueDialogState {
+  isOpen: boolean
+  workout: WorkoutHistorySummary | null
+}
+
+// Confirmation dialog for deleting workout
+interface DeleteDialogState {
   isOpen: boolean
   workout: WorkoutHistorySummary | null
 }
@@ -24,6 +31,10 @@ export default function WorkoutHistory() {
   const [expandedWorkoutDetails, setExpandedWorkoutDetails] = useState<WorkoutHistoryEntry | null>(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [continueDialog, setContinueDialog] = useState<ContinueDialogState>({
+    isOpen: false,
+    workout: null,
+  })
+  const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>({
     isOpen: false,
     workout: null,
   })
@@ -71,6 +82,28 @@ export default function WorkoutHistory() {
       day: 'numeric',
       month: 'short',
     })
+  }
+
+  // Handle delete button click
+  const handleDeleteClick = (e: React.MouseEvent, workout: WorkoutHistorySummary) => {
+    e.stopPropagation() // Prevent card expansion
+    setDeleteDialog({ isOpen: true, workout })
+  }
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
+    if (!deleteDialog.workout) return
+
+    try {
+      await deleteWorkoutHistory(deleteDialog.workout.id)
+      setWorkouts((prev) => prev.filter((w) => w.id !== deleteDialog.workout!.id))
+      toast.success('האימון נמחק בהצלחה')
+    } catch (error) {
+      console.error('Failed to delete workout:', error)
+      toast.error('שגיאה במחיקת האימון')
+    } finally {
+      setDeleteDialog({ isOpen: false, workout: null })
+    }
   }
 
   // Get status config for styling (using design tokens)
@@ -496,6 +529,14 @@ export default function WorkoutHistory() {
                           </p>
                         </div>
                       </div>
+                      {/* Delete button */}
+                      <button
+                        onClick={(e) => handleDeleteClick(e, workout)}
+                        className="p-2 text-text-muted hover:text-red-400 transition-colors"
+                        aria-label="מחק אימון"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
                     </div>
                   </div>
 
@@ -630,6 +671,14 @@ export default function WorkoutHistory() {
                           </p>
                         </div>
                       </div>
+                      {/* Delete button */}
+                      <button
+                        onClick={(e) => handleDeleteClick(e, workout)}
+                        className="p-2 text-text-muted hover:text-red-400 transition-colors"
+                        aria-label="מחק אימון"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
                     </div>
                   </div>
 
@@ -773,6 +822,54 @@ export default function WorkoutHistory() {
                   className="flex-1 py-3 px-4 bg-primary-400 hover:bg-primary-500 text-white font-medium rounded-xl transition-colors"
                 >
                   אישור
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteDialog.isOpen && deleteDialog.workout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
+          <div className="bg-dark-surface rounded-2xl max-w-sm w-full shadow-xl animate-scale-in">
+            <div className="p-6 text-center">
+              {/* Close button */}
+              <button
+                onClick={() => setDeleteDialog({ isOpen: false, workout: null })}
+                className="absolute top-4 right-4 p-2 text-text-muted hover:text-text-primary"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Icon */}
+              <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center bg-red-400/20">
+                <Trash2 className="w-8 h-8 text-red-400" />
+              </div>
+
+              <h3 className="text-xl font-bold text-text-primary mb-2">
+                מחיקת אימון
+              </h3>
+
+              <p className="text-text-muted mb-6">
+                האם אתה בטוח שברצונך למחוק את האימון "{deleteDialog.workout.name}"?
+                <br />
+                <span className="text-red-400 text-sm">פעולה זו לא ניתנת לביטול</span>
+              </p>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteDialog({ isOpen: false, workout: null })}
+                  className="flex-1 py-3 px-4 bg-dark-card hover:bg-dark-border text-text-primary font-medium rounded-xl transition-colors"
+                >
+                  ביטול
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  className="flex-1 py-3 px-4 bg-red-500 hover:bg-red-600 text-white font-medium rounded-xl transition-colors"
+                >
+                  מחק
                 </button>
               </div>
             </div>
