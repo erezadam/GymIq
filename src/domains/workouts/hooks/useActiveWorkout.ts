@@ -929,8 +929,8 @@ export function useActiveWorkout() {
     const groups: Record<string, ActiveWorkoutExercise[]> = {}
 
     workout.exercises.forEach((ex) => {
-      // Use category for grouping (more reliable than primaryMuscle)
-      const muscle = ex.category || 'other'
+      // Use category first, fall back to primaryMuscle (for older data)
+      const muscle = ex.category || ex.primaryMuscle || 'other'
       const muscleHe = muscleGroupNames[muscle] || muscle
 
       if (!groups[muscleHe]) {
@@ -940,7 +940,7 @@ export function useActiveWorkout() {
     })
 
     return Object.entries(groups).map(([muscleGroupHe, exercises]) => ({
-      muscleGroup: exercises[0]?.category || 'other',
+      muscleGroup: exercises[0]?.category || exercises[0]?.primaryMuscle || 'other',
       muscleGroupHe,
       exercises,
     }))

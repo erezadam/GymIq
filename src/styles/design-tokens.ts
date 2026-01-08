@@ -47,6 +47,7 @@ export const workoutLabels = {
 
 // Muscle group Hebrew names (for grouping exercises)
 export const muscleGroupNames: Record<string, string> = {
+  // Common names
   chest: 'חזה',
   back: 'גב',
   lats: 'גב',
@@ -67,6 +68,17 @@ export const muscleGroupNames: Record<string, string> = {
   rhomboids: 'גב עליון',
   middle_traps: 'טרפז אמצעי',
   other: 'אחר',
+  // Scientific/anatomical names (from Firebase primaryMuscle values)
+  erector_spinae: 'גב תחתון',
+  rotator_cuff: 'כתפיים',
+  trapezius: 'טרפז',
+  triceps_brachii: 'זרועות',
+  side_delt: 'כתפיים',
+  gastrocnemius_soleus: 'שוקיים',
+  latissimus_dorsi: 'גב',
+  adductors: 'רגליים',
+  biceps_brachii: 'זרועות',
+  lower_abs: 'בטן',
 }
 
 // Common Hebrew labels used across the app
