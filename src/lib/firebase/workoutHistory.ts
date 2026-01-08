@@ -528,3 +528,148 @@ export async function updateWorkoutHistory(
     throw error
   }
 }
+
+// Get user's in-progress workout (for recovery after app close)
+export async function getInProgressWorkout(userId: string): Promise<WorkoutHistoryEntry | null> {
+  const historyRef = collection(db, COLLECTION_NAME)
+
+  // Query for in_progress workouts, get most recent
+  const q = query(
+    historyRef,
+    where('userId', '==', userId),
+    where('status', '==', 'in_progress'),
+    orderBy('date', 'desc'),
+    limit(1)
+  )
+
+  console.log('🔍 Looking for in_progress workout for user:', userId)
+
+  try {
+    const snapshot = await getDocs(q)
+
+    if (snapshot.empty) {
+      console.log('📭 No in_progress workout found')
+      return null
+    }
+
+    const doc = snapshot.docs[0]
+    console.log('✅ Found in_progress workout:', doc.id)
+    return toWorkoutHistory(doc.id, doc.data())
+  } catch (error: any) {
+    console.error('❌ Failed to get in_progress workout:', error)
+    return null
+  }
+}
+
+// Auto-save workout in progress (create or update)
+export async function autoSaveWorkout(
+  workoutId: string | null,
+  workout: Omit<WorkoutHistoryEntry, 'id'>
+): Promise<string> {
+  const cleanWorkout = removeUndefined({
+    userId: workout.userId,
+    name: workout.name || 'אימון',
+    date: Timestamp.fromDate(workout.date),
+    startTime: Timestamp.fromDate(workout.startTime),
+    endTime: Timestamp.fromDate(workout.endTime),
+    duration: workout.duration || 0,
+    status: 'in_progress', // Always in_progress for auto-save
+    exercises: workout.exercises.map(ex => ({
+      exerciseId: ex.exerciseId,
+      exerciseName: ex.exerciseName,
+      exerciseNameHe: ex.exerciseNameHe,
+      imageUrl: ex.imageUrl || '',
+      isCompleted: ex.isCompleted,
+      sets: ex.sets.map(set => ({
+        type: set.type,
+        targetReps: set.targetReps || 0,
+        targetWeight: set.targetWeight || 0,
+        actualReps: set.actualReps || 0,
+        actualWeight: set.actualWeight || 0,
+        completed: set.completed || false,
+      })),
+    })),
+    completedExercises: workout.completedExercises || 0,
+    totalExercises: workout.totalExercises || 0,
+    completedSets: workout.completedSets || 0,
+    totalSets: workout.totalSets || 0,
+    totalVolume: workout.totalVolume || 0,
+    personalRecords: workout.personalRecords || 0,
+    lastUpdated: Timestamp.now(),
+  })
+
+  try {
+    if (workoutId) {
+      // Update existing workout
+      const docRef = doc(db, COLLECTION_NAME, workoutId)
+      await updateDoc(docRef, cleanWorkout)
+      console.log('💾 Auto-save: Updated workout', workoutId)
+      return workoutId
+    } else {
+      // Create new workout
+      const historyRef = collection(db, COLLECTION_NAME)
+      ;(cleanWorkout as any).createdAt = Timestamp.now()
+      const docRef = await addDoc(historyRef, cleanWorkout)
+      console.log('💾 Auto-save: Created workout', docRef.id)
+      return docRef.id
+    }
+  } catch (error: any) {
+    console.error('❌ Auto-save failed:', error)
+    throw error
+  }
+}
+
+// Complete a workout (change status from in_progress to completed)
+export async function completeWorkout(
+  workoutId: string,
+  updates: {
+    status: 'completed' | 'partial' | 'cancelled'
+    endTime: Date
+    duration: number
+    exercises: any[]
+    completedExercises: number
+    totalExercises: number
+    completedSets: number
+    totalSets: number
+    totalVolume: number
+  }
+): Promise<void> {
+  const docRef = doc(db, COLLECTION_NAME, workoutId)
+
+  const updateData = {
+    status: updates.status,
+    endTime: Timestamp.fromDate(updates.endTime),
+    duration: updates.duration,
+    exercises: updates.exercises.map(ex => ({
+      exerciseId: ex.exerciseId,
+      exerciseName: ex.exerciseName,
+      exerciseNameHe: ex.exerciseNameHe,
+      imageUrl: ex.imageUrl || '',
+      isCompleted: ex.isCompleted,
+      sets: ex.sets.map((set: any) => ({
+        type: set.type,
+        targetReps: set.targetReps || 0,
+        targetWeight: set.targetWeight || 0,
+        actualReps: set.actualReps || 0,
+        actualWeight: set.actualWeight || 0,
+        completed: set.completed || false,
+      })),
+    })),
+    completedExercises: updates.completedExercises,
+    totalExercises: updates.totalExercises,
+    completedSets: updates.completedSets,
+    totalSets: updates.totalSets,
+    totalVolume: updates.totalVolume,
+    lastUpdated: Timestamp.now(),
+  }
+
+  console.log('🏁 Completing workout:', workoutId)
+
+  try {
+    await updateDoc(docRef, updateData)
+    console.log('✅ Workout completed successfully')
+  } catch (error: any) {
+    console.error('❌ Failed to complete workout:', error)
+    throw error
+  }
+}

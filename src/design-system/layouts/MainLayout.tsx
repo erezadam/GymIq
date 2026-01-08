@@ -60,13 +60,14 @@ export default function MainLayout() {
           style={{
             background: colors.background.card,
             borderBottom: `1px solid ${colors.border.default}`,
+            paddingTop: 'env(safe-area-inset-top, 0px)',
           }}
         >
           <div
             style={{
               ...components.layout.header.container,
               height: 64,
-              padding: `0 ${spacing.lg}px`,
+              padding: `0 ${spacing.xl}px`,
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
@@ -115,7 +116,7 @@ export default function MainLayout() {
           className="lg:hidden fixed inset-0 z-30"
           style={{
             background: colors.background.main,
-            paddingTop: 64,
+            paddingTop: 'calc(64px + env(safe-area-inset-top, 0px))',
           }}
         >
           <nav style={{ padding: spacing.lg, display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
@@ -360,7 +361,7 @@ export default function MainLayout() {
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          paddingTop: hideMobileHeader ? 0 : 64,
+          paddingTop: hideMobileHeader ? 0 : 'calc(64px + env(safe-area-inset-top, 0px))',
           overflow: 'hidden',
         }}
       >

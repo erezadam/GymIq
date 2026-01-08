@@ -6,6 +6,36 @@
 
 ---
 
+## [v1.2.0] - 2026-01-08
+
+### 🚀 פיצ'רים חדשים
+
+| פיצ'ר | תיאור |
+|-------|-------|
+| **Auto-Save Workout** | שמירה אוטומטית של אימון ל-Firebase כל 2 שניות - מונע אובדן נתונים כשסוגרים אפליקציה |
+| **Workout Recovery** | שחזור אוטומטי של אימון in_progress מ-Firebase בעת חזרה לאפליקציה |
+| **Rest Timer Toggle** | פקד "שעון עצר" למסך אימון פעיל - שולט האם הטיימר קופץ אחרי הוספת סט |
+
+### 🐛 תיקוני באגים
+
+| תיקון | תיאור |
+|-------|-------|
+| **Workout Lost** | תיקון באג קריטי - אימון לא נעלם יותר כשסוגרים את האפליקציה |
+| **Safe Area** | הוספת padding עליון ל-header עבור iPhone notch |
+| **Back Button** | הוספת כפתור חזרה במסך היסטוריית אימונים |
+
+### ✏️ קבצים ששונו
+
+| קובץ | שינוי |
+|------|-------|
+| `workoutHistory.ts` | הוספת autoSaveWorkout, getInProgressWorkout, completeWorkout |
+| `useActiveWorkout.ts` | אינטגרציה של Auto-Save עם debounce 2 שניות |
+| `ActiveWorkoutScreen.tsx` | Rest Timer Toggle UI |
+| `MainLayout.tsx` | Safe area support |
+| `WorkoutHistory.tsx` | Back button |
+
+---
+
 ## [v1.1.0] - 2026-01-06
 
 ### 🚀 פיצ'רים חדשים

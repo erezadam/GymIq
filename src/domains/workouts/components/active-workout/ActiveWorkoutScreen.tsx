@@ -5,6 +5,7 @@
 
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Timer } from 'lucide-react'
 
 import { useActiveWorkout } from '../../hooks/useActiveWorkout'
 import { WorkoutHeader } from './WorkoutHeader'
@@ -19,6 +20,7 @@ export default function ActiveWorkoutScreen() {
   // Rest Timer state
   const [showRestTimer, setShowRestTimer] = useState(false)
   const [restTimerResetKey, setRestTimerResetKey] = useState(0)
+  const [restTimerEnabled, setRestTimerEnabled] = useState(false)
 
   const {
     workout,
@@ -47,10 +49,12 @@ export default function ActiveWorkoutScreen() {
   // Wrap addSet to show rest timer - MUST be before early returns!
   const handleAddSet = useCallback((exerciseId: string) => {
     addSet(exerciseId)
-    // Show rest timer and reset it
-    setRestTimerResetKey((prev) => prev + 1)
-    setShowRestTimer(true)
-  }, [addSet])
+    // Show rest timer only if enabled
+    if (restTimerEnabled) {
+      setRestTimerResetKey((prev) => prev + 1)
+      setShowRestTimer(true)
+    }
+  }, [addSet, restTimerEnabled])
 
   // Close rest timer
   const handleCloseRestTimer = useCallback(() => {
@@ -121,11 +125,36 @@ export default function ActiveWorkoutScreen() {
       {/* Header */}
       <WorkoutHeader formattedTime={formattedTime} onExit={confirmExit} />
 
-      {/* Title & Counter */}
-      <ExerciseCounter
-        completed={workout.stats.completedExercises}
-        total={workout.stats.totalExercises}
-      />
+      {/* Title & Counter with Rest Timer Toggle */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '0 16px', marginBottom: '8px' }}>
+        <ExerciseCounter
+          completed={workout.stats.completedExercises}
+          total={workout.stats.totalExercises}
+        />
+
+        {/* Rest Timer Toggle */}
+        <button
+          onClick={() => setRestTimerEnabled(!restTimerEnabled)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 12px',
+            minHeight: '44px',
+            background: restTimerEnabled ? 'rgba(45, 212, 191, 0.15)' : 'transparent',
+            border: `1px solid ${restTimerEnabled ? '#2DD4BF' : '#4B5563'}`,
+            borderRadius: '8px',
+            color: restTimerEnabled ? '#2DD4BF' : '#9CA3AF',
+            fontSize: '14px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <Timer size={18} />
+          <span>שעון עצר</span>
+        </button>
+      </div>
 
       {/* Exercises by muscle group */}
       <div className="active-workout-content" style={{ paddingBottom: '80px' }}>

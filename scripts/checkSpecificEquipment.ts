@@ -23,7 +23,7 @@ async function checkEquipment() {
   console.log('🔍 בדיקת תרגילים: kettlebell, pull_up_bar, bench')
   console.log('='.repeat(70) + '\n')
 
-  const equipmentTypes = ['kettlebell', 'pull_up_bar', 'bench']
+  const equipmentTypes = ['kettlebell', 'pull_up_bar', 'bench', 'resistance_band']
 
   const exercisesRef = collection(db, 'exercises')
   const snapshot = await getDocs(exercisesRef)

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Calendar, Dumbbell, Trophy, ChevronDown, ChevronUp, CheckCircle, AlertCircle, XCircle, Play, X, Clock, Zap } from 'lucide-react'
+import { Calendar, Dumbbell, Trophy, ChevronDown, ChevronUp, CheckCircle, AlertCircle, XCircle, Play, X, Clock, Zap, ArrowRight } from 'lucide-react'
 // Note: Flame icon removed - can be re-added if stats cubes are restored
 import { getUserWorkoutHistory, getWorkoutById, updateWorkoutHistory } from '@/lib/firebase/workoutHistory'
 import { useAuthStore } from '@/domains/authentication/store'
@@ -430,10 +430,19 @@ export default function WorkoutHistory() {
 
   return (
     <div className="space-y-6 pb-20 lg:pb-6 animate-fade-in">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">תוכנית אימונים</h1>
-        <p className="text-text-muted mt-1">האימונים שלך - עבר, הווה ועתיד</p>
+      {/* Header with back button */}
+      <div className="flex items-start gap-3">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="p-2 -m-2 text-text-secondary hover:text-text-primary transition-colors"
+          aria-label="חזרה לדשבורד"
+        >
+          <ArrowRight size={24} />
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">תוכנית אימונים</h1>
+          <p className="text-text-muted mt-1">האימונים שלך - עבר, הווה ועתיד</p>
+        </div>
       </div>
 
       {/* Stats summary - REMOVED per request, stats useMemo kept for future use */}

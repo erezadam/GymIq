@@ -14,12 +14,16 @@ import type {
   ConfirmModalState,
   MuscleGroupExercises,
 } from '../types/active-workout.types'
+import type { SetType } from '../types/workout.types'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '../types/active-workout.types'
 import { useWorkoutBuilderStore } from '../store'
 import { useAuthStore } from '@/domains/authentication/store'
 import {
   saveWorkoutHistory,
   getLastWorkoutForExercises,
+  autoSaveWorkout,
+  getInProgressWorkout,
+  completeWorkout,
 } from '@/lib/firebase/workoutHistory'
 import { muscleGroupNames } from '@/styles/design-tokens'
 
@@ -33,9 +37,15 @@ export function useActiveWorkout() {
   const [isLoading, setIsLoading] = useState(true)
   const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({ type: null })
 
+  // Firebase workout ID for auto-save
+  const [firebaseWorkoutId, setFirebaseWorkoutId] = useState<string | null>(null)
+
   // Timer ref for elapsed time
   const timerRef = useRef<number | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+
+  // Auto-save debounce ref
+  const autoSaveTimeoutRef = useRef<number | null>(null)
 
   // Track if we've already initialized to prevent duplicate creation
   const hasInitialized = useRef(false)
@@ -48,6 +58,62 @@ export function useActiveWorkout() {
   // Clear from localStorage
   const clearStorage = useCallback(() => {
     localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY)
+  }, [])
+
+  // Auto-save to Firebase (debounced)
+  const triggerAutoSave = useCallback((workoutToSave: ActiveWorkout, currentFirebaseId: string | null) => {
+    // Clear any pending auto-save
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current)
+    }
+
+    // Debounce: wait 2 seconds after last change before saving
+    autoSaveTimeoutRef.current = window.setTimeout(async () => {
+      try {
+        const endTime = new Date()
+        const duration = Math.floor((endTime.getTime() - workoutToSave.startedAt.getTime()) / 60000)
+
+        const savedId = await autoSaveWorkout(currentFirebaseId, {
+          userId: workoutToSave.userId,
+          name: `אימון ${workoutToSave.startedAt.toLocaleDateString('he-IL')}`,
+          date: workoutToSave.startedAt,
+          startTime: workoutToSave.startedAt,
+          endTime,
+          duration,
+          status: 'in_progress',
+          exercises: workoutToSave.exercises.map((ex) => ({
+            exerciseId: ex.exerciseId,
+            exerciseName: ex.exerciseName,
+            exerciseNameHe: ex.exerciseNameHe,
+            imageUrl: ex.imageUrl || '',
+            isCompleted: ex.isCompleted,
+            sets: ex.reportedSets.map((set) => ({
+              type: 'working',
+              targetReps: 0,
+              targetWeight: 0,
+              actualReps: set.reps,
+              actualWeight: set.weight,
+              completed: set.reps > 0,
+            })),
+          })),
+          completedExercises: workoutToSave.stats.completedExercises,
+          totalExercises: workoutToSave.stats.totalExercises,
+          completedSets: workoutToSave.stats.completedSets,
+          totalSets: workoutToSave.stats.totalSets,
+          totalVolume: workoutToSave.stats.totalVolume,
+          personalRecords: 0,
+        })
+
+        // Store the Firebase ID if this was a new workout
+        if (!currentFirebaseId && savedId) {
+          setFirebaseWorkoutId(savedId)
+          // Also store in localStorage for recovery
+          localStorage.setItem('gymiq_firebase_workout_id', savedId)
+        }
+      } catch (error) {
+        console.error('❌ Auto-save failed:', error)
+      }
+    }, 2000) // 2 second debounce
   }, [])
 
   // Initialize workout from selected exercises or restore from storage
@@ -64,8 +130,65 @@ export function useActiveWorkout() {
 
       setIsLoading(true)
 
+      // First, check Firebase for in_progress workout (recovery after app close)
+      if (user?.uid && selectedExercises.length === 0) {
+        try {
+          const firebaseWorkout = await getInProgressWorkout(user.uid)
+          if (firebaseWorkout) {
+            console.log('🔥 Found in_progress workout in Firebase:', firebaseWorkout.id)
+
+            // Convert Firebase workout to ActiveWorkout format
+            const restoredWorkout: ActiveWorkout = {
+              id: firebaseWorkout.id,
+              startedAt: firebaseWorkout.startTime,
+              userId: firebaseWorkout.userId,
+              exercises: firebaseWorkout.exercises.map((ex, index) => ({
+                id: `workout_ex_${index}_${Date.now()}`,
+                exerciseId: ex.exerciseId,
+                exerciseName: ex.exerciseName,
+                exerciseNameHe: ex.exerciseNameHe,
+                imageUrl: ex.imageUrl,
+                primaryMuscle: 'other', // Will be populated from exercise data
+                isExpanded: false,
+                isCompleted: ex.isCompleted,
+                reportedSets: ex.sets.map((set, setIndex) => ({
+                  id: `set_${Date.now()}_${setIndex}`,
+                  setNumber: setIndex + 1,
+                  weight: set.actualWeight || 0,
+                  reps: set.actualReps || 0,
+                  completedAt: set.completed ? new Date() : undefined,
+                })),
+              })),
+              stats: {
+                totalExercises: firebaseWorkout.totalExercises,
+                completedExercises: firebaseWorkout.completedExercises,
+                totalSets: firebaseWorkout.totalSets,
+                completedSets: firebaseWorkout.completedSets,
+                elapsedSeconds: 0,
+                totalVolume: firebaseWorkout.totalVolume,
+              },
+            }
+
+            setWorkout(restoredWorkout)
+            setFirebaseWorkoutId(firebaseWorkout.id)
+            localStorage.setItem('gymiq_firebase_workout_id', firebaseWorkout.id)
+            saveToStorage(restoredWorkout)
+            hasInitialized.current = true
+            setIsLoading(false)
+            toast.success('האימון שוחזר!')
+            return
+          }
+        } catch (error) {
+          console.error('❌ Failed to check Firebase for in_progress workout:', error)
+        }
+      }
+
       // Try to restore from localStorage
       const savedWorkout = localStorage.getItem(ACTIVE_WORKOUT_STORAGE_KEY)
+      const savedFirebaseId = localStorage.getItem('gymiq_firebase_workout_id')
+      if (savedFirebaseId) {
+        setFirebaseWorkoutId(savedFirebaseId)
+      }
 
       if (savedWorkout) {
         try {
@@ -216,7 +339,47 @@ export function useActiveWorkout() {
         setWorkout(newWorkout)
         saveToStorage(newWorkout)
         hasInitialized.current = true
-        console.log('✅ New workout created and saved')
+
+        // Immediately save to Firebase (no debounce for initial save)
+        try {
+          const endTime = new Date()
+          const savedId = await autoSaveWorkout(null, {
+            userId: newWorkout.userId,
+            name: `אימון ${newWorkout.startedAt.toLocaleDateString('he-IL')}`,
+            date: newWorkout.startedAt,
+            startTime: newWorkout.startedAt,
+            endTime,
+            duration: 0,
+            status: 'in_progress',
+            exercises: newWorkout.exercises.map((ex) => ({
+              exerciseId: ex.exerciseId,
+              exerciseName: ex.exerciseName,
+              exerciseNameHe: ex.exerciseNameHe,
+              imageUrl: ex.imageUrl || '',
+              isCompleted: ex.isCompleted,
+              sets: ex.reportedSets.map((set) => ({
+                type: 'working',
+                targetReps: 0,
+                targetWeight: 0,
+                actualReps: set.reps,
+                actualWeight: set.weight,
+                completed: set.reps > 0,
+              })),
+            })),
+            completedExercises: 0,
+            totalExercises: newWorkout.exercises.length,
+            completedSets: 0,
+            totalSets: newWorkout.stats.totalSets,
+            totalVolume: 0,
+            personalRecords: 0,
+          })
+
+          setFirebaseWorkoutId(savedId)
+          localStorage.setItem('gymiq_firebase_workout_id', savedId)
+          console.log('✅ New workout created and saved to Firebase:', savedId)
+        } catch (error) {
+          console.error('❌ Failed to save new workout to Firebase:', error)
+        }
       } else {
         console.log('⚠️ No selectedExercises and no saved workout')
       }
@@ -249,10 +412,12 @@ export function useActiveWorkout() {
         if (!prev) return prev
         const updated = updater(prev)
         saveToStorage(updated)
+        // Trigger auto-save to Firebase (debounced)
+        triggerAutoSave(updated, firebaseWorkoutId)
         return updated
       })
     },
-    [saveToStorage]
+    [saveToStorage, triggerAutoSave, firebaseWorkoutId]
   )
 
   // Toggle exercise expansion (only one can be expanded at a time)
@@ -515,39 +680,55 @@ export function useActiveWorkout() {
         console.log('status:', status)
 
         try {
-          const workoutId = await saveWorkoutHistory({
-            userId: workout.userId,
-            name: `אימון ${new Date().toLocaleDateString('he-IL')}`,
-            date: workout.startedAt,
-            startTime: workout.startedAt,
-            endTime,
-            duration,
-            status,
-            exercises: workout.exercises.map((ex) => ({
-              exerciseId: ex.exerciseId,
-              exerciseName: ex.exerciseName,
-              exerciseNameHe: ex.exerciseNameHe,
-              imageUrl: ex.imageUrl || '',
-              isCompleted: ex.isCompleted,
-              sets: ex.reportedSets.map((set) => ({
-                type: 'working',
-                targetReps: 0,
-                targetWeight: 0,
-                actualReps: set.reps,
-                actualWeight: set.weight,
-                completed: set.reps > 0,
-              })),
+          const exercises = workout.exercises.map((ex) => ({
+            exerciseId: ex.exerciseId,
+            exerciseName: ex.exerciseName,
+            exerciseNameHe: ex.exerciseNameHe,
+            imageUrl: ex.imageUrl || '',
+            isCompleted: ex.isCompleted,
+            sets: ex.reportedSets.map((set) => ({
+              type: 'working' as SetType,
+              targetReps: 0,
+              targetWeight: 0,
+              actualReps: set.reps,
+              actualWeight: set.weight,
+              completed: set.reps > 0,
             })),
-            completedExercises: workout.stats.completedExercises,
-            totalExercises: workout.stats.totalExercises,
-            completedSets: workout.stats.completedSets,
-            totalSets: workout.stats.totalSets,
-            totalVolume: workout.stats.totalVolume,
-            personalRecords: 0,
-          })
+          }))
 
-          console.log('=== SAVE WORKOUT SUCCESS (from effect) ===')
-          console.log('Saved workout ID:', workoutId)
+          // If we have a Firebase ID, use completeWorkout; otherwise save new
+          if (firebaseWorkoutId) {
+            await completeWorkout(firebaseWorkoutId, {
+              status,
+              endTime,
+              duration,
+              exercises,
+              completedExercises: workout.stats.completedExercises,
+              totalExercises: workout.stats.totalExercises,
+              completedSets: workout.stats.completedSets,
+              totalSets: workout.stats.totalSets,
+              totalVolume: workout.stats.totalVolume,
+            })
+            console.log('=== COMPLETE WORKOUT SUCCESS (from effect) ===')
+          } else {
+            await saveWorkoutHistory({
+              userId: workout.userId,
+              name: `אימון ${new Date().toLocaleDateString('he-IL')}`,
+              date: workout.startedAt,
+              startTime: workout.startedAt,
+              endTime,
+              duration,
+              status,
+              exercises,
+              completedExercises: workout.stats.completedExercises,
+              totalExercises: workout.stats.totalExercises,
+              completedSets: workout.stats.completedSets,
+              totalSets: workout.stats.totalSets,
+              totalVolume: workout.stats.totalVolume,
+              personalRecords: 0,
+            })
+            console.log('=== SAVE WORKOUT SUCCESS (from effect) ===')
+          }
           toast.success('האימון נשמר!')
         } catch (error: any) {
           console.error('=== SAVE WORKOUT FAILED (from effect) ===')
@@ -559,6 +740,8 @@ export function useActiveWorkout() {
         clearStorage()
         clearWorkout()
         setWorkout(null)
+        setFirebaseWorkoutId(null)
+        localStorage.removeItem('gymiq_firebase_workout_id')
         hasInitialized.current = false
         setConfirmModal({ type: null })
         navigate('/workout/history')
@@ -566,42 +749,50 @@ export function useActiveWorkout() {
 
       doFinish()
     }
-  }, [shouldFinish, workout, clearStorage, clearWorkout, navigate])
+  }, [shouldFinish, workout, firebaseWorkoutId, clearStorage, clearWorkout, navigate])
 
-  // Exit workout (save to Firebase as in_progress and clear)
+  // Exit workout (final save to Firebase as in_progress and clear)
   const exitWorkout = useCallback(async () => {
     console.log('🚪 exitWorkout called')
+
+    // Cancel any pending auto-save
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current)
+    }
 
     if (workout) {
       const endTime = new Date()
       const duration = Math.floor((endTime.getTime() - workout.startedAt.getTime()) / 60000)
 
-      console.log('💾 Saving workout as in_progress before exit')
+      console.log('💾 Final save as in_progress before exit')
 
       try {
-        await saveWorkoutHistory({
+        const exercises = workout.exercises.map((ex) => ({
+          exerciseId: ex.exerciseId,
+          exerciseName: ex.exerciseName,
+          exerciseNameHe: ex.exerciseNameHe,
+          imageUrl: ex.imageUrl || '',
+          isCompleted: ex.isCompleted,
+          sets: ex.reportedSets.map((set) => ({
+            type: 'working' as SetType,
+            targetReps: 0,
+            targetWeight: 0,
+            actualReps: set.reps,
+            actualWeight: set.weight,
+            completed: set.reps > 0,
+          })),
+        }))
+
+        // Use existing Firebase document if available
+        await autoSaveWorkout(firebaseWorkoutId, {
           userId: workout.userId,
           name: `אימון ${new Date().toLocaleDateString('he-IL')}`,
           date: workout.startedAt,
           startTime: workout.startedAt,
           endTime,
           duration,
-          status: 'in_progress', // Always save as in_progress when exiting
-          exercises: workout.exercises.map((ex) => ({
-            exerciseId: ex.exerciseId,
-            exerciseName: ex.exerciseName,
-            exerciseNameHe: ex.exerciseNameHe,
-            imageUrl: ex.imageUrl || '',
-            isCompleted: ex.isCompleted,
-            sets: ex.reportedSets.map((set) => ({
-              type: 'working',
-              targetReps: 0,
-              targetWeight: 0,
-              actualReps: set.reps,
-              actualWeight: set.weight,
-              completed: set.reps > 0,
-            })),
-          })),
+          status: 'in_progress',
+          exercises,
           completedExercises: workout.stats.completedExercises,
           totalExercises: workout.stats.totalExercises,
           completedSets: workout.stats.completedSets,
@@ -618,20 +809,28 @@ export function useActiveWorkout() {
       }
     }
 
-    // Clear everything
+    // Clear everything - but DON'T clear the Firebase workout ID from storage
+    // so we can find it later if the user comes back
     clearStorage()
     clearWorkout()
     setWorkout(null)
+    setFirebaseWorkoutId(null)
+    // Keep the firebase ID in localStorage for recovery!
     hasInitialized.current = false
     setConfirmModal({ type: null })
 
     navigate('/dashboard')
-  }, [workout, clearStorage, clearWorkout, navigate])
+  }, [workout, firebaseWorkoutId, clearStorage, clearWorkout, navigate])
 
   // Finish workout (save to Firebase and clear)
   const finishWorkout = useCallback(async () => {
     console.log('=== FINISH WORKOUT START ===')
     console.log('workout:', workout)
+
+    // Cancel any pending auto-save
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current)
+    }
 
     if (!workout) {
       console.error('=== FINISH WORKOUT FAILED - NO WORKOUT ===')
@@ -648,56 +847,63 @@ export function useActiveWorkout() {
       : 'partial'
 
     console.log('=== SAVING TO FIREBASE ===')
-    console.log('userId:', workout.userId)
-    console.log('exercises:', workout.exercises.length)
-    console.log('duration:', duration)
+    console.log('firebaseWorkoutId:', firebaseWorkoutId)
     console.log('status:', status)
 
     try {
-      const workoutId = await saveWorkoutHistory({
-        userId: workout.userId,
-        name: `אימון ${new Date().toLocaleDateString('he-IL')}`,
-        date: workout.startedAt,
-        startTime: workout.startedAt,
-        endTime,
-        duration,
-        status:
-          workout.stats.completedExercises === workout.stats.totalExercises
-            ? 'completed'
-            : workout.stats.completedExercises === 0
-            ? 'cancelled'
-            : 'partial',
-        exercises: workout.exercises.map((ex) => ({
-          exerciseId: ex.exerciseId,
-          exerciseName: ex.exerciseName,
-          exerciseNameHe: ex.exerciseNameHe,
-          imageUrl: ex.imageUrl || '',
-          isCompleted: ex.isCompleted,
-          sets: ex.reportedSets.map((set) => ({
-            type: 'working',
-            targetReps: 0,
-            targetWeight: 0,
-            actualReps: set.reps,
-            actualWeight: set.weight,
-            completed: set.reps > 0,
-          })),
+      const exercises = workout.exercises.map((ex) => ({
+        exerciseId: ex.exerciseId,
+        exerciseName: ex.exerciseName,
+        exerciseNameHe: ex.exerciseNameHe,
+        imageUrl: ex.imageUrl || '',
+        isCompleted: ex.isCompleted,
+        sets: ex.reportedSets.map((set) => ({
+          type: 'working' as SetType,
+          targetReps: 0,
+          targetWeight: 0,
+          actualReps: set.reps,
+          actualWeight: set.weight,
+          completed: set.reps > 0,
         })),
-        completedExercises: workout.stats.completedExercises,
-        totalExercises: workout.stats.totalExercises,
-        completedSets: workout.stats.completedSets,
-        totalSets: workout.stats.totalSets,
-        totalVolume: workout.stats.totalVolume,
-        personalRecords: 0,
-      })
+      }))
 
-      console.log('=== SAVE WORKOUT SUCCESS ===')
-      console.log('Saved workout ID:', workoutId)
+      // If we have a Firebase ID, use completeWorkout; otherwise save new
+      if (firebaseWorkoutId) {
+        await completeWorkout(firebaseWorkoutId, {
+          status,
+          endTime,
+          duration,
+          exercises,
+          completedExercises: workout.stats.completedExercises,
+          totalExercises: workout.stats.totalExercises,
+          completedSets: workout.stats.completedSets,
+          totalSets: workout.stats.totalSets,
+          totalVolume: workout.stats.totalVolume,
+        })
+        console.log('=== COMPLETE WORKOUT SUCCESS ===')
+      } else {
+        await saveWorkoutHistory({
+          userId: workout.userId,
+          name: `אימון ${new Date().toLocaleDateString('he-IL')}`,
+          date: workout.startedAt,
+          startTime: workout.startedAt,
+          endTime,
+          duration,
+          status,
+          exercises,
+          completedExercises: workout.stats.completedExercises,
+          totalExercises: workout.stats.totalExercises,
+          completedSets: workout.stats.completedSets,
+          totalSets: workout.stats.totalSets,
+          totalVolume: workout.stats.totalVolume,
+          personalRecords: 0,
+        })
+        console.log('=== SAVE WORKOUT SUCCESS ===')
+      }
       toast.success('האימון נשמר!')
     } catch (error: any) {
       console.error('=== SAVE WORKOUT FAILED ===')
       console.error('Error:', error)
-      console.error('Error code:', error?.code)
-      console.error('Error message:', error?.message)
       toast.error('שגיאה בשמירת האימון')
     }
 
@@ -705,11 +911,13 @@ export function useActiveWorkout() {
     clearStorage()
     clearWorkout()
     setWorkout(null)
+    setFirebaseWorkoutId(null)
+    localStorage.removeItem('gymiq_firebase_workout_id')
     hasInitialized.current = false
     setConfirmModal({ type: null })
 
     navigate('/workout/history')
-  }, [workout, clearStorage, clearWorkout, navigate])
+  }, [workout, firebaseWorkoutId, clearStorage, clearWorkout, navigate])
 
   // Group exercises by muscle
   const exercisesByMuscle = useMemo((): MuscleGroupExercises[] => {
