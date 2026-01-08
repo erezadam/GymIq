@@ -174,6 +174,7 @@ export function ExerciseLibrary() {
         exerciseNameHe: exercise.nameHe,
         imageUrl: exercise.imageUrl,
         primaryMuscle: exercise.primaryMuscle || exercise.category,
+        category: exercise.category,
       })
     }
   }

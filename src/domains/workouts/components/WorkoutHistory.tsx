@@ -190,7 +190,7 @@ export default function WorkoutHistory() {
       }
 
       // Fetch exercise details to get imageUrl and English name for each exercise
-      const exerciseDetailsMap = new Map<string, { imageUrl: string; primaryMuscle: string; name: string; nameHe: string }>()
+      const exerciseDetailsMap = new Map<string, { imageUrl: string; primaryMuscle: string; category: string; name: string; nameHe: string }>()
       await Promise.all(
         fullWorkout.exercises.map(async (ex) => {
           try {
@@ -199,6 +199,7 @@ export default function WorkoutHistory() {
               exerciseDetailsMap.set(ex.exerciseId, {
                 imageUrl: exerciseDetails.imageUrl || '',
                 primaryMuscle: exerciseDetails.primaryMuscle || '',
+                category: exerciseDetails.category || '',
                 name: exerciseDetails.name || '',
                 nameHe: exerciseDetails.nameHe || '',
               })
@@ -226,6 +227,7 @@ export default function WorkoutHistory() {
               exerciseNameHe: details?.nameHe || exercise.exerciseNameHe || '',
               imageUrl: details?.imageUrl || exercise.imageUrl || '',
               primaryMuscle: details?.primaryMuscle || '',
+              category: details?.category || '',
             })
           })
 
@@ -265,6 +267,7 @@ export default function WorkoutHistory() {
               exerciseNameHe: details?.nameHe || exercise.exerciseNameHe || '',
               imageUrl: details?.imageUrl || exercise.imageUrl || '',
               primaryMuscle: details?.primaryMuscle || '',
+              category: details?.category || '',
             })
           })
 
@@ -310,6 +313,7 @@ export default function WorkoutHistory() {
               exerciseNameHe: details?.nameHe || exercise.exerciseNameHe || '',
               imageUrl: details?.imageUrl || exercise.imageUrl || '',
               primaryMuscle: details?.primaryMuscle || '',
+              category: details?.category || '',
             })
           })
 

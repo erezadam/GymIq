@@ -219,6 +219,7 @@ export default function WorkoutSession() {
       exerciseNameHe: exercise.nameHe,
       imageUrl: exercise.imageUrl,
       primaryMuscle: exercise.primaryMuscle,
+      category: exercise.category,
     })
     setShowAddExercise(false)
     setSearchQuery('')

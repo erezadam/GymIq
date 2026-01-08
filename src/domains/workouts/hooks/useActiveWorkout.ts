@@ -149,6 +149,7 @@ export function useActiveWorkout() {
                 exerciseNameHe: ex.exerciseNameHe,
                 imageUrl: ex.imageUrl,
                 primaryMuscle: 'other', // Will be populated from exercise data
+                category: undefined, // Will be populated from exercise data
                 isExpanded: false,
                 isCompleted: ex.isCompleted,
                 reportedSets: ex.sets.map((set, setIndex) => ({
@@ -230,6 +231,7 @@ export function useActiveWorkout() {
               exerciseNameHe: ex.exerciseNameHe,
               imageUrl: ex.imageUrl,
               primaryMuscle: ex.primaryMuscle || 'other',
+              category: ex.category,
               isExpanded: index === newExercisesToAdd.length - 1, // Last new exercise is expanded
               isCompleted: false,
               reportedSets: [
@@ -292,6 +294,7 @@ export function useActiveWorkout() {
           exerciseNameHe: ex.exerciseNameHe,
           imageUrl: ex.imageUrl,
           primaryMuscle: ex.primaryMuscle || 'other',
+          category: ex.category,
           isExpanded: false, // All exercises start collapsed
           isCompleted: false,
           reportedSets: [
@@ -926,7 +929,8 @@ export function useActiveWorkout() {
     const groups: Record<string, ActiveWorkoutExercise[]> = {}
 
     workout.exercises.forEach((ex) => {
-      const muscle = ex.primaryMuscle || 'other'
+      // Use category for grouping (more reliable than primaryMuscle)
+      const muscle = ex.category || 'other'
       const muscleHe = muscleGroupNames[muscle] || muscle
 
       if (!groups[muscleHe]) {
@@ -936,7 +940,7 @@ export function useActiveWorkout() {
     })
 
     return Object.entries(groups).map(([muscleGroupHe, exercises]) => ({
-      muscleGroup: exercises[0]?.primaryMuscle || 'other',
+      muscleGroup: exercises[0]?.category || 'other',
       muscleGroupHe,
       exercises,
     }))

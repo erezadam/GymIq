@@ -30,6 +30,7 @@ export interface ActiveWorkoutExercise {
   exerciseNameHe: string              // Hebrew name
   imageUrl?: string                   // Exercise image
   primaryMuscle: MuscleGroup | string // Primary muscle group
+  category?: string                   // Exercise category (for grouping)
 
   // State
   isExpanded: boolean                 // Is card expanded for reporting

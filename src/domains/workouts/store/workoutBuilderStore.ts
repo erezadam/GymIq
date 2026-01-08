@@ -11,6 +11,7 @@ export interface SelectedExercise {
   exerciseNameHe: string
   imageUrl: string
   primaryMuscle: string
+  category?: string
   sets: WorkoutSet[]
   restTime: number
   order: number

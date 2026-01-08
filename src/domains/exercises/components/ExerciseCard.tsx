@@ -23,6 +23,7 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
         exerciseNameHe: exercise.nameHe,
         imageUrl: exercise.imageUrl,
         primaryMuscle: exercise.primaryMuscle || exercise.category,
+        category: exercise.category,
       })
     }
   }
