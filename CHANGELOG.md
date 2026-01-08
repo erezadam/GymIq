@@ -24,6 +24,7 @@
 | **Safe Area** | הוספת padding עליון ל-header עבור iPhone notch |
 | **Back Button** | הוספת כפתור חזרה במסך היסטוריית אימונים |
 | **Exercise Grouping** | תיקון קיבוץ תרגילים - תרגילים עם primaryMuscle מדעי (כמו erector_spinae) מוצגים עכשיו בעברית לפי category |
+| **Delete Workout Button** | שחזור כפתור מחיקת אימון במסך תוכנית אימונים (נמחק בטעות ב-06/01) |
 
 ### ✏️ קבצים ששונו
 
