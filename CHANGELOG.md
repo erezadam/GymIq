@@ -23,16 +23,22 @@
 | **Workout Lost** | תיקון באג קריטי - אימון לא נעלם יותר כשסוגרים את האפליקציה |
 | **Safe Area** | הוספת padding עליון ל-header עבור iPhone notch |
 | **Back Button** | הוספת כפתור חזרה במסך היסטוריית אימונים |
+| **Exercise Grouping** | תיקון קיבוץ תרגילים - תרגילים עם primaryMuscle מדעי (כמו erector_spinae) מוצגים עכשיו בעברית לפי category |
 
 ### ✏️ קבצים ששונו
 
 | קובץ | שינוי |
 |------|-------|
 | `workoutHistory.ts` | הוספת autoSaveWorkout, getInProgressWorkout, completeWorkout |
-| `useActiveWorkout.ts` | אינטגרציה של Auto-Save עם debounce 2 שניות |
+| `useActiveWorkout.ts` | אינטגרציה של Auto-Save עם debounce 2 שניות + קיבוץ לפי category |
 | `ActiveWorkoutScreen.tsx` | Rest Timer Toggle UI |
 | `MainLayout.tsx` | Safe area support |
-| `WorkoutHistory.tsx` | Back button |
+| `WorkoutHistory.tsx` | Back button + העברת category |
+| `active-workout.types.ts` | הוספת שדה category |
+| `workoutBuilderStore.ts` | הוספת שדה category ל-SelectedExercise |
+| `ExerciseCard.tsx` | העברת category בבחירת תרגיל |
+| `ExerciseLibrary.tsx` | העברת category בבחירת תרגיל |
+| `WorkoutSession.tsx` | העברת category בהוספת תרגיל |
 
 ---
 
