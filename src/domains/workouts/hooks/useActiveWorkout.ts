@@ -25,6 +25,7 @@ import {
   getInProgressWorkout,
   completeWorkout,
 } from '@/lib/firebase/workoutHistory'
+import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { muscleGroupNames } from '@/styles/design-tokens'
 
 export function useActiveWorkout() {
@@ -36,6 +37,10 @@ export function useActiveWorkout() {
   const [workout, setWorkout] = useState<ActiveWorkout | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({ type: null })
+  const [showSummaryModal, setShowSummaryModal] = useState(false)
+
+  // Dynamic muscle name mapping from Firebase
+  const [dynamicMuscleNames, setDynamicMuscleNames] = useState<Record<string, string>>({})
 
   // Firebase workout ID for auto-save
   const [firebaseWorkoutId, setFirebaseWorkoutId] = useState<string | null>(null)
@@ -49,6 +54,21 @@ export function useActiveWorkout() {
 
   // Track if we've already initialized to prevent duplicate creation
   const hasInitialized = useRef(false)
+
+  // Load dynamic muscle names from Firebase on mount
+  useEffect(() => {
+    const loadMuscleNames = async () => {
+      try {
+        const mapping = await getMuscleIdToNameHeMap()
+        setDynamicMuscleNames(mapping)
+        console.log('✅ Loaded dynamic muscle names from Firebase:', Object.keys(mapping).length, 'entries')
+      } catch (error) {
+        console.error('❌ Failed to load muscle names from Firebase:', error)
+        // Will fall back to muscleGroupNames
+      }
+    }
+    loadMuscleNames()
+  }, [])
 
   // Save to localStorage - defined early so it can be used in initWorkout
   const saveToStorage = useCallback((workoutToSave: ActiveWorkout) => {
@@ -625,29 +645,32 @@ export function useActiveWorkout() {
 
   // Show finish confirmation - sets shouldFinish flag
   const [shouldFinish, setShouldFinish] = useState(false)
+  const [pendingCalories, setPendingCalories] = useState<number | undefined>(undefined)
 
   const confirmFinish = useCallback(() => {
     console.log('=== CONFIRM FINISH CLICKED ===')
-    console.log('workout:', workout)
 
     if (!workout) {
       console.log('❌ No workout - returning')
       return
     }
 
-    console.log('Stats:', workout.stats)
-    console.log('completedExercises:', workout.stats.completedExercises)
-    console.log('totalExercises:', workout.stats.totalExercises)
-
-    // If all exercises completed, trigger finish
-    if (workout.stats.completedExercises === workout.stats.totalExercises) {
-      console.log('✅ All exercises completed - triggering finish')
-      setShouldFinish(true)
-    } else {
-      console.log('⚠️ Not all completed - showing modal')
-      setConfirmModal({ type: 'finish_workout' })
-    }
+    console.log('✅ Showing summary modal')
+    // Always show summary modal directly
+    setShowSummaryModal(true)
   }, [workout])
+
+  // Called when user confirms finish from confirmation modal (partial workout)
+  const handleConfirmFinish = useCallback(() => {
+    console.log('=== CONFIRM FINISH FROM MODAL ===')
+    setConfirmModal({ type: null })
+    setShowSummaryModal(true)
+  }, [])
+
+  // Close summary modal
+  const closeSummaryModal = useCallback(() => {
+    setShowSummaryModal(false)
+  }, [])
 
   // Close modal
   const closeModal = useCallback(() => {
@@ -681,6 +704,7 @@ export function useActiveWorkout() {
         console.log('userId:', workout.userId)
         console.log('exercises:', workout.exercises.length)
         console.log('status:', status)
+        console.log('calories:', pendingCalories)
 
         try {
           const exercises = workout.exercises.map((ex) => ({
@@ -711,6 +735,7 @@ export function useActiveWorkout() {
               completedSets: workout.stats.completedSets,
               totalSets: workout.stats.totalSets,
               totalVolume: workout.stats.totalVolume,
+              calories: pendingCalories,
             })
             console.log('=== COMPLETE WORKOUT SUCCESS (from effect) ===')
           } else {
@@ -729,6 +754,7 @@ export function useActiveWorkout() {
               totalSets: workout.stats.totalSets,
               totalVolume: workout.stats.totalVolume,
               personalRecords: 0,
+              calories: pendingCalories,
             })
             console.log('=== SAVE WORKOUT SUCCESS (from effect) ===')
           }
@@ -744,6 +770,8 @@ export function useActiveWorkout() {
         clearWorkout()
         setWorkout(null)
         setFirebaseWorkoutId(null)
+        setShowSummaryModal(false)
+        setPendingCalories(undefined)
         localStorage.removeItem('gymiq_firebase_workout_id')
         hasInitialized.current = false
         setConfirmModal({ type: null })
@@ -752,7 +780,7 @@ export function useActiveWorkout() {
 
       doFinish()
     }
-  }, [shouldFinish, workout, firebaseWorkoutId, clearStorage, clearWorkout, navigate])
+  }, [shouldFinish, workout, firebaseWorkoutId, pendingCalories, clearStorage, clearWorkout, navigate])
 
   // Exit workout (final save to Firebase as in_progress and clear)
   const exitWorkout = useCallback(async () => {
@@ -825,102 +853,21 @@ export function useActiveWorkout() {
     navigate('/dashboard')
   }, [workout, firebaseWorkoutId, clearStorage, clearWorkout, navigate])
 
-  // Finish workout (save to Firebase and clear)
+  // Finish workout with calories (called from summary modal)
+  const finishWorkoutWithCalories = useCallback((calories?: number) => {
+    console.log('=== FINISH WORKOUT WITH CALORIES ===')
+    console.log('calories:', calories)
+    setPendingCalories(calories)
+    setShowSummaryModal(false)
+    setShouldFinish(true)
+  }, [])
+
+  // Finish workout (save to Firebase and clear) - legacy, triggers summary modal flow
   const finishWorkout = useCallback(async () => {
     console.log('=== FINISH WORKOUT START ===')
-    console.log('workout:', workout)
-
-    // Cancel any pending auto-save
-    if (autoSaveTimeoutRef.current) {
-      clearTimeout(autoSaveTimeoutRef.current)
-    }
-
-    if (!workout) {
-      console.error('=== FINISH WORKOUT FAILED - NO WORKOUT ===')
-      return
-    }
-
-    const endTime = new Date()
-    const duration = Math.floor((endTime.getTime() - workout.startedAt.getTime()) / 60000)
-
-    const status = workout.stats.completedExercises === workout.stats.totalExercises
-      ? 'completed'
-      : workout.stats.completedExercises === 0
-      ? 'cancelled'
-      : 'partial'
-
-    console.log('=== SAVING TO FIREBASE ===')
-    console.log('firebaseWorkoutId:', firebaseWorkoutId)
-    console.log('status:', status)
-
-    try {
-      const exercises = workout.exercises.map((ex) => ({
-        exerciseId: ex.exerciseId,
-        exerciseName: ex.exerciseName,
-        exerciseNameHe: ex.exerciseNameHe,
-        imageUrl: ex.imageUrl || '',
-        isCompleted: ex.isCompleted,
-        sets: ex.reportedSets.map((set) => ({
-          type: 'working' as SetType,
-          targetReps: 0,
-          targetWeight: 0,
-          actualReps: set.reps,
-          actualWeight: set.weight,
-          completed: set.reps > 0,
-        })),
-      }))
-
-      // If we have a Firebase ID, use completeWorkout; otherwise save new
-      if (firebaseWorkoutId) {
-        await completeWorkout(firebaseWorkoutId, {
-          status,
-          endTime,
-          duration,
-          exercises,
-          completedExercises: workout.stats.completedExercises,
-          totalExercises: workout.stats.totalExercises,
-          completedSets: workout.stats.completedSets,
-          totalSets: workout.stats.totalSets,
-          totalVolume: workout.stats.totalVolume,
-        })
-        console.log('=== COMPLETE WORKOUT SUCCESS ===')
-      } else {
-        await saveWorkoutHistory({
-          userId: workout.userId,
-          name: `אימון ${new Date().toLocaleDateString('he-IL')}`,
-          date: workout.startedAt,
-          startTime: workout.startedAt,
-          endTime,
-          duration,
-          status,
-          exercises,
-          completedExercises: workout.stats.completedExercises,
-          totalExercises: workout.stats.totalExercises,
-          completedSets: workout.stats.completedSets,
-          totalSets: workout.stats.totalSets,
-          totalVolume: workout.stats.totalVolume,
-          personalRecords: 0,
-        })
-        console.log('=== SAVE WORKOUT SUCCESS ===')
-      }
-      toast.success('האימון נשמר!')
-    } catch (error: any) {
-      console.error('=== SAVE WORKOUT FAILED ===')
-      console.error('Error:', error)
-      toast.error('שגיאה בשמירת האימון')
-    }
-
-    // Clear everything
-    clearStorage()
-    clearWorkout()
-    setWorkout(null)
-    setFirebaseWorkoutId(null)
-    localStorage.removeItem('gymiq_firebase_workout_id')
-    hasInitialized.current = false
-    setConfirmModal({ type: null })
-
-    navigate('/workout/history')
-  }, [workout, firebaseWorkoutId, clearStorage, clearWorkout, navigate])
+    // Show summary modal instead of finishing directly
+    setShowSummaryModal(true)
+  }, [])
 
   // Group exercises by muscle
   const exercisesByMuscle = useMemo((): MuscleGroupExercises[] => {
@@ -931,7 +878,8 @@ export function useActiveWorkout() {
     workout.exercises.forEach((ex) => {
       // Use category first, fall back to primaryMuscle (for older data)
       const muscle = ex.category || ex.primaryMuscle || 'other'
-      const muscleHe = muscleGroupNames[muscle] || muscle
+      // Try dynamic mapping from Firebase first, then static muscleGroupNames, then raw muscle ID
+      const muscleHe = dynamicMuscleNames[muscle] || muscleGroupNames[muscle] || muscle
 
       if (!groups[muscleHe]) {
         groups[muscleHe] = []
@@ -944,7 +892,7 @@ export function useActiveWorkout() {
       muscleGroupHe,
       exercises,
     }))
-  }, [workout])
+  }, [workout, dynamicMuscleNames])
 
   // Format elapsed time
   const formattedTime = useMemo(() => {
@@ -961,6 +909,7 @@ export function useActiveWorkout() {
     elapsedSeconds,
     formattedTime,
     exercisesByMuscle,
+    showSummaryModal,
 
     // Exercise actions
     toggleExercise,
@@ -975,7 +924,10 @@ export function useActiveWorkout() {
     confirmExit,
     exitWorkout,
     confirmFinish,
+    handleConfirmFinish,
     finishWorkout,
+    finishWorkoutWithCalories,
     closeModal,
+    closeSummaryModal,
   }
 }

@@ -7,7 +7,7 @@ import { defaultMuscleMapping } from '../types/muscles'
 import { exerciseService } from '../services'
 import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '../utils'
 import { useWorkoutBuilderStore } from '@/domains/workouts/store'
-import { getMuscles } from '@/lib/firebase/muscles'
+import { getMuscles, getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { saveWorkoutHistory } from '@/lib/firebase/workoutHistory'
 import { useAuthStore } from '@/domains/authentication/store'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '@/domains/workouts/types/active-workout.types'
@@ -67,6 +67,7 @@ export function ExerciseLibrary() {
 
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [muscles, setMuscles] = useState<PrimaryMuscle[]>(defaultMuscleMapping)
+  const [dynamicMuscleNames, setDynamicMuscleNames] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [selectedPrimaryMuscle, setSelectedPrimaryMuscle] = useState<string>('all')
@@ -109,12 +110,14 @@ export function ExerciseLibrary() {
   const loadData = async () => {
     setLoading(true)
     try {
-      const [exercisesData, musclesData] = await Promise.all([
+      const [exercisesData, musclesData, muscleNamesMapping] = await Promise.all([
         exerciseService.getExercises(),
         getMuscles(),
+        getMuscleIdToNameHeMap(),
       ])
       setExercises(exercisesData)
       setMuscles(musclesData)
+      setDynamicMuscleNames(muscleNamesMapping)
     } catch (error) {
       console.error('Failed to load data:', error)
     } finally {
@@ -411,7 +414,7 @@ export function ExerciseLibrary() {
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-white truncate">{exercise.nameHe}</h3>
                       <p className="text-xs text-text-muted truncate">
-                        {getSubMuscleHe(exercise.primaryMuscle)} • {getEquipmentHe(exercise.equipment)}
+                        {dynamicMuscleNames[exercise.primaryMuscle] || getSubMuscleHe(exercise.primaryMuscle)} • {getEquipmentHe(exercise.equipment)}
                       </p>
                     </div>
 

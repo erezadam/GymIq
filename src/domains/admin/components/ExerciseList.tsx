@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -18,6 +18,7 @@ import toast from 'react-hot-toast'
 import { exerciseService } from '@/domains/exercises/services'
 import type { ExerciseFilters, ExerciseCategory, ExerciseDifficulty, EquipmentType } from '@/domains/exercises/types'
 import { categories, equipment, difficultyOptions } from '@/domains/exercises/data/mockExercises'
+import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
 
 export default function ExerciseList() {
@@ -25,6 +26,22 @@ export default function ExerciseList() {
   const [filters, setFilters] = useState<ExerciseFilters>({})
   const [showFilters, setShowFilters] = useState(false)
   const [showOnlyMissingImages, setShowOnlyMissingImages] = useState(false)
+
+  // Dynamic muscle/category name mapping from Firebase
+  const [dynamicCategoryNames, setDynamicCategoryNames] = useState<Record<string, string>>({})
+
+  // Load dynamic category names from Firebase on mount
+  useEffect(() => {
+    const loadCategoryNames = async () => {
+      try {
+        const mapping = await getMuscleIdToNameHeMap()
+        setDynamicCategoryNames(mapping)
+      } catch (error) {
+        console.error('Failed to load category names from Firebase:', error)
+      }
+    }
+    loadCategoryNames()
+  }, [])
 
   // Fetch exercises
   const { data: allExercises = [], isLoading } = useQuery({
@@ -142,9 +159,9 @@ export default function ExerciseList() {
     return Object.values(filters).some((v) => v !== undefined && v !== '')
   }, [filters])
 
-  // Get category label
+  // Get category label - use dynamic Firebase mapping first, then static categories
   const getCategoryLabel = (categoryId: string) => {
-    return categories.find((c) => c.id === categoryId)?.nameHe || categoryId
+    return dynamicCategoryNames[categoryId] || categories.find((c) => c.id === categoryId)?.nameHe || categoryId
   }
 
   // Get equipment label

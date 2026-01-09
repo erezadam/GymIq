@@ -171,3 +171,30 @@ export async function forceUpdateAllMuscles(): Promise<number> {
     throw error
   }
 }
+
+// Get muscle ID to Hebrew name mapping from Firebase
+// Used for grouping exercises by muscle in Hebrew
+export async function getMuscleIdToNameHeMap(): Promise<Record<string, string>> {
+  try {
+    const muscles = await getMuscles()
+    const mapping: Record<string, string> = {}
+
+    for (const muscle of muscles) {
+      // Map the primary muscle id to its Hebrew name
+      mapping[muscle.id] = muscle.nameHe
+
+      // Also map sub-muscles if they exist
+      if (muscle.subMuscles) {
+        for (const subMuscle of muscle.subMuscles) {
+          mapping[subMuscle.id] = subMuscle.nameHe
+        }
+      }
+    }
+
+    return mapping
+  } catch (error) {
+    console.error('Error building muscle mapping:', error)
+    // Return empty mapping - will fall back to muscleGroupNames
+    return {}
+  }
+}

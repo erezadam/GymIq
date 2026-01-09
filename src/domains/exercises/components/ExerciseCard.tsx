@@ -1,7 +1,28 @@
+import { useState, useEffect } from 'react'
 import type { Exercise } from '../types'
 import { useWorkoutBuilderStore } from '@/domains/workouts/store'
 import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '../utils'
+import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { Check, Plus } from 'lucide-react'
+
+// Cache the mapping to avoid repeated Firebase calls
+let cachedMuscleNames: Record<string, string> | null = null
+let loadingPromise: Promise<Record<string, string>> | null = null
+
+async function loadMuscleNames(): Promise<Record<string, string>> {
+  if (cachedMuscleNames) return cachedMuscleNames
+  if (loadingPromise) return loadingPromise
+
+  loadingPromise = getMuscleIdToNameHeMap().then((mapping) => {
+    cachedMuscleNames = mapping
+    return mapping
+  }).catch((error) => {
+    console.error('Failed to load muscle names:', error)
+    return {}
+  })
+
+  return loadingPromise
+}
 
 interface ExerciseCardProps {
   exercise: Exercise
@@ -9,6 +30,12 @@ interface ExerciseCardProps {
 
 export function ExerciseCard({ exercise }: ExerciseCardProps) {
   const { addExercise, removeExercise, selectedExercises } = useWorkoutBuilderStore()
+  const [dynamicMuscleNames, setDynamicMuscleNames] = useState<Record<string, string>>({})
+
+  // Load dynamic muscle names on mount
+  useEffect(() => {
+    loadMuscleNames().then(setDynamicMuscleNames)
+  }, [])
 
   const isSelected = selectedExercises.some((e) => e.exerciseId === exercise.id)
 
@@ -75,7 +102,7 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
 
         {/* Category Badge - Bottom */}
         <div className="absolute bottom-3 right-3">
-          <span className="badge-category">{getCategoryHe(exercise.category)}</span>
+          <span className="badge-category">{dynamicMuscleNames[exercise.category] || getCategoryHe(exercise.category)}</span>
         </div>
       </div>
 

@@ -6,6 +6,26 @@
 
 ---
 
+## [v1.2.1] - 2026-01-09
+
+### 🐛 תיקוני באגים
+
+| תיקון | תיאור |
+|-------|-------|
+| **Dynamic Category Names** | קטגוריות תרגילים מוצגות כעת בעברית מ-Firebase במקום מיפוי סטטי - תומך בכל קטגוריה חדשה שמתווספת ב-Firebase |
+
+### ✏️ קבצים ששונו
+
+| קובץ | שינוי |
+|------|-------|
+| `muscles.ts` | הוספת פונקציה `getMuscleIdToNameHeMap()` לבניית מיפוי דינמי |
+| `useActiveWorkout.ts` | שימוש במיפוי דינמי לקיבוץ תרגילים לפי שריר |
+| `ExerciseList.tsx` | שימוש במיפוי דינמי בטבלת ניהול תרגילים |
+| `ExerciseCard.tsx` | שימוש במיפוי דינמי בכרטיס תרגיל |
+| `ExerciseLibrary.tsx` | שימוש במיפוי דינמי בספריית תרגילים |
+
+---
+
 ## [v1.2.0] - 2026-01-08
 
 ### 🚀 פיצ'רים חדשים
@@ -15,6 +35,7 @@
 | **Auto-Save Workout** | שמירה אוטומטית של אימון ל-Firebase כל 2 שניות - מונע אובדן נתונים כשסוגרים אפליקציה |
 | **Workout Recovery** | שחזור אוטומטי של אימון in_progress מ-Firebase בעת חזרה לאפליקציה |
 | **Rest Timer Toggle** | פקד "שעון עצר" למסך אימון פעיל - שולט האם הטיימר קופץ אחרי הוספת סט |
+| **Workout Summary Modal** | פופאפ סיכום אימון עם סטטיסטיקות (תרגילים, סטים, זמן) + שדה קלט לקלוריות שנשרפו |
 
 ### 🐛 תיקוני באגים
 
@@ -26,16 +47,23 @@
 | **Exercise Grouping** | תיקון קיבוץ תרגילים - תרגילים עם primaryMuscle מדעי (כמו erector_spinae) מוצגים עכשיו בעברית לפי category |
 | **Delete Workout Button** | שחזור כפתור מחיקת אימון במסך תוכנית אימונים (נמחק בטעות ב-06/01) |
 
+### 📁 קבצים חדשים
+
+```
+src/.../WorkoutSummaryModal.tsx  - פופאפ סיכום אימון עם קלוריות
+```
+
 ### ✏️ קבצים ששונו
 
 | קובץ | שינוי |
 |------|-------|
-| `workoutHistory.ts` | הוספת autoSaveWorkout, getInProgressWorkout, completeWorkout |
-| `useActiveWorkout.ts` | אינטגרציה של Auto-Save עם debounce 2 שניות + קיבוץ לפי category |
-| `ActiveWorkoutScreen.tsx` | Rest Timer Toggle UI |
+| `workoutHistory.ts` | הוספת autoSaveWorkout, getInProgressWorkout, completeWorkout + תמיכה בשדה calories |
+| `useActiveWorkout.ts` | אינטגרציה של Auto-Save עם debounce 2 שניות + קיבוץ לפי category + summary modal state |
+| `ActiveWorkoutScreen.tsx` | Rest Timer Toggle UI + WorkoutSummaryModal integration |
 | `MainLayout.tsx` | Safe area support |
 | `WorkoutHistory.tsx` | Back button + העברת category |
 | `active-workout.types.ts` | הוספת שדה category |
+| `workout.types.ts` | הוספת שדה calories ל-WorkoutHistoryEntry ו-WorkoutHistorySummary |
 | `workoutBuilderStore.ts` | הוספת שדה category ל-SelectedExercise |
 | `ExerciseCard.tsx` | העברת category בבחירת תרגיל |
 | `ExerciseLibrary.tsx` | העברת category בבחירת תרגיל |
