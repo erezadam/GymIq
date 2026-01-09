@@ -252,7 +252,7 @@ export function useActiveWorkout() {
               imageUrl: ex.imageUrl,
               primaryMuscle: ex.primaryMuscle || 'other',
               category: ex.category,
-              isExpanded: index === newExercisesToAdd.length - 1, // Last new exercise is expanded
+              isExpanded: false, // New exercises start collapsed
               isCompleted: false,
               reportedSets: [
                 {
