@@ -58,9 +58,10 @@ GymIQ/
 |------------|-------|--------------|
 | `users` | פרופילי משתמשים | uid, name, phone, role |
 | `exercises` | ספריית תרגילים | name, muscleGroup, imageUrl |
-| `muscles` | קטגוריות שרירים | name, hebrewName |
-| `workoutSessions` | אימונים פעילים | odri, odri, exercises[], status |
-| `workoutHistory` | היסטוריית אימונים | userId, completedAt, exercises[] |
+| `muscles` | קטגוריות שרירים | id, nameHe, nameEn, subMuscles[] |
+| `equipment` | ציוד כושר | id, nameHe, nameEn |
+| `workoutSessions` | אימונים פעילים | userId, exercises[], status |
+| `workoutHistory` | היסטוריית אימונים | userId, completedAt, exercises[], calories |
 
 ---
 
