@@ -8,6 +8,7 @@ import { exerciseService } from '../services'
 import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '../utils'
 import { useWorkoutBuilderStore } from '@/domains/workouts/store'
 import { getMuscles, getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
+import { MuscleIcon } from '@/shared/components/MuscleIcon'
 import { saveWorkoutHistory } from '@/lib/firebase/workoutHistory'
 import { useAuthStore } from '@/domains/authentication/store'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '@/domains/workouts/types/active-workout.types'
@@ -327,7 +328,7 @@ export function ExerciseLibrary() {
                   onClick={() => setSelectedPrimaryMuscle(muscle.id)}
                   className={selectedPrimaryMuscle === muscle.id ? 'pill-active' : 'pill-default'}
                 >
-                  <span>{muscle.icon}</span>
+                  <MuscleIcon icon={muscle.icon} size={20} />
                   <span>{muscle.nameHe}</span>
                 </button>
               ))}

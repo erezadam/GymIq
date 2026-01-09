@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Trash2, Edit2, Save, X, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
 import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
 import { getMuscles, saveMuscle, addPrimaryMuscle, deletePrimaryMuscle, initializeMuscles, syncMissingMuscles, forceUpdateAllMuscles } from '@/lib/firebase/muscles'
+import { MuscleIcon } from '@/shared/components/MuscleIcon'
 
 export default function MuscleManager() {
   const [muscles, setMuscles] = useState<PrimaryMuscle[]>([])
@@ -12,7 +13,7 @@ export default function MuscleManager() {
   const [showAddSubMuscle, setShowAddSubMuscle] = useState<string | null>(null)
 
   // Form states
-  const [newMuscle, setNewMuscle] = useState({ id: '', nameHe: '', nameEn: '', icon: '💪' })
+  const [newMuscle, setNewMuscle] = useState({ id: '', nameHe: '', nameEn: '', icon: '' })
   const [newSubMuscle, setNewSubMuscle] = useState({ id: '', nameHe: '', nameEn: '' })
   const [editForm, setEditForm] = useState<PrimaryMuscle | null>(null)
 
@@ -88,7 +89,7 @@ export default function MuscleManager() {
         icon: newMuscle.icon,
         subMuscles: [],
       })
-      setNewMuscle({ id: '', nameHe: '', nameEn: '', icon: '💪' })
+      setNewMuscle({ id: '', nameHe: '', nameEn: '', icon: '' })
       setShowAddMuscle(false)
       await loadMuscles()
     } catch (error) {
@@ -205,7 +206,7 @@ export default function MuscleManager() {
       {showAddMuscle && (
         <div className="card p-4 space-y-4">
           <h3 className="font-semibold text-white">הוסף שריר מרכזי חדש</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input
               type="text"
               placeholder="מזהה (אנגלית)"
@@ -227,13 +228,17 @@ export default function MuscleManager() {
               onChange={(e) => setNewMuscle({ ...newMuscle, nameEn: e.target.value })}
               className="input-primary text-sm"
             />
-            <input
-              type="text"
-              placeholder="אייקון"
-              value={newMuscle.icon}
-              onChange={(e) => setNewMuscle({ ...newMuscle, icon: e.target.value })}
-              className="input-primary text-sm"
-            />
+            {/* Icon URL with Preview */}
+            <div className="flex items-center gap-3">
+              <MuscleIcon icon={newMuscle.icon} size={48} />
+              <input
+                type="text"
+                placeholder="קישור לתמונה (URL)"
+                value={newMuscle.icon}
+                onChange={(e) => setNewMuscle({ ...newMuscle, icon: e.target.value })}
+                className="input-primary text-sm flex-1"
+              />
+            </div>
           </div>
           <div className="flex gap-2">
             <button onClick={handleAddMuscle} className="btn-primary text-sm">שמור</button>
@@ -252,9 +257,9 @@ export default function MuscleManager() {
               onClick={() => setExpandedMuscle(expandedMuscle === muscle.id ? null : muscle.id)}
             >
               <div className="flex items-center gap-3">
-                <span className="text-2xl">{muscle.icon}</span>
+                <MuscleIcon icon={editingMuscle === muscle.id && editForm ? editForm.icon : muscle.icon} size={48} />
                 {editingMuscle === muscle.id && editForm ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-1">
                     <input
                       type="text"
                       value={editForm.nameHe}
@@ -264,9 +269,10 @@ export default function MuscleManager() {
                     />
                     <input
                       type="text"
+                      placeholder="קישור לתמונה"
                       value={editForm.icon}
                       onChange={(e) => setEditForm({ ...editForm, icon: e.target.value })}
-                      className="input-primary text-sm w-12"
+                      className="input-primary text-sm flex-1"
                       onClick={(e) => e.stopPropagation()}
                     />
                   </div>

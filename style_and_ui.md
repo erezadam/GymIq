@@ -190,3 +190,44 @@ className="p-[17px]"
 ❌ לא ליצור קבצי CSS חדשים
 
 ❌ לא להשתמש ב-class שלא קיים ב-tokens
+
+---
+
+## 11. קומפוננטת MuscleIcon
+
+קומפוננטה להצגת אייקון שריר - תמונה מ-URL או אימוג'י כ-fallback.
+
+### שימוש:
+```typescript
+import { MuscleIcon } from '@/shared/components/MuscleIcon'
+
+// בסיסי
+<MuscleIcon icon={muscle.icon} />
+
+// עם גודל מותאם
+<MuscleIcon icon={muscle.icon} size={24} />
+<MuscleIcon icon={muscle.icon} size={32} />
+<MuscleIcon icon={muscle.icon} size={48} />
+<MuscleIcon icon={muscle.icon} size={64} />
+```
+
+### Props:
+| Prop | Type | Default | תיאור |
+|------|------|---------|-------|
+| `icon` | string | required | URL לתמונה או אימוג'י |
+| `size` | number | 48 | גודל בפיקסלים |
+| `className` | string | '' | classes נוספים |
+
+### התנהגות:
+- אם `icon` הוא URL (מתחיל ב-http/https) → מציג תמונה
+- אם `icon` הוא אימוג'י או טקסט → מציג כטקסט
+- אם התמונה לא נטענת → מציג 💪 כ-fallback
+
+---
+
+```
+═══════════════════════════════════════════════════════════════════════════════
+עדכון אחרון: 09/01/2026
+גרסה: 1.9
+═══════════════════════════════════════════════════════════════════════════════
+```

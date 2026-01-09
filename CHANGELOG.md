@@ -6,6 +6,38 @@
 
 ---
 
+## [v1.9.0] - 2026-01-09
+
+### 🚀 פיצ'רים חדשים
+
+| פיצ'ר | תיאור |
+|-------|-------|
+| **MuscleIcon Component** | קומפוננטה חדשה להצגת אייקוני שרירים מ-URL במקום אימוג'י |
+| **URL-based Muscle Icons** | שדה URL לתמונה בניהול שרירים במקום אימוג'י |
+
+### ✏️ קבצים ששונו
+
+| קובץ | שינוי |
+|------|-------|
+| `MuscleManager.tsx` | שדה URL לתמונה + preview + MuscleIcon |
+| `ExerciseLibrary.tsx` | שימוש ב-MuscleIcon בכפתורי סינון |
+
+### 📁 קבצים חדשים
+
+```
+src/shared/components/MuscleIcon.tsx - קומפוננטת תצוגת אייקון שריר
+```
+
+### 📝 עדכוני תיעוד
+
+| מסמך | שינוי |
+|------|-------|
+| `architecture.md` | עדכון מלא - routes, components, features |
+| `qa_scenarios.md` | תרחישי MuscleIcon (8.7-8.9) |
+| `style_and_ui.md` | תיעוד קומפוננטת MuscleIcon |
+
+---
+
 ## [v1.8.0] - 2026-01-09
 
 ### 🚀 פיצ'רים חדשים
