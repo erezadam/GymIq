@@ -35,6 +35,7 @@ export default function ExerciseList() {
     const loadCategoryNames = async () => {
       try {
         const mapping = await getMuscleIdToNameHeMap()
+        console.log('🔥 ExerciseList: Loaded muscle mapping from Firebase:', mapping)
         setDynamicCategoryNames(mapping)
       } catch (error) {
         console.error('Failed to load category names from Firebase:', error)
@@ -160,8 +161,28 @@ export default function ExerciseList() {
   }, [filters])
 
   // Get category label - use dynamic Firebase mapping first, then static categories
+  // Normalize ID by trying both hyphen and underscore versions
   const getCategoryLabel = (categoryId: string) => {
-    return dynamicCategoryNames[categoryId] || categories.find((c) => c.id === categoryId)?.nameHe || categoryId
+    // Try exact match first
+    if (dynamicCategoryNames[categoryId]) {
+      console.log(`✅ Found exact match for "${categoryId}":`, dynamicCategoryNames[categoryId])
+      return dynamicCategoryNames[categoryId]
+    }
+    // Try with hyphen replaced by underscore
+    const underscoreVersion = categoryId.replace(/-/g, '_')
+    if (dynamicCategoryNames[underscoreVersion]) {
+      console.log(`✅ Found underscore match for "${categoryId}" -> "${underscoreVersion}":`, dynamicCategoryNames[underscoreVersion])
+      return dynamicCategoryNames[underscoreVersion]
+    }
+    // Try with underscore replaced by hyphen
+    const hyphenVersion = categoryId.replace(/_/g, '-')
+    if (dynamicCategoryNames[hyphenVersion]) {
+      console.log(`✅ Found hyphen match for "${categoryId}" -> "${hyphenVersion}":`, dynamicCategoryNames[hyphenVersion])
+      return dynamicCategoryNames[hyphenVersion]
+    }
+    // Fall back to static categories, then raw ID
+    console.log(`❌ No match for "${categoryId}". Available keys:`, Object.keys(dynamicCategoryNames))
+    return categories.find((c) => c.id === categoryId)?.nameHe || categoryId
   }
 
   // Get equipment label

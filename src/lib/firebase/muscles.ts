@@ -177,6 +177,8 @@ export async function forceUpdateAllMuscles(): Promise<number> {
 export async function getMuscleIdToNameHeMap(): Promise<Record<string, string>> {
   try {
     const muscles = await getMuscles()
+    console.log('🔥 getMuscleIdToNameHeMap: Got muscles from Firebase:', muscles.map(m => ({ id: m.id, nameHe: m.nameHe })))
+
     const mapping: Record<string, string> = {}
 
     for (const muscle of muscles) {
@@ -191,6 +193,7 @@ export async function getMuscleIdToNameHeMap(): Promise<Record<string, string>> 
       }
     }
 
+    console.log('🔥 getMuscleIdToNameHeMap: Final mapping:', mapping)
     return mapping
   } catch (error) {
     console.error('Error building muscle mapping:', error)

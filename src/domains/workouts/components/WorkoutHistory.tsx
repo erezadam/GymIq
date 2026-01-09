@@ -560,7 +560,7 @@ export default function WorkoutHistory() {
                             <span className="text-sm">קלוריות</span>
                           </div>
                           <p className="text-lg font-semibold text-text-primary">
-                            {estimateCalories(workout.duration, workout.totalVolume)}
+                            {workout.calories ?? estimateCalories(workout.duration, workout.totalVolume)}
                           </p>
                         </div>
                       </div>
@@ -702,7 +702,7 @@ export default function WorkoutHistory() {
                             <span className="text-sm">קלוריות</span>
                           </div>
                           <p className="text-lg font-semibold text-text-primary">
-                            {estimateCalories(workout.duration, workout.totalVolume)}
+                            {workout.calories ?? estimateCalories(workout.duration, workout.totalVolume)}
                           </p>
                         </div>
                       </div>

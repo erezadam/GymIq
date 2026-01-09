@@ -12,6 +12,7 @@ import { WorkoutHeader } from './WorkoutHeader'
 import { ExerciseCounter } from './ExerciseCounter'
 import { MuscleGroupSection } from './MuscleGroupSection'
 import { ConfirmationModal } from './ConfirmationModal'
+import { WorkoutSummaryModal } from './WorkoutSummaryModal'
 import { RestTimer } from './RestTimer'
 
 export default function ActiveWorkoutScreen() {
@@ -28,6 +29,7 @@ export default function ActiveWorkoutScreen() {
     confirmModal,
     formattedTime,
     exercisesByMuscle,
+    showSummaryModal,
 
     // Exercise actions
     toggleExercise,
@@ -42,8 +44,10 @@ export default function ActiveWorkoutScreen() {
     confirmExit,
     exitWorkout,
     confirmFinish,
-    finishWorkout,
+    handleConfirmFinish,
+    finishWorkoutWithCalories,
     closeModal,
+    closeSummaryModal,
   } = useActiveWorkout()
 
   // Wrap addSet to show rest timer - MUST be before early returns!
@@ -107,7 +111,8 @@ export default function ActiveWorkoutScreen() {
   const handleModalConfirm = () => {
     switch (confirmModal.type) {
       case 'finish_workout':
-        finishWorkout()
+        // Show summary modal instead of finishing directly
+        handleConfirmFinish()
         break
       case 'exit_workout':
         exitWorkout()
@@ -251,6 +256,20 @@ export default function ActiveWorkoutScreen() {
         isVisible={showRestTimer}
         onClose={handleCloseRestTimer}
         resetKey={restTimerResetKey}
+      />
+
+      {/* Workout Summary Modal */}
+      <WorkoutSummaryModal
+        isOpen={showSummaryModal}
+        onClose={closeSummaryModal}
+        onSave={finishWorkoutWithCalories}
+        stats={{
+          completedExercises: workout.stats.completedExercises,
+          totalExercises: workout.stats.totalExercises,
+          completedSets: workout.stats.completedSets,
+          totalSets: workout.stats.totalSets,
+          formattedTime,
+        }}
       />
     </div>
   )

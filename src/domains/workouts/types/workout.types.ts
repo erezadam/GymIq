@@ -107,6 +107,7 @@ export interface WorkoutHistoryEntry {
   totalSets: number
   totalVolume: number // kg
   personalRecords: number
+  calories?: number // User-entered calories burned
   notes?: string
 }
 
@@ -121,4 +122,5 @@ export interface WorkoutHistorySummary {
   totalExercises: number
   totalVolume: number // kg
   personalRecords: number
+  calories?: number // User-entered calories burned
 }

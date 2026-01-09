@@ -38,6 +38,7 @@ function toWorkoutHistory(id: string, data: any): WorkoutHistoryEntry {
     totalSets: data.totalSets,
     totalVolume: data.totalVolume,
     personalRecords: data.personalRecords || 0,
+    calories: data.calories,
     notes: data.notes,
   }
 }
@@ -54,6 +55,7 @@ function toSummary(entry: WorkoutHistoryEntry): WorkoutHistorySummary {
     totalExercises: entry.totalExercises,
     totalVolume: entry.totalVolume,
     personalRecords: entry.personalRecords,
+    calories: entry.calories,
   }
 }
 
@@ -648,11 +650,12 @@ export async function completeWorkout(
     completedSets: number
     totalSets: number
     totalVolume: number
+    calories?: number
   }
 ): Promise<void> {
   const docRef = doc(db, COLLECTION_NAME, workoutId)
 
-  const updateData = {
+  const updateData: Record<string, any> = {
     status: updates.status,
     endTime: Timestamp.fromDate(updates.endTime),
     duration: updates.duration,
@@ -677,6 +680,11 @@ export async function completeWorkout(
     totalSets: updates.totalSets,
     totalVolume: updates.totalVolume,
     lastUpdated: Timestamp.now(),
+  }
+
+  // Add calories if provided
+  if (updates.calories !== undefined) {
+    updateData.calories = updates.calories
   }
 
   console.log('🏁 Completing workout:', workoutId)
