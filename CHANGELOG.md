@@ -6,6 +6,41 @@
 
 ---
 
+## [v1.10.0] - 2026-01-10
+
+### 🚀 פיצ'רים חדשים
+
+| פיצ'ר | תיאור |
+|-------|-------|
+| **סוגי דיווח תרגילים (ReportType)** | תמיכה בסוגי דיווח שונים: weight_reps, reps_only, time_only, reps_time |
+| **קוביית השוואה בין-לאומית** | קוביה בדשבורד שפותחת קישור חיצוני (מוגדר ע"י אדמין) |
+| **מסך הגדרות אדמין** | מסך AdminSettings לניהול URL חיצוני |
+| **מיון לפי ציוד במסך אימון** | לחצני toggle: "לפי שריר" / "לפי ציוד" |
+
+### ✏️ קבצים ששונו
+
+| קובץ | שינוי |
+|------|-------|
+| `exercise.types.ts` | הוספת ExerciseReportType |
+| `active-workout.types.ts` | הוספת equipment, reportType, EquipmentGroupExercises |
+| `workoutBuilderStore.ts` | הוספת equipment, reportType ל-SelectedExercise |
+| `ExerciseLibrary.tsx` | העברת equipment, reportType בבחירת תרגיל |
+| `ExerciseForm.tsx` | שדה בחירת reportType |
+| `useActiveWorkout.ts` | exercisesByEquipment, העברת equipment/reportType |
+| `SetReportRow.tsx` | תצוגה דינמית לפי reportType |
+| `ActiveWorkoutScreen.tsx` | לחצני מיון muscle/equipment |
+| `UserDashboard.tsx` | קוביית השוואה בין-לאומית |
+| `App.tsx` | route ל-AdminSettings |
+
+### 📁 קבצים חדשים
+
+```
+src/lib/firebase/appSettings.ts - Firebase functions להגדרות אפליקציה
+src/domains/admin/components/AdminSettings.tsx - מסך הגדרות אדמין
+```
+
+---
+
 ## [v1.9.1] - 2026-01-09
 
 ### 🐛 תיקוני באגים
