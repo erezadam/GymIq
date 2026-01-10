@@ -39,6 +39,12 @@ src/lib/firebase/appSettings.ts - Firebase functions להגדרות אפליקצ
 src/domains/admin/components/AdminSettings.tsx - מסך הגדרות אדמין
 ```
 
+### 🐛 תיקוני באגים
+
+| תיקון | תיאור |
+|-------|-------|
+| **סנכרון פילטר ציוד** | פילטר הציוד במסך תרגילים נשלף עכשיו מ-Firebase במקום מערך hardcoded |
+
 ---
 
 ## [v1.9.1] - 2026-01-09
