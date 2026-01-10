@@ -8,22 +8,12 @@ import { exerciseService } from '../services'
 import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '../utils'
 import { useWorkoutBuilderStore } from '@/domains/workouts/store'
 import { getMuscles, getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
+import { getEquipment } from '@/lib/firebase/equipment'
 import { MuscleIcon } from '@/shared/components/MuscleIcon'
 import { saveWorkoutHistory } from '@/lib/firebase/workoutHistory'
 import { useAuthStore } from '@/domains/authentication/store'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '@/domains/workouts/types/active-workout.types'
 import type { WorkoutHistoryEntry } from '@/domains/workouts/types'
-
-// Equipment options
-const equipmentOptions = [
-  { id: 'all', label: 'הכל' },
-  { id: 'barbell', label: 'מוט' },
-  { id: 'dumbbell', label: 'משקולות' },
-  { id: 'bodyweight', label: 'גוף' },
-  { id: 'cable_machine', label: 'כבלים' },
-  { id: 'machine', label: 'מכונה' },
-  { id: 'pull_up_bar', label: 'מתח' },
-]
 
 // Helper functions
 function getEquipmentHe(equipment: string): string {
@@ -69,6 +59,9 @@ export function ExerciseLibrary() {
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [muscles, setMuscles] = useState<PrimaryMuscle[]>(defaultMuscleMapping)
   const [dynamicMuscleNames, setDynamicMuscleNames] = useState<Record<string, string>>({})
+  const [equipmentOptions, setEquipmentOptions] = useState<{ id: string; label: string }[]>([
+    { id: 'all', label: 'הכל' },
+  ])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [selectedPrimaryMuscle, setSelectedPrimaryMuscle] = useState<string>('all')
@@ -111,14 +104,21 @@ export function ExerciseLibrary() {
   const loadData = async () => {
     setLoading(true)
     try {
-      const [exercisesData, musclesData, muscleNamesMapping] = await Promise.all([
+      const [exercisesData, musclesData, muscleNamesMapping, equipmentData] = await Promise.all([
         exerciseService.getExercises(),
         getMuscles(),
         getMuscleIdToNameHeMap(),
+        getEquipment(),
       ])
       setExercises(exercisesData)
       setMuscles(musclesData)
       setDynamicMuscleNames(muscleNamesMapping)
+
+      // Set equipment options from Firebase
+      setEquipmentOptions([
+        { id: 'all', label: 'הכל' },
+        ...equipmentData.map((eq) => ({ id: eq.id, label: eq.nameHe })),
+      ])
     } catch (error) {
       console.error('Failed to load data:', error)
     } finally {
