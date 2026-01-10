@@ -114,6 +114,7 @@ export function ExerciseCard({
               <SetReportRow
                 key={set.id}
                 set={set}
+                reportType={exercise.reportType}
                 onUpdate={(updates) => onUpdateSet(set.id, updates)}
                 onDelete={() => onDeleteSet(set.id)}
                 canDelete={exercise.reportedSets.length > 1}

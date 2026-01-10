@@ -23,12 +23,16 @@ export default function ActiveWorkoutScreen() {
   const [restTimerResetKey, setRestTimerResetKey] = useState(0)
   const [restTimerEnabled, setRestTimerEnabled] = useState(false)
 
+  // Sort mode state
+  const [sortBy, setSortBy] = useState<'muscle' | 'equipment'>('muscle')
+
   const {
     workout,
     isLoading,
     confirmModal,
     formattedTime,
     exercisesByMuscle,
+    exercisesByEquipment,
     showSummaryModal,
 
     // Exercise actions
@@ -161,9 +165,52 @@ export default function ActiveWorkoutScreen() {
         </button>
       </div>
 
-      {/* Exercises by muscle group */}
+      {/* Sort Toggle Buttons */}
+      <div style={{ display: 'flex', gap: '8px', padding: '0 16px', marginBottom: '12px' }}>
+        <button
+          onClick={() => setSortBy('muscle')}
+          style={{
+            padding: '6px 14px',
+            borderRadius: '8px',
+            fontSize: '13px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            background: sortBy === 'muscle' ? '#2DD4BF' : 'transparent',
+            border: `1px solid ${sortBy === 'muscle' ? '#2DD4BF' : '#4B5563'}`,
+            color: sortBy === 'muscle' ? '#0B0D12' : '#9CA3AF',
+          }}
+        >
+          לפי שריר
+        </button>
+        <button
+          onClick={() => setSortBy('equipment')}
+          style={{
+            padding: '6px 14px',
+            borderRadius: '8px',
+            fontSize: '13px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            background: sortBy === 'equipment' ? '#2DD4BF' : 'transparent',
+            border: `1px solid ${sortBy === 'equipment' ? '#2DD4BF' : '#4B5563'}`,
+            color: sortBy === 'equipment' ? '#0B0D12' : '#9CA3AF',
+          }}
+        >
+          לפי ציוד
+        </button>
+      </div>
+
+      {/* Exercises grouped by muscle or equipment */}
       <div className="active-workout-content" style={{ paddingBottom: '80px' }}>
-        {exercisesByMuscle.map((group) => (
+        {(sortBy === 'muscle'
+          ? exercisesByMuscle
+          : exercisesByEquipment.map((g) => ({
+              muscleGroup: g.equipment,
+              muscleGroupHe: g.equipmentHe,
+              exercises: g.exercises,
+            }))
+        ).map((group) => (
           <MuscleGroupSection
             key={group.muscleGroupHe}
             group={group}

@@ -3,7 +3,7 @@
  * Types for the active workout screen
  */
 
-import type { MuscleGroup } from '@/domains/exercises/types'
+import type { MuscleGroup, ExerciseReportType } from '@/domains/exercises/types'
 
 // Last workout data for an exercise
 export interface LastWorkoutData {
@@ -18,6 +18,7 @@ export interface ReportedSet {
   setNumber: number
   weight: number
   reps: number
+  time?: number           // Time in seconds (for time_only and reps_time)
   completedAt?: Date
 }
 
@@ -31,6 +32,8 @@ export interface ActiveWorkoutExercise {
   imageUrl?: string                   // Exercise image
   primaryMuscle: MuscleGroup | string // Primary muscle group
   category?: string                   // Exercise category (for grouping)
+  equipment?: string                  // Equipment type (for grouping by equipment)
+  reportType?: ExerciseReportType     // How sets are reported (default: weight_reps)
 
   // State
   isExpanded: boolean                 // Is card expanded for reporting
@@ -47,6 +50,13 @@ export interface ActiveWorkoutExercise {
 export interface MuscleGroupExercises {
   muscleGroup: string                 // Muscle group key
   muscleGroupHe: string               // Hebrew name
+  exercises: ActiveWorkoutExercise[]
+}
+
+// Exercises grouped by equipment
+export interface EquipmentGroupExercises {
+  equipment: string                   // Equipment key
+  equipmentHe: string                 // Hebrew name
   exercises: ActiveWorkoutExercise[]
 }
 

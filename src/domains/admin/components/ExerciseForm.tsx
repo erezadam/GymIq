@@ -7,11 +7,19 @@ import { z } from 'zod'
 import { ArrowRight, Save, Plus, Trash2, Image } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { exerciseService } from '@/domains/exercises/services'
-import type { ExerciseCategory, MuscleGroup, EquipmentType } from '@/domains/exercises/types'
+import type { ExerciseCategory, MuscleGroup, EquipmentType, ExerciseReportType } from '@/domains/exercises/types'
 import { equipment, difficultyOptions } from '@/domains/exercises/data/mockExercises'
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
 import { getMuscles } from '@/lib/firebase/muscles'
 import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
+
+// Report type options
+const reportTypeOptions = [
+  { value: 'weight_reps', labelHe: 'משקל + חזרות' },
+  { value: 'reps_only', labelHe: 'חזרות בלבד' },
+  { value: 'time_only', labelHe: 'זמן בלבד' },
+  { value: 'reps_time', labelHe: 'חזרות + זמן' },
+] as const
 
 // Validation schema
 const exerciseSchema = z.object({
@@ -22,6 +30,7 @@ const exerciseSchema = z.object({
   secondaryMuscles: z.array(z.string()),
   equipment: z.string().min(1, 'ציוד נדרש'),
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']),
+  reportType: z.enum(['weight_reps', 'reps_only', 'time_only', 'reps_time']),
   instructions: z.array(z.object({ value: z.string() })).min(1, 'נדרשת לפחות הוראה אחת'),
   instructionsHe: z.array(z.object({ value: z.string() })).min(1, 'נדרשת לפחות הוראה אחת בעברית'),
   targetMuscles: z.array(z.string()),
@@ -70,6 +79,7 @@ export default function ExerciseForm() {
       secondaryMuscles: [],
       equipment: '',
       difficulty: 'beginner',
+      reportType: 'weight_reps',
       instructions: [{ value: '' }],
       instructionsHe: [{ value: '' }],
       targetMuscles: [],
@@ -115,6 +125,7 @@ export default function ExerciseForm() {
         secondaryMuscles: existingExercise.secondaryMuscles || [],
         equipment: existingExercise.equipment || '',
         difficulty: existingExercise.difficulty || 'beginner',
+        reportType: existingExercise.reportType || 'weight_reps',
         instructions: (existingExercise.instructions || []).length > 0
           ? existingExercise.instructions.map((v) => ({ value: v }))
           : [{ value: '' }],
@@ -167,6 +178,7 @@ export default function ExerciseForm() {
       primaryMuscle: data.primaryMuscle as MuscleGroup,
       secondaryMuscles: data.secondaryMuscles as MuscleGroup[],
       equipment: data.equipment as EquipmentType,
+      reportType: data.reportType as ExerciseReportType,
       targetMuscles: data.targetMuscles as MuscleGroup[],
       instructions: data.instructions.map((i) => i.value).filter(Boolean),
       instructionsHe: data.instructionsHe.map((i) => i.value).filter(Boolean),
@@ -307,6 +319,24 @@ export default function ExerciseForm() {
               {errors.equipment && (
                 <p className="text-red-400 text-sm mt-1">{errors.equipment.message}</p>
               )}
+            </div>
+
+            {/* Report Type */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">סוג דיווח</label>
+              <select
+                {...register('reportType')}
+                className="input-neon w-full"
+              >
+                {reportTypeOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.labelHe}
+                  </option>
+                ))}
+              </select>
+              <p className="text-text-muted text-xs mt-1">
+                קובע אילו שדות יוצגו בדיווח סטים
+              </p>
             </div>
 
             {/* Primary Muscle - Sub Muscle */}

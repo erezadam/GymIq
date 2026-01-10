@@ -13,6 +13,7 @@ import type {
   ReportedSet,
   ConfirmModalState,
   MuscleGroupExercises,
+  EquipmentGroupExercises,
 } from '../types/active-workout.types'
 import type { SetType } from '../types/workout.types'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '../types/active-workout.types'
@@ -27,6 +28,20 @@ import {
 } from '@/lib/firebase/workoutHistory'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { muscleGroupNames } from '@/styles/design-tokens'
+
+// Equipment names in Hebrew
+const equipmentNames: Record<string, string> = {
+  barbell: 'מוט ברזל',
+  dumbbell: 'משקולות',
+  bodyweight: 'משקל גוף',
+  pull_up_bar: 'מתח',
+  cable_machine: 'כבלים',
+  kettlebell: 'קטלבל',
+  machine: 'מכונה',
+  bench: 'ספסל',
+  resistance_band: 'גומייה',
+  other: 'אחר',
+}
 
 export function useActiveWorkout() {
   const navigate = useNavigate()
@@ -252,6 +267,8 @@ export function useActiveWorkout() {
               imageUrl: ex.imageUrl,
               primaryMuscle: ex.primaryMuscle || 'other',
               category: ex.category,
+              equipment: ex.equipment,
+              reportType: ex.reportType,
               isExpanded: false, // New exercises start collapsed
               isCompleted: false,
               reportedSets: [
@@ -315,6 +332,8 @@ export function useActiveWorkout() {
           imageUrl: ex.imageUrl,
           primaryMuscle: ex.primaryMuscle || 'other',
           category: ex.category,
+          equipment: ex.equipment,
+          reportType: ex.reportType,
           isExpanded: false, // All exercises start collapsed
           isCompleted: false,
           reportedSets: [
@@ -894,6 +913,29 @@ export function useActiveWorkout() {
     }))
   }, [workout, dynamicMuscleNames])
 
+  // Group exercises by equipment
+  const exercisesByEquipment = useMemo((): EquipmentGroupExercises[] => {
+    if (!workout) return []
+
+    const groups: Record<string, ActiveWorkoutExercise[]> = {}
+
+    workout.exercises.forEach((ex) => {
+      const equipment = ex.equipment || 'other'
+      const equipmentHe = equipmentNames[equipment] || equipment
+
+      if (!groups[equipmentHe]) {
+        groups[equipmentHe] = []
+      }
+      groups[equipmentHe].push(ex)
+    })
+
+    return Object.entries(groups).map(([equipmentHe, exercises]) => ({
+      equipment: exercises[0]?.equipment || 'other',
+      equipmentHe,
+      exercises,
+    }))
+  }, [workout])
+
   // Format elapsed time
   const formattedTime = useMemo(() => {
     const mins = Math.floor(elapsedSeconds / 60)
@@ -909,6 +951,7 @@ export function useActiveWorkout() {
     elapsedSeconds,
     formattedTime,
     exercisesByMuscle,
+    exercisesByEquipment,
     showSummaryModal,
 
     // Exercise actions

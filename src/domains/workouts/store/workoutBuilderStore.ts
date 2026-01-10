@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { WorkoutExercise, WorkoutSet, SetType } from '../types'
+import type { ExerciseReportType } from '@/domains/exercises/types'
 
 // ============================================
 // Types
@@ -12,6 +13,8 @@ export interface SelectedExercise {
   imageUrl: string
   primaryMuscle: string
   category?: string
+  equipment?: string
+  reportType?: ExerciseReportType
   sets: WorkoutSet[]
   restTime: number
   order: number

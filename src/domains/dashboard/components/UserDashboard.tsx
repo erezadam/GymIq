@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/domains/authentication/store'
 import { getUserWorkoutStats } from '@/lib/firebase/workoutHistory'
+import { getExternalComparisonUrl } from '@/lib/firebase/appSettings'
 import { colors, spacing, borderRadius, typography } from '@/styles/theme'
 
 // Initial stats (will be replaced with Firebase data)
@@ -59,6 +60,13 @@ const actionCardStyles = {
     subtitleColor: colors.text.secondary,
     iconBg: 'rgba(234, 179, 8, 0.2)',
   },
+  comparison: {
+    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%)',
+    border: '1px solid rgba(59, 130, 246, 0.2)',
+    titleColor: '#3B82F6',
+    subtitleColor: colors.text.secondary,
+    iconBg: 'rgba(59, 130, 246, 0.2)',
+  },
 }
 
 // Get Sunday of current week (D/M format)
@@ -75,32 +83,37 @@ export default function UserDashboard() {
   const sundayDate = getSundayOfWeek()
   const [userStats, setUserStats] = useState(defaultStats)
   const [isLoading, setIsLoading] = useState(true)
+  const [externalUrl, setExternalUrl] = useState<string | null>(null)
 
-  // Fetch user stats from Firebase
+  // Fetch user stats and external URL from Firebase
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       if (!user?.uid) {
         setIsLoading(false)
         return
       }
 
       try {
-        console.log('📊 Fetching stats for userId:', user.uid)
-        const stats = await getUserWorkoutStats(user.uid)
-        console.log('📊 Stats received:', stats)
+        // Fetch stats and external URL in parallel
+        const [stats, url] = await Promise.all([
+          getUserWorkoutStats(user.uid),
+          getExternalComparisonUrl(),
+        ])
+
         setUserStats({
           totalWorkouts: stats.totalWorkouts,
           thisWeek: stats.thisWeekWorkouts,
           currentStreak: stats.currentStreak,
         })
+        setExternalUrl(url)
       } catch (error) {
-        console.error('Failed to fetch user stats:', error)
+        console.error('Failed to fetch dashboard data:', error)
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchStats()
+    fetchData()
   }, [user?.uid])
 
   return (
@@ -202,7 +215,7 @@ export default function UserDashboard() {
       </div>
 
       {/* Action Cards Row - 3 cards */}
-      <div style={{ display: 'flex', gap: 10 }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
         {/* Primary CTA - Build Workout */}
         <Link to="/exercises" style={{ ...cardBase, ...actionCardStyles.primary, textDecoration: 'none' }}>
           <div
@@ -303,6 +316,57 @@ export default function UserDashboard() {
           </div>
         </Link>
       </div>
+
+      {/* International Comparison Card - Only shown if URL is configured */}
+      {externalUrl && (
+        <div style={{ display: 'flex', gap: 10 }}>
+          <a
+            href={externalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              ...cardBase,
+              ...actionCardStyles.comparison,
+              cursor: 'pointer',
+              width: '100%',
+              textDecoration: 'none',
+            }}
+          >
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: borderRadius.sm,
+                background: actionCardStyles.comparison.iconBg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 8px',
+                fontSize: 18,
+              }}
+            >
+              🌍
+            </div>
+            <div
+              style={{
+                fontSize: typography.fontSize.base,
+                fontWeight: typography.fontWeight.bold,
+                color: actionCardStyles.comparison.titleColor,
+              }}
+            >
+              נתוני השוואה בין לאומית
+            </div>
+            <div
+              style={{
+                fontSize: typography.fontSize.xs,
+                color: actionCardStyles.comparison.subtitleColor,
+              }}
+            >
+              צפה בנתונים
+            </div>
+          </a>
+        </div>
+      )}
     </div>
   )
 }

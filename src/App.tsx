@@ -14,6 +14,7 @@ const ExerciseForm = lazy(() => import('@/domains/admin/components/ExerciseForm'
 const UsersList = lazy(() => import('@/domains/admin/components/UsersList'))
 const MuscleManager = lazy(() => import('@/domains/admin/components/MuscleManager'))
 const EquipmentManager = lazy(() => import('@/domains/admin/components/EquipmentManager'))
+const AdminSettings = lazy(() => import('@/domains/admin/components/AdminSettings'))
 
 // User
 const MainLayout = lazy(() => import('@/design-system/layouts/MainLayout'))
@@ -80,6 +81,7 @@ function App() {
           <Route path="muscles" element={<MuscleManager />} />
           <Route path="equipment" element={<EquipmentManager />} />
           <Route path="users" element={<UsersList />} />
+          <Route path="settings" element={<AdminSettings />} />
         </Route>
 
         {/* Fallback */}

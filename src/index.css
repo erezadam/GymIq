@@ -994,6 +994,23 @@
     -moz-appearance: textfield;
   }
 
+  /* Time input specific styles */
+  .set-input-group--time {
+    @apply flex-1;
+  }
+
+  .time-inputs {
+    @apply flex items-center justify-center gap-1;
+  }
+
+  .set-input--time {
+    @apply w-12 h-10;
+  }
+
+  .time-separator {
+    @apply text-white text-lg font-bold;
+  }
+
   .set-delete-btn {
     @apply p-2 text-neon-gray-500 hover:text-red-400 transition-colors;
   }
