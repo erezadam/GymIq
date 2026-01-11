@@ -68,12 +68,32 @@ export function useVersionCheck(): UseVersionCheckReturn {
     }
   }, [])
 
-  // Clear PWA caches (NOT Firebase data) and reload
+  // Safe update mechanism - doesn't crash on iOS PWA
   const performUpdate = useCallback(async () => {
     console.log('[Version] Performing update...')
 
     try {
-      // 1. Clear only PWA/workbox caches (NOT firebase caches)
+      // 1. Check if there's an active workout - warn user
+      const activeWorkout = localStorage.getItem('gymiq_active_workout')
+      if (activeWorkout) {
+        const confirmed = window.confirm(
+          'יש לך אימון פעיל. העדכון עלול לאבד שינויים שלא נשמרו.\n\nלהמתין 3 שניות לשמירה ולהמשיך?'
+        )
+        if (!confirmed) {
+          console.log('[Version] Update cancelled by user (active workout)')
+          return
+        }
+        // Wait for auto-save to complete (debounce is 2 seconds, add buffer)
+        console.log('[Version] Waiting for auto-save...')
+        await new Promise(resolve => setTimeout(resolve, 3000))
+      }
+
+      // 2. Update stored version FIRST
+      if (newVersion) {
+        localStorage.setItem(VERSION_KEY, newVersion)
+      }
+
+      // 3. Clear only PWA caches (NOT firebase caches)
       if ('caches' in window) {
         const cacheNames = await caches.keys()
         await Promise.all(
@@ -94,28 +114,33 @@ export function useVersionCheck(): UseVersionCheckReturn {
         )
       }
 
-      // 2. Unregister service worker (this is safe - doesn't affect Firebase)
+      // 4. Ask SW to update (DON'T unregister - causes crash on iOS PWA!)
       if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations()
-        for (const registration of registrations) {
-          console.log('[Version] Unregistering SW')
-          await registration.unregister()
+        const registration = await navigator.serviceWorker.getRegistration()
+        if (registration) {
+          // If there's a waiting worker, activate it
+          if (registration.waiting) {
+            console.log('[Version] Activating waiting SW')
+            registration.waiting.postMessage('skipWaiting')
+          }
+          // Request update check
+          try {
+            await registration.update()
+            console.log('[Version] SW update requested')
+          } catch (e) {
+            console.log('[Version] SW update request failed (normal on iOS)')
+          }
         }
       }
 
-      // 3. Update stored version
-      if (newVersion) {
-        localStorage.setItem(VERSION_KEY, newVersion)
-      }
+      // 5. Short wait then reload
+      await new Promise(resolve => setTimeout(resolve, 300))
 
-      // 4. Wait 500ms for cleanup to complete
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      // 5. Force reload from server
+      // 6. Force reload from server
+      console.log('[Version] Reloading...')
       window.location.reload()
     } catch (error) {
       console.error('[Version] Error during update:', error)
-      // Show error to user instead of breaking the app
       alert('שגיאה בעדכון. נסה לרענן את הדף ידנית.')
     }
   }, [newVersion])

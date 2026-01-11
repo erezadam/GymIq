@@ -33,3 +33,20 @@ versionData.buildTime = new Date().toISOString();
 fs.writeFileSync(versionFile, JSON.stringify(versionData, null, 2) + '\n');
 
 console.log(`[Version] Updated to ${newVersion}`);
+
+// Also update CACHE_VERSION in sw.js
+const swFile = path.join(__dirname, '../public/sw.js');
+try {
+  if (fs.existsSync(swFile)) {
+    let swContent = fs.readFileSync(swFile, 'utf8');
+    // Replace CACHE_VERSION value
+    swContent = swContent.replace(
+      /const CACHE_VERSION = ['"]v[^'"]+['"]/,
+      `const CACHE_VERSION = 'v${newVersion}'`
+    );
+    fs.writeFileSync(swFile, swContent);
+    console.log(`[Version] Updated sw.js CACHE_VERSION to v${newVersion}`);
+  }
+} catch (e) {
+  console.error('[Version] Failed to update sw.js:', e.message);
+}
