@@ -57,6 +57,8 @@ GymIQ/
 │   │       │   ├── PersonalRecords.tsx
 │   │       │   └── active-workout/
 │   │       │       ├── ActiveWorkoutScreen.tsx
+│   │       │       ├── ExerciseCard.tsx
+│   │       │       ├── NotesModal.tsx
 │   │       │       ├── RestTimer.tsx
 │   │       │       └── WorkoutSummaryModal.tsx
 │   │       ├── hooks/           # useActiveWorkout
@@ -180,6 +182,8 @@ interface WorkoutBuilderStore {
 | **Workout Summary** | פופאפ סיכום עם קלוריות | WorkoutSummaryModal.tsx |
 | **MuscleIcon** | תמונות URL לאייקוני שרירים | MuscleIcon.tsx |
 | **Dynamic Mapping** | מיפוי דינמי ID→שם עברית מ-Firebase | getMuscleIdToNameHeMap() |
+| **Exercise Notes** | הערות לתרגילים באימון | NotesModal.tsx, ExerciseCard.tsx |
+| **Last Workout Data** | הצגת נתוני אימון קודם | ExerciseCard.tsx |
 
 ---
 
@@ -219,7 +223,7 @@ export interface ActiveWorkoutExercise { ... }
 
 ```
 ═══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 09/01/2026
-גרסה: 1.9
+עדכון אחרון: 11/01/2026
+גרסה: 1.10.2
 ═══════════════════════════════════════════════════════════════════════════════
 ```
