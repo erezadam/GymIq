@@ -70,6 +70,9 @@ export function useActiveWorkout() {
   // Track if we've already initialized to prevent duplicate creation
   const hasInitialized = useRef(false)
 
+  // Track if initWorkout is currently running to prevent concurrent calls
+  const isInitializing = useRef(false)
+
   // Load dynamic muscle names from Firebase on mount
   useEffect(() => {
     const loadMuscleNames = async () => {
@@ -157,17 +160,35 @@ export function useActiveWorkout() {
     const initWorkout = async () => {
       console.log('🔄 initWorkout called, selectedExercises:', selectedExercises.length)
 
-      // Don't re-initialize if we already have a workout
-      if (workout && hasInitialized.current) {
+      // Prevent concurrent calls - if already initializing, skip
+      if (isInitializing.current) {
+        console.log('⏳ Already initializing, skipping')
+        return
+      }
+
+      // Check if we're continuing from history FIRST (before early return check)
+      const continueWorkoutData = localStorage.getItem('continueWorkoutData')
+      const continueWorkoutMode = localStorage.getItem('continueWorkoutMode')
+      const isContinuingFromHistory = continueWorkoutData && continueWorkoutMode === 'in_progress'
+
+      if (isContinuingFromHistory) {
+        console.log('📋 Detected continue from history - will override existing workout')
+      }
+
+      // Don't re-initialize if we already have a workout (UNLESS continuing from history)
+      if (workout && hasInitialized.current && !isContinuingFromHistory) {
         console.log('⏭️ Already have workout, skipping init')
         setIsLoading(false)
         return
       }
 
+      // Set initializing lock
+      isInitializing.current = true
       setIsLoading(true)
 
       // First, check Firebase for in_progress workout (recovery after app close)
-      if (user?.uid && selectedExercises.length === 0) {
+      // Skip this if continuing from history
+      if (user?.uid && selectedExercises.length === 0 && !isContinuingFromHistory) {
         try {
           const firebaseWorkout = await getInProgressWorkout(user.uid)
           if (firebaseWorkout) {
@@ -220,14 +241,34 @@ export function useActiveWorkout() {
         }
       }
 
-      // Try to restore from localStorage
+      // Process continueWorkoutData from history (already detected above)
+      let continueData: any[] | null = null
+
+      if (isContinuingFromHistory) {
+        try {
+          continueData = JSON.parse(continueWorkoutData!)
+          console.log('📋 Parsing continueWorkoutData with', continueData?.length, 'exercises')
+          // Clear old localStorage workout - we're starting fresh from history data
+          localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY)
+          localStorage.removeItem('gymiq_firebase_workout_id')
+          // DON'T set hasInitialized.current = false - it causes race conditions!
+          // The isContinuingFromHistory flag is enough to allow initialization to proceed
+        } catch (e) {
+          console.error('Failed to parse continueWorkoutData:', e)
+        }
+        // Clear the localStorage flags after reading
+        localStorage.removeItem('continueWorkoutData')
+        localStorage.removeItem('continueWorkoutMode')
+      }
+
+      // Try to restore from localStorage (only if not continuing from history)
       const savedWorkout = localStorage.getItem(ACTIVE_WORKOUT_STORAGE_KEY)
       const savedFirebaseId = localStorage.getItem('gymiq_firebase_workout_id')
       if (savedFirebaseId) {
         setFirebaseWorkoutId(savedFirebaseId)
       }
 
-      if (savedWorkout) {
+      if (savedWorkout && !continueData) {
         try {
           const parsed = JSON.parse(savedWorkout)
           parsed.startedAt = new Date(parsed.startedAt)
@@ -322,26 +363,9 @@ export function useActiveWorkout() {
         }
       }
 
-      // Check for continueWorkoutData from history (for in_progress workouts)
-      const continueWorkoutData = localStorage.getItem('continueWorkoutData')
-      const continueWorkoutMode = localStorage.getItem('continueWorkoutMode')
-      let continueData: any[] | null = null
-
-      if (continueWorkoutData && continueWorkoutMode === 'in_progress') {
-        try {
-          continueData = JSON.parse(continueWorkoutData)
-          console.log('📋 Found continueWorkoutData with', continueData?.length, 'exercises')
-        } catch (e) {
-          console.error('Failed to parse continueWorkoutData:', e)
-        }
-        // Clear the localStorage flags after reading
-        localStorage.removeItem('continueWorkoutData')
-        localStorage.removeItem('continueWorkoutMode')
-      }
-
       // Create new workout from selected exercises
       if (selectedExercises.length > 0) {
-        console.log('🆕 Creating new workout from', selectedExercises.length, 'exercises')
+        console.log('🆕 Creating new workout from', selectedExercises.length, 'exercises', continueData ? '(with continueData)' : '')
         const exercises: ActiveWorkoutExercise[] = selectedExercises.map((ex, index) => {
           // Check if we have continue data for this exercise
           const continueExercise = continueData?.find(ce => ce.exerciseId === ex.exerciseId)
@@ -424,9 +448,10 @@ export function useActiveWorkout() {
           },
         }
 
+        // Set hasInitialized BEFORE setWorkout to prevent re-render from triggering another init
+        hasInitialized.current = true
         setWorkout(newWorkout)
         saveToStorage(newWorkout)
-        hasInitialized.current = true
 
         // Immediately save to Firebase (no debounce for initial save)
         try {
@@ -474,6 +499,7 @@ export function useActiveWorkout() {
       }
 
       setIsLoading(false)
+      isInitializing.current = false
     }
 
     initWorkout()

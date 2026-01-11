@@ -15,6 +15,7 @@ interface MuscleGroupSectionProps {
   onDeleteSet: (exerciseId: string, setId: string) => void
   onFinishExercise: (exerciseId: string) => void
   onDeleteExercise: (exerciseId: string) => void
+  onUpdateNotes: (exerciseId: string, notes: string) => void
 }
 
 export function MuscleGroupSection({
@@ -25,6 +26,7 @@ export function MuscleGroupSection({
   onDeleteSet,
   onFinishExercise,
   onDeleteExercise,
+  onUpdateNotes,
 }: MuscleGroupSectionProps) {
   return (
     <section className="muscle-group-section" dir="rtl">
@@ -45,6 +47,7 @@ export function MuscleGroupSection({
             onDeleteSet={(setId) => onDeleteSet(exercise.id, setId)}
             onFinish={() => onFinishExercise(exercise.id)}
             onDelete={() => onDeleteExercise(exercise.id)}
+            onUpdateNotes={(notes) => onUpdateNotes(exercise.id, notes)}
           />
         ))}
       </div>
