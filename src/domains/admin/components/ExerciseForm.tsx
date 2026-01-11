@@ -278,7 +278,7 @@ export default function ExerciseForm() {
                 <option value="">בחר שריר ראשי</option>
                 {musclesData.map((muscle) => (
                   <option key={muscle.id} value={muscle.id}>
-                    {muscle.icon} {muscle.nameHe}
+                    {muscle.nameHe}
                   </option>
                 ))}
               </select>

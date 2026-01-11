@@ -44,6 +44,9 @@ export interface ActiveWorkoutExercise {
 
   // Last workout data (from Firebase)
   lastWorkoutData?: LastWorkoutData
+
+  // User notes for this exercise
+  notes?: string
 }
 
 // Exercises grouped by muscle

@@ -26,6 +26,7 @@ export default function ExerciseList() {
   const [filters, setFilters] = useState<ExerciseFilters>({})
   const [showFilters, setShowFilters] = useState(false)
   const [showOnlyMissingImages, setShowOnlyMissingImages] = useState(false)
+  const [showOnlyNoEquipment, setShowOnlyNoEquipment] = useState(false)
 
   // Dynamic muscle/category name mapping from Firebase
   const [dynamicCategoryNames, setDynamicCategoryNames] = useState<Record<string, string>>({})
@@ -55,8 +56,22 @@ export default function ExerciseList() {
     return allExercises.filter(ex => !ex.imageUrl || ex.imageUrl.trim() === '')
   }, [allExercises])
 
-  // Display either all exercises or only those without images
-  const exercises = showOnlyMissingImages ? exercisesWithoutImages : allExercises
+  // Filter exercises without equipment (empty, null, undefined)
+  const exercisesWithoutEquipment = useMemo(() => {
+    return allExercises.filter(ex => !ex.equipment || ex.equipment.trim() === '')
+  }, [allExercises])
+
+  // Display exercises based on active filters
+  const exercises = useMemo(() => {
+    let result = allExercises
+    if (showOnlyMissingImages) {
+      result = result.filter(ex => !ex.imageUrl || ex.imageUrl.trim() === '')
+    }
+    if (showOnlyNoEquipment) {
+      result = result.filter(ex => !ex.equipment || ex.equipment.trim() === '')
+    }
+    return result
+  }, [allExercises, showOnlyMissingImages, showOnlyNoEquipment])
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -216,8 +231,12 @@ export default function ExerciseList() {
         <div>
           <h1 className="text-2xl font-bold text-text-primary">ניהול תרגילים</h1>
           <p className="text-text-muted mt-1">
-            {showOnlyMissingImages
+            {showOnlyMissingImages && showOnlyNoEquipment
+              ? `${exercises.length} תרגילים ללא תמונה וללא ציוד`
+              : showOnlyMissingImages
               ? `${exercisesWithoutImages.length} תרגילים ללא תמונה`
+              : showOnlyNoEquipment
+              ? `${exercisesWithoutEquipment.length} תרגילים ללא ציוד`
               : `${allExercises.length} תרגילים במערכת`
             }
           </p>
@@ -241,6 +260,27 @@ export default function ExerciseList() {
                   : 'bg-dark-border text-text-muted'
               }`}>
                 {exercisesWithoutImages.length}
+              </span>
+            )}
+          </button>
+          {/* No equipment filter button */}
+          <button
+            onClick={() => setShowOnlyNoEquipment(!showOnlyNoEquipment)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors ${
+              showOnlyNoEquipment
+                ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400'
+                : 'bg-dark-card hover:bg-dark-border border-dark-border text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            <Dumbbell className="w-4 h-4" />
+            <span className="hidden sm:inline">ללא ציוד</span>
+            {exercisesWithoutEquipment.length > 0 && (
+              <span className={`px-2 py-0.5 text-xs rounded-full ${
+                showOnlyNoEquipment
+                  ? 'bg-cyan-500/30 text-cyan-300'
+                  : 'bg-dark-border text-text-muted'
+              }`}>
+                {exercisesWithoutEquipment.length}
               </span>
             )}
           </button>

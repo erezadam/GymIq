@@ -6,6 +6,50 @@
 
 ---
 
+## [v1.10.1] - 2026-01-11
+
+### 🚀 פיצ'רים חדשים
+
+| פיצ'ר | תיאור |
+|-------|-------|
+| **הערות לתרגילים** | אפשרות להוסיף הערות טקסט לכל תרגיל באימון פעיל (כפתור "הערות" + מודל) |
+| **מנגנון עדכון PWA** | באנר עדכון גרסה למשתמש + useVersionCheck hook לזיהוי גרסאות חדשות |
+| **סקריפט עדכון גרסה** | סקריפט אוטומטי שמעדכן version.json בכל build |
+
+### 🐛 תיקוני באגים
+
+| תיקון | תיאור |
+|-------|-------|
+| **קלוריות לא נשמרות** | תיקון ב-saveWorkoutHistory - קלוריות לא נוספו ל-cleanWorkout |
+| **נתונים לא נטענים מהיסטוריה** | תיקון טעינת סטים בהמשך אימון מהיסטוריה - continueWorkoutData לא נקרא ב-useActiveWorkout |
+| **עדכון PWA גורם למסך שחור** | תיקון מחיקת cache של Firebase באופן לא מכוון בעת עדכון |
+
+### 📁 קבצים חדשים
+
+```
+src/domains/workouts/components/active-workout/NotesModal.tsx - מודל הערות לתרגיל
+src/shared/components/UpdateBanner.tsx - באנר עדכון גרסה
+src/shared/hooks/useVersionCheck.ts - hook לבדיקת גרסאות
+src/shared/hooks/index.ts - export של hooks
+public/version.json - קובץ גרסה לזיהוי עדכונים
+scripts/update-version.cjs - סקריפט עדכון גרסה
+```
+
+### ✏️ קבצים ששונו
+
+| קובץ | שינוי |
+|------|-------|
+| `workoutHistory.ts` | הוספת שמירת calories ב-saveWorkoutHistory |
+| `useActiveWorkout.ts` | קריאת continueWorkoutData + notes support + חישוב stats נכון |
+| `active-workout.types.ts` | הוספת notes ל-ActiveWorkoutExercise |
+| `App.tsx` | הוספת UpdateBanner |
+| `firebase.json` | הסרת service-worker.js כפול |
+| `index.html` | הסרת auto-reload של SW |
+| `ExerciseList.tsx` | תיקוני UI |
+| `package.json` | הוספת prebuild script |
+
+---
+
 ## [v1.10.0] - 2026-01-10
 
 ### 🚀 פיצ'רים חדשים

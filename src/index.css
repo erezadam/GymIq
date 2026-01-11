@@ -915,7 +915,7 @@
   }
 
   .exercise-card-name {
-    @apply text-white font-medium truncate;
+    @apply text-white font-medium line-clamp-2;
   }
 
   .exercise-card--completed .exercise-card-name {
@@ -924,6 +924,11 @@
 
   .exercise-card-last-workout {
     @apply text-neon-gray-400 text-sm mt-0.5;
+  }
+
+  /* Last workout data in expanded view - red/error color */
+  .exercise-last-workout-expanded {
+    @apply text-status-error text-base font-medium mt-3 text-center;
   }
 
   .exercise-card-image {
@@ -951,11 +956,13 @@
 
   /* Buttons in Exercise Card */
   .expand-btn {
-    @apply p-1 text-neon-gray-400 hover:text-white transition-colors;
+    @apply p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center;
+    @apply text-neon-gray-400 hover:text-white active:text-white transition-colors;
   }
 
   .delete-exercise-btn {
-    @apply p-1.5 text-neon-gray-500 hover:text-red-400 transition-colors;
+    @apply p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center;
+    @apply text-neon-gray-500 hover:text-red-400 active:text-red-400 transition-colors;
   }
 
   /* Set Report Row */

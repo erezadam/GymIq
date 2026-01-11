@@ -122,6 +122,7 @@ export function useActiveWorkout() {
             exerciseNameHe: ex.exerciseNameHe,
             imageUrl: ex.imageUrl || '',
             isCompleted: ex.isCompleted,
+            notes: ex.notes,
             sets: ex.reportedSets.map((set) => ({
               type: 'working',
               targetReps: 0,
@@ -321,30 +322,68 @@ export function useActiveWorkout() {
         }
       }
 
+      // Check for continueWorkoutData from history (for in_progress workouts)
+      const continueWorkoutData = localStorage.getItem('continueWorkoutData')
+      const continueWorkoutMode = localStorage.getItem('continueWorkoutMode')
+      let continueData: any[] | null = null
+
+      if (continueWorkoutData && continueWorkoutMode === 'in_progress') {
+        try {
+          continueData = JSON.parse(continueWorkoutData)
+          console.log('📋 Found continueWorkoutData with', continueData?.length, 'exercises')
+        } catch (e) {
+          console.error('Failed to parse continueWorkoutData:', e)
+        }
+        // Clear the localStorage flags after reading
+        localStorage.removeItem('continueWorkoutData')
+        localStorage.removeItem('continueWorkoutMode')
+      }
+
       // Create new workout from selected exercises
       if (selectedExercises.length > 0) {
         console.log('🆕 Creating new workout from', selectedExercises.length, 'exercises')
-        const exercises: ActiveWorkoutExercise[] = selectedExercises.map((ex, index) => ({
-          id: `workout_ex_${index}_${Date.now()}`,
-          exerciseId: ex.exerciseId,
-          exerciseName: ex.exerciseName,
-          exerciseNameHe: ex.exerciseNameHe,
-          imageUrl: ex.imageUrl,
-          primaryMuscle: ex.primaryMuscle || 'other',
-          category: ex.category,
-          equipment: ex.equipment,
-          reportType: ex.reportType,
-          isExpanded: false, // All exercises start collapsed
-          isCompleted: false,
-          reportedSets: [
-            {
-              id: `set_${Date.now()}_1`,
-              setNumber: 1,
-              weight: 0,
-              reps: 0,
-            },
-          ],
-        }))
+        const exercises: ActiveWorkoutExercise[] = selectedExercises.map((ex, index) => {
+          // Check if we have continue data for this exercise
+          const continueExercise = continueData?.find(ce => ce.exerciseId === ex.exerciseId)
+
+          // If we have continue data with sets, use them
+          let reportedSets: ReportedSet[]
+          if (continueExercise?.sets && continueExercise.sets.length > 0) {
+            console.log(`📋 Restoring ${continueExercise.sets.length} sets for ${ex.exerciseNameHe}`)
+            reportedSets = continueExercise.sets.map((set: any, setIndex: number) => ({
+              id: `set_${Date.now()}_${index}_${setIndex}`,
+              setNumber: setIndex + 1,
+              weight: set.actualWeight || 0,
+              reps: set.actualReps || 0,
+              completedAt: set.completed ? new Date() : undefined,
+            }))
+          } else {
+            // Default: one empty set
+            reportedSets = [
+              {
+                id: `set_${Date.now()}_${index}_1`,
+                setNumber: 1,
+                weight: 0,
+                reps: 0,
+              },
+            ]
+          }
+
+          return {
+            id: `workout_ex_${index}_${Date.now()}`,
+            exerciseId: ex.exerciseId,
+            exerciseName: ex.exerciseName,
+            exerciseNameHe: ex.exerciseNameHe,
+            imageUrl: ex.imageUrl,
+            primaryMuscle: ex.primaryMuscle || 'other',
+            category: ex.category,
+            equipment: ex.equipment,
+            reportType: ex.reportType,
+            isExpanded: false, // All exercises start collapsed
+            isCompleted: continueExercise?.isCompleted || false,
+            reportedSets,
+          }
+        })
 
         // Fetch last workout data for all exercises
         if (user?.uid) {
@@ -363,6 +402,13 @@ export function useActiveWorkout() {
           }
         }
 
+        // Calculate stats based on restored data
+        const completedExercises = exercises.filter(ex => ex.isCompleted).length
+        const completedSets = exercises.reduce((sum, ex) =>
+          sum + ex.reportedSets.filter(set => set.reps > 0).length, 0)
+        const totalVolume = exercises.reduce((sum, ex) =>
+          sum + ex.reportedSets.reduce((setSum, set) => setSum + (set.weight * set.reps), 0), 0)
+
         const newWorkout: ActiveWorkout = {
           id: `workout_${Date.now()}`,
           startedAt: new Date(),
@@ -370,11 +416,11 @@ export function useActiveWorkout() {
           exercises,
           stats: {
             totalExercises: exercises.length,
-            completedExercises: 0,
+            completedExercises,
             totalSets: exercises.reduce((sum, ex) => sum + ex.reportedSets.length, 0),
-            completedSets: 0,
+            completedSets,
             elapsedSeconds: 0,
-            totalVolume: 0,
+            totalVolume,
           },
         }
 
@@ -399,6 +445,7 @@ export function useActiveWorkout() {
               exerciseNameHe: ex.exerciseNameHe,
               imageUrl: ex.imageUrl || '',
               isCompleted: ex.isCompleted,
+              notes: ex.notes,
               sets: ex.reportedSets.map((set) => ({
                 type: 'working',
                 targetReps: 0,
@@ -553,6 +600,19 @@ export function useActiveWorkout() {
           },
         }
       })
+    },
+    [updateWorkout]
+  )
+
+  // Update exercise notes
+  const updateExerciseNotes = useCallback(
+    (exerciseId: string, notes: string) => {
+      updateWorkout((prev) => ({
+        ...prev,
+        exercises: prev.exercises.map((ex) =>
+          ex.id === exerciseId ? { ...ex, notes } : ex
+        ),
+      }))
     },
     [updateWorkout]
   )
@@ -732,6 +792,7 @@ export function useActiveWorkout() {
             exerciseNameHe: ex.exerciseNameHe,
             imageUrl: ex.imageUrl || '',
             isCompleted: ex.isCompleted,
+            notes: ex.notes,
             sets: ex.reportedSets.map((set) => ({
               type: 'working' as SetType,
               targetReps: 0,
@@ -823,6 +884,7 @@ export function useActiveWorkout() {
           exerciseNameHe: ex.exerciseNameHe,
           imageUrl: ex.imageUrl || '',
           isCompleted: ex.isCompleted,
+          notes: ex.notes,
           sets: ex.reportedSets.map((set) => ({
             type: 'working' as SetType,
             targetReps: 0,
@@ -960,6 +1022,7 @@ export function useActiveWorkout() {
     updateSet,
     deleteSet,
     finishExercise,
+    updateExerciseNotes,
 
     // Workout actions
     confirmDeleteExercise,

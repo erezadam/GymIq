@@ -44,15 +44,14 @@
                 registration.update();
               }, 5 * 60 * 1000);
 
-              // Handle updates
+              // Handle updates - let UpdateBanner manage the UI
               registration.addEventListener('updatefound', () => {
                 const newWorker = registration.installing;
                 newWorker.addEventListener('statechange', () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // New version available - reload to update
-                    console.log('[App] New version available, reloading...');
+                    console.log('[App] New version available');
                     newWorker.postMessage('skipWaiting');
-                    window.location.reload();
+                    // Don't auto-reload - UpdateBanner will show update option
                   }
                 });
               });

@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
+import { UpdateBanner } from '@/shared/components/UpdateBanner'
+import { useVersionCheck } from '@/shared/hooks/useVersionCheck'
 import { AuthGuard, GuestGuard } from '@/app/router/guards'
 
 // Lazy load pages
@@ -30,9 +32,21 @@ const PersonalRecords = lazy(() => import('@/domains/workouts/components/Persona
 const ExerciseLibrary = lazy(() => import('@/domains/exercises/components/ExerciseLibrary'))
 
 function App() {
+  const { updateAvailable, newVersion, performUpdate, dismissUpdate } = useVersionCheck()
+
   return (
-    <Suspense fallback={<LoadingSpinner fullScreen />}>
-      <Routes>
+    <>
+      {/* Update Banner */}
+      {updateAvailable && (
+        <UpdateBanner
+          onUpdate={performUpdate}
+          onDismiss={dismissUpdate}
+          newVersion={newVersion}
+        />
+      )}
+
+      <Suspense fallback={<LoadingSpinner fullScreen />}>
+        <Routes>
         {/* Public Routes */}
         <Route
           path="/login"
@@ -87,7 +101,8 @@ function App() {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
-    </Suspense>
+      </Suspense>
+    </>
   )
 }
 

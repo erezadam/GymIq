@@ -125,6 +125,11 @@ export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'
     (cleanWorkout as any).notes = workout.notes
   }
 
+  // Add calories only if exists
+  if (workout.calories !== undefined) {
+    (cleanWorkout as any).calories = workout.calories
+  }
+
   console.log('💾 Saving workout to Firebase...')
   console.log('📋 Collection:', COLLECTION_NAME)
   console.log('📋 Data:', JSON.stringify(cleanWorkout, null, 2))
