@@ -65,12 +65,6 @@ export function ExerciseCard({
         {/* Exercise info */}
         <div className="exercise-card-info">
           <h3 className="exercise-card-name">{exercise.exerciseNameHe}</h3>
-          {exercise.lastWorkoutData && (
-            <p className="exercise-card-last-workout">
-              {workoutLabels.lastWorkout} {exercise.lastWorkoutData.reps} -{' '}
-              {exercise.lastWorkoutData.weight}kg
-            </p>
-          )}
         </div>
 
         {/* Exercise image */}
@@ -84,15 +78,6 @@ export function ExerciseCard({
             target.src = EXERCISE_PLACEHOLDER_IMAGE
           }}
         />
-
-        {/* Completion indicator */}
-        <div
-          className={`exercise-completion-indicator ${
-            exercise.isCompleted ? 'exercise-completion-indicator--done' : ''
-          }`}
-        >
-          {exercise.isCompleted && <Check className="w-4 h-4" />}
-        </div>
       </div>
 
       {/* Card Content (expanded only) */}
