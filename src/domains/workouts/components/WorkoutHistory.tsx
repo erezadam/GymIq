@@ -144,7 +144,7 @@ export default function WorkoutHistory() {
       case 'cancelled':
       default:
         return {
-          label: 'בוטל',
+          label: 'ללא דיווח',
           icon: XCircle,
           bgClass: 'bg-neon-gray-700/50',
           borderClass: 'border-neon-gray-600',
@@ -247,11 +247,12 @@ export default function WorkoutHistory() {
       // Clear any existing workout in the store
       clearWorkout()
 
-      // Handle the 3 different cases based on status
+      // Handle the different cases based on status
       switch (workoutSummary.status) {
-        case 'completed': {
-          // Case 1: Completed workout - create NEW workout with exercises but EMPTY sets
-          console.log('📋 Creating new workout from completed - exercises only, no set data')
+        case 'completed':
+        case 'cancelled': {
+          // Completed or cancelled workout - create NEW workout with exercises but EMPTY sets
+          console.log('📋 Creating new workout from completed/cancelled - exercises only, no set data')
 
           fullWorkout.exercises.forEach(exercise => {
             const details = exerciseDetailsMap.get(exercise.exerciseId)
@@ -374,6 +375,7 @@ export default function WorkoutHistory() {
   const getDialogMessage = (status: WorkoutCompletionStatus) => {
     switch (status) {
       case 'completed':
+      case 'cancelled':
         return 'שים לב: אתה מתחיל אימון חדש מאפס עם אותם תרגילים'
       case 'in_progress':
       case 'partial':
@@ -389,6 +391,7 @@ export default function WorkoutHistory() {
   const getDialogTitle = (status: WorkoutCompletionStatus) => {
     switch (status) {
       case 'completed':
+      case 'cancelled':
         return 'התחל אימון חדש'
       case 'in_progress':
       case 'partial':
