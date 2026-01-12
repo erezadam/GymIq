@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { useAuthStore } from '@/domains/authentication/store'
 import { useWorkoutBuilderStore } from '../store'
 import { exerciseService } from '@/domains/exercises/services'
+import { muscleGroupNames } from '@/styles/design-tokens'
 import type { WorkoutHistorySummary, WorkoutHistoryEntry, WorkoutCompletionStatus } from '../types'
 
 // Confirmation dialog for continuing workout
@@ -526,7 +527,10 @@ export default function WorkoutHistory() {
                           </div>
                           {workout.muscleGroups && workout.muscleGroups.length > 0 && (
                             <p className="text-red-400 text-sm mt-1">
-                              {workout.muscleGroups.join(' • ')}
+                              {workout.muscleGroups
+                                .map(muscle => muscleGroupNames[muscle] || muscle)
+                                .filter((name, index, self) => self.indexOf(name) === index)
+                                .join(' • ')}
                             </p>
                           )}
                           <p className="text-text-muted text-sm mt-1">
@@ -673,7 +677,10 @@ export default function WorkoutHistory() {
                           </div>
                           {workout.muscleGroups && workout.muscleGroups.length > 0 && (
                             <p className="text-red-400 text-sm mt-1">
-                              {workout.muscleGroups.join(' • ')}
+                              {workout.muscleGroups
+                                .map(muscle => muscleGroupNames[muscle] || muscle)
+                                .filter((name, index, self) => self.indexOf(name) === index)
+                                .join(' • ')}
                             </p>
                           )}
                           <p className="text-text-muted text-sm mt-1">
