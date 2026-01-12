@@ -124,6 +124,7 @@ export function useActiveWorkout() {
             exerciseName: ex.exerciseName,
             exerciseNameHe: ex.exerciseNameHe,
             imageUrl: ex.imageUrl || '',
+            category: ex.category || '',
             isCompleted: ex.isCompleted,
             notes: ex.notes,
             sets: ex.reportedSets.map((set) => ({
@@ -469,6 +470,7 @@ export function useActiveWorkout() {
               exerciseName: ex.exerciseName,
               exerciseNameHe: ex.exerciseNameHe,
               imageUrl: ex.imageUrl || '',
+              category: ex.category || '',
               isCompleted: ex.isCompleted,
               notes: ex.notes,
               sets: ex.reportedSets.map((set) => ({
@@ -817,6 +819,7 @@ export function useActiveWorkout() {
             exerciseName: ex.exerciseName,
             exerciseNameHe: ex.exerciseNameHe,
             imageUrl: ex.imageUrl || '',
+            category: ex.category || '',
             isCompleted: ex.isCompleted,
             notes: ex.notes,
             sets: ex.reportedSets.map((set) => ({
@@ -909,6 +912,7 @@ export function useActiveWorkout() {
           exerciseName: ex.exerciseName,
           exerciseNameHe: ex.exerciseNameHe,
           imageUrl: ex.imageUrl || '',
+          category: ex.category || '',
           isCompleted: ex.isCompleted,
           notes: ex.notes,
           sets: ex.reportedSets.map((set) => ({

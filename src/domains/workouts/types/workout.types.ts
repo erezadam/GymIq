@@ -91,7 +91,9 @@ export interface WorkoutHistoryEntry {
     exerciseName: string
     exerciseNameHe: string
     imageUrl?: string // Exercise image URL
+    category?: string // Muscle group name in Hebrew
     isCompleted: boolean
+    notes?: string // Exercise notes
     sets: {
       type: SetType
       targetReps: number
@@ -123,4 +125,5 @@ export interface WorkoutHistorySummary {
   totalVolume: number // kg
   personalRecords: number
   calories?: number // User-entered calories burned
+  muscleGroups?: string[] // Unique muscle groups worked
 }

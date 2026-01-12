@@ -524,6 +524,11 @@ export default function WorkoutHistory() {
                             </p>
                             {getStatusBadge(workout.status)}
                           </div>
+                          {workout.muscleGroups && workout.muscleGroups.length > 0 && (
+                            <p className="text-red-400 text-sm mt-1">
+                              {workout.muscleGroups.join(' • ')}
+                            </p>
+                          )}
                           <p className="text-text-muted text-sm mt-1">
                             {formatDate(workout.date)} • {workout.totalExercises} תרגילים
                           </p>
@@ -666,6 +671,11 @@ export default function WorkoutHistory() {
                               </span>
                             )}
                           </div>
+                          {workout.muscleGroups && workout.muscleGroups.length > 0 && (
+                            <p className="text-red-400 text-sm mt-1">
+                              {workout.muscleGroups.join(' • ')}
+                            </p>
+                          )}
                           <p className="text-text-muted text-sm mt-1">
                             {formatDate(workout.date)} • {workout.duration} דקות • {workout.completedExercises}/{workout.totalExercises} תרגילים
                           </p>

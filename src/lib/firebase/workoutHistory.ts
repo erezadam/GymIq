@@ -45,6 +45,12 @@ function toWorkoutHistory(id: string, data: any): WorkoutHistoryEntry {
 
 // Convert to summary for list display
 function toSummary(entry: WorkoutHistoryEntry): WorkoutHistorySummary {
+  // Extract unique muscle groups from exercises (preserve order of first appearance)
+  const muscleGroups = entry.exercises
+    .map(ex => ex.category)
+    .filter((category): category is string => Boolean(category))
+    .filter((category, index, self) => self.indexOf(category) === index)
+
   return {
     id: entry.id,
     name: entry.name,
@@ -56,6 +62,7 @@ function toSummary(entry: WorkoutHistoryEntry): WorkoutHistorySummary {
     totalVolume: entry.totalVolume,
     personalRecords: entry.personalRecords,
     calories: entry.calories,
+    muscleGroups: muscleGroups.length > 0 ? muscleGroups : undefined,
   }
 }
 
@@ -101,7 +108,9 @@ export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'
       exerciseName: ex.exerciseName,
       exerciseNameHe: ex.exerciseNameHe,
       imageUrl: ex.imageUrl || '',
+      category: ex.category || '',
       isCompleted: ex.isCompleted,
+      notes: ex.notes || '',
       sets: ex.sets.map(set => ({
         type: set.type,
         targetReps: set.targetReps || 0,
@@ -602,7 +611,9 @@ export async function autoSaveWorkout(
       exerciseName: ex.exerciseName,
       exerciseNameHe: ex.exerciseNameHe,
       imageUrl: ex.imageUrl || '',
+      category: ex.category || '',
       isCompleted: ex.isCompleted,
+      notes: ex.notes || '',
       sets: ex.sets.map(set => ({
         type: set.type,
         targetReps: set.targetReps || 0,
@@ -669,7 +680,9 @@ export async function completeWorkout(
       exerciseName: ex.exerciseName,
       exerciseNameHe: ex.exerciseNameHe,
       imageUrl: ex.imageUrl || '',
+      category: ex.category || '',
       isCompleted: ex.isCompleted,
+      notes: ex.notes || '',
       sets: ex.sets.map((set: any) => ({
         type: set.type,
         targetReps: set.targetReps || 0,
