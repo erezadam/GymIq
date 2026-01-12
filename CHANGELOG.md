@@ -6,6 +6,32 @@
 
 ---
 
+## [v1.9.0] - 2026-01-12
+
+### 🚀 פיצ'רים חדשים
+
+| פיצ'ר | תיאור |
+|-------|-------|
+| **רשימת שרירים בכרטיסי אימון** | הצגת קבוצות השרירים (בעברית) שעובדו באימון בכרטיסי היסטוריה |
+
+### 🐛 תיקוני באגים
+
+| תיקון | תיאור |
+|-------|-------|
+| **סטטוס "ללא דיווח"** | שינוי טקסט מ-"מבוטל" ל-"ללא דיווח" + תיקון התנהגות "המשך לאימון" לטעינת התרגילים |
+| **תרגום שרירים לעברית** | מיפוי שמות שרירים מאנגלית לעברית בהיסטוריה |
+
+### ✏️ קבצים ששונו
+
+| קובץ | שינוי |
+|------|-------|
+| `workout.types.ts` | הוספת category ל-exercises, muscleGroups ל-Summary |
+| `workoutHistory.ts` | שמירת category, חילוץ muscleGroups ב-toSummary |
+| `WorkoutHistory.tsx` | הצגת שרירים בעברית, תיקון cancelled status |
+| `useActiveWorkout.ts` | העברת category לשמירה ב-Firebase |
+
+---
+
 ## [v1.10.2] - 2026-01-11
 
 ### 🐛 תיקוני באגים
