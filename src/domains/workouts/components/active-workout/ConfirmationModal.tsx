@@ -58,6 +58,15 @@ export function ConfirmationModal({
           showStats: false,
           isDanger: true,
         }
+      case 'finish_exercise_reminder':
+        return {
+          title: `💪 לסיים את "${modal.exerciseName}"?`,
+          text: `דיווחת על ${modal.setsCount} סטים. רוצה לסמן את התרגיל כמושלם?`,
+          confirmText: 'כן, סיים תרגיל',
+          cancelText: 'לא',
+          showStats: false,
+          isDanger: false,
+        }
       default:
         return null
     }

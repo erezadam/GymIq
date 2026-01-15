@@ -50,6 +50,7 @@ export default function ActiveWorkoutScreen() {
     exitWorkout,
     confirmFinish,
     handleConfirmFinish,
+    handleFinishExerciseReminder,
     finishWorkoutWithCalories,
     closeModal,
     closeSummaryModal,
@@ -126,6 +127,9 @@ export default function ActiveWorkoutScreen() {
         if (confirmModal.exerciseId) {
           deleteExercise(confirmModal.exerciseId)
         }
+        break
+      case 'finish_exercise_reminder':
+        handleFinishExerciseReminder()
         break
     }
   }

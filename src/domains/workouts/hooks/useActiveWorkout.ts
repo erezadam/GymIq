@@ -551,8 +551,37 @@ export function useActiveWorkout() {
   )
 
   // Toggle exercise expansion (only one can be expanded at a time)
+  // Shows reminder if user has unclosed exercise with reported sets
   const toggleExercise = useCallback(
     (exerciseId: string) => {
+      if (!workout) return
+
+      // Find the currently expanded exercise
+      const currentlyExpanded = workout.exercises.find(ex => ex.isExpanded)
+
+      // Check if user is trying to open a DIFFERENT exercise
+      const isOpeningDifferent = currentlyExpanded && currentlyExpanded.id !== exerciseId
+
+      // Check if currently expanded exercise has unreported completion
+      // (has sets with reps > 0, but not marked as completed)
+      const hasUnfinishedSets = currentlyExpanded &&
+        !currentlyExpanded.isCompleted &&
+        currentlyExpanded.reportedSets.some(set => set.reps > 0)
+
+      // If trying to open different exercise and current has unfinished sets, show reminder
+      if (isOpeningDifferent && hasUnfinishedSets) {
+        const setsWithReps = currentlyExpanded.reportedSets.filter(set => set.reps > 0).length
+        setConfirmModal({
+          type: 'finish_exercise_reminder',
+          exerciseId: currentlyExpanded.id,
+          exerciseName: currentlyExpanded.exerciseNameHe,
+          pendingExerciseId: exerciseId,
+          setsCount: setsWithReps,
+        })
+        return
+      }
+
+      // Normal toggle behavior
       updateWorkout((prev) => ({
         ...prev,
         exercises: prev.exercises.map((ex) => ({
@@ -561,7 +590,7 @@ export function useActiveWorkout() {
         })),
       }))
     },
-    [updateWorkout]
+    [updateWorkout, workout]
   )
 
   // Add a new set to an exercise
@@ -710,6 +739,29 @@ export function useActiveWorkout() {
     },
     [updateWorkout]
   )
+
+  // Handle finish exercise reminder confirmation (finish current + open new)
+  const handleFinishExerciseReminder = useCallback(() => {
+    if (!confirmModal.exerciseId || !confirmModal.pendingExerciseId) return
+
+    const currentExerciseId = confirmModal.exerciseId
+    const pendingExerciseId = confirmModal.pendingExerciseId
+
+    // Close modal first
+    setConfirmModal({ type: null })
+
+    // Finish current exercise
+    finishExercise(currentExerciseId)
+
+    // Then open the pending exercise
+    updateWorkout((prev) => ({
+      ...prev,
+      exercises: prev.exercises.map((ex) => ({
+        ...ex,
+        isExpanded: ex.id === pendingExerciseId,
+      })),
+    }))
+  }, [confirmModal, finishExercise, updateWorkout])
 
   // Delete an exercise from the workout
   const deleteExercise = useCallback(
@@ -1074,6 +1126,7 @@ export function useActiveWorkout() {
     exitWorkout,
     confirmFinish,
     handleConfirmFinish,
+    handleFinishExerciseReminder,
     finishWorkout,
     finishWorkoutWithCalories,
     closeModal,

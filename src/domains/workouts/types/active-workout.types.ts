@@ -95,12 +95,16 @@ export type ConfirmModalType =
   | 'finish_workout'
   | 'exit_workout'
   | 'delete_exercise'
+  | 'finish_exercise_reminder'
   | null
 
 // State for confirmation modal
 export interface ConfirmModalState {
   type: ConfirmModalType
   exerciseId?: string                 // For delete confirmation
+  exerciseName?: string               // For finish reminder (current exercise name)
+  pendingExerciseId?: string          // For finish reminder (exercise user wants to open)
+  setsCount?: number                  // For finish reminder (number of sets reported)
 }
 
 // Storage key for persisting workout
