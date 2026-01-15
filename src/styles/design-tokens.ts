@@ -79,6 +79,9 @@ export const muscleGroupNames: Record<string, string> = {
   adductors: 'רגליים',
   biceps_brachii: 'זרועות',
   lower_abs: 'בטן',
+  gluteus_maximus: 'ישבן',
+  warmup: 'חימום',
+  cardio: 'אירובי',
 }
 
 // Common Hebrew labels used across the app
