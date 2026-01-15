@@ -248,6 +248,81 @@ export async function getLastWorkoutForExercise(
   return null
 }
 
+// Get all historical notes for an exercise
+export async function getExerciseNotes(
+  userId: string,
+  exerciseId: string
+): Promise<{ note: string; date: Date }[]> {
+  const historyRef = collection(db, COLLECTION_NAME)
+
+  // Get user's workout history
+  const q = query(
+    historyRef,
+    where('userId', '==', userId),
+    orderBy('date', 'desc'),
+    limit(50)
+  )
+
+  const snapshot = await getDocs(q)
+  const notes: { note: string; date: Date }[] = []
+
+  for (const doc of snapshot.docs) {
+    const data = doc.data()
+    const exercises = data.exercises || []
+
+    const exercise = exercises.find((ex: any) => ex.exerciseId === exerciseId)
+    if (exercise?.notes && exercise.notes.trim()) {
+      notes.push({
+        note: exercise.notes,
+        date: data.date?.toDate() || new Date(),
+      })
+    }
+  }
+
+  return notes
+}
+
+// Get historical notes for multiple exercises at once
+export async function getExerciseNotesForExercises(
+  userId: string,
+  exerciseIds: string[]
+): Promise<Record<string, { note: string; date: Date }[]>> {
+  const historyRef = collection(db, COLLECTION_NAME)
+
+  const q = query(
+    historyRef,
+    where('userId', '==', userId),
+    orderBy('date', 'desc'),
+    limit(50)
+  )
+
+  const snapshot = await getDocs(q)
+  const result: Record<string, { note: string; date: Date }[]> = {}
+
+  // Initialize result for all exercise IDs
+  exerciseIds.forEach(id => {
+    result[id] = []
+  })
+
+  for (const doc of snapshot.docs) {
+    const data = doc.data()
+    const exercises = data.exercises || []
+    const workoutDate = data.date?.toDate() || new Date()
+
+    for (const exerciseId of exerciseIds) {
+      const exercise = exercises.find((ex: any) => ex.exerciseId === exerciseId)
+      if (exercise?.notes && exercise.notes.trim()) {
+        result[exerciseId].push({
+          note: exercise.notes,
+          date: workoutDate,
+        })
+      }
+    }
+  }
+
+  return result
+}
+
 // Get last workout data for multiple exercises at once
 export async function getLastWorkoutForExercises(
   userId: string,
@@ -427,8 +502,10 @@ export async function getPersonalRecords(userId: string): Promise<PersonalRecord
       if (!exercise.sets || exercise.sets.length === 0) continue
 
       // Find best set in this workout (highest weight with actual reps)
+      // Exclude warmup sets from personal records calculation
       const validSets = exercise.sets.filter((set: any) =>
-        (set.actualReps && set.actualReps > 0) || set.completed
+        set.type !== 'warmup' &&
+        ((set.actualReps && set.actualReps > 0) || set.completed)
       )
 
       if (validSets.length === 0) continue

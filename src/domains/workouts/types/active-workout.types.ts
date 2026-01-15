@@ -45,6 +45,9 @@ export interface ActiveWorkoutExercise {
   // Last workout data (from Firebase)
   lastWorkoutData?: LastWorkoutData
 
+  // Historical notes from previous workouts
+  historicalNotes?: { note: string; date: Date }[]
+
   // User notes for this exercise
   notes?: string
 }

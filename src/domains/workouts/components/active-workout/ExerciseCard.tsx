@@ -34,6 +34,22 @@ export function ExerciseCard({
 }: ExerciseCardProps) {
   const [showNotesModal, setShowNotesModal] = useState(false)
 
+  // Check if there are historical notes
+  const hasHistoricalNotes = exercise.historicalNotes && exercise.historicalNotes.length > 0
+  const hasCurrentNotes = exercise.notes && exercise.notes.trim().length > 0
+
+  // Get notes to display in modal - prefer current, fall back to historical
+  const getInitialNotes = () => {
+    if (hasCurrentNotes) return exercise.notes || ''
+    if (hasHistoricalNotes) {
+      // Format historical notes with dates
+      return exercise.historicalNotes!
+        .map(n => `[${n.date.toLocaleDateString('he-IL')}] ${n.note}`)
+        .join('\n\n')
+    }
+    return ''
+  }
+
   const cardClassName = `exercise-card ${
     exercise.isCompleted ? 'exercise-card--completed' : ''
   } ${exercise.isExpanded ? 'exercise-card--expanded' : ''}`
@@ -142,7 +158,7 @@ export function ExerciseCard({
 
           {/* Bottom action buttons row */}
           <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-            {/* Notes button */}
+            {/* Notes button - red if historical notes, green if current notes */}
             <button
               onClick={(e) => {
                 e.stopPropagation()
@@ -155,10 +171,24 @@ export function ExerciseCard({
                 gap: '6px',
                 padding: '10px 16px',
                 minHeight: '44px',
-                background: exercise.notes ? 'rgba(45, 212, 191, 0.15)' : 'transparent',
-                border: `1px solid ${exercise.notes ? '#2DD4BF' : '#4B5563'}`,
+                background: hasHistoricalNotes && !hasCurrentNotes
+                  ? 'rgba(239, 68, 68, 0.15)'  // Red for historical
+                  : hasCurrentNotes
+                    ? 'rgba(45, 212, 191, 0.15)'  // Green for current
+                    : 'transparent',
+                border: `1px solid ${
+                  hasHistoricalNotes && !hasCurrentNotes
+                    ? '#EF4444'  // Red border for historical
+                    : hasCurrentNotes
+                      ? '#2DD4BF'  // Green border for current
+                      : '#4B5563'
+                }`,
                 borderRadius: '8px',
-                color: exercise.notes ? '#2DD4BF' : '#9CA3AF',
+                color: hasHistoricalNotes && !hasCurrentNotes
+                  ? '#EF4444'  // Red text for historical
+                  : hasCurrentNotes
+                    ? '#2DD4BF'  // Green text for current
+                    : '#9CA3AF',
                 fontSize: '14px',
                 fontWeight: 500,
                 cursor: 'pointer',
@@ -166,7 +196,7 @@ export function ExerciseCard({
               }}
             >
               <MessageSquare className="w-4 h-4" />
-              <span>הערות</span>
+              <span>{hasHistoricalNotes && !hasCurrentNotes ? 'הערות קודמות' : 'הערות'}</span>
             </button>
 
             {/* Finish exercise button */}
@@ -182,7 +212,7 @@ export function ExerciseCard({
       <NotesModal
         isOpen={showNotesModal}
         exerciseName={exercise.exerciseNameHe}
-        initialNotes={exercise.notes || ''}
+        initialNotes={getInitialNotes()}
         onClose={() => setShowNotesModal(false)}
         onSave={onUpdateNotes}
       />

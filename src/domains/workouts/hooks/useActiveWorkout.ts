@@ -22,6 +22,7 @@ import { useAuthStore } from '@/domains/authentication/store'
 import {
   saveWorkoutHistory,
   getLastWorkoutForExercises,
+  getExerciseNotesForExercises,
   autoSaveWorkout,
   getInProgressWorkout,
   completeWorkout,
@@ -324,14 +325,20 @@ export function useActiveWorkout() {
               ],
             }))
 
-            // Fetch last workout data for new exercises
+            // Fetch last workout data and historical notes for new exercises
             if (user?.uid) {
               try {
                 const exerciseIds = newExercises.map((ex) => ex.exerciseId)
-                const lastWorkoutData = await getLastWorkoutForExercises(user.uid, exerciseIds)
+                const [lastWorkoutData, historicalNotes] = await Promise.all([
+                  getLastWorkoutForExercises(user.uid, exerciseIds),
+                  getExerciseNotesForExercises(user.uid, exerciseIds),
+                ])
                 newExercises.forEach((ex) => {
                   if (lastWorkoutData[ex.exerciseId]) {
                     ex.lastWorkoutData = lastWorkoutData[ex.exerciseId]
+                  }
+                  if (historicalNotes[ex.exerciseId]?.length > 0) {
+                    ex.historicalNotes = historicalNotes[ex.exerciseId]
                   }
                 })
               } catch (e) {
@@ -410,16 +417,22 @@ export function useActiveWorkout() {
           }
         })
 
-        // Fetch last workout data for all exercises
+        // Fetch last workout data and historical notes for all exercises
         if (user?.uid) {
           try {
             const exerciseIds = exercises.map((ex) => ex.exerciseId)
-            const lastWorkoutData = await getLastWorkoutForExercises(user.uid, exerciseIds)
+            const [lastWorkoutData, historicalNotes] = await Promise.all([
+              getLastWorkoutForExercises(user.uid, exerciseIds),
+              getExerciseNotesForExercises(user.uid, exerciseIds),
+            ])
 
-            // Update exercises with last workout data
+            // Update exercises with last workout data and historical notes
             exercises.forEach((ex) => {
               if (lastWorkoutData[ex.exerciseId]) {
                 ex.lastWorkoutData = lastWorkoutData[ex.exerciseId]
+              }
+              if (historicalNotes[ex.exerciseId]?.length > 0) {
+                ex.historicalNotes = historicalNotes[ex.exerciseId]
               }
             })
           } catch (e) {
