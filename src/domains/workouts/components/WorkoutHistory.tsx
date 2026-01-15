@@ -624,6 +624,11 @@ export default function WorkoutHistory() {
                                   משקל: {exercise.sets?.[0]?.targetWeight || exercise.sets?.[0]?.actualWeight || '--'} ק"ג
                                 </span>
                               </div>
+                              {exercise.notes && (
+                                <p className="text-sm text-text-muted mt-2 italic border-r-2 border-primary-main pr-2">
+                                  {exercise.notes}
+                                </p>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -774,6 +779,11 @@ export default function WorkoutHistory() {
                                   משקל: {exercise.sets?.[0]?.targetWeight || exercise.sets?.[0]?.actualWeight || '--'} ק"ג
                                 </span>
                               </div>
+                              {exercise.notes && (
+                                <p className="text-sm text-text-muted mt-2 italic border-r-2 border-primary-main pr-2">
+                                  {exercise.notes}
+                                </p>
+                              )}
                             </div>
                           ))}
                         </div>
