@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/domains/authentication/store'
 import { getUserWorkoutStats } from '@/lib/firebase/workoutHistory'
 import { getExternalComparisonUrl } from '@/lib/firebase/appSettings'
+import { useVersionCheck } from '@/shared/hooks/useVersionCheck'
 import { colors, spacing, borderRadius, typography } from '@/styles/theme'
 
 // Initial stats (will be replaced with Firebase data)
@@ -84,6 +85,19 @@ export default function UserDashboard() {
   const [userStats, setUserStats] = useState(defaultStats)
   const [isLoading, setIsLoading] = useState(true)
   const [externalUrl, setExternalUrl] = useState<string | null>(null)
+  const { currentVersion, performUpdate } = useVersionCheck()
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  // Force refresh function
+  const handleForceRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      await performUpdate()
+    } catch (error) {
+      console.error('Failed to refresh:', error)
+      setIsRefreshing(false)
+    }
+  }
 
   // Fetch user stats and external URL from Firebase
   useEffect(() => {
@@ -367,6 +381,41 @@ export default function UserDashboard() {
           </a>
         </div>
       )}
+
+      {/* Version & Refresh Section */}
+      <div
+        style={{
+          marginTop: spacing.xl,
+          paddingBottom: spacing.lg,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: spacing.md,
+        }}
+      >
+        <span style={{ fontSize: typography.fontSize.xs, color: colors.text.muted }}>
+          גרסה {currentVersion || '...'}
+        </span>
+        <button
+          onClick={handleForceRefresh}
+          disabled={isRefreshing}
+          style={{
+            padding: `${spacing.xs}px ${spacing.md}px`,
+            fontSize: typography.fontSize.xs,
+            color: colors.primary.main,
+            background: 'transparent',
+            border: `1px solid ${colors.primary.main}`,
+            borderRadius: borderRadius.sm,
+            cursor: isRefreshing ? 'not-allowed' : 'pointer',
+            opacity: isRefreshing ? 0.5 : 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing.xs,
+          }}
+        >
+          {isRefreshing ? '⏳' : '🔄'} {isRefreshing ? 'מרענן...' : 'בדוק עדכונים'}
+        </button>
+      </div>
     </div>
   )
 }
