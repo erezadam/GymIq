@@ -3,7 +3,7 @@ import type { Exercise } from '../types'
 import { useWorkoutBuilderStore } from '@/domains/workouts/store'
 import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '../utils'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
-import { muscleGroupNames } from '@/styles/design-tokens'
+import { getMuscleNameHe, getCategoryNameHe } from '@/utils/muscleTranslations'
 import { Check, Plus } from 'lucide-react'
 
 // Cache the mapping to avoid repeated Firebase calls
@@ -103,7 +103,7 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
 
         {/* Category Badge - Bottom */}
         <div className="absolute bottom-3 right-3">
-          <span className="badge-category">{dynamicMuscleNames[exercise.category] || getCategoryHe(exercise.category)}</span>
+          <span className="badge-category">{getCategoryNameHe(exercise.category, dynamicMuscleNames)}</span>
         </div>
       </div>
 
@@ -115,10 +115,10 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
 
         {/* Primary Muscles */}
         <div className="flex flex-wrap gap-1.5 mb-4">
-          <span className="badge-muscle-primary">{getMuscleHe(exercise.primaryMuscle)}</span>
+          <span className="badge-muscle-primary">{getMuscleNameHe(exercise.primaryMuscle, dynamicMuscleNames)}</span>
           {exercise.secondaryMuscles.slice(0, 2).map((muscle) => (
             <span key={muscle} className="badge-muscle-secondary">
-              {getMuscleHe(muscle)}
+              {getMuscleNameHe(muscle, dynamicMuscleNames)}
             </span>
           ))}
         </div>
@@ -155,42 +155,7 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
   )
 }
 
-// Helper functions for Hebrew translations
-function getCategoryHe(category: string): string {
-  const map: Record<string, string> = {
-    chest: 'חזה',
-    back: 'גב',
-    legs: 'רגליים',
-    shoulders: 'כתפיים',
-    arms: 'זרועות',
-    core: 'ליבה',
-    cardio: 'קרדיו',
-    functional: 'פונקציונלי',
-    stretching: 'מתיחות',
-  }
-  return map[category] || muscleGroupNames[category] || category
-}
-
-function getMuscleHe(muscle: string): string {
-  const map: Record<string, string> = {
-    chest: 'חזה',
-    lats: 'גב רחב',
-    quadriceps: 'ארבע ראשי',
-    hamstrings: 'ירך אחורי',
-    glutes: 'ישבן',
-    triceps: 'טרייספס',
-    biceps: 'ביספס',
-    shoulders: 'כתפיים',
-    core: 'ליבה',
-    calves: 'שוקיים',
-    traps: 'טרפז',
-    lower_back: 'גב תחתון',
-    forearms: 'אמות',
-    rhomboids: 'רומבואידים',
-    middle_traps: 'טרפז אמצעי',
-  }
-  return map[muscle] || muscleGroupNames[muscle] || muscle
-}
+// Helper functions for Hebrew translations (equipment only - muscles use central utility)
 
 function getEquipmentHe(equipment: string): string {
   const map: Record<string, string> = {

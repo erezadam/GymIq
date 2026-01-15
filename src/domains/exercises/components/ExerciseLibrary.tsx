@@ -14,6 +14,7 @@ import { saveWorkoutHistory } from '@/lib/firebase/workoutHistory'
 import { useAuthStore } from '@/domains/authentication/store'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '@/domains/workouts/types/active-workout.types'
 import type { WorkoutHistoryEntry } from '@/domains/workouts/types'
+import { getMuscleNameHe } from '@/utils/muscleTranslations'
 
 // Helper functions
 function getEquipmentHe(equipment: string): string {
@@ -31,24 +32,6 @@ function getEquipmentHe(equipment: string): string {
   return map[equipment] || equipment
 }
 
-function getSubMuscleHe(muscle: string): string {
-  const map: Record<string, string> = {
-    triceps: 'יד אחורית',
-    biceps: 'יד קידמית',
-    forearms: 'אמות',
-    chest: 'חזה',
-    lats: 'גב רחב',
-    quadriceps: 'ארבע ראשי',
-    hamstrings: 'ירך אחורי',
-    glutes: 'ישבן',
-    shoulders: 'כתפיים',
-    calves: 'שוקיים',
-    traps: 'טרפז',
-    lower_back: 'גב תחתון',
-    core: 'ליבה',
-  }
-  return map[muscle] || muscle
-}
 
 export function ExerciseLibrary() {
   const navigate = useNavigate()
@@ -417,7 +400,7 @@ export function ExerciseLibrary() {
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-white truncate">{exercise.nameHe}</h3>
                       <p className="text-xs text-text-muted truncate">
-                        {dynamicMuscleNames[exercise.primaryMuscle] || getSubMuscleHe(exercise.primaryMuscle)} • {getEquipmentHe(exercise.equipment)}
+                        {getMuscleNameHe(exercise.primaryMuscle, dynamicMuscleNames)} • {getEquipmentHe(exercise.equipment)}
                       </p>
                     </div>
 

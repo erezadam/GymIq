@@ -3,11 +3,12 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Calendar, Dumbbell, Trophy, ChevronDown, ChevronUp, CheckCircle, AlertCircle, XCircle, Play, X, Clock, Zap, ArrowRight, Trash2 } from 'lucide-react'
 // Note: Flame icon removed - can be re-added if stats cubes are restored
 import { getUserWorkoutHistory, getWorkoutById, updateWorkoutHistory, deleteWorkoutHistory } from '@/lib/firebase/workoutHistory'
+import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/domains/authentication/store'
 import { useWorkoutBuilderStore } from '../store'
 import { exerciseService } from '@/domains/exercises/services'
-import { muscleGroupNames } from '@/styles/design-tokens'
+import { getMuscleNameHe } from '@/utils/muscleTranslations'
 import type { WorkoutHistorySummary, WorkoutHistoryEntry, WorkoutCompletionStatus } from '../types'
 
 // Confirmation dialog for continuing workout
@@ -39,10 +40,24 @@ export default function WorkoutHistory() {
     isOpen: false,
     workout: null,
   })
+  const [dynamicMuscleNames, setDynamicMuscleNames] = useState<Record<string, string>>({})
 
   useEffect(() => {
     loadWorkouts()
   }, [user])
+
+  // Load dynamic muscle names from Firebase
+  useEffect(() => {
+    const loadMuscleNames = async () => {
+      try {
+        const mapping = await getMuscleIdToNameHeMap()
+        setDynamicMuscleNames(mapping)
+      } catch (error) {
+        console.error('Failed to load muscle names:', error)
+      }
+    }
+    loadMuscleNames()
+  }, [])
 
   const loadWorkouts = async () => {
     if (!user?.uid) {
@@ -531,7 +546,7 @@ export default function WorkoutHistory() {
                           {workout.muscleGroups && workout.muscleGroups.length > 0 && (
                             <p className="text-red-400 text-sm mt-1">
                               {workout.muscleGroups
-                                .map(muscle => muscleGroupNames[muscle] || muscle)
+                                .map(muscle => getMuscleNameHe(muscle, dynamicMuscleNames))
                                 .filter((name, index, self) => self.indexOf(name) === index)
                                 .join(' • ')}
                             </p>
@@ -681,7 +696,7 @@ export default function WorkoutHistory() {
                           {workout.muscleGroups && workout.muscleGroups.length > 0 && (
                             <p className="text-red-400 text-sm mt-1">
                               {workout.muscleGroups
-                                .map(muscle => muscleGroupNames[muscle] || muscle)
+                                .map(muscle => getMuscleNameHe(muscle, dynamicMuscleNames))
                                 .filter((name, index, self) => self.indexOf(name) === index)
                                 .join(' • ')}
                             </p>
