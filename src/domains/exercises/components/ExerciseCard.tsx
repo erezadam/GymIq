@@ -3,6 +3,7 @@ import type { Exercise } from '../types'
 import { useWorkoutBuilderStore } from '@/domains/workouts/store'
 import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '../utils'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
+import { muscleGroupNames } from '@/styles/design-tokens'
 import { Check, Plus } from 'lucide-react'
 
 // Cache the mapping to avoid repeated Firebase calls
@@ -167,7 +168,7 @@ function getCategoryHe(category: string): string {
     functional: 'פונקציונלי',
     stretching: 'מתיחות',
   }
-  return map[category] || category
+  return map[category] || muscleGroupNames[category] || category
 }
 
 function getMuscleHe(muscle: string): string {
@@ -188,7 +189,7 @@ function getMuscleHe(muscle: string): string {
     rhomboids: 'רומבואידים',
     middle_traps: 'טרפז אמצעי',
   }
-  return map[muscle] || muscle
+  return map[muscle] || muscleGroupNames[muscle] || muscle
 }
 
 function getEquipmentHe(equipment: string): string {
