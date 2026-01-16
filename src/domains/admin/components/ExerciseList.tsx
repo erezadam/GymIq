@@ -16,10 +16,25 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { exerciseService } from '@/domains/exercises/services'
-import type { ExerciseFilters, ExerciseCategory, ExerciseDifficulty, EquipmentType } from '@/domains/exercises/types'
-import { categories, equipment, difficultyOptions } from '@/domains/exercises/data/mockExercises'
+import type { ExerciseFilters, ExerciseDifficulty } from '@/domains/exercises/types'
+import { difficultyOptions } from '@/domains/exercises/data/mockExercises'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
+import { getEquipment, type Equipment } from '@/lib/firebase/equipment'
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
+
+// Category translations for display
+const categoryTranslations: Record<string, string> = {
+  chest: 'חזה',
+  back: 'גב',
+  legs: 'רגליים',
+  shoulders: 'כתפיים',
+  arms: 'זרועות',
+  core: 'ליבה',
+  cardio: 'אירובי',
+  functional: 'פונקציונלי',
+  stretching: 'מתיחות',
+  warmup: 'חימום',
+}
 
 export default function ExerciseList() {
   const queryClient = useQueryClient()
@@ -31,18 +46,27 @@ export default function ExerciseList() {
   // Dynamic muscle/category name mapping from Firebase
   const [dynamicCategoryNames, setDynamicCategoryNames] = useState<Record<string, string>>({})
 
-  // Load dynamic category names from Firebase on mount
+  // Equipment from Firebase
+  const [equipmentList, setEquipmentList] = useState<Equipment[]>([])
+
+  // Load dynamic data from Firebase on mount
   useEffect(() => {
-    const loadCategoryNames = async () => {
+    const loadDynamicData = async () => {
       try {
+        // Load muscle mapping
         const mapping = await getMuscleIdToNameHeMap()
         console.log('🔥 ExerciseList: Loaded muscle mapping from Firebase:', mapping)
         setDynamicCategoryNames(mapping)
+
+        // Load equipment from Firebase
+        const eqData = await getEquipment()
+        console.log('🔥 ExerciseList: Loaded equipment from Firebase:', eqData)
+        setEquipmentList(eqData)
       } catch (error) {
-        console.error('Failed to load category names from Firebase:', error)
+        console.error('Failed to load dynamic data from Firebase:', error)
       }
     }
-    loadCategoryNames()
+    loadDynamicData()
   }, [])
 
   // Fetch exercises
@@ -50,6 +74,19 @@ export default function ExerciseList() {
     queryKey: ['exercises', filters],
     queryFn: () => exerciseService.getExercises(filters),
   })
+
+  // Extract unique categories from exercises
+  const uniqueCategories = useMemo(() => {
+    const cats = new Set<string>()
+    allExercises.forEach(ex => {
+      if (ex.category) cats.add(ex.category)
+    })
+    return Array.from(cats).sort((a, b) => {
+      const aHe = categoryTranslations[a] || a
+      const bHe = categoryTranslations[b] || b
+      return aHe.localeCompare(bHe, 'he')
+    })
+  }, [allExercises])
 
   // Filter exercises without images
   const exercisesWithoutImages = useMemo(() => {
@@ -175,34 +212,29 @@ export default function ExerciseList() {
     return Object.values(filters).some((v) => v !== undefined && v !== '')
   }, [filters])
 
-  // Get category label - use dynamic Firebase mapping first, then static categories
-  // Normalize ID by trying both hyphen and underscore versions
+  // Get category label - use categoryTranslations or muscle mapping
   const getCategoryLabel = (categoryId: string) => {
-    // Try exact match first
+    // First try categoryTranslations
+    if (categoryTranslations[categoryId]) {
+      return categoryTranslations[categoryId]
+    }
+    // Then try dynamic muscle mapping
     if (dynamicCategoryNames[categoryId]) {
-      console.log(`✅ Found exact match for "${categoryId}":`, dynamicCategoryNames[categoryId])
       return dynamicCategoryNames[categoryId]
     }
-    // Try with hyphen replaced by underscore
+    // Normalize and try again
     const underscoreVersion = categoryId.replace(/-/g, '_')
     if (dynamicCategoryNames[underscoreVersion]) {
-      console.log(`✅ Found underscore match for "${categoryId}" -> "${underscoreVersion}":`, dynamicCategoryNames[underscoreVersion])
       return dynamicCategoryNames[underscoreVersion]
     }
-    // Try with underscore replaced by hyphen
-    const hyphenVersion = categoryId.replace(/_/g, '-')
-    if (dynamicCategoryNames[hyphenVersion]) {
-      console.log(`✅ Found hyphen match for "${categoryId}" -> "${hyphenVersion}":`, dynamicCategoryNames[hyphenVersion])
-      return dynamicCategoryNames[hyphenVersion]
-    }
-    // Fall back to static categories, then raw ID
-    console.log(`❌ No match for "${categoryId}". Available keys:`, Object.keys(dynamicCategoryNames))
-    return categories.find((c) => c.id === categoryId)?.nameHe || categoryId
+    // Fall back to raw ID
+    return categoryId
   }
 
-  // Get equipment label
+  // Get equipment label - use Firebase data
   const getEquipmentLabel = (equipmentId: string) => {
-    return equipment.find((e) => e.id === equipmentId)?.nameHe || equipmentId
+    const eq = equipmentList.find((e) => e.id === equipmentId)
+    return eq?.nameHe || equipmentId
   }
 
   // Get difficulty label
@@ -351,18 +383,18 @@ export default function ExerciseList() {
         {/* Filter dropdowns */}
         {showFilters && (
           <div className="flex flex-wrap gap-3 p-4 bg-dark-surface rounded-xl border border-dark-border animate-slide-up">
-            {/* Category */}
+            {/* Category - dynamic from exercises */}
             <select
               value={filters.category || ''}
               onChange={(e) =>
-                setFilters({ ...filters, category: (e.target.value as ExerciseCategory) || undefined })
+                setFilters({ ...filters, category: e.target.value || undefined })
               }
               className="input-neon min-w-[150px]"
             >
               <option value="">כל הקטגוריות</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.nameHe}
+              {uniqueCategories.map((catId) => (
+                <option key={catId} value={catId}>
+                  {categoryTranslations[catId] || catId}
                 </option>
               ))}
             </select>
@@ -386,16 +418,16 @@ export default function ExerciseList() {
               ))}
             </select>
 
-            {/* Equipment */}
+            {/* Equipment - from Firebase */}
             <select
               value={filters.equipment || ''}
               onChange={(e) =>
-                setFilters({ ...filters, equipment: (e.target.value as EquipmentType) || undefined })
+                setFilters({ ...filters, equipment: e.target.value || undefined })
               }
               className="input-neon min-w-[150px]"
             >
               <option value="">כל הציוד</option>
-              {equipment.map((eq) => (
+              {equipmentList.map((eq) => (
                 <option key={eq.id} value={eq.id}>
                   {eq.nameHe}
                 </option>

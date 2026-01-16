@@ -60,7 +60,7 @@ export const getExercises = async (filters?: ExerciseFilters): Promise<Exercise[
       exercises = exercises.filter(
         (ex) =>
           ex.primaryMuscle === filters.muscle ||
-          ex.secondaryMuscles.includes(filters.muscle!)
+          (ex.secondaryMuscles as string[]).includes(filters.muscle!)
       )
     }
   }

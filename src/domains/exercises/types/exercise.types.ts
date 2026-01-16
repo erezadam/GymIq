@@ -119,10 +119,11 @@ export interface CreateExerciseDto {
 export type UpdateExerciseDto = Partial<CreateExerciseDto>
 
 // Filter options for exercise list
+// Using string types to support dynamic values from Firebase
 export interface ExerciseFilters {
   search?: string
-  category?: ExerciseCategory
+  category?: string
   difficulty?: ExerciseDifficulty
-  equipment?: EquipmentType
-  muscle?: MuscleGroup
+  equipment?: string
+  muscle?: string
 }
