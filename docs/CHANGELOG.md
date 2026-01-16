@@ -6,6 +6,40 @@
 
 ---
 
+## [v1.10.38] - 2026-01-16
+
+### 🚀 פיצ'רים חדשים
+
+| פיצ'ר | תיאור |
+|-------|-------|
+| **הערות היסטוריות באימון** | כפתור אדום מציג הערות קודמות מאימונים קודמים לכל תרגיל |
+| **תזכורת סיום תרגיל** | פופאפ שמזכיר לסיים תרגיל לפני מעבר לתרגיל אחר |
+
+### 🐛 תיקוני באגים
+
+| תיקון | תיאור |
+|-------|-------|
+| **B14** | הערות תרגיל לא מוצגות בהיסטוריה - תוקן |
+| **B15** | המשך אימון - סטטוס תרגילים (isCompleted) לא נשמר |
+| **B16** | המשך אימון - כפל אימונים בהיסטוריה (יצירת רשומה חדשה במקום עדכון) |
+
+### ✏️ קבצים ששונו
+
+| קובץ | שינוי |
+|------|-------|
+| `WorkoutHistory.tsx` | הוספת isCompleted + continueWorkoutId, הצגת הערות |
+| `useActiveWorkout.ts` | שימוש ב-ID קיים, תזכורת סיום תרגיל, הערות היסטוריות |
+| `workoutHistory.ts` | פונקציה getExerciseNotesForExercises |
+| `ExerciseCard.tsx` | כפתור הערות אדום/ירוק, טעינת הערות היסטוריות |
+| `ConfirmationModal.tsx` | מודל תזכורת סיום תרגיל |
+| `active-workout.types.ts` | הוספת historicalNotes, finish_exercise_reminder |
+
+### 🔗 Git
+
+- **Commit:** `0cf26af`
+
+---
+
 ## [v1.9.0] - 2026-01-12
 
 ### 🚀 פיצ'רים חדשים
