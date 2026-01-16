@@ -161,3 +161,57 @@ export const deleteAllExercises = async (): Promise<number> => {
   await batch.commit()
   return snapshot.size
 }
+
+// Valid categories for exercises
+export const VALID_EXERCISE_CATEGORIES = [
+  'chest', 'back', 'legs', 'shoulders', 'arms', 'core',
+  'cardio', 'functional', 'stretching', 'warmup'
+] as const
+
+// Fix exercises with invalid categories
+// Returns list of fixed exercises
+export const fixInvalidCategories = async (): Promise<{ id: string; nameHe: string; oldCategory: string; newCategory: string }[]> => {
+  const categoryFixes: Record<string, { id: string; newCategory: string }[]> = {
+    // abcsde exercises - cardio machines
+    cardio: [
+      { id: "Hfa5YoHu9j88evuBE5XW", newCategory: "cardio" }, // אופניים נייחים
+      { id: "KaC7dbGCPEEtlppiWK2K", newCategory: "cardio" }, // הליכון
+      { id: "R29ea1XKRxWmlqaryCAM", newCategory: "cardio" }, // מדרגות
+      { id: "arf3iUkOzGWGNvnUVWH4", newCategory: "cardio" }, // מכשיר-אליפטי
+      { id: "b1EqSp0s3yqv8bpI2Pnn", newCategory: "cardio" }, // סטפר
+      { id: "fuTYUAneJPnZ6ULTLucn", newCategory: "cardio" }, // חתירה
+    ],
+    warmup: [
+      { id: "zYBjjjzKoo4C57seLZ8f", newCategory: "warmup" }, // חימום
+    ],
+    back: [
+      { id: "UlFsp2JWjSaJXqxH50Np", newCategory: "back" }, // פשיטת גו מלאה
+    ],
+    legs: [
+      { id: "ZnmjmlIkyyIAskc1Qczo", newCategory: "legs" }, // היפטראסט
+    ],
+  }
+
+  const allFixes = Object.values(categoryFixes).flat()
+  const results: { id: string; nameHe: string; oldCategory: string; newCategory: string }[] = []
+  const batch = writeBatch(db)
+
+  for (const fix of allFixes) {
+    const docRef = doc(db, COLLECTION, fix.id)
+    const docSnap = await getDoc(docRef)
+
+    if (docSnap.exists()) {
+      const data = docSnap.data()
+      batch.update(docRef, { category: fix.newCategory })
+      results.push({
+        id: fix.id,
+        nameHe: data.nameHe || data.name,
+        oldCategory: data.category || '(empty)',
+        newCategory: fix.newCategory,
+      })
+    }
+  }
+
+  await batch.commit()
+  return results
+}

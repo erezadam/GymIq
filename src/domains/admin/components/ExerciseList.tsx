@@ -13,9 +13,11 @@ import {
   X,
   Dumbbell,
   ImageOff,
+  Wrench,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { exerciseService } from '@/domains/exercises/services'
+import { fixInvalidCategories, VALID_EXERCISE_CATEGORIES } from '@/lib/firebase/exercises'
 import type { ExerciseFilters, ExerciseDifficulty } from '@/domains/exercises/types'
 import { difficultyOptions } from '@/domains/exercises/data/mockExercises'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
@@ -52,11 +54,8 @@ const categoryTranslations: Record<string, string> = {
   abs: 'בטן',
 }
 
-// Valid category IDs (only these should appear in filter)
-const validCategoryIds = new Set([
-  'chest', 'back', 'legs', 'shoulders', 'arms', 'core',
-  'cardio', 'functional', 'stretching', 'warmup'
-])
+// Valid category IDs (from Firebase exercises service)
+const validCategoryIds = new Set(VALID_EXERCISE_CATEGORIES)
 
 export default function ExerciseList() {
   const queryClient = useQueryClient()
@@ -123,6 +122,11 @@ export default function ExerciseList() {
     return allExercises.filter(ex => !ex.equipment || ex.equipment.trim() === '')
   }, [allExercises])
 
+  // Filter exercises with invalid categories
+  const exercisesWithInvalidCategory = useMemo(() => {
+    return allExercises.filter(ex => !ex.category || !validCategoryIds.has(ex.category))
+  }, [allExercises])
+
   // Display exercises based on active filters
   const exercises = useMemo(() => {
     let result = allExercises
@@ -158,6 +162,31 @@ export default function ExerciseList() {
       toast.error('שגיאה במחיקת התרגילים')
     },
   })
+
+  // Fix invalid categories mutation
+  const fixCategoriesMutation = useMutation({
+    mutationFn: fixInvalidCategories,
+    onSuccess: (results) => {
+      queryClient.invalidateQueries({ queryKey: ['exercises'] })
+      toast.success(`תוקנו ${results.length} תרגילים`)
+      console.log('Fixed categories:', results)
+    },
+    onError: (error) => {
+      toast.error('שגיאה בתיקון קטגוריות')
+      console.error('Fix categories error:', error)
+    },
+  })
+
+  // Handle fix categories
+  const handleFixCategories = () => {
+    if (exercisesWithInvalidCategory.length === 0) {
+      toast.success('אין תרגילים לתיקון')
+      return
+    }
+    if (window.confirm(`האם לתקן ${exercisesWithInvalidCategory.length} תרגילים עם קטגוריה לא תקינה?`)) {
+      fixCategoriesMutation.mutate()
+    }
+  }
 
   // Handle delete
   const handleDelete = (id: string, name: string) => {
@@ -341,6 +370,20 @@ export default function ExerciseList() {
               </span>
             )}
           </button>
+          {/* Fix invalid categories button - only show when there are issues */}
+          {exercisesWithInvalidCategory.length > 0 && (
+            <button
+              onClick={handleFixCategories}
+              disabled={fixCategoriesMutation.isPending}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/50 rounded-xl text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50"
+            >
+              <Wrench className="w-4 h-4" />
+              <span className="hidden sm:inline">תקן קטגוריות</span>
+              <span className="px-2 py-0.5 text-xs rounded-full bg-purple-500/30 text-purple-300">
+                {exercisesWithInvalidCategory.length}
+              </span>
+            </button>
+          )}
           <button
             onClick={handleDeleteAll}
             disabled={deleteAllMutation.isPending || exercises.length === 0}
