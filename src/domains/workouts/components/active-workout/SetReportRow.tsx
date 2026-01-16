@@ -1,16 +1,16 @@
 /**
  * SetReportRow
  * A single row for reporting set data based on exercise reportType
+ * Supports dynamic report types from Firebase
  */
 
 import { Trash2 } from 'lucide-react'
 import type { ReportedSet } from '../../types/active-workout.types'
-import type { ExerciseReportType } from '@/domains/exercises/types'
 import { workoutLabels } from '@/styles/design-tokens'
 
 interface SetReportRowProps {
   set: ReportedSet
-  reportType?: ExerciseReportType
+  reportType?: string  // Dynamic - loaded from Firebase
   onUpdate: (updates: Partial<ReportedSet>) => void
   onDelete: () => void
   canDelete: boolean
@@ -108,6 +108,28 @@ export function SetReportRow({
     </div>
   )
 
+  // Render intensity input (1-10 scale)
+  const renderIntensityInput = () => (
+    <div className="set-input-group">
+      <label className="set-label">עצימות</label>
+      <input
+        type="number"
+        inputMode="numeric"
+        className="set-input"
+        value={set.intensity || ''}
+        onChange={(e) => {
+          const value = parseInt(e.target.value) || 0
+          // Clamp to 1-10 range
+          const clamped = Math.min(10, Math.max(0, value))
+          onUpdate({ intensity: clamped })
+        }}
+        placeholder="1-10"
+        min="1"
+        max="10"
+      />
+    </div>
+  )
+
   // Render inputs based on reportType
   const renderInputs = () => {
     switch (reportType) {
@@ -125,8 +147,17 @@ export function SetReportRow({
           </>
         )
 
+      case 'intensity_time':
+        return (
+          <>
+            {renderIntensityInput()}
+            {renderTimeInput()}
+          </>
+        )
+
       case 'weight_reps':
       default:
+        // Default to weight + reps for unknown types (backward compatibility)
         return (
           <>
             {renderWeightInput()}

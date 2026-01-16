@@ -44,11 +44,14 @@ export type EquipmentType =
   | 'resistance_band'
 
 // Exercise report types - how sets are reported
+// NOTE: This is now loaded dynamically from Firebase.
+// These are the legacy/default types for backward compatibility.
 export type ExerciseReportType =
   | 'weight_reps'   // משקל + חזרות (ברירת מחדל)
   | 'reps_only'     // חזרות בלבד (מתח, שכיבות סמיכה)
   | 'time_only'     // זמן בלבד (פלאנק, ריצה)
   | 'reps_time'     // חזרות + זמן (AMRAP)
+  | string          // Dynamic types from Firebase
 
 // Main Exercise interface
 export interface Exercise {
@@ -60,7 +63,7 @@ export interface Exercise {
   secondaryMuscles: MuscleGroup[]
   equipment: EquipmentType
   difficulty: ExerciseDifficulty
-  reportType?: ExerciseReportType  // סוג דיווח - ברירת מחדל: weight_reps
+  reportType?: string  // סוג דיווח דינמי - ברירת מחדל: weight_reps
   instructions: string[]
   instructionsHe: string[]
   targetMuscles: string[]
@@ -104,7 +107,7 @@ export interface CreateExerciseDto {
   secondaryMuscles: MuscleGroup[]
   equipment: EquipmentType
   difficulty: ExerciseDifficulty
-  reportType?: ExerciseReportType  // סוג דיווח - ברירת מחדל: weight_reps
+  reportType?: string  // סוג דיווח דינמי - ברירת מחדל: weight_reps
   instructions: string[]
   instructionsHe: string[]
   targetMuscles: string[]

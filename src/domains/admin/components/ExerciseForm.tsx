@@ -7,19 +7,13 @@ import { z } from 'zod'
 import { ArrowRight, Save, Plus, Trash2, Image } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { exerciseService } from '@/domains/exercises/services'
-import type { ExerciseCategory, MuscleGroup, EquipmentType, ExerciseReportType } from '@/domains/exercises/types'
+import type { ExerciseCategory, MuscleGroup, EquipmentType } from '@/domains/exercises/types'
 import { equipment, difficultyOptions } from '@/domains/exercises/data/mockExercises'
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
 import { getMuscles } from '@/lib/firebase/muscles'
+import { getActiveReportTypes } from '@/lib/firebase/reportTypes'
 import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
-
-// Report type options
-const reportTypeOptions = [
-  { value: 'weight_reps', labelHe: 'משקל + חזרות' },
-  { value: 'reps_only', labelHe: 'חזרות בלבד' },
-  { value: 'time_only', labelHe: 'זמן בלבד' },
-  { value: 'reps_time', labelHe: 'חזרות + זמן' },
-] as const
+import type { ReportType } from '@/domains/exercises/types/reportTypes'
 
 // Validation schema
 const exerciseSchema = z.object({
@@ -30,7 +24,7 @@ const exerciseSchema = z.object({
   secondaryMuscles: z.array(z.string()),
   equipment: z.string().min(1, 'ציוד נדרש'),
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']),
-  reportType: z.enum(['weight_reps', 'reps_only', 'time_only', 'reps_time']),
+  reportType: z.string().min(1, 'סוג דיווח נדרש'), // Dynamic - loaded from Firebase
   instructions: z.array(z.object({ value: z.string() })).min(1, 'נדרשת לפחות הוראה אחת'),
   instructionsHe: z.array(z.object({ value: z.string() })).min(1, 'נדרשת לפחות הוראה אחת בעברית'),
   targetMuscles: z.array(z.string()),
@@ -58,6 +52,12 @@ export default function ExerciseForm() {
   const { data: musclesData = [] } = useQuery<PrimaryMuscle[]>({
     queryKey: ['muscles'],
     queryFn: getMuscles,
+  })
+
+  // Fetch report types from Firebase
+  const { data: reportTypesData = [] } = useQuery<ReportType[]>({
+    queryKey: ['reportTypes'],
+    queryFn: getActiveReportTypes,
   })
 
   // Form setup
@@ -178,7 +178,7 @@ export default function ExerciseForm() {
       primaryMuscle: data.primaryMuscle as MuscleGroup,
       secondaryMuscles: data.secondaryMuscles as MuscleGroup[],
       equipment: data.equipment as EquipmentType,
-      reportType: data.reportType as ExerciseReportType,
+      reportType: data.reportType, // Dynamic - stored as string
       targetMuscles: data.targetMuscles as MuscleGroup[],
       instructions: data.instructions.map((i) => i.value).filter(Boolean),
       instructionsHe: data.instructionsHe.map((i) => i.value).filter(Boolean),
@@ -323,17 +323,21 @@ export default function ExerciseForm() {
 
             {/* Report Type */}
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-2">סוג דיווח</label>
+              <label className="block text-sm font-medium text-text-secondary mb-2">סוג דיווח *</label>
               <select
                 {...register('reportType')}
-                className="input-neon w-full"
+                className={`input-neon w-full ${errors.reportType ? 'border-red-500' : ''}`}
               >
-                {reportTypeOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.labelHe}
+                <option value="">בחר סוג דיווח</option>
+                {reportTypesData.map((rt) => (
+                  <option key={rt.id} value={rt.id}>
+                    {rt.nameHe}
                   </option>
                 ))}
               </select>
+              {errors.reportType && (
+                <p className="text-red-400 text-sm mt-1">{errors.reportType.message}</p>
+              )}
               <p className="text-text-muted text-xs mt-1">
                 קובע אילו שדות יוצגו בדיווח סטים
               </p>
