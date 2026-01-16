@@ -406,6 +406,10 @@
     @apply animate-spin rounded-full h-12 w-12 border-b-2 border-neon-cyan;
   }
 
+  .spinner-small {
+    @apply animate-spin rounded-full h-5 w-5 border-b-2 border-neon-cyan;
+  }
+
   /* ----- EMPTY STATE ----- */
   .empty-state {
     @apply text-center py-20;

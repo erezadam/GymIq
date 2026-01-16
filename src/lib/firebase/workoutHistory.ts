@@ -730,6 +730,109 @@ export async function autoSaveWorkout(
   }
 }
 
+// Exercise history entry for PR screen
+export interface ExerciseHistoryEntry {
+  date: Date
+  bestWeight: number
+  bestReps: number
+  bestTime?: number // For time-based exercises (in seconds)
+  isOverallBest: boolean // Is this the all-time best?
+}
+
+// Get exercise history grouped by date with best values per date
+export async function getExerciseHistory(
+  userId: string,
+  exerciseId: string
+): Promise<ExerciseHistoryEntry[]> {
+  const historyRef = collection(db, COLLECTION_NAME)
+
+  // Get all completed workouts for the user
+  const q = query(
+    historyRef,
+    where('userId', '==', userId),
+    orderBy('date', 'desc')
+  )
+
+  const snapshot = await getDocs(q)
+
+  // Map: date string -> best values for that date
+  const dateMap: Map<string, { date: Date; weight: number; reps: number; time?: number }> = new Map()
+
+  for (const docSnap of snapshot.docs) {
+    const data = docSnap.data()
+
+    // Skip non-completed workouts
+    if (data.status !== 'completed') continue
+
+    const workoutDate = data.date?.toDate() || new Date()
+    const dateKey = workoutDate.toISOString().split('T')[0] // YYYY-MM-DD
+
+    const exercises = data.exercises || []
+    const exercise = exercises.find((ex: any) => ex.exerciseId === exerciseId)
+
+    if (!exercise || !exercise.sets || exercise.sets.length === 0) continue
+
+    // Find best set for this exercise in this workout (exclude warmup)
+    const validSets = exercise.sets.filter((set: any) =>
+      set.type !== 'warmup' &&
+      ((set.actualReps && set.actualReps > 0) || set.completed)
+    )
+
+    if (validSets.length === 0) continue
+
+    // Find best values
+    let bestWeight = 0
+    let bestReps = 0
+
+    for (const set of validSets) {
+      const weight = set.actualWeight || 0
+      const reps = set.actualReps || 0
+
+      // Best = highest weight
+      if (weight > bestWeight) {
+        bestWeight = weight
+        bestReps = reps
+      } else if (weight === bestWeight && reps > bestReps) {
+        bestReps = reps
+      }
+    }
+
+    // Update date map - keep best values for each date
+    const existing = dateMap.get(dateKey)
+    if (!existing || bestWeight > existing.weight ||
+        (bestWeight === existing.weight && bestReps > existing.reps)) {
+      dateMap.set(dateKey, {
+        date: workoutDate,
+        weight: bestWeight,
+        reps: bestReps,
+      })
+    }
+  }
+
+  // Convert to array and find overall best
+  const entries = Array.from(dateMap.values())
+
+  // Find overall best weight
+  let overallBestWeight = 0
+  for (const entry of entries) {
+    if (entry.weight > overallBestWeight) {
+      overallBestWeight = entry.weight
+    }
+  }
+
+  // Sort by date descending (most recent first)
+  entries.sort((a, b) => b.date.getTime() - a.date.getTime())
+
+  // Mark overall best
+  return entries.map(entry => ({
+    date: entry.date,
+    bestWeight: entry.weight,
+    bestReps: entry.reps,
+    bestTime: entry.time,
+    isOverallBest: entry.weight === overallBestWeight && overallBestWeight > 0,
+  }))
+}
+
 // Complete a workout (change status from in_progress to completed)
 export async function completeWorkout(
   workoutId: string,
