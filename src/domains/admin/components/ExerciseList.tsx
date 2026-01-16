@@ -23,7 +23,11 @@ import { getEquipment, type Equipment } from '@/lib/firebase/equipment'
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
 
 // Category translations for display
+// IMPORTANT: All valid categories MUST have Hebrew translations!
+// If a category appears in English, add it here.
+// See regressions.md B12, B17 for related bugs.
 const categoryTranslations: Record<string, string> = {
+  // Standard categories
   chest: 'חזה',
   back: 'גב',
   legs: 'רגליים',
@@ -34,7 +38,25 @@ const categoryTranslations: Record<string, string> = {
   functional: 'פונקציונלי',
   stretching: 'מתיחות',
   warmup: 'חימום',
+  // Muscle names that might be used as categories (fallback)
+  gluteus_maximus: 'ישבן',
+  glutes: 'ישבן',
+  quadriceps: 'ארבע ראשי',
+  hamstrings: 'ירך אחורי',
+  biceps: 'דו ראשי',
+  triceps: 'תלת ראשי',
+  lats: 'גב רחב',
+  calves: 'שוקיים',
+  forearms: 'אמות',
+  traps: 'טרפז',
+  abs: 'בטן',
 }
+
+// Valid category IDs (only these should appear in filter)
+const validCategoryIds = new Set([
+  'chest', 'back', 'legs', 'shoulders', 'arms', 'core',
+  'cardio', 'functional', 'stretching', 'warmup'
+])
 
 export default function ExerciseList() {
   const queryClient = useQueryClient()
@@ -75,11 +97,14 @@ export default function ExerciseList() {
     queryFn: () => exerciseService.getExercises(filters),
   })
 
-  // Extract unique categories from exercises
+  // Extract unique categories from exercises (only valid ones with Hebrew names)
   const uniqueCategories = useMemo(() => {
     const cats = new Set<string>()
     allExercises.forEach(ex => {
-      if (ex.category) cats.add(ex.category)
+      // Only include valid categories that have Hebrew translations
+      if (ex.category && validCategoryIds.has(ex.category)) {
+        cats.add(ex.category)
+      }
     })
     return Array.from(cats).sort((a, b) => {
       const aHe = categoryTranslations[a] || a
