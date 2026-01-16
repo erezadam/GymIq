@@ -250,9 +250,20 @@ export function useActiveWorkout() {
         try {
           continueData = JSON.parse(continueWorkoutData!)
           console.log('📋 Parsing continueWorkoutData with', continueData?.length, 'exercises')
+
+          // Check for existing workout ID to prevent duplication
+          const existingWorkoutId = localStorage.getItem('continueWorkoutId')
+          if (existingWorkoutId) {
+            console.log('📋 Found existing workout ID:', existingWorkoutId)
+            setFirebaseWorkoutId(existingWorkoutId)
+            localStorage.setItem('gymiq_firebase_workout_id', existingWorkoutId)
+          } else {
+            // Only clear if no existing ID
+            localStorage.removeItem('gymiq_firebase_workout_id')
+          }
+
           // Clear old localStorage workout - we're starting fresh from history data
           localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY)
-          localStorage.removeItem('gymiq_firebase_workout_id')
           // DON'T set hasInitialized.current = false - it causes race conditions!
           // The isContinuingFromHistory flag is enough to allow initialization to proceed
         } catch (e) {
@@ -261,6 +272,7 @@ export function useActiveWorkout() {
         // Clear the localStorage flags after reading
         localStorage.removeItem('continueWorkoutData')
         localStorage.removeItem('continueWorkoutMode')
+        localStorage.removeItem('continueWorkoutId')
       }
 
       // Try to restore from localStorage (only if not continuing from history)
@@ -468,9 +480,11 @@ export function useActiveWorkout() {
         saveToStorage(newWorkout)
 
         // Immediately save to Firebase (no debounce for initial save)
+        // Use existing ID if continuing workout, or create new
+        const existingId = localStorage.getItem('gymiq_firebase_workout_id')
         try {
           const endTime = new Date()
-          const savedId = await autoSaveWorkout(null, {
+          const savedId = await autoSaveWorkout(existingId, {
             userId: newWorkout.userId,
             name: `אימון ${newWorkout.startedAt.toLocaleDateString('he-IL')}`,
             date: newWorkout.startedAt,
@@ -495,17 +509,17 @@ export function useActiveWorkout() {
                 completed: set.reps > 0,
               })),
             })),
-            completedExercises: 0,
+            completedExercises: newWorkout.stats.completedExercises,
             totalExercises: newWorkout.exercises.length,
-            completedSets: 0,
+            completedSets: newWorkout.stats.completedSets,
             totalSets: newWorkout.stats.totalSets,
-            totalVolume: 0,
+            totalVolume: newWorkout.stats.totalVolume,
             personalRecords: 0,
           })
 
           setFirebaseWorkoutId(savedId)
           localStorage.setItem('gymiq_firebase_workout_id', savedId)
-          console.log('✅ New workout created and saved to Firebase:', savedId)
+          console.log(existingId ? '✅ Existing workout updated in Firebase:' : '✅ New workout created in Firebase:', savedId)
         } catch (error) {
           console.error('❌ Failed to save new workout to Firebase:', error)
         }

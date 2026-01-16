@@ -301,12 +301,14 @@ export default function WorkoutHistory() {
               imageUrl: details?.imageUrl || exercise.imageUrl || '',
               primaryMuscle: details?.primaryMuscle || '',
               sets: exercise.sets || [],
+              isCompleted: exercise.isCompleted || false,  // שמירת סטטוס התרגיל
             }
           })
 
           // Store in localStorage for ActiveWorkoutScreen to pick up
           localStorage.setItem('continueWorkoutData', JSON.stringify(exercisesWithSets))
           localStorage.setItem('continueWorkoutMode', 'in_progress')
+          localStorage.setItem('continueWorkoutId', workoutSummary.id)  // שמירת ID למניעת כפילויות
 
           // Add exercises to store (basic info)
           fullWorkout.exercises.forEach(exercise => {
