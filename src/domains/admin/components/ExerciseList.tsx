@@ -20,8 +20,9 @@ import { exerciseService } from '@/domains/exercises/services'
 import { fixInvalidCategories, VALID_EXERCISE_CATEGORIES } from '@/lib/firebase/exercises'
 import type { ExerciseFilters, ExerciseDifficulty } from '@/domains/exercises/types'
 import { difficultyOptions } from '@/domains/exercises/data/mockExercises'
-import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
+import { getMuscleIdToNameHeMap, getMuscles } from '@/lib/firebase/muscles'
 import { getEquipment, type Equipment } from '@/lib/firebase/equipment'
+import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
 
 // Category translations for display
@@ -70,11 +71,14 @@ export default function ExerciseList() {
   // Equipment from Firebase
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([])
 
+  // Muscles list from Firebase (for filter dropdown)
+  const [musclesList, setMusclesList] = useState<PrimaryMuscle[]>([])
+
   // Load dynamic data from Firebase on mount
   useEffect(() => {
     const loadDynamicData = async () => {
       try {
-        // Load muscle mapping
+        // Load muscle mapping (for category display)
         const mapping = await getMuscleIdToNameHeMap()
         console.log('🔥 ExerciseList: Loaded muscle mapping from Firebase:', mapping)
         setDynamicCategoryNames(mapping)
@@ -83,6 +87,11 @@ export default function ExerciseList() {
         const eqData = await getEquipment()
         console.log('🔥 ExerciseList: Loaded equipment from Firebase:', eqData)
         setEquipmentList(eqData)
+
+        // Load muscles list from Firebase (for filter dropdown)
+        const musclesData = await getMuscles()
+        console.log('🔥 ExerciseList: Loaded muscles from Firebase:', musclesData)
+        setMusclesList(musclesData)
       } catch (error) {
         console.error('Failed to load dynamic data from Firebase:', error)
       }
@@ -463,6 +472,22 @@ export default function ExerciseList() {
               {uniqueCategories.map((catId) => (
                 <option key={catId} value={catId}>
                   {categoryTranslations[catId] || catId}
+                </option>
+              ))}
+            </select>
+
+            {/* Primary Muscle - from Firebase */}
+            <select
+              value={filters.muscle || ''}
+              onChange={(e) =>
+                setFilters({ ...filters, muscle: e.target.value || undefined })
+              }
+              className="input-neon min-w-[150px]"
+            >
+              <option value="">כל השרירים</option>
+              {musclesList.map((muscle) => (
+                <option key={muscle.id} value={muscle.id}>
+                  {muscle.nameHe}
                 </option>
               ))}
             </select>
