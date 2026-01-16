@@ -88,7 +88,9 @@ GymIQ/
 | `muscles` | קטגוריות שרירים | id, nameHe, nameEn, icon (URL), subMuscles[] |
 | `equipment` | ציוד כושר | id, nameHe, nameEn |
 | `workoutSessions` | אימונים פעילים | userId, exercises[], status, createdAt |
-| `workoutHistory` | היסטוריית אימונים | odri, odri, exercises[], calories, duration, totalVolume |
+| `workoutHistory` | היסטוריית אימונים | userId, exercises[], calories, duration, totalVolume |
+| `reportTypes` | סוגי דיווח לתרגילים | id, name, nameHe, fields[], isDefault |
+| `appSettings` | הגדרות אפליקציה | externalComparisonUrl |
 
 ---
 
@@ -127,6 +129,8 @@ GymIQ/
 | `/admin/muscles` | MuscleManager | ניהול שרירים |
 | `/admin/equipment` | EquipmentManager | ניהול ציוד |
 | `/admin/users` | UsersList | ניהול משתמשים |
+| `/admin/report-types` | ReportTypeManager | ניהול סוגי דיווח |
+| `/admin/settings` | AdminSettings | הגדרות אפליקציה |
 
 ---
 
@@ -186,6 +190,9 @@ interface WorkoutBuilderStore {
 | **Exercise Notes** | הערות לתרגילים באימון | NotesModal.tsx, ExerciseCard.tsx |
 | **Last Workout Data** | הצגת נתוני אימון קודם | ExerciseCard.tsx |
 | **Muscle Groups Display** | הצגת קבוצות שרירים בעברית בכרטיסי היסטוריה | WorkoutHistory.tsx, workout.types.ts |
+| **Report Types Manager** | ניהול סוגי דיווח דינמיים (weight_reps, reps_only, time_only) | ReportTypeManager.tsx, reportTypes.ts |
+| **Muscle Filter** | פילטר תרגילים לפי שריר מרכזי ב-Admin | ExerciseList.tsx |
+| **Category Fix** | כפתור לתיקון קטגוריות לא תקינות | ExerciseList.tsx, exercises.ts |
 
 ---
 
@@ -220,12 +227,14 @@ export interface ActiveWorkoutExercise { ... }
 | `equipment.ts` | getEquipment, createEquipment, updateEquipment, deleteEquipment |
 | `workouts.ts` | createWorkout, getWorkouts, updateWorkout |
 | `workoutHistory.ts` | getWorkoutHistory, autoSaveWorkout, getInProgressWorkout, completeWorkout |
+| `reportTypes.ts` | getReportTypes, createReportType, updateReportType, deleteReportType |
+| `appSettings.ts` | getAppSettings, updateAppSettings |
 
 ---
 
 ```
 ═══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 12/01/2026
-גרסה: 1.9.0
+עדכון אחרון: 16/01/2026
+גרסה: 1.10.55
 ═══════════════════════════════════════════════════════════════════════════════
 ```

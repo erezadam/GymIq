@@ -6,6 +6,49 @@
 
 ---
 
+## [v1.10.55] - 2026-01-16
+
+### 🚀 פיצ'רים חדשים
+
+| פיצ'ר | תיאור |
+|-------|-------|
+| **פילטר לפי שריר מרכזי** | פילטר חדש ב-Admin > תרגילים לסינון לפי primaryMuscle מ-Firebase |
+| **כפתור תיקון קטגוריות** | כפתור "תקן קטגוריות" שמתקן תרגילים עם קטגוריות לא תקינות |
+| **סנכרון פילטרים עם Firebase** | קטגוריות נטענות דינמית מתרגילים, ציוד נטען מ-Firebase |
+| **מערכת סוגי דיווח דינמיים** | ReportTypeManager - ניהול סוגי דיווח ב-Admin עם CRUD מלא |
+
+### 🐛 תיקוני באגים
+
+| תיקון | תיאור |
+|-------|-------|
+| **B17** | שמות קטגוריות באנגלית בפילטרים - תוקן עם categoryTranslations |
+| **White screen v1.10.54** | מסך לבן אחרי deploy - rebuild ו-redeploy |
+| **9 תרגילים עם קטגוריות לא תקינות** | תוקנו 9 תרגילים שהיה להם category של שריר במקום קטגוריה |
+
+### ✏️ קבצים ששונו
+
+| קובץ | שינוי |
+|------|-------|
+| `ExerciseList.tsx` | פילטר שרירים, קטגוריות דינמיות, ציוד מ-Firebase, כפתור תיקון |
+| `exercises.ts` | VALID_EXERCISE_CATEGORIES, fixInvalidCategories() |
+| `exercise.types.ts` | ExerciseFilters עם strings במקום enums |
+| `regressions.md` | הוספת B17 |
+
+### 📁 קבצים חדשים
+
+```
+src/domains/admin/components/ReportTypeManager.tsx - ניהול סוגי דיווח
+src/lib/firebase/reportTypes.ts - CRUD לסוגי דיווח
+scripts/find-invalid-categories.cjs - סקריפט לאיתור קטגוריות לא תקינות
+scripts/fix-categories.cjs - סקריפט לתיקון קטגוריות
+```
+
+### 🔗 Git
+
+- **Commits:** `172bd12`, `b55a48a`, `ed74810`, `d46bcf4`, `a87f2ab`
+
+---
+
 ## [v1.10.38] - 2026-01-16
 
 ### 🚀 פיצ'רים חדשים
