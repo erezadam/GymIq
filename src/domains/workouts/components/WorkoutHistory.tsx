@@ -1,14 +1,14 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Calendar, Dumbbell, Trophy, ChevronDown, ChevronUp, CheckCircle, AlertCircle, XCircle, Play, X, Clock, Zap, ArrowRight, Trash2 } from 'lucide-react'
-// Note: Flame icon removed - can be re-added if stats cubes are restored
+import { Calendar, Dumbbell, CheckCircle, AlertCircle, XCircle, Play, X, ArrowRight, Trash2 } from 'lucide-react'
+// Note: Trophy, ChevronDown, ChevronUp, Clock, Zap moved to WorkoutCard
 import { getUserWorkoutHistory, getWorkoutById, updateWorkoutHistory, deleteWorkoutHistory } from '@/lib/firebase/workoutHistory'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/domains/authentication/store'
 import { useWorkoutBuilderStore } from '../store'
 import { exerciseService } from '@/domains/exercises/services'
-import { getMuscleNameHe } from '@/utils/muscleTranslations'
+import { WorkoutCard } from '@/shared/components/WorkoutCard'
 import type { WorkoutHistorySummary, WorkoutHistoryEntry, WorkoutCompletionStatus } from '../types'
 
 // Confirmation dialog for continuing workout
@@ -513,141 +513,25 @@ export default function WorkoutHistory() {
             אימונים מתוכננים
           </h2>
           <div className="space-y-3">
-            {plannedWorkouts.map((workout) => {
-              const statusConfig = getStatusConfig(workout.status)
-              const isExpanded = expandedWorkoutId === workout.id
-              return (
-                <div
-                  key={workout.id}
-                  className={`rounded-xl transition-colors border-2 ${statusConfig.bgClass} ${statusConfig.borderClass}`}
-                >
-                  {/* Card Header - clickable to expand */}
-                  <div
-                    className="p-4 cursor-pointer"
-                    onClick={() => toggleWorkoutExpanded(workout.id)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <button className="p-1">
-                          {isExpanded ? (
-                            <ChevronUp className="w-5 h-5 text-text-muted" />
-                          ) : (
-                            <ChevronDown className="w-5 h-5 text-text-muted" />
-                          )}
-                        </button>
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${statusConfig.iconBgClass}`}>
-                          <Dumbbell className={`w-6 h-6 ${statusConfig.iconTextClass}`} />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-medium text-text-primary">
-                              {workout.name}
-                            </p>
-                            {getStatusBadge(workout.status)}
-                          </div>
-                          {workout.muscleGroups && workout.muscleGroups.length > 0 && (
-                            <p className="text-red-400 text-sm mt-1">
-                              {workout.muscleGroups
-                                .map(muscle => getMuscleNameHe(muscle, dynamicMuscleNames))
-                                .filter((name, index, self) => self.indexOf(name) === index)
-                                .join(' • ')}
-                            </p>
-                          )}
-                          <p className="text-text-muted text-sm mt-1">
-                            {formatDate(workout.date)} • {workout.totalExercises} תרגילים
-                          </p>
-                        </div>
-                      </div>
-                      {/* Delete button */}
-                      <button
-                        onClick={(e) => handleDeleteClick(e, workout)}
-                        className="p-2 text-text-muted hover:text-red-400 transition-colors"
-                        aria-label="מחק אימון"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Expanded Content */}
-                  {isExpanded && (
-                    <div className="px-4 pb-4 border-t border-dark-border/50 pt-4 space-y-4">
-                      {/* Stats: Time and Calories */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-3 bg-dark-card/50 rounded-xl">
-                          <div className="flex items-center justify-center gap-2 text-text-muted mb-1">
-                            <Clock className="w-4 h-4" />
-                            <span className="text-sm">זמן</span>
-                          </div>
-                          <p className="text-lg font-semibold text-text-primary">
-                            {formatDuration(workout.duration)}
-                          </p>
-                        </div>
-                        <div className="text-center p-3 bg-dark-card/50 rounded-xl">
-                          <div className="flex items-center justify-center gap-2 text-text-muted mb-1">
-                            <Zap className="w-4 h-4" />
-                            <span className="text-sm">קלוריות</span>
-                          </div>
-                          <p className="text-lg font-semibold text-text-primary">
-                            {workout.calories ?? estimateCalories(workout.duration, workout.totalVolume)}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Continue button */}
-                      <button
-                        onClick={() => handleContinueClick(workout)}
-                        className="w-full py-3 px-4 bg-primary-400 hover:bg-primary-500 text-white font-medium rounded-xl flex items-center justify-center gap-2 transition-colors"
-                      >
-                        <Play className="w-5 h-5" />
-                        המשך לאימון
-                      </button>
-
-                      {/* Exercise List */}
-                      {loadingDetails ? (
-                        <div className="flex items-center justify-center py-4">
-                          <div className="spinner"></div>
-                        </div>
-                      ) : expandedWorkoutDetails?.exercises && expandedWorkoutDetails.exercises.length > 0 ? (
-                        <div className="space-y-3">
-                          {expandedWorkoutDetails.exercises.map((exercise, idx) => (
-                            <div key={idx} className="bg-dark-card/30 rounded-xl p-3">
-                              <p className="font-medium text-text-primary mb-2">
-                                {exercise.exerciseNameHe || exercise.exerciseName}
-                              </p>
-                              <div className="flex flex-wrap gap-2 text-sm text-text-muted">
-                                <span className="px-2 py-0.5 bg-dark-border/50 rounded">
-                                  סטים: {exercise.sets?.length || 0}
-                                </span>
-                                <span className="px-2 py-0.5 bg-dark-border/50 rounded">
-                                  חזרות: {exercise.sets?.[0]?.targetReps || exercise.sets?.[0]?.actualReps || '--'}
-                                </span>
-                                <span className="px-2 py-0.5 bg-dark-border/50 rounded">
-                                  משקל: {exercise.sets?.[0]?.targetWeight || exercise.sets?.[0]?.actualWeight || '--'} ק"ג
-                                </span>
-                              </div>
-                              {exercise.notes && (
-                                <p className="text-sm text-text-muted mt-2 italic border-r-2 border-primary-main pr-2">
-                                  {exercise.notes}
-                                </p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-
-                      {/* Link to details */}
-                      <Link
-                        to={`/workout/history/${workout.id}`}
-                        className="block text-center text-text-muted hover:text-primary-400 text-sm"
-                      >
-                        צפה בפרטים
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+            {plannedWorkouts.map((workout) => (
+              <WorkoutCard
+                key={workout.id}
+                workout={workout}
+                type="planned"
+                isExpanded={expandedWorkoutId === workout.id}
+                statusConfig={getStatusConfig(workout.status)}
+                expandedWorkoutDetails={expandedWorkoutDetails}
+                loadingDetails={loadingDetails}
+                dynamicMuscleNames={dynamicMuscleNames}
+                onToggleExpand={() => toggleWorkoutExpanded(workout.id)}
+                onDeleteClick={(e) => handleDeleteClick(e, workout)}
+                onContinueClick={() => handleContinueClick(workout)}
+                getStatusBadge={getStatusBadge}
+                formatDate={formatDate}
+                formatDuration={formatDuration}
+                estimateCalories={estimateCalories}
+              />
+            ))}
           </div>
         </div>
       )}
@@ -662,147 +546,25 @@ export default function WorkoutHistory() {
         <div>
           <h2 className="text-lg font-semibold text-text-primary mb-3">שבועיים אחרונים</h2>
           <div className="space-y-3">
-            {otherWorkouts.map((workout) => {
-              const statusConfig = getStatusConfig(workout.status)
-              const isExpanded = expandedWorkoutId === workout.id
-              return (
-                <div
-                  key={workout.id}
-                  className={`rounded-xl transition-colors border-2 ${statusConfig.bgClass} ${statusConfig.borderClass}`}
-                >
-                  {/* Card Header - clickable to expand */}
-                  <div
-                    className="p-4 cursor-pointer"
-                    onClick={() => toggleWorkoutExpanded(workout.id)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <button className="p-1">
-                          {isExpanded ? (
-                            <ChevronUp className="w-5 h-5 text-text-muted" />
-                          ) : (
-                            <ChevronDown className="w-5 h-5 text-text-muted" />
-                          )}
-                        </button>
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${statusConfig.iconBgClass}`}>
-                          <Dumbbell className={`w-6 h-6 ${statusConfig.iconTextClass}`} />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-medium text-text-primary">
-                              {workout.name}
-                            </p>
-                            {getStatusBadge(workout.status)}
-                            {workout.personalRecords > 0 && (
-                              <span className="flex items-center gap-1 px-2 py-0.5 bg-yellow-400/20 rounded-full">
-                                <Trophy className="w-3 h-3 text-yellow-400" />
-                                <span className="text-yellow-400 text-xs">{workout.personalRecords} PR</span>
-                              </span>
-                            )}
-                          </div>
-                          {workout.muscleGroups && workout.muscleGroups.length > 0 && (
-                            <p className="text-red-400 text-sm mt-1">
-                              {workout.muscleGroups
-                                .map(muscle => getMuscleNameHe(muscle, dynamicMuscleNames))
-                                .filter((name, index, self) => self.indexOf(name) === index)
-                                .join(' • ')}
-                            </p>
-                          )}
-                          <p className="text-text-muted text-sm mt-1">
-                            {formatDate(workout.date)} • {workout.duration} דקות • {workout.completedExercises}/{workout.totalExercises} תרגילים
-                          </p>
-                        </div>
-                      </div>
-                      {/* Delete button */}
-                      <button
-                        onClick={(e) => handleDeleteClick(e, workout)}
-                        className="p-2 text-text-muted hover:text-red-400 transition-colors"
-                        aria-label="מחק אימון"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Expanded Content */}
-                  {isExpanded && (
-                    <div className="px-4 pb-4 border-t border-dark-border/50 pt-4 space-y-4">
-                      {/* Stats: Time and Calories */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-3 bg-dark-card/50 rounded-xl">
-                          <div className="flex items-center justify-center gap-2 text-text-muted mb-1">
-                            <Clock className="w-4 h-4" />
-                            <span className="text-sm">זמן</span>
-                          </div>
-                          <p className="text-lg font-semibold text-text-primary">
-                            {formatDuration(workout.duration)}
-                          </p>
-                        </div>
-                        <div className="text-center p-3 bg-dark-card/50 rounded-xl">
-                          <div className="flex items-center justify-center gap-2 text-text-muted mb-1">
-                            <Zap className="w-4 h-4" />
-                            <span className="text-sm">קלוריות</span>
-                          </div>
-                          <p className="text-lg font-semibold text-text-primary">
-                            {workout.calories ?? estimateCalories(workout.duration, workout.totalVolume)}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Continue button */}
-                      <button
-                        onClick={() => handleContinueClick(workout)}
-                        className="w-full py-3 px-4 bg-primary-400 hover:bg-primary-500 text-white font-medium rounded-xl flex items-center justify-center gap-2 transition-colors"
-                      >
-                        <Play className="w-5 h-5" />
-                        המשך לאימון
-                      </button>
-
-                      {/* Exercise List */}
-                      {loadingDetails ? (
-                        <div className="flex items-center justify-center py-4">
-                          <div className="spinner"></div>
-                        </div>
-                      ) : expandedWorkoutDetails?.exercises && expandedWorkoutDetails.exercises.length > 0 ? (
-                        <div className="space-y-3">
-                          {expandedWorkoutDetails.exercises.map((exercise, idx) => (
-                            <div key={idx} className="bg-dark-card/30 rounded-xl p-3">
-                              <p className="font-medium text-text-primary mb-2">
-                                {exercise.exerciseNameHe || exercise.exerciseName}
-                              </p>
-                              <div className="flex flex-wrap gap-2 text-sm text-text-muted">
-                                <span className="px-2 py-0.5 bg-dark-border/50 rounded">
-                                  סטים: {exercise.sets?.length || 0}
-                                </span>
-                                <span className="px-2 py-0.5 bg-dark-border/50 rounded">
-                                  חזרות: {exercise.sets?.[0]?.targetReps || exercise.sets?.[0]?.actualReps || '--'}
-                                </span>
-                                <span className="px-2 py-0.5 bg-dark-border/50 rounded">
-                                  משקל: {exercise.sets?.[0]?.targetWeight || exercise.sets?.[0]?.actualWeight || '--'} ק"ג
-                                </span>
-                              </div>
-                              {exercise.notes && (
-                                <p className="text-sm text-text-muted mt-2 italic border-r-2 border-primary-main pr-2">
-                                  {exercise.notes}
-                                </p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-
-                      {/* Link to details */}
-                      <Link
-                        to={`/workout/history/${workout.id}`}
-                        className="block text-center text-text-muted hover:text-primary-400 text-sm"
-                      >
-                        צפה בפרטים
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+            {otherWorkouts.map((workout) => (
+              <WorkoutCard
+                key={workout.id}
+                workout={workout}
+                type="regular"
+                isExpanded={expandedWorkoutId === workout.id}
+                statusConfig={getStatusConfig(workout.status)}
+                expandedWorkoutDetails={expandedWorkoutDetails}
+                loadingDetails={loadingDetails}
+                dynamicMuscleNames={dynamicMuscleNames}
+                onToggleExpand={() => toggleWorkoutExpanded(workout.id)}
+                onDeleteClick={(e) => handleDeleteClick(e, workout)}
+                onContinueClick={() => handleContinueClick(workout)}
+                getStatusBadge={getStatusBadge}
+                formatDate={formatDate}
+                formatDuration={formatDuration}
+                estimateCalories={estimateCalories}
+              />
+            ))}
           </div>
         </div>
       )}

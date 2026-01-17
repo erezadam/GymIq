@@ -1,4 +1,2 @@
-export { LoadingSpinner } from './LoadingSpinner'
-export { UpdateBanner } from './UpdateBanner'
 export { WorkoutCard } from './WorkoutCard'
 export type { WorkoutCardProps, StatusConfig } from './WorkoutCard'
