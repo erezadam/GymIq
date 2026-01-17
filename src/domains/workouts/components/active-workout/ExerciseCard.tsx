@@ -44,7 +44,7 @@ export function ExerciseCard({
     if (hasHistoricalNotes) {
       // Format historical notes with dates
       return exercise.historicalNotes!
-        .map(n => `[${n.date.toLocaleDateString('he-IL')}] ${n.note}`)
+        .map(n => `[${n.date?.toLocaleDateString?.('he-IL') || 'תאריך לא זמין'}] ${n.note}`)
         .join('\n\n')
     }
     return ''
