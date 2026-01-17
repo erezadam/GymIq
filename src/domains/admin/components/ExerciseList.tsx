@@ -14,10 +14,11 @@ import {
   Dumbbell,
   ImageOff,
   Wrench,
+  AlertTriangle,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { exerciseService } from '@/domains/exercises/services'
-import { fixInvalidCategories, VALID_EXERCISE_CATEGORIES } from '@/lib/firebase/exercises'
+import { fixInvalidCategories, fixInvalidPrimaryMuscles, countInvalidPrimaryMuscles, VALID_EXERCISE_CATEGORIES } from '@/lib/firebase/exercises'
 import type { ExerciseFilters, ExerciseDifficulty } from '@/domains/exercises/types'
 import { difficultyOptions } from '@/domains/exercises/data/mockExercises'
 import { getMuscleIdToNameHeMap, getMuscles } from '@/lib/firebase/muscles'
@@ -64,6 +65,8 @@ export default function ExerciseList() {
   const [showFilters, setShowFilters] = useState(false)
   const [showOnlyMissingImages, setShowOnlyMissingImages] = useState(false)
   const [showOnlyNoEquipment, setShowOnlyNoEquipment] = useState(false)
+  // Data issues filter: 'none' | 'no_primary' | 'invalid_primary' | 'all_valid'
+  const [dataIssueFilter, setDataIssueFilter] = useState<string>('none')
 
   // Dynamic muscle/category name mapping from Firebase
   const [dynamicCategoryNames, setDynamicCategoryNames] = useState<Record<string, string>>({})
@@ -73,6 +76,9 @@ export default function ExerciseList() {
 
   // Muscles list from Firebase (for filter dropdown)
   const [musclesList, setMusclesList] = useState<PrimaryMuscle[]>([])
+
+  // Count of exercises with invalid primaryMuscle
+  const [invalidMusclesCount, setInvalidMusclesCount] = useState(0)
 
   // Load dynamic data from Firebase on mount
   useEffect(() => {
@@ -92,6 +98,11 @@ export default function ExerciseList() {
         const musclesData = await getMuscles()
         console.log('🔥 ExerciseList: Loaded muscles from Firebase:', musclesData)
         setMusclesList(musclesData)
+
+        // Count invalid primary muscles
+        const invalidCount = await countInvalidPrimaryMuscles()
+        console.log('🔥 ExerciseList: Invalid primaryMuscle count:', invalidCount)
+        setInvalidMusclesCount(invalidCount)
       } catch (error) {
         console.error('Failed to load dynamic data from Firebase:', error)
       }
@@ -104,22 +115,6 @@ export default function ExerciseList() {
     queryKey: ['exercises', filters],
     queryFn: () => exerciseService.getExercises(filters),
   })
-
-  // Extract unique categories from exercises (only valid ones with Hebrew names)
-  const uniqueCategories = useMemo(() => {
-    const cats = new Set<string>()
-    allExercises.forEach(ex => {
-      // Only include valid categories that have Hebrew translations
-      if (ex.category && validCategoryIds.has(ex.category)) {
-        cats.add(ex.category)
-      }
-    })
-    return Array.from(cats).sort((a, b) => {
-      const aHe = categoryTranslations[a] || a
-      const bHe = categoryTranslations[b] || b
-      return aHe.localeCompare(bHe, 'he')
-    })
-  }, [allExercises])
 
   // Filter exercises without images
   const exercisesWithoutImages = useMemo(() => {
@@ -136,6 +131,51 @@ export default function ExerciseList() {
     return allExercises.filter(ex => !ex.category || !validCategoryIds.has(ex.category))
   }, [allExercises])
 
+  // Valid primary muscle IDs (main muscle groups from Firebase)
+  const validPrimaryMuscleIds = useMemo(() => {
+    return new Set(musclesList.map(m => m.id))
+  }, [musclesList])
+
+  // Exercises with no primaryMuscle
+  const exercisesWithNoPrimaryMuscle = useMemo(() => {
+    return allExercises.filter(ex => !ex.primaryMuscle || ex.primaryMuscle.trim() === '')
+  }, [allExercises])
+
+  // Exercises with invalid primaryMuscle (not in valid muscles list)
+  const exercisesWithInvalidPrimaryMuscle = useMemo(() => {
+    if (musclesList.length === 0) return [] // Wait for muscles to load
+    return allExercises.filter(ex => {
+      if (!ex.primaryMuscle || ex.primaryMuscle.trim() === '') return false // Already caught by "no primary"
+      // Check if primaryMuscle is a valid main muscle
+      if (validPrimaryMuscleIds.has(ex.primaryMuscle)) return false
+      // Check if primaryMuscle is a valid sub-muscle
+      for (const muscle of musclesList) {
+        if (muscle.subMuscles?.some(sub => sub.id === ex.primaryMuscle)) {
+          return false // Valid sub-muscle
+        }
+      }
+      return true // Invalid - not found anywhere
+    })
+  }, [allExercises, musclesList, validPrimaryMuscleIds])
+
+  // Check if an exercise has data issues (for warning icon)
+  const getExerciseIssues = (exercise: typeof allExercises[0]) => {
+    const issues: string[] = []
+    if (!exercise.primaryMuscle || exercise.primaryMuscle.trim() === '') {
+      issues.push('ללא שריר ראשי')
+    } else if (musclesList.length > 0) {
+      const isValidMain = validPrimaryMuscleIds.has(exercise.primaryMuscle)
+      const isValidSub = musclesList.some(m => m.subMuscles?.some(sub => sub.id === exercise.primaryMuscle))
+      if (!isValidMain && !isValidSub) {
+        issues.push('שריר לא תקין')
+      }
+    }
+    if (!exercise.category || !validCategoryIds.has(exercise.category)) {
+      issues.push('קטגוריה לא תקינה')
+    }
+    return issues
+  }
+
   // Display exercises based on active filters
   const exercises = useMemo(() => {
     let result = allExercises
@@ -145,8 +185,27 @@ export default function ExerciseList() {
     if (showOnlyNoEquipment) {
       result = result.filter(ex => !ex.equipment || ex.equipment.trim() === '')
     }
+    // Data issues filter
+    if (dataIssueFilter === 'no_primary') {
+      result = result.filter(ex => !ex.primaryMuscle || ex.primaryMuscle.trim() === '')
+    } else if (dataIssueFilter === 'invalid_primary') {
+      result = result.filter(ex => {
+        if (!ex.primaryMuscle || ex.primaryMuscle.trim() === '') return false
+        if (musclesList.length === 0) return false
+        const isValidMain = validPrimaryMuscleIds.has(ex.primaryMuscle)
+        const isValidSub = musclesList.some(m => m.subMuscles?.some(sub => sub.id === ex.primaryMuscle))
+        return !isValidMain && !isValidSub
+      })
+    } else if (dataIssueFilter === 'invalid_category') {
+      result = result.filter(ex => !ex.category || !validCategoryIds.has(ex.category))
+    } else if (dataIssueFilter === 'all_valid') {
+      result = result.filter(ex => {
+        const issues = getExerciseIssues(ex)
+        return issues.length === 0
+      })
+    }
     return result
-  }, [allExercises, showOnlyMissingImages, showOnlyNoEquipment])
+  }, [allExercises, showOnlyMissingImages, showOnlyNoEquipment, dataIssueFilter, musclesList, validPrimaryMuscleIds])
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -194,6 +253,34 @@ export default function ExerciseList() {
     }
     if (window.confirm(`האם לתקן ${exercisesWithInvalidCategory.length} תרגילים עם קטגוריה לא תקינה?`)) {
       fixCategoriesMutation.mutate()
+    }
+  }
+
+  // Fix invalid primaryMuscle mutation
+  const fixMusclesMutation = useMutation({
+    mutationFn: fixInvalidPrimaryMuscles,
+    onSuccess: async (results) => {
+      queryClient.invalidateQueries({ queryKey: ['exercises'] })
+      toast.success(`תוקנו ${results.length} תרגילים`)
+      console.log('Fixed primaryMuscles:', results)
+      // Refresh the count
+      const newCount = await countInvalidPrimaryMuscles()
+      setInvalidMusclesCount(newCount)
+    },
+    onError: (error) => {
+      toast.error('שגיאה בתיקון שרירים')
+      console.error('Fix muscles error:', error)
+    },
+  })
+
+  // Handle fix primary muscles
+  const handleFixMuscles = () => {
+    if (invalidMusclesCount === 0) {
+      toast.success('אין תרגילים לתיקון')
+      return
+    }
+    if (window.confirm(`האם לתקן ${invalidMusclesCount} תרגילים עם שריר לא תקין?`)) {
+      fixMusclesMutation.mutate()
     }
   }
 
@@ -393,6 +480,20 @@ export default function ExerciseList() {
               </span>
             </button>
           )}
+          {/* Fix invalid primaryMuscle button - only show when there are issues */}
+          {invalidMusclesCount > 0 && (
+            <button
+              onClick={handleFixMuscles}
+              disabled={fixMusclesMutation.isPending}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 rounded-xl text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-50"
+            >
+              <Dumbbell className="w-4 h-4" />
+              <span className="hidden sm:inline">תקן שרירים</span>
+              <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-500/30 text-emerald-300">
+                {invalidMusclesCount}
+              </span>
+            </button>
+          )}
           <button
             onClick={handleDeleteAll}
             disabled={deleteAllMutation.isPending || exercises.length === 0}
@@ -460,7 +561,7 @@ export default function ExerciseList() {
         {/* Filter dropdowns */}
         {showFilters && (
           <div className="flex flex-wrap gap-3 p-4 bg-dark-surface rounded-xl border border-dark-border animate-slide-up">
-            {/* Category - dynamic from exercises */}
+            {/* Category/Muscle - dynamic from Firebase */}
             <select
               value={filters.category || ''}
               onChange={(e) =>
@@ -469,22 +570,6 @@ export default function ExerciseList() {
               className="input-neon min-w-[150px]"
             >
               <option value="">כל הקטגוריות</option>
-              {uniqueCategories.map((catId) => (
-                <option key={catId} value={catId}>
-                  {categoryTranslations[catId] || catId}
-                </option>
-              ))}
-            </select>
-
-            {/* Primary Muscle - from Firebase */}
-            <select
-              value={filters.muscle || ''}
-              onChange={(e) =>
-                setFilters({ ...filters, muscle: e.target.value || undefined })
-              }
-              className="input-neon min-w-[150px]"
-            >
-              <option value="">כל השרירים</option>
               {musclesList.map((muscle) => (
                 <option key={muscle.id} value={muscle.id}>
                   {muscle.nameHe}
@@ -525,6 +610,19 @@ export default function ExerciseList() {
                   {eq.nameHe}
                 </option>
               ))}
+            </select>
+
+            {/* Data Issues Filter */}
+            <select
+              value={dataIssueFilter}
+              onChange={(e) => setDataIssueFilter(e.target.value)}
+              className={`input-neon min-w-[180px] ${dataIssueFilter !== 'none' ? 'border-amber-500 bg-amber-500/10' : ''}`}
+            >
+              <option value="none">🔍 בעיות נתונים</option>
+              <option value="no_primary">⚠️ ללא שריר ראשי ({exercisesWithNoPrimaryMuscle.length})</option>
+              <option value="invalid_primary">⚠️ שריר לא תקין ({exercisesWithInvalidPrimaryMuscle.length})</option>
+              <option value="invalid_category">⚠️ קטגוריה לא תקינה ({exercisesWithInvalidCategory.length})</option>
+              <option value="all_valid">✅ הכל תקין</option>
             </select>
 
             {/* Clear filters */}
@@ -591,9 +689,28 @@ export default function ExerciseList() {
                       </div>
                     </td>
                     <td>
-                      <div>
-                        <p className="font-medium text-text-primary">{exercise.nameHe}</p>
-                        <p className="text-sm text-text-muted">{exercise.name}</p>
+                      <div className="flex items-start gap-2">
+                        {/* Warning icon for exercises with issues */}
+                        {(() => {
+                          const issues = getExerciseIssues(exercise)
+                          if (issues.length > 0) {
+                            return (
+                              <div className="relative group/warning">
+                                <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-1" />
+                                <div className="absolute right-0 top-6 z-10 hidden group-hover/warning:block bg-dark-card border border-amber-500/50 rounded-lg p-2 text-xs text-amber-300 whitespace-nowrap shadow-lg">
+                                  {issues.map((issue, i) => (
+                                    <div key={i}>⚠️ {issue}</div>
+                                  ))}
+                                </div>
+                              </div>
+                            )
+                          }
+                          return null
+                        })()}
+                        <div>
+                          <p className="font-medium text-text-primary">{exercise.nameHe}</p>
+                          <p className="text-sm text-text-muted">{exercise.name}</p>
+                        </div>
                       </div>
                     </td>
                     <td>

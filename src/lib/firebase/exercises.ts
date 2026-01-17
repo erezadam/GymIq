@@ -7,7 +7,6 @@ import {
   updateDoc,
   deleteDoc,
   query,
-  where,
   orderBy,
   serverTimestamp,
   writeBatch,
@@ -23,10 +22,6 @@ export const getExercises = async (filters?: ExerciseFilters): Promise<Exercise[
 
   // Note: Firestore has limitations on compound queries
   // For complex filtering, we filter client-side after fetching
-  if (filters?.category) {
-    q = query(collection(db, COLLECTION), where('category', '==', filters.category))
-  }
-
   const snapshot = await getDocs(q)
   let exercises = snapshot.docs.map((doc) => {
     const data = doc.data()
@@ -45,6 +40,16 @@ export const getExercises = async (filters?: ExerciseFilters): Promise<Exercise[
         (ex) =>
           ex.name.toLowerCase().includes(searchLower) ||
           ex.nameHe.includes(filters.search!)
+      )
+    }
+
+    // Category filter - matches category OR primaryMuscle
+    // This allows filtering by muscle ID from the dynamic Firebase filter
+    if (filters.category) {
+      exercises = exercises.filter(
+        (ex) =>
+          ex.category === filters.category ||
+          ex.primaryMuscle === filters.category
       )
     }
 
@@ -168,6 +173,75 @@ export const VALID_EXERCISE_CATEGORIES = [
   'cardio', 'functional', 'stretching', 'warmup'
 ] as const
 
+// Valid primary muscle IDs (from MuscleManager in Firebase)
+export const VALID_PRIMARY_MUSCLES = new Set([
+  'cardio', 'arms', 'back', 'chest', 'core', 'glutes', 'legs', 'shoulders'
+])
+
+// Mapping from specific muscles to parent muscle groups
+const MUSCLE_TO_PARENT_MAPPING: Record<string, string> = {
+  // Legs
+  'quadriceps': 'legs',
+  'hamstrings': 'legs',
+  'quads': 'legs',
+  'calves': 'legs',
+  'gastrocnemius': 'legs',
+  'gastrocnemius_soleus': 'legs',
+  'adductors': 'legs',
+  'abductors': 'legs',
+  'hip_flexors': 'legs',
+  // Back
+  'lats': 'back',
+  'latissimus_dorsi': 'back',
+  'trapezius': 'back',
+  'traps': 'back',
+  'rhomboids': 'back',
+  'erector_spinae': 'back',
+  'longissimus': 'back',
+  'lower_back': 'back',
+  'upper_back': 'back',
+  'mid_back': 'back',
+  // Arms
+  'biceps': 'arms',
+  'biceps_brachii': 'arms',
+  'triceps': 'arms',
+  'triceps_brachii': 'arms',
+  'forearms': 'arms',
+  'brachialis': 'arms',
+  // Shoulders
+  'deltoids': 'shoulders',
+  'front_delt': 'shoulders',
+  'side_delt': 'shoulders',
+  'rear_delt': 'shoulders',
+  'anterior_deltoid': 'shoulders',
+  'lateral_deltoid': 'shoulders',
+  'posterior_deltoid': 'shoulders',
+  'rotator_cuff': 'shoulders',
+  // Core
+  'abs': 'core',
+  'lower_abs': 'core',
+  'upper_abs': 'core',
+  'obliques': 'core',
+  'transverse_abdominis': 'core',
+  'rectus_abdominis': 'core',
+  // Chest
+  'pectoralis': 'chest',
+  'pectoralis_major': 'chest',
+  'upper_chest': 'chest',
+  'lower_chest': 'chest',
+  'middle_chest': 'chest',
+  'mid_chest': 'chest',
+  // Glutes
+  'gluteus_maximus': 'glutes',
+  'gluteus_medius': 'glutes',
+  'gluteus_minimus': 'glutes',
+  // Cardio - Hebrew variations
+  'חימום': 'cardio',
+  'אירובי': 'cardio',
+  'aerobic': 'cardio',
+  'warmup': 'cardio',
+}
+
 // Fix exercises with invalid categories
 // Returns list of fixed exercises
 export const fixInvalidCategories = async (): Promise<{ id: string; nameHe: string; oldCategory: string; newCategory: string }[]> => {
@@ -175,7 +249,7 @@ export const fixInvalidCategories = async (): Promise<{ id: string; nameHe: stri
     // abcsde exercises - cardio machines
     cardio: [
       { id: "Hfa5YoHu9j88evuBE5XW", newCategory: "cardio" }, // אופניים נייחים
-      { id: "KaC7dbGCPEEtlppiWK2K", newCategory: "cardio" }, // הליכון
+      { id: "KaC7gbGCPEEtlppiWK2K", newCategory: "cardio" }, // הליכון
       { id: "R29ea1XKRxWmlqaryCAM", newCategory: "cardio" }, // מדרגות
       { id: "arf3iUkOzGWGNvnUVWH4", newCategory: "cardio" }, // מכשיר-אליפטי
       { id: "b1EqSp0s3yqv8bpI2Pnn", newCategory: "cardio" }, // סטפר
@@ -213,5 +287,58 @@ export const fixInvalidCategories = async (): Promise<{ id: string; nameHe: stri
   }
 
   await batch.commit()
+  return results
+}
+
+// Count exercises with invalid primaryMuscle
+export const countInvalidPrimaryMuscles = async (): Promise<number> => {
+  const snapshot = await getDocs(collection(db, COLLECTION))
+  let count = 0
+  snapshot.docs.forEach((docSnapshot) => {
+    const data = docSnapshot.data()
+    const primaryMuscle = data.primaryMuscle
+    if (!primaryMuscle || !VALID_PRIMARY_MUSCLES.has(primaryMuscle)) {
+      // Check if we have a mapping for this muscle
+      if (primaryMuscle && MUSCLE_TO_PARENT_MAPPING[primaryMuscle]) {
+        count++
+      }
+    }
+  })
+  return count
+}
+
+// Fix exercises with invalid primaryMuscle values
+// Maps specific muscles to their parent muscle groups
+export const fixInvalidPrimaryMuscles = async (): Promise<{ id: string; nameHe: string; oldMuscle: string; newMuscle: string }[]> => {
+  const snapshot = await getDocs(collection(db, COLLECTION))
+  const results: { id: string; nameHe: string; oldMuscle: string; newMuscle: string }[] = []
+  const batch = writeBatch(db)
+
+  snapshot.docs.forEach((docSnapshot) => {
+    const data = docSnapshot.data()
+    const primaryMuscle = data.primaryMuscle
+
+    // Skip if already valid
+    if (VALID_PRIMARY_MUSCLES.has(primaryMuscle)) {
+      return
+    }
+
+    // Check if we have a mapping for this muscle
+    const newMuscle = MUSCLE_TO_PARENT_MAPPING[primaryMuscle]
+    if (newMuscle) {
+      const docRef = doc(db, COLLECTION, docSnapshot.id)
+      batch.update(docRef, { primaryMuscle: newMuscle })
+      results.push({
+        id: docSnapshot.id,
+        nameHe: data.nameHe || data.name,
+        oldMuscle: primaryMuscle,
+        newMuscle: newMuscle,
+      })
+    }
+  })
+
+  if (results.length > 0) {
+    await batch.commit()
+  }
   return results
 }

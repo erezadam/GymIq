@@ -115,13 +115,67 @@ export default function ExerciseForm() {
   } = useFieldArray({ control, name: 'tipsHe' })
 
   // Populate form when editing
+  // IMPORTANT: Wait for both existingExercise AND musclesData to load
+  // Otherwise subMuscles dropdown will be empty and values will be lost
   useEffect(() => {
-    if (existingExercise) {
+    if (existingExercise && musclesData.length > 0) {
+      // Find the correct category (main muscle) and primaryMuscle (sub-muscle)
+      //
+      // Database values:
+      // - category: exercise category (might be muscle ID like 'chest' or category like 'cardio')
+      // - primaryMuscle: specific muscle (might be main muscle like 'chest' or sub-muscle like 'pectoralis_major')
+      //
+      // Form fields:
+      // - category: main muscle selector (from musclesData)
+      // - primaryMuscle: sub-muscle selector (from selectedPrimaryMuscle.subMuscles)
+
+      let categoryToSet = ''
+      let primaryMuscleToSet = existingExercise.primaryMuscle || ''
+      const originalCategory = existingExercise.category || ''
+
+      // Step 1: Determine the main muscle (category)
+      // Check if originalCategory is a valid main muscle ID
+      const categoryIsMainMuscle = musclesData.some(m => m.id === originalCategory)
+      if (categoryIsMainMuscle) {
+        categoryToSet = originalCategory
+      }
+
+      // If category is not a main muscle, check if primaryMuscle is a main muscle
+      if (!categoryToSet) {
+        const primaryIsMainMuscle = musclesData.some(m => m.id === primaryMuscleToSet)
+        if (primaryIsMainMuscle) {
+          categoryToSet = primaryMuscleToSet
+        }
+      }
+
+      // If still no category, try to find the parent muscle of primaryMuscle
+      if (!categoryToSet && primaryMuscleToSet) {
+        for (const muscle of musclesData) {
+          if (muscle.subMuscles?.some(sub => sub.id === primaryMuscleToSet)) {
+            categoryToSet = muscle.id
+            break
+          }
+        }
+      }
+
+      // Last resort: use originalCategory if it exists (even if not a muscle ID)
+      if (!categoryToSet && originalCategory) {
+        categoryToSet = originalCategory
+      }
+
+      console.log('🔥 ExerciseForm: Loading existing exercise', {
+        originalCategory,
+        originalPrimaryMuscle: existingExercise.primaryMuscle,
+        categoryToSet,
+        primaryMuscleToSet,
+        musclesCount: musclesData.length,
+      })
+
       reset({
         name: existingExercise.name || '',
         nameHe: existingExercise.nameHe || '',
-        category: existingExercise.category || '',
-        primaryMuscle: existingExercise.primaryMuscle || '',
+        category: categoryToSet,
+        primaryMuscle: primaryMuscleToSet,
         secondaryMuscles: existingExercise.secondaryMuscles || [],
         equipment: existingExercise.equipment || '',
         difficulty: existingExercise.difficulty || 'beginner',
@@ -142,7 +196,7 @@ export default function ExerciseForm() {
           : [{ value: '' }],
       })
     }
-  }, [existingExercise, reset])
+  }, [existingExercise, musclesData, reset])
 
   // Create/Update mutations
   const createMutation = useMutation({
@@ -158,20 +212,26 @@ export default function ExerciseForm() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof exerciseService.updateExercise>[1] }) =>
-      exerciseService.updateExercise(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof exerciseService.updateExercise>[1] }) => {
+      console.log('🔥 ExerciseForm: updateMutation calling service with:', { id, data })
+      return exerciseService.updateExercise(id, data)
+    },
     onSuccess: () => {
+      console.log('🔥 ExerciseForm: Update SUCCESS!')
       queryClient.invalidateQueries({ queryKey: ['exercises'] })
       toast.success('התרגיל עודכן בהצלחה')
       navigate('/admin/exercises')
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('🔥 ExerciseForm: Update FAILED!', error)
       toast.error('שגיאה בעדכון התרגיל')
     },
   })
 
   // Form submit
   const onSubmit = (data: ExerciseFormData) => {
+    console.log('🔥 ExerciseForm: onSubmit called with data:', data)
+
     const formattedData = {
       ...data,
       category: data.category as ExerciseCategory,
@@ -186,9 +246,13 @@ export default function ExerciseForm() {
       tipsHe: data.tipsHe.map((t) => t.value).filter(Boolean),
     }
 
+    console.log('🔥 ExerciseForm: Submitting formatted data:', formattedData)
+
     if (isEditing && id) {
+      console.log('🔥 ExerciseForm: Updating exercise with id:', id)
       updateMutation.mutate({ id, data: formattedData })
     } else {
+      console.log('🔥 ExerciseForm: Creating new exercise')
       createMutation.mutate(formattedData)
     }
   }
@@ -200,9 +264,18 @@ export default function ExerciseForm() {
   const selectedPrimaryMuscle = musclesData.find((m) => m.id === selectedCategory)
   const subMuscles = selectedPrimaryMuscle?.subMuscles || []
 
-  // Reset sub-muscle when main muscle changes
+  // Get current primaryMuscle value from the form
+  const currentPrimaryMuscle = watch('primaryMuscle')
+
+  // Check if current primaryMuscle is in the subMuscles list
+  // If not, we need to show it as a fallback option (for exercises with invalid data)
+  const isCurrentValueInSubMuscles = subMuscles.some(sub => sub.id === currentPrimaryMuscle)
+  const showFallbackOption = currentPrimaryMuscle && !isCurrentValueInSubMuscles && selectedCategory
+
+  // Reset sub-muscle when main muscle changes (only when user manually changes)
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newCategory = e.target.value
+    console.log('🔥 ExerciseForm: handleCategoryChange called:', { newCategory, wasTriggeredByUser: true })
     setValue('category', newCategory)
     setValue('primaryMuscle', '') // Reset sub-muscle selection
   }
@@ -235,7 +308,10 @@ export default function ExerciseForm() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={handleSubmit(onSubmit, (errors) => {
+        console.error('🔥 ExerciseForm: Validation errors:', errors)
+        toast.error('יש שגיאות בטופס - בדוק את השדות')
+      })} className="space-y-8">
         {/* Basic Info */}
         <section className="card-neon">
           <h2 className="text-lg font-semibold text-text-primary mb-6">מידע בסיסי</h2>
@@ -349,9 +425,15 @@ export default function ExerciseForm() {
               <select
                 {...register('primaryMuscle')}
                 disabled={!selectedCategory || subMuscles.length === 0}
-                className={`input-neon w-full ${errors.primaryMuscle ? 'border-red-500' : ''} ${!selectedCategory ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`input-neon w-full ${errors.primaryMuscle ? 'border-red-500' : ''} ${showFallbackOption ? 'border-amber-500' : ''} ${!selectedCategory ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <option value="">{selectedCategory ? 'בחר תת שריר' : 'בחר קודם שריר ראשי'}</option>
+                {/* Show fallback option for exercises with invalid/old primaryMuscle values */}
+                {showFallbackOption && (
+                  <option value={currentPrimaryMuscle} className="text-amber-400">
+                    ⚠️ {currentPrimaryMuscle} (ערך נוכחי - לא תקני)
+                  </option>
+                )}
                 {subMuscles.map((subMuscle) => (
                   <option key={subMuscle.id} value={subMuscle.id}>
                     {subMuscle.nameHe}
@@ -360,6 +442,11 @@ export default function ExerciseForm() {
               </select>
               {errors.primaryMuscle && (
                 <p className="text-red-400 text-sm mt-1">{errors.primaryMuscle.message}</p>
+              )}
+              {showFallbackOption && (
+                <p className="text-amber-400 text-xs mt-1">
+                  ⚠️ הערך הנוכחי לא תקני. מומלץ לבחור תת-שריר מהרשימה.
+                </p>
               )}
             </div>
           </div>
