@@ -267,10 +267,11 @@ export default function ExerciseForm() {
   // Get current primaryMuscle value from the form
   const currentPrimaryMuscle = watch('primaryMuscle')
 
-  // Check if current primaryMuscle is in the subMuscles list
+  // Check if current primaryMuscle is in the subMuscles list or is a valid main muscle
   // If not, we need to show it as a fallback option (for exercises with invalid data)
   const isCurrentValueInSubMuscles = subMuscles.some(sub => sub.id === currentPrimaryMuscle)
-  const showFallbackOption = currentPrimaryMuscle && !isCurrentValueInSubMuscles && selectedCategory
+  const isCurrentValueMainMuscle = musclesData.some(m => m.id === currentPrimaryMuscle)
+  const showFallbackOption = currentPrimaryMuscle && !isCurrentValueInSubMuscles && !isCurrentValueMainMuscle && selectedCategory
 
   // Reset sub-muscle when main muscle changes (only when user manually changes)
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
