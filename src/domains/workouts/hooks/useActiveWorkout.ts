@@ -841,8 +841,22 @@ export function useActiveWorkout() {
       return
     }
 
-    console.log('✅ Showing summary modal')
-    // Always show summary modal directly
+    // Check if there are incomplete exercises
+    const incompleteCount = workout.stats.totalExercises - workout.stats.completedExercises
+    console.log(`📊 Incomplete exercises: ${incompleteCount}/${workout.stats.totalExercises}`)
+
+    if (incompleteCount > 0) {
+      // Show warning modal
+      console.log('⚠️ Showing incomplete exercises warning')
+      setConfirmModal({
+        type: 'incomplete_exercises_warning',
+        incompleteCount,
+      })
+      return
+    }
+
+    console.log('✅ All exercises complete - showing summary modal')
+    // All exercises complete - show summary modal directly
     setShowSummaryModal(true)
   }, [workout])
 

@@ -131,6 +131,10 @@ export default function ActiveWorkoutScreen() {
       case 'finish_exercise_reminder':
         handleFinishExerciseReminder()
         break
+      case 'incomplete_exercises_warning':
+        // User confirmed to finish despite incomplete exercises
+        handleConfirmFinish()
+        break
     }
   }
 

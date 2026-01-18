@@ -67,6 +67,15 @@ export function ConfirmationModal({
           showStats: false,
           isDanger: false,
         }
+      case 'incomplete_exercises_warning':
+        return {
+          title: '⚠️ יש תרגילים שלא הושלמו',
+          text: `לא סיימת ${modal.incompleteCount} תרגילים. האם אתה בטוח שברצונך לסיים את האימון?`,
+          confirmText: 'כן, סיים',
+          cancelText: 'ביטול',
+          showStats: false,
+          isDanger: false,
+        }
       default:
         return null
     }

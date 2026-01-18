@@ -603,7 +603,59 @@ src/
 
 ---
 
-## 11. הערות חשובות לסוכן | Important Notes for Agent
+## 11. התרעות ואישורים | Warnings & Confirmations
+
+### 11.1 התרעה על תרגילים לא הושלמו
+
+כאשר המשתמש לוחץ על "סיום אימון" ויש תרגילים שלא הושלמו, מוצגת התרעה:
+
+```typescript
+interface IncompleteExercisesWarning {
+  type: 'incomplete_exercises_warning';
+  incompleteCount: number;  // מספר התרגילים שלא הושלמו
+
+  // תצוגה
+  title: '⚠️ יש תרגילים שלא הושלמו';
+  text: `לא סיימת ${incompleteCount} תרגילים. האם אתה בטוח שברצונך לסיים את האימון?`;
+
+  // כפתורים
+  confirmButton: 'כן, סיים';    // ממשיך לפופאפ סיכום
+  cancelButton: 'ביטול';         // חוזר לאימון
+}
+```
+
+**זרימה:**
+```
+לחיצה "סיום אימון"
+    ↓
+בדיקה: completedExercises < totalExercises?
+    ├── כן → הצג התרעה עם מספר התרגילים
+    │         ├── "כן, סיים" → פופאפ סיכום
+    │         └── "ביטול" → חזרה לאימון
+    └── לא → פופאפ סיכום ישירות
+```
+
+### 11.2 תזכורת סיום תרגיל (מעבר בין תרגילים)
+
+כאשר עוברים לתרגיל אחר והתרגיל הנוכחי לא הושלם:
+
+```typescript
+interface FinishExerciseReminder {
+  type: 'finish_exercise_reminder';
+  exerciseName: string;   // שם התרגיל
+  setsCount: number;      // מספר הסטים שדווחו
+
+  title: `💪 לסיים את "${exerciseName}"?`;
+  text: `דיווחת על ${setsCount} סטים. רוצה לסמן את התרגיל כמושלם?`;
+
+  confirmButton: 'כן, סיים תרגיל';
+  cancelButton: 'לא';
+}
+```
+
+---
+
+## 12. הערות חשובות לסוכן | Important Notes for Agent
 
 1. **RTL First**: כל העיצוב צריך להיות RTL מההתחלה. שימוש ב-`dir="rtl"` וב-Tailwind RTL utilities.
 

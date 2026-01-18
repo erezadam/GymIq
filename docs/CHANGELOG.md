@@ -6,6 +6,30 @@
 
 ---
 
+## [v1.10.57] - 2026-01-18
+
+### 🚀 פיצ'רים חדשים
+
+| פיצ'ר | תיאור |
+|-------|-------|
+| **התרעה על תרגילים לא הושלמו** | בלחיצה על "סיום אימון" כשיש תרגילים שלא הושלמו - פופאפ התרעה עם מספר התרגילים |
+
+### ✏️ קבצים ששונו
+
+| קובץ | שינוי |
+|------|-------|
+| `active-workout.types.ts` | הוספת סוג `incomplete_exercises_warning` ו-`incompleteCount` |
+| `ConfirmationModal.tsx` | הוספת case להתרעה החדשה עם טקסט דינמי |
+| `useActiveWorkout.ts` | `confirmFinish` בודק תרגילים לא הושלמו לפני סיכום |
+| `ActiveWorkoutScreen.tsx` | טיפול באישור ההתרעה |
+| `workout-session-screen-spec.md` | תיעוד סעיף 11 - התרעות ואישורים |
+
+### 🔗 Git
+
+- **Branch:** main
+
+---
+
 ## [v1.10.55] - 2026-01-16
 
 ### 🚀 פיצ'רים חדשים
