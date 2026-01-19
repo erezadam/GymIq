@@ -103,18 +103,21 @@ export function ExerciseLibrary() {
         { id: 'all', label: 'הכל' },
         ...equipmentData.map((eq) => ({ id: eq.id, label: eq.nameHe })),
       ])
-
-      // Load recently done exercises if user is logged in
-      if (user?.uid) {
-        const recentlyDone = await getRecentlyDoneExerciseIds(user.uid)
-        setRecentlyDoneExerciseIds(recentlyDone)
-      }
     } catch (error) {
       console.error('Failed to load data:', error)
     } finally {
       setLoading(false)
     }
   }
+
+  // Load recently done exercises in background (non-blocking)
+  useEffect(() => {
+    if (user?.uid && !loading) {
+      getRecentlyDoneExerciseIds(user.uid)
+        .then(setRecentlyDoneExerciseIds)
+        .catch(err => console.error('Failed to load recently done:', err))
+    }
+  }, [user?.uid, loading])
 
   // Get selected muscle name in Hebrew
   const selectedMuscleName = useMemo(() => {
