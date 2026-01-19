@@ -18,13 +18,47 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { exerciseService } from '@/domains/exercises/services'
-import { fixInvalidCategories, fixInvalidPrimaryMuscles, countInvalidPrimaryMuscles, VALID_EXERCISE_CATEGORIES } from '@/lib/firebase/exercises'
+import { fixInvalidCategories, VALID_EXERCISE_CATEGORIES } from '@/lib/firebase/exercises'
 import type { ExerciseFilters, ExerciseDifficulty } from '@/domains/exercises/types'
 import { difficultyOptions } from '@/domains/exercises/data/mockExercises'
 import { getMuscleIdToNameHeMap, getMuscles } from '@/lib/firebase/muscles'
 import { getEquipment, type Equipment } from '@/lib/firebase/equipment'
 import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
+
+// Session storage key for persisting filter state
+const FILTER_STORAGE_KEY = 'gymiq-exercise-list-filters'
+
+// Interface for persisted filter state
+interface PersistedFilterState {
+  filters: ExerciseFilters
+  showFilters: boolean
+  showOnlyMissingImages: boolean
+  showOnlyNoEquipment: boolean
+  dataIssueFilter: string
+}
+
+// Load filters from sessionStorage
+function loadPersistedFilters(): PersistedFilterState | null {
+  try {
+    const stored = sessionStorage.getItem(FILTER_STORAGE_KEY)
+    if (stored) {
+      return JSON.parse(stored)
+    }
+  } catch (e) {
+    console.error('Failed to load persisted filters:', e)
+  }
+  return null
+}
+
+// Save filters to sessionStorage
+function savePersistedFilters(state: PersistedFilterState): void {
+  try {
+    sessionStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(state))
+  } catch (e) {
+    console.error('Failed to save persisted filters:', e)
+  }
+}
 
 // Category translations for display
 // IMPORTANT: All valid categories MUST have Hebrew translations!
@@ -61,12 +95,27 @@ const validCategoryIds = new Set(VALID_EXERCISE_CATEGORIES)
 
 export default function ExerciseList() {
   const queryClient = useQueryClient()
-  const [filters, setFilters] = useState<ExerciseFilters>({})
-  const [showFilters, setShowFilters] = useState(false)
-  const [showOnlyMissingImages, setShowOnlyMissingImages] = useState(false)
-  const [showOnlyNoEquipment, setShowOnlyNoEquipment] = useState(false)
+
+  // Load persisted state on mount
+  const persistedState = useMemo(() => loadPersistedFilters(), [])
+
+  const [filters, setFilters] = useState<ExerciseFilters>(persistedState?.filters || {})
+  const [showFilters, setShowFilters] = useState(persistedState?.showFilters || false)
+  const [showOnlyMissingImages, setShowOnlyMissingImages] = useState(persistedState?.showOnlyMissingImages || false)
+  const [showOnlyNoEquipment, setShowOnlyNoEquipment] = useState(persistedState?.showOnlyNoEquipment || false)
   // Data issues filter: 'none' | 'no_primary' | 'invalid_primary' | 'all_valid'
-  const [dataIssueFilter, setDataIssueFilter] = useState<string>('none')
+  const [dataIssueFilter, setDataIssueFilter] = useState<string>(persistedState?.dataIssueFilter || 'none')
+
+  // Persist filter state whenever it changes
+  useEffect(() => {
+    savePersistedFilters({
+      filters,
+      showFilters,
+      showOnlyMissingImages,
+      showOnlyNoEquipment,
+      dataIssueFilter,
+    })
+  }, [filters, showFilters, showOnlyMissingImages, showOnlyNoEquipment, dataIssueFilter])
 
   // Dynamic muscle/category name mapping from Firebase
   const [dynamicCategoryNames, setDynamicCategoryNames] = useState<Record<string, string>>({})
@@ -76,9 +125,6 @@ export default function ExerciseList() {
 
   // Muscles list from Firebase (for filter dropdown)
   const [musclesList, setMusclesList] = useState<PrimaryMuscle[]>([])
-
-  // Count of exercises with invalid primaryMuscle
-  const [invalidMusclesCount, setInvalidMusclesCount] = useState(0)
 
   // Load dynamic data from Firebase on mount
   useEffect(() => {
@@ -98,11 +144,6 @@ export default function ExerciseList() {
         const musclesData = await getMuscles()
         console.log('🔥 ExerciseList: Loaded muscles from Firebase:', musclesData)
         setMusclesList(musclesData)
-
-        // Count invalid primary muscles
-        const invalidCount = await countInvalidPrimaryMuscles()
-        console.log('🔥 ExerciseList: Invalid primaryMuscle count:', invalidCount)
-        setInvalidMusclesCount(invalidCount)
       } catch (error) {
         console.error('Failed to load dynamic data from Firebase:', error)
       }
@@ -256,34 +297,6 @@ export default function ExerciseList() {
     }
   }
 
-  // Fix invalid primaryMuscle mutation
-  const fixMusclesMutation = useMutation({
-    mutationFn: fixInvalidPrimaryMuscles,
-    onSuccess: async (results) => {
-      queryClient.invalidateQueries({ queryKey: ['exercises'] })
-      toast.success(`תוקנו ${results.length} תרגילים`)
-      console.log('Fixed primaryMuscles:', results)
-      // Refresh the count
-      const newCount = await countInvalidPrimaryMuscles()
-      setInvalidMusclesCount(newCount)
-    },
-    onError: (error) => {
-      toast.error('שגיאה בתיקון שרירים')
-      console.error('Fix muscles error:', error)
-    },
-  })
-
-  // Handle fix primary muscles
-  const handleFixMuscles = () => {
-    if (invalidMusclesCount === 0) {
-      toast.success('אין תרגילים לתיקון')
-      return
-    }
-    if (window.confirm(`האם לתקן ${invalidMusclesCount} תרגילים עם שריר לא תקין?`)) {
-      fixMusclesMutation.mutate()
-    }
-  }
-
   // Handle delete
   const handleDelete = (id: string, name: string) => {
     if (window.confirm(`האם אתה בטוח שברצונך למחוק את "${name}"?`)) {
@@ -356,11 +369,15 @@ export default function ExerciseList() {
   // Clear filters
   const clearFilters = () => {
     setFilters({})
+    setShowOnlyMissingImages(false)
+    setShowOnlyNoEquipment(false)
+    setDataIssueFilter('none')
   }
 
   const hasActiveFilters = useMemo(() => {
-    return Object.values(filters).some((v) => v !== undefined && v !== '')
-  }, [filters])
+    const hasBasicFilters = Object.values(filters).some((v) => v !== undefined && v !== '')
+    return hasBasicFilters || showOnlyMissingImages || showOnlyNoEquipment || dataIssueFilter !== 'none'
+  }, [filters, showOnlyMissingImages, showOnlyNoEquipment, dataIssueFilter])
 
   // Get category label - use categoryTranslations or muscle mapping
   const getCategoryLabel = (categoryId: string) => {
@@ -477,20 +494,6 @@ export default function ExerciseList() {
               <span className="hidden sm:inline">תקן קטגוריות</span>
               <span className="px-2 py-0.5 text-xs rounded-full bg-purple-500/30 text-purple-300">
                 {exercisesWithInvalidCategory.length}
-              </span>
-            </button>
-          )}
-          {/* Fix invalid primaryMuscle button - only show when there are issues */}
-          {invalidMusclesCount > 0 && (
-            <button
-              onClick={handleFixMuscles}
-              disabled={fixMusclesMutation.isPending}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 rounded-xl text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-50"
-            >
-              <Dumbbell className="w-4 h-4" />
-              <span className="hidden sm:inline">תקן שרירים</span>
-              <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-500/30 text-emerald-300">
-                {invalidMusclesCount}
               </span>
             </button>
           )}
