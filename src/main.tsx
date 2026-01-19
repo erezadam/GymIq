@@ -7,6 +7,9 @@ import { AuthProvider } from '@/app/providers'
 import App from './App'
 import './index.css'
 
+// Performance timing
+console.log('[PERF] Main.tsx loaded at:', Date.now())
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
