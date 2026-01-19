@@ -70,4 +70,34 @@ cp file.tsx file.tsx.backup
 - Tailwind CSS with centralized tokens
 - Domain-driven folder structure
 
+## קבצים עיקריים בפרויקט
+
+### מסכים ראשיים
+| קובץ | מיקום | תפקיד |
+|------|-------|-------|
+| UserDashboard | `src/domains/dashboard/` | דשבורד ראשי |
+| ActiveWorkoutScreen | `src/domains/workouts/components/active-workout/` | מסך אימון פעיל |
+| ExerciseLibrary | `src/domains/exercises/components/` | בחירת תרגילים |
+| WorkoutHistory | `src/domains/workouts/components/` | היסטוריית אימונים |
+
+### לוגיקה מרכזית
+| קובץ | מיקום | תפקיד |
+|------|-------|-------|
+| useActiveWorkout | `src/domains/workouts/hooks/` | ניהול אימון פעיל + auto-save |
+| workoutHistory.ts | `src/lib/firebase/` | שמירה/טעינה מ-Firebase |
+| authStore | `src/domains/authentication/store/` | ניהול משתמש מחובר |
+
+### עיצוב וסגנון
+| קובץ | מיקום | תפקיד |
+|------|-------|-------|
+| tailwind-tokens.js | `root/` | הגדרת צבעים וטוקנים |
+| index.css | `src/` | CSS גלובלי + קלאסים מותאמים |
+
+### Admin
+| קובץ | מיקום | תפקיד |
+|------|-------|-------|
+| ExerciseList | `src/domains/admin/components/` | ניהול תרגילים |
+| ExerciseForm | `src/domains/admin/components/` | טופס עריכת תרגיל |
+| MuscleManager | `src/domains/admin/components/` | ניהול שרירים |
+
 This skill ensures adherence to CLAUDE.md guidelines and prevents the historical regressions that have plagued GymIQ development.

@@ -80,6 +80,40 @@ console.clear();
 2. **חוזר**: משתמש עם אימונים קיימים
 3. **אימון בתהליך**: חזרה לאימון החצוי
 
+## PWA & Service Worker Testing
+
+### בדיקת עדכון גרסה:
+```bash
+# בדוק גרסה נוכחית
+cat public/version.json
+
+# ודא ש-sw.js מעודכן
+grep "CACHE_VERSION" public/sw.js
+```
+
+### בדיקת PWA במכשיר:
+```
+□ התקנת PWA עובדת (Add to Home Screen)
+□ אייקון מופיע נכון
+□ אפליקציה נפתחת במסך מלא
+□ עדכון גרסה - באנר עדכון מופיע
+□ ניקוי cache - אפליקציה טוענת גרסה חדשה
+```
+
+### פתרון בעיות cache:
+```javascript
+// בקונסול הדפדפן - ניקוי cache ידני:
+caches.keys().then(names => {
+  names.forEach(name => caches.delete(name));
+});
+// אז refresh הדף
+```
+
+### Service Worker בעיות נפוצות:
+- **מסך שחור/לבן**: נקה cache והתקן מחדש
+- **גרסה ישנה**: בדוק ש-sw.js עודכן ב-deploy
+- **לא מתעדכן**: בדוק version.json
+
 ## Post-Test Checklist
 ```
 □ כל הזרימות העיקריות עובדות

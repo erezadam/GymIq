@@ -101,6 +101,31 @@ const getInProgressWorkout = async (userId: string) => {
 };
 ```
 
+## Local Storage (Session/Local)
+
+> **בנוסף ל-Firebase, הפרויקט משתמש ב-sessionStorage לשמירת state זמני**
+
+### שימושים נוכחיים:
+| מפתח | סוג | תפקיד |
+|------|-----|-------|
+| `gymiq-exercise-list-filters` | sessionStorage | שמירת מצב סינון בניהול תרגילים |
+
+### דוגמת שימוש:
+```typescript
+// שמירה
+const state = { filters, showFilters };
+sessionStorage.setItem('key', JSON.stringify(state));
+
+// טעינה
+const stored = sessionStorage.getItem('key');
+const state = stored ? JSON.parse(stored) : defaultState;
+```
+
+### מתי להשתמש:
+- **sessionStorage**: מצב זמני שמתאפס בסגירת הדפדפן (פילטרים, העדפות זמניות)
+- **localStorage**: מצב קבוע (לא בשימוש כרגע - הכל ב-Firebase)
+- **Firebase**: מקור אמת יחיד לנתונים (אימונים, תרגילים, משתמשים)
+
 ## Error Handling
 
 ### Network Issues
