@@ -6,6 +6,33 @@
 
 ---
 
+## [v1.10.70] - 2026-01-19 (עדכון תיעוד)
+
+### 📚 שיפורי תיעוד - קבצי SKILL
+
+| קובץ | שיפור |
+|------|-------|
+| **CLAUDE.md** | תיקון נתיבים מ-`/mnt/project/claude/` ל-`.claude/`, הסרת פקודות `view` |
+| **project-control** | טבלת קבצים עיקריים, הפניה מרכזית לרגרסיות |
+| **qa-testing** | איחוד רשימות רגרסיות, PWA & Service Worker testing |
+| **firebase-data** | אזהרת אבטחה, עדכון collections, sessionStorage docs |
+| **mobile-rtl** | הוספת design tokens ו-Tailwind guidelines |
+| **deployment** | עדכון version process לסקריפט האוטומטי |
+| **documentation** | הפניה ל-qa-testing לרגרסיות |
+
+### 🐛 תיקונים
+
+| תיקון | תיאור |
+|-------|-------|
+| **שמות קבצים** | תוקן רווח בשם `CLAUDE .md` ו-`qa-testing-SKILL .md` |
+| **נתיבי SKILL** | כל ההפניות מצביעות כעת ל-`.claude/` |
+
+### 🔗 Git
+
+- **Commits:** `322e7e7`, `755c1f1`, `36fb39f`, `fc0029a`
+
+---
+
 ## [v1.10.70] - 2026-01-19
 
 ### 🚀 פיצ'רים חדשים
