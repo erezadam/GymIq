@@ -6,7 +6,7 @@
 
 ---
 
-## [v1.10.62] - 2026-01-19
+## [v1.10.63] - 2026-01-19
 
 ### 🚀 פיצ'רים חדשים
 
@@ -21,6 +21,7 @@
   2. תרגילים שסומנו כ-`isCompleted: true` באימון פעיל (`in_progress`)
 - הסגנון מוגדר ב-`index.css` ככיתת `.badge-last-workout`
 - צבע התג: כתום המותג (`accent-orange`)
+- **תיקון v1.10.63:** שינוי ה-query להימנעות מ-composite index (שימוש ב-client-side filtering)
 
 ### ✏️ קבצים ששונו
 
