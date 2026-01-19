@@ -65,23 +65,13 @@ description: "Documentation and change tracking for GymIQ project. Ensures prope
 
 ## Historical Regression Tracking
 
-### Critical Checks (From CLAUDE.md History):
-```
-□ 09/01: קלוריות displayed from workout.calories (not estimateCalories)
-□ 08/01: WorkoutSummaryModal exists and functional
-□ 06/01: Delete workout button present
-□ 05/01: Navigation bar stable across screens
-□ 03/01: Volume field exists in UI
-```
+> **רשימת הרגרסיות המלאה נמצאת ב-`.claude/qa-testing-SKILL.md`**
 
-### Add New Regression Check:
+### הוספת רגרסיה חדשה:
+כשמתגלה באג שחוזר, הוסף אותו ל-`qa-testing-SKILL.md` בטבלת הרגרסיות:
+
 ```markdown
-## New Issue Template:
-Date: [DD/MM]
-Issue: [מה נשבר]
-Root Cause: [למה קרה]  
-Prevention: [איך למנוע בעתיד]
-Test: [איך לוודא שלא חזר]
+| DD/MM | תיאור הבעיה | פקודת בדיקה |
 ```
 
 ## Documentation Commands

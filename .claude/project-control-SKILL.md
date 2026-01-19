@@ -30,11 +30,13 @@ description: "Essential project control for GymIQ fitness app development. Enfor
 - RTL Hebrew support
 
 ### Regression Prevention
-**Critical components - NEVER delete:**
-- WorkoutSummaryModal (workout summary + calories popup)
-- handleDeleteWorkout (workout deletion button) 
-- handleAddSet (add set functionality)
-- useTimer (rest timer)
+> **רשימת הרגרסיות המלאה נמצאת ב-`.claude/qa-testing-SKILL.md`**
+
+לפני כל שינוי משמעותי, הרץ:
+```bash
+grep -r "WorkoutSummaryModal\|handleDeleteWorkout\|handleAddSet" src/ | wc -l
+# אמור להיות > 0
+```
 
 ### Before ANY UI changes:
 1. Map dependencies: `grep -r "ComponentName" src/`

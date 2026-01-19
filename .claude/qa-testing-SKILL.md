@@ -90,13 +90,38 @@ console.clear();
 □ לא נוצרו רגרסיות בפיצ'רים קיימים
 ```
 
-## Historical Regressions Monitor
-תמיד לבדוק שאלו לא נשברו שוב:
-- ✅ קלוריות מוצגות בהיסטוריה
-- ✅ פופאפ סיכום אימון קיים
-- ✅ כפתור מחיקת אימון פעיל
-- ✅ Navigation bar יציב
-- ✅ שדה Volume קיים
+## Historical Regressions Monitor 📋
+> **זהו המקום המרכזי לכל הרגרסיות ההיסטוריות - אל תשכפל למקומות אחרים!**
+
+### רגרסיות קריטיות - תמיד לבדוק:
+
+| תאריך | בעיה | בדיקה |
+|-------|------|-------|
+| 09/01 | קלוריות לא מוצגות בהיסטוריה | `grep -r "workout\.calories" src/` |
+| 08/01 | WorkoutSummaryModal נמחק | `grep -r "WorkoutSummaryModal" src/` |
+| 06/01 | כפתור מחיקת אימון נעלם | `grep -r "handleDeleteWorkout\|Trash2" src/` |
+| 05/01 | Navigation header קופץ | בדיקה ויזואלית במעבר בין מסכים |
+| 03/01 | שדה Volume חסר | בדיקה ויזואלית בדשבורד |
+
+### רכיבים שאסור למחוק:
+```
+WorkoutSummaryModal - פופאפ סיכום אימון + קלוריות
+handleDeleteWorkout - כפתור מחיקת אימון
+handleAddSet - הוספת סט לאימון
+useTimer / RestTimer - טיימר מנוחה
+workout.calories - שדה קלוריות (לא estimateCalories!)
+```
+
+### בדיקת רגרסיות מהירה:
+```bash
+# הרץ לפני כל deploy:
+echo "=== Regression Check ===" && \
+grep -r "WorkoutSummaryModal" src/ | wc -l && \
+grep -r "handleDeleteWorkout" src/ | wc -l && \
+grep -r "workout\.calories" src/ | wc -l && \
+grep -r "handleAddSet" src/ | wc -l && \
+echo "All counts should be > 0"
+```
 
 ## Anti-Destruction Protocol 🚨
 **לפני כל deployment - בדיקה מלאה שלא נהרסו דברים:**

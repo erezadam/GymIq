@@ -30,9 +30,24 @@ import.meta.env.VITE_FIREBASE_API_KEY
 | Collection | Purpose | Key Fields |
 |------------|---------|------------|
 | `users` | User profiles | uid, name, phone, role |
-| `exercises` | Exercise library | name, nameHe, primaryMuscle, equipment |
-| `workoutHistory` | Completed workouts | userId, exercises[], calories, duration |
-| `workoutSessions` | Active workouts | userId, exercises[], status, createdAt |
+| `exercises` | Exercise library | name, nameHe, primaryMuscle, equipment, category, reportType |
+| `workoutHistory` | Completed/In-progress workouts | userId, exercises[], calories, duration, status |
+| `muscles` | Muscle groups | id, nameHe, iconUrl, subMuscles[] |
+| `equipment` | Gym equipment | id, nameHe |
+| `reportTypes` | Exercise report types | id, nameHe, fields[] |
+| `appSettings` | App configuration | externalComparisonUrl |
+
+### Collection Relationships
+```
+users
+  └── workoutHistory (userId)
+        └── exercises[] (exerciseId → exercises collection)
+
+exercises
+  └── primaryMuscle → muscles.id
+  └── equipment → equipment.id
+  └── reportType → reportTypes.id
+```
 
 ### Data Patterns
 

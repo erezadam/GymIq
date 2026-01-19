@@ -52,6 +52,40 @@ html[dir="rtl"] {
 </div>
 ```
 
+## Design Tokens (Tailwind)
+
+> **כל הצבעים והסגנונות מוגדרים ב-`tailwind.config.js`**
+
+### צבעים עיקריים:
+```javascript
+// מתוך tailwind-tokens.js
+colors: {
+  'primary-400': '#60A5FA',    // כחול ראשי
+  'accent-orange': '#F97316',  // כתום הדגשה
+  'dark-bg': '#0A0A0A',        // רקע כהה
+  'dark-surface': '#141414',   // משטח
+  'dark-card': '#1A1A1A',      // כרטיס
+  'text-primary': '#FFFFFF',   // טקסט ראשי
+  'text-muted': '#6B7280',     // טקסט משני
+}
+```
+
+### שימוש נכון:
+```jsx
+// ✅ נכון - שימוש ב-tokens
+<div className="bg-dark-card text-text-primary">
+<span className="text-accent-orange">
+
+// ❌ לא נכון - צבעים hardcoded
+<div style={{ background: '#1A1A1A' }}>
+<span className="text-orange-500">
+```
+
+### קובץ סגנונות מרכזי:
+- צבעים: `tailwind-tokens.js`
+- CSS גלובלי: `src/index.css`
+- קלאסים מותאמים: `.btn-neon`, `.input-neon`, `.badge-last-workout`
+
 ## Component Guidelines
 
 ### Headers
