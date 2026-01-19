@@ -833,6 +833,52 @@ export async function getExerciseHistory(
   }))
 }
 
+// Get exercise IDs that were done recently:
+// 1. All exercises from last completed workout
+// 2. Completed exercises from current in-progress workout
+export async function getRecentlyDoneExerciseIds(userId: string): Promise<Set<string>> {
+  const result = new Set<string>()
+  const historyRef = collection(db, COLLECTION_NAME)
+
+  try {
+    // 1. Get last completed workout - all exercises count
+    const completedQuery = query(
+      historyRef,
+      where('userId', '==', userId),
+      where('status', '==', 'completed'),
+      orderBy('date', 'desc'),
+      limit(1)
+    )
+
+    const completedSnapshot = await getDocs(completedQuery)
+
+    if (!completedSnapshot.empty) {
+      const exercises = completedSnapshot.docs[0].data().exercises || []
+      for (const ex of exercises) {
+        if (ex.exerciseId) {
+          result.add(ex.exerciseId)
+        }
+      }
+    }
+
+    // 2. Get in-progress workout - only completed exercises count
+    const inProgress = await getInProgressWorkout(userId)
+    if (inProgress) {
+      for (const ex of inProgress.exercises) {
+        if (ex.isCompleted && ex.exerciseId) {
+          result.add(ex.exerciseId)
+        }
+      }
+    }
+
+    console.log('📋 Recently done exercises:', result.size)
+    return result
+  } catch (error) {
+    console.error('❌ Error getting recently done exercises:', error)
+    return result
+  }
+}
+
 // Complete a workout (change status from in_progress to completed)
 export async function completeWorkout(
   workoutId: string,

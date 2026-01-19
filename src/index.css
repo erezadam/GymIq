@@ -254,6 +254,12 @@
     @apply px-2.5 py-1 bg-neon-gray-700 text-neon-gray-300 rounded-lg text-xs;
   }
 
+  /* Badge for exercises done in last workout */
+  .badge-last-workout {
+    @apply px-2 py-0.5 rounded-lg text-xs font-medium;
+    @apply bg-accent-orange/20 text-accent-orange;
+  }
+
   /* ----- PILLS (Filter buttons) ----- */
   .pill {
     @apply flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap;

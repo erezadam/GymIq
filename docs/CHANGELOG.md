@@ -6,6 +6,36 @@
 
 ---
 
+## [v1.10.62] - 2026-01-19
+
+### 🚀 פיצ'רים חדשים
+
+| פיצ'ר | תיאור |
+|-------|-------|
+| **סימון "אחרון" בבחירת תרגילים** | תג כתום "אחרון" מופיע על תרגילים שבוצעו באימון האחרון שהושלם או באימון הפעיל |
+
+### 📝 פרטי המימוש
+
+- תרגילים מסומנים מגיעים משני מקורות:
+  1. כל התרגילים מהאימון האחרון עם `status: 'completed'`
+  2. תרגילים שסומנו כ-`isCompleted: true` באימון פעיל (`in_progress`)
+- הסגנון מוגדר ב-`index.css` ככיתת `.badge-last-workout`
+- צבע התג: כתום המותג (`accent-orange`)
+
+### ✏️ קבצים ששונו
+
+| קובץ | שינוי |
+|------|-------|
+| `workoutHistory.ts` | פונקציה חדשה `getRecentlyDoneExerciseIds` |
+| `index.css` | סגנון חדש `.badge-last-workout` |
+| `ExerciseLibrary.tsx` | שילוב התג בכרטיסי תרגילים |
+
+### 🔗 Git
+
+- **Branch:** main
+
+---
+
 ## [v1.10.60] - 2026-01-18
 
 ### 🐛 תיקוני באגים

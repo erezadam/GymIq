@@ -10,7 +10,7 @@ import { useWorkoutBuilderStore } from '@/domains/workouts/store'
 import { getMuscles, getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { getEquipment } from '@/lib/firebase/equipment'
 import { MuscleIcon } from '@/shared/components/MuscleIcon'
-import { saveWorkoutHistory } from '@/lib/firebase/workoutHistory'
+import { saveWorkoutHistory, getRecentlyDoneExerciseIds } from '@/lib/firebase/workoutHistory'
 import { useAuthStore } from '@/domains/authentication/store'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '@/domains/workouts/types/active-workout.types'
 import type { WorkoutHistoryEntry } from '@/domains/workouts/types'
@@ -51,6 +51,7 @@ export function ExerciseLibrary() {
   const [selectedSubMuscle, setSelectedSubMuscle] = useState<string>('all')
   const [selectedEquipment, setSelectedEquipment] = useState<string>('all')
   const [imageModal, setImageModal] = useState<{ url: string; name: string } | null>(null)
+  const [recentlyDoneExerciseIds, setRecentlyDoneExerciseIds] = useState<Set<string>>(new Set())
 
   const { selectedExercises, addExercise, removeExercise, clearWorkout, scheduledDate, setScheduledDate } = useWorkoutBuilderStore()
 
@@ -102,6 +103,12 @@ export function ExerciseLibrary() {
         { id: 'all', label: 'הכל' },
         ...equipmentData.map((eq) => ({ id: eq.id, label: eq.nameHe })),
       ])
+
+      // Load recently done exercises if user is logged in
+      if (user?.uid) {
+        const recentlyDone = await getRecentlyDoneExerciseIds(user.uid)
+        setRecentlyDoneExerciseIds(recentlyDone)
+      }
     } catch (error) {
       console.error('Failed to load data:', error)
     } finally {
@@ -377,6 +384,7 @@ export function ExerciseLibrary() {
             <div className="space-y-2">
               {filteredExercises.map((exercise) => {
                 const isSelected = selectedExercises.some((e) => e.exerciseId === exercise.id)
+                const wasInLastWorkout = recentlyDoneExerciseIds.has(exercise.id)
                 return (
                   <div
                     key={exercise.id}
@@ -398,7 +406,12 @@ export function ExerciseLibrary() {
 
                     {/* Exercise Info */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-white truncate">{exercise.nameHe}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-white truncate">{exercise.nameHe}</h3>
+                        {wasInLastWorkout && (
+                          <span className="badge-last-workout flex-shrink-0">אחרון</span>
+                        )}
+                      </div>
                       <p className="text-xs text-text-muted truncate">
                         {getMuscleNameHe(exercise.primaryMuscle, dynamicMuscleNames)} • {getEquipmentHe(exercise.equipment)}
                       </p>
