@@ -841,37 +841,46 @@ export async function getRecentlyDoneExerciseIds(userId: string): Promise<Set<st
   const historyRef = collection(db, COLLECTION_NAME)
 
   try {
-    // 1. Get last completed workout - all exercises count
-    const completedQuery = query(
+    // Get recent workouts (uses existing index: userId + date)
+    const recentQuery = query(
       historyRef,
       where('userId', '==', userId),
-      where('status', '==', 'completed'),
       orderBy('date', 'desc'),
-      limit(1)
+      limit(10)
     )
 
-    const completedSnapshot = await getDocs(completedQuery)
+    const snapshot = await getDocs(recentQuery)
+    console.log('📋 Found', snapshot.docs.length, 'recent workouts')
 
-    if (!completedSnapshot.empty) {
-      const exercises = completedSnapshot.docs[0].data().exercises || []
-      for (const ex of exercises) {
-        if (ex.exerciseId) {
-          result.add(ex.exerciseId)
+    // 1. Find last completed workout
+    let foundCompleted = false
+    for (const doc of snapshot.docs) {
+      const data = doc.data()
+
+      if (!foundCompleted && data.status === 'completed') {
+        // First completed workout - add all exercises
+        const exercises = data.exercises || []
+        console.log('📋 Last completed workout has', exercises.length, 'exercises')
+        for (const ex of exercises) {
+          if (ex.exerciseId) {
+            result.add(ex.exerciseId)
+          }
+        }
+        foundCompleted = true
+      }
+
+      // 2. Check for in-progress workout - only completed exercises
+      if (data.status === 'in_progress') {
+        const exercises = data.exercises || []
+        for (const ex of exercises) {
+          if (ex.isCompleted && ex.exerciseId) {
+            result.add(ex.exerciseId)
+          }
         }
       }
     }
 
-    // 2. Get in-progress workout - only completed exercises count
-    const inProgress = await getInProgressWorkout(userId)
-    if (inProgress) {
-      for (const ex of inProgress.exercises) {
-        if (ex.isCompleted && ex.exerciseId) {
-          result.add(ex.exerciseId)
-        }
-      }
-    }
-
-    console.log('📋 Recently done exercises:', result.size)
+    console.log('📋 Recently done exercises:', result.size, Array.from(result))
     return result
   } catch (error) {
     console.error('❌ Error getting recently done exercises:', error)
