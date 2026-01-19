@@ -48,11 +48,19 @@ description: "Essential project control for GymIQ fitness app development. Enfor
 - Full user flow from dashboard
 
 ## Available Commands
-Use skills.md commands:
-- `start` - Session initialization
-- `test` - Post-change testing
-- `mobile` - Mobile verification
-- `backup` - Pre-change backup
+```bash
+# Session initialization - check project status
+git status && npm run build
+
+# Post-change testing
+npm run build && npm run lint
+
+# Mobile verification - test in DevTools at 375px
+# Open browser DevTools → Toggle Device Toolbar → iPhone SE
+
+# Pre-change backup
+cp file.tsx file.tsx.backup
+```
 
 ## Architecture Notes
 - Zustand stores for state management

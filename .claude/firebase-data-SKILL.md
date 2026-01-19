@@ -7,6 +7,23 @@ description: "Firebase data management for GymIQ fitness app. Handles Firestore 
 
 **מתי להפעיל:** כשעובדים עם מסד נתונים, שמירת אימונים, אוטו-סייב, או כל פיצ'ר הקשור לנתונים
 
+## 🔐 אזהרת אבטחה - חוק ברזל!
+
+> **לעולם לא לכתוב מפתחות Firebase בקוד!**
+
+```typescript
+// ❌ אסור!
+const firebaseConfig = { apiKey: "AIzaSy..." };
+
+// ✅ נכון - בסקריפטים:
+import { db, app } from './firebase-config';
+
+// ✅ נכון - באפליקציה:
+import.meta.env.VITE_FIREBASE_API_KEY
+```
+
+**לפרטים מלאים ראה סעיף אבטחה ב-CLAUDE.md**
+
 ## Firebase Collections
 
 ### Core Collections

@@ -66,17 +66,29 @@ MAJOR (X.0.0): Breaking changes, major rewrites
 ```
 
 ### Version Bump Process
+
+> **הערה:** הפרויקט משתמש בסקריפט אוטומטי `scripts/update-version.cjs` שרץ ב-prebuild!
+
 ```bash
-# 1. Update version in package.json
-npm version patch|minor|major --no-git-tag-version
+# הגרסה מתעדכנת אוטומטית בכל build:
+npm run build
+# → מעדכן public/version.json
+# → מעדכן public/sw.js CACHE_VERSION
 
-# 2. Update CHANGELOG.md
-echo "## [$(node -p "require('./package.json').version")] - $(date +%Y-%m-%d)" >> CHANGELOG.md
+# לבדיקת הגרסה הנוכחית:
+cat public/version.json
 
-# 3. Git commit and tag
-git add .
-git commit -m "chore: bump version to $(node -p "require('./package.json').version")"
-git tag -a v$(node -p "require('./package.json').version") -m "Release v$(node -p "require('./package.json').version")"
+# לאחר deploy - עדכון CHANGELOG ו-git:
+git add -A
+git commit -m "v$(cat public/version.json | grep version | cut -d'"' -f4) - תיאור השינויים"
+git push origin main
+```
+
+### Version Format
+```
+1.10.XX - הגרסה מתעדכנת אוטומטית
+- כל build מעלה את ה-PATCH ב-1
+- שינויים גדולים יותר - לעדכן ידנית ב-version.json
 ```
 
 ## Deployment Procedures
