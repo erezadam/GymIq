@@ -6,7 +6,7 @@
 ║   🚨 התחלה קבועה לכל משימה                                                    ║
 ║                                                                              ║
 ║   1. קרא CLAUDE.md הזה (נעשה אוטומטית)                                        ║
-║   2. קרא project-control: `view /mnt/project/claude/project-control-SKILL.md`    ║
+║   2. קרא project-control: `view .claude/project-control-SKILL.md`    ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -76,20 +76,20 @@ grep -r "AIza" --include="*.ts" --include="*.js" --include="*.cjs" --include="*.
 
 | נושא | חוק | איך בודקים שבוצע | Skill לפתוח |
 |------|-----|-------------------|-------------|
-| **התחלה קבועה** | בתחילת כל משימה קוראים CLAUDE.md ואז קוראים project_control | בתחילת התשובה רשום "נקרא project_control" | `view /mnt/project/claude/project-control-SKILL.md` |
-| **הגדרת משימה** | לפני שינוי קוד מנסחים במשפט אחד מה המטרה ומה ההגדרה של Done | יש סעיף Goal ו-Done | `view /mnt/project/claude/project-control-SKILL.md` |
-| **היקף שינוי** | לא משנים קבצים שלא קשורים ישירות למשימה | ברשימת הקבצים מופיעים רק קשורים | `view /mnt/project/claude/project-control-SKILL.md` |
-| **מניעת רגרסיה** | כל שינוי כולל בדיקת השפעה על יכולות קיימות | יש סעיף Regression checks | `view /mnt/project/claude/qa-testing-SKILL.md` |
-| **תיקון באגים** | בבאגים מתחילים בשחזור הבעיה לפני תיקון | יש Steps to reproduce | `view /mnt/project/claude/qa-testing-SKILL.md` |
-| **בדיקות** | אחרי תיקון מריצים בדיקות רלוונטיות ומדווחים תוצאה | יש Tests run ו-Results | `view /mnt/project/claude/qa-testing-SKILL.md` |
-| **תיעוד שינוי** | כל שינוי משמעותי כולל עדכון תיעוד רלוונטי | יש Docs updated | `view /mnt/project/claude/documentation-SKILL.md` |
-| **UI RTL עברית** | בכל מסך בעברית בודקים כיווניות טקסט קלטים אייקונים וניווט | יש RTL checklist summary | `view /mnt/project/claude/mobile-rtl-SKILL.md` |
-| **iOS מובייל** | בודקים גדלי מסך מקלדת safe area גלילה ופוקוס | יש Mobile checks | `view /mnt/project/claude/mobile-rtl-SKILL.md` |
-| **ביצועים** | לא מוסיפים טעינות כבדות בלי הצדקה | יש Performance notes | `view /mnt/project/claude/project-control-SKILL.md` |
+| **התחלה קבועה** | בתחילת כל משימה קוראים CLAUDE.md ואז קוראים project_control | בתחילת התשובה רשום "נקרא project_control" | `view .claude/project-control-SKILL.md` |
+| **הגדרת משימה** | לפני שינוי קוד מנסחים במשפט אחד מה המטרה ומה ההגדרה של Done | יש סעיף Goal ו-Done | `view .claude/project-control-SKILL.md` |
+| **היקף שינוי** | לא משנים קבצים שלא קשורים ישירות למשימה | ברשימת הקבצים מופיעים רק קשורים | `view .claude/project-control-SKILL.md` |
+| **מניעת רגרסיה** | כל שינוי כולל בדיקת השפעה על יכולות קיימות | יש סעיף Regression checks | `view .claude/qa-testing-SKILL.md` |
+| **תיקון באגים** | בבאגים מתחילים בשחזור הבעיה לפני תיקון | יש Steps to reproduce | `view .claude/qa-testing-SKILL.md` |
+| **בדיקות** | אחרי תיקון מריצים בדיקות רלוונטיות ומדווחים תוצאה | יש Tests run ו-Results | `view .claude/qa-testing-SKILL.md` |
+| **תיעוד שינוי** | כל שינוי משמעותי כולל עדכון תיעוד רלוונטי | יש Docs updated | `view .claude/documentation-SKILL.md` |
+| **UI RTL עברית** | בכל מסך בעברית בודקים כיווניות טקסט קלטים אייקונים וניווט | יש RTL checklist summary | `view .claude/mobile-rtl-SKILL.md` |
+| **iOS מובייל** | בודקים גדלי מסך מקלדת safe area גלילה ופוקוס | יש Mobile checks | `view .claude/mobile-rtl-SKILL.md` |
+| **ביצועים** | לא מוסיפים טעינות כבדות בלי הצדקה | יש Performance notes | `view .claude/project-control-SKILL.md` |
 | **🔐 אבטחה סודות** | לא מכניסים מפתחות לקוד - בסקריפטים להשתמש ב-`scripts/firebase-config.ts` | יש Security check + בדיקת grep | ראה סעיף אבטחה למעלה |
-| **Firebase** | כל שינוי נתונים כולל בדיקת rules ו-migrations במידת הצורך | יש Data change notes | `view /mnt/project/claude/firebase-data-SKILL.md` |
-| **פריסה** | לפני פריסה מוודאים env נכון build נקי ו-rollback plan | יש Deploy checklist | `view /mnt/project/claude/deployment-SKILL.md` |
-| **סיום** | מסיימים בסיכום מה שונה איך נבדק ומה נשאר פתוח | יש Summary + Next | `view /mnt/project/claude/project-control-SKILL.md` |
+| **Firebase** | כל שינוי נתונים כולל בדיקת rules ו-migrations במידת הצורך | יש Data change notes | `view .claude/firebase-data-SKILL.md` |
+| **פריסה** | לפני פריסה מוודאים env נכון build נקי ו-rollback plan | יש Deploy checklist | `view .claude/deployment-SKILL.md` |
+| **סיום** | מסיימים בסיכום מה שונה איך נבדק ומה נשאר פתוח | יש Summary + Next | `view .claude/project-control-SKILL.md` |
 
 ---
 
@@ -97,15 +97,15 @@ grep -r "AIza" --include="*.ts" --include="*.js" --include="*.cjs" --include="*.
 
 | קטגוריית משימה | מילות מפתח | Skills לפתוח |
 |----------------|-------------|-------------|
-| **באגים ובדיקות** | bug, fix, regression, test, failing, error, crash, broken, debug | `view /mnt/project/claude/qa-testing-SKILL.md` |
-| **עברית ומובייל** | hebrew, rtl, ios, mobile, layout, responsive, iphone, android, touch | `view /mnt/project/claude/mobile-rtl-SKILL.md` |
-| **פריסה ותשתיות** | deploy, release, ci, env, firebase, hosting, production, build | `view /mnt/project/claude/deployment-SKILL.md` |
-| **רפקטור וארכיטקטורה** | refactor, architecture, structure, cleanup, organize, rename, move | `view /mnt/project/claude/project-control-SKILL.md` |
-| **UI ועיצוב** | design, style, color, theme, css, tailwind, component, visual | `view /mnt/project/claude/mobile-rtl-SKILL.md` |
-| **נתונים ו-Firebase** | data, database, firestore, collection, document, query, auth | `view /mnt/project/claude/firebase-data-SKILL.md` |
-| **ביצועים ואופטימיזציה** | performance, optimize, slow, fast, cache, memory, bundle | `view /mnt/project/claude/project-control-SKILL.md` |
-| **תכנון ותיעוד** | plan, design, document, spec, requirements, architecture | `view /mnt/project/claude/documentation-SKILL.md` |
-| **סקריפטים ו-Firebase** | script, migration, import, export, firebase-admin | ראה סעיף אבטחה + `view /mnt/project/claude/firebase-data-SKILL.md` |
+| **באגים ובדיקות** | bug, fix, regression, test, failing, error, crash, broken, debug | `view .claude/qa-testing-SKILL.md` |
+| **עברית ומובייל** | hebrew, rtl, ios, mobile, layout, responsive, iphone, android, touch | `view .claude/mobile-rtl-SKILL.md` |
+| **פריסה ותשתיות** | deploy, release, ci, env, firebase, hosting, production, build | `view .claude/deployment-SKILL.md` |
+| **רפקטור וארכיטקטורה** | refactor, architecture, structure, cleanup, organize, rename, move | `view .claude/project-control-SKILL.md` |
+| **UI ועיצוב** | design, style, color, theme, css, tailwind, component, visual | `view .claude/mobile-rtl-SKILL.md` |
+| **נתונים ו-Firebase** | data, database, firestore, collection, document, query, auth | `view .claude/firebase-data-SKILL.md` |
+| **ביצועים ואופטימיזציה** | performance, optimize, slow, fast, cache, memory, bundle | `view .claude/project-control-SKILL.md` |
+| **תכנון ותיעוד** | plan, design, document, spec, requirements, architecture | `view .claude/documentation-SKILL.md` |
+| **סקריפטים ו-Firebase** | script, migration, import, export, firebase-admin | ראה סעיף אבטחה + `view .claude/firebase-data-SKILL.md` |
 
 ---
 
@@ -152,6 +152,6 @@ grep -r "AIza" --include="*.ts" --include="*.js" --include="*.cjs" --include="*.
 
 ```
 ══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 17/01/2026 | נוסף סעיף אבטחה מקיף + pre-commit hook
+עדכון אחרון: 19/01/2026 | תוקנו נתיבי SKILL מ-/mnt/project/claude/ ל-.claude/
 ══════════════════════════════════════════════════════════════════════════════
 ```
