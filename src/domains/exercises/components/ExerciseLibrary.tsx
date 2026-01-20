@@ -366,8 +366,8 @@ export function ExerciseLibrary() {
         </div>
       </header>
 
-      {/* Content */}
-      <div style={{ flex: 1, paddingBottom: '100px' }}>
+      {/* Content - extra padding for fixed footer + safe area */}
+      <div style={{ flex: 1, paddingBottom: '120px' }}>
         <div className="max-w-2xl mx-auto">
           {/* Muscle Title with Count */}
           <div className="mb-4">
@@ -512,10 +512,13 @@ export function ExerciseLibrary() {
         </div>
       </div>
 
-      {/* Footer - Fixed at bottom */}
+      {/* Footer - Fixed at bottom with safe area support */}
       <footer
-        className="fixed bottom-0 left-0 right-0 z-50 bg-background-main border-t border-border-default"
-        style={{ padding: '12px 16px' }}
+        className="fixed bottom-0 left-0 right-0 z-[100] bg-background-main border-t border-border-default"
+        style={{
+          padding: '12px 16px',
+          paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
+        }}
       >
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between">
