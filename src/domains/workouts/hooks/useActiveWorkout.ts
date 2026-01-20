@@ -1074,7 +1074,7 @@ export function useActiveWorkout() {
     setShowSummaryModal(true)
   }, [])
 
-  // Group exercises by muscle
+  // Group exercises by muscle, sort exercises within groups by Hebrew name (A-Z)
   const exercisesByMuscle = useMemo((): MuscleGroupExercises[] => {
     if (!workout) return []
 
@@ -1092,14 +1092,20 @@ export function useActiveWorkout() {
       groups[muscleHe].push(ex)
     })
 
-    return Object.entries(groups).map(([muscleGroupHe, exercises]) => ({
-      muscleGroup: exercises[0]?.category || exercises[0]?.primaryMuscle || 'other',
-      muscleGroupHe,
-      exercises,
-    }))
+    return Object.entries(groups)
+      // Sort groups by Hebrew name
+      .sort(([a], [b]) => a.localeCompare(b, 'he'))
+      .map(([muscleGroupHe, exercises]) => ({
+        muscleGroup: exercises[0]?.category || exercises[0]?.primaryMuscle || 'other',
+        muscleGroupHe,
+        // Sort exercises within group by Hebrew name (A-Z)
+        exercises: [...exercises].sort((a, b) =>
+          (a.exerciseNameHe || '').localeCompare(b.exerciseNameHe || '', 'he')
+        ),
+      }))
   }, [workout, dynamicMuscleNames])
 
-  // Group exercises by equipment
+  // Group exercises by equipment, sort exercises within groups by Hebrew name (A-Z)
   const exercisesByEquipment = useMemo((): EquipmentGroupExercises[] => {
     if (!workout) return []
 
@@ -1115,11 +1121,17 @@ export function useActiveWorkout() {
       groups[equipmentHe].push(ex)
     })
 
-    return Object.entries(groups).map(([equipmentHe, exercises]) => ({
-      equipment: exercises[0]?.equipment || 'other',
-      equipmentHe,
-      exercises,
-    }))
+    return Object.entries(groups)
+      // Sort groups by Hebrew name
+      .sort(([a], [b]) => a.localeCompare(b, 'he'))
+      .map(([equipmentHe, exercises]) => ({
+        equipment: exercises[0]?.equipment || 'other',
+        equipmentHe,
+        // Sort exercises within group by Hebrew name (A-Z)
+        exercises: [...exercises].sort((a, b) =>
+          (a.exerciseNameHe || '').localeCompare(b.exerciseNameHe || '', 'he')
+        ),
+      }))
   }, [workout])
 
   // Format elapsed time

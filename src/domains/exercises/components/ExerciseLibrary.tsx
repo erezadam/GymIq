@@ -147,31 +147,34 @@ export function ExerciseLibrary() {
     return primaryMuscle?.subMuscles || []
   }, [selectedPrimaryMuscle, muscles])
 
-  // Filter exercises
+  // Filter and sort exercises (Hebrew A-Z)
   const filteredExercises = useMemo(() => {
-    return exercises.filter((ex) => {
-      // Primary muscle filter
-      if (selectedPrimaryMuscle !== 'all') {
-        const exercisePrimaryMuscle = ex.primaryMuscle || ex.category
-        if (exercisePrimaryMuscle !== selectedPrimaryMuscle && ex.category !== selectedPrimaryMuscle) {
+    return exercises
+      .filter((ex) => {
+        // Primary muscle filter
+        if (selectedPrimaryMuscle !== 'all') {
+          const exercisePrimaryMuscle = ex.primaryMuscle || ex.category
+          if (exercisePrimaryMuscle !== selectedPrimaryMuscle && ex.category !== selectedPrimaryMuscle) {
+            return false
+          }
+        }
+
+        // Sub-muscle filter
+        if (selectedSubMuscle !== 'all') {
+          if (ex.primaryMuscle !== selectedSubMuscle && !ex.secondaryMuscles.includes(selectedSubMuscle as MuscleGroup)) {
+            return false
+          }
+        }
+
+        // Equipment filter
+        if (selectedEquipment !== 'all' && ex.equipment !== selectedEquipment) {
           return false
         }
-      }
 
-      // Sub-muscle filter
-      if (selectedSubMuscle !== 'all') {
-        if (ex.primaryMuscle !== selectedSubMuscle && !ex.secondaryMuscles.includes(selectedSubMuscle as MuscleGroup)) {
-          return false
-        }
-      }
-
-      // Equipment filter
-      if (selectedEquipment !== 'all' && ex.equipment !== selectedEquipment) {
-        return false
-      }
-
-      return true
-    })
+        return true
+      })
+      // Sort by Hebrew name (A-Z)
+      .sort((a, b) => (a.nameHe || '').localeCompare(b.nameHe || '', 'he'))
   }, [exercises, selectedPrimaryMuscle, selectedSubMuscle, selectedEquipment])
 
   const handleToggleExercise = (exercise: Exercise) => {
