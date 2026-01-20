@@ -1,7 +1,9 @@
 /**
  * RestTimer
  * Floating rest timer that appears after adding a set
- * With audio alerts in the last 10 seconds of each minute
+ * With audio alerts - two modes available:
+ * - minute_end (default): 3-second beep at end of each minute
+ * - countdown_10s: Beeps in last 10 seconds of each minute
  */
 
 import { useState, useEffect, useRef } from 'react'
@@ -24,6 +26,7 @@ export function RestTimer({ isVisible, onClose, resetKey }: RestTimerProps) {
     settings,
     toggleEnabled,
     setVolume,
+    setAlertMode,
     checkAndPlaySound,
     playTestSound,
     initAudioContext,
@@ -65,9 +68,11 @@ export function RestTimer({ isVisible, onClose, resetKey }: RestTimerProps) {
     return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
-  // Check if we're in the last 10 seconds of a minute
+  // Check if we're in the alert zone based on mode
   const secondsInMinute = seconds % 60
-  const isAlertZone = secondsInMinute >= 50 || secondsInMinute === 0
+  const isCountdownAlertZone = settings.alertMode === 'countdown_10s' && secondsInMinute >= 50
+  const isMinuteEndAlertZone = secondsInMinute === 0 && seconds > 0
+  const isAlertZone = isCountdownAlertZone || isMinuteEndAlertZone
 
   if (!isVisible) return null
 
@@ -118,11 +123,22 @@ export function RestTimer({ isVisible, onClose, resetKey }: RestTimerProps) {
           <span>מנוחה</span>
         </div>
 
-        {/* Audio indicator */}
-        {settings.enabled && isAlertZone && seconds > 0 && (
-          <div className="text-xs text-accent-orange mt-2">
-            🔔 {60 - secondsInMinute} שניות לסיום הדקה
-          </div>
+        {/* Audio indicator - different message based on mode */}
+        {settings.enabled && seconds > 0 && (
+          <>
+            {/* Countdown mode: show seconds remaining */}
+            {settings.alertMode === 'countdown_10s' && secondsInMinute >= 50 && (
+              <div className="text-xs text-accent-orange mt-2">
+                🔔 {60 - secondsInMinute} שניות לסיום הדקה
+              </div>
+            )}
+            {/* Minute end mode: show when approaching minute end */}
+            {settings.alertMode === 'minute_end' && secondsInMinute >= 55 && (
+              <div className="text-xs text-accent-orange mt-2">
+                🔔 צפצוף בעוד {60 - secondsInMinute} שניות
+              </div>
+            )}
+          </>
         )}
 
         {/* Close instruction */}
@@ -137,7 +153,7 @@ export function RestTimer({ isVisible, onClose, resetKey }: RestTimerProps) {
         {showSettings && (
           <div
             className="absolute top-14 right-2 bg-neon-gray-900 border border-neon-gray-700
-                       rounded-lg p-4 shadow-xl min-w-[200px] text-right z-10"
+                       rounded-lg p-4 shadow-xl min-w-[220px] text-right z-10"
             onClick={(e) => e.stopPropagation()}
           >
             <h4 className="text-sm font-medium text-white mb-3">הגדרות צלילים</h4>
@@ -157,6 +173,68 @@ export function RestTimer({ isVisible, onClose, resetKey }: RestTimerProps) {
                   }`}
                 />
               </button>
+            </div>
+
+            {/* Alert Mode Selection */}
+            <div className="mb-3">
+              <span className="text-sm text-neon-gray-300 block mb-2">סוג התראה</span>
+              <div className="space-y-2">
+                <label
+                  className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
+                    settings.alertMode === 'minute_end'
+                      ? 'bg-primary-500/20 border border-primary-500'
+                      : 'bg-neon-gray-800 border border-transparent hover:bg-neon-gray-700'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="alertMode"
+                    checked={settings.alertMode === 'minute_end'}
+                    onChange={() => setAlertMode('minute_end')}
+                    disabled={!settings.enabled}
+                    className="sr-only"
+                  />
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                    settings.alertMode === 'minute_end' ? 'border-primary-400' : 'border-neon-gray-500'
+                  }`}>
+                    {settings.alertMode === 'minute_end' && (
+                      <div className="w-2 h-2 rounded-full bg-primary-400" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-sm text-white">צפצוף בסיום דקה</span>
+                    <span className="text-xs text-neon-gray-500 block">צליל ארוך (3 שניות)</span>
+                  </div>
+                </label>
+
+                <label
+                  className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
+                    settings.alertMode === 'countdown_10s'
+                      ? 'bg-primary-500/20 border border-primary-500'
+                      : 'bg-neon-gray-800 border border-transparent hover:bg-neon-gray-700'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="alertMode"
+                    checked={settings.alertMode === 'countdown_10s'}
+                    onChange={() => setAlertMode('countdown_10s')}
+                    disabled={!settings.enabled}
+                    className="sr-only"
+                  />
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                    settings.alertMode === 'countdown_10s' ? 'border-primary-400' : 'border-neon-gray-500'
+                  }`}>
+                    {settings.alertMode === 'countdown_10s' && (
+                      <div className="w-2 h-2 rounded-full bg-primary-400" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-sm text-white">ספירה לאחור</span>
+                    <span className="text-xs text-neon-gray-500 block">10 צפצופים לפני סיום דקה</span>
+                  </div>
+                </label>
+              </div>
             </div>
 
             {/* Volume slider */}
@@ -189,11 +267,6 @@ export function RestTimer({ isVisible, onClose, resetKey }: RestTimerProps) {
             >
               🔊 בדוק צליל
             </button>
-
-            {/* Info text */}
-            <p className="text-xs text-neon-gray-500 mt-3">
-              צפצוף ב-10 שניות אחרונות של כל דקה
-            </p>
           </div>
         )}
       </div>

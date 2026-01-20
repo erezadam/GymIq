@@ -1,26 +1,34 @@
 /**
  * useRestTimerAudio
  * Hook for managing rest timer audio alerts
- * - Beeps in last 10 seconds of each minute (50-59)
- * - Distinct sound at minute completion
- * - Settings persisted to localStorage
+ *
+ * Two modes:
+ * - 'minute_end' (default): Single 3-second beep at the end of each minute
+ * - 'countdown_10s': Beeps in last 10 seconds of each minute (50-59)
+ *
+ * Settings persisted to localStorage
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+
+// Alert mode types
+export type AlertMode = 'minute_end' | 'countdown_10s'
 
 // Types
 export interface RestTimerAudioSettings {
   enabled: boolean
   volume: number // 0-100
+  alertMode: AlertMode
 }
 
 // Storage key
 const STORAGE_KEY = 'gymiq_timer_audio_settings'
 
-// Default settings
+// Default settings - minute_end is the default
 const DEFAULT_SETTINGS: RestTimerAudioSettings = {
   enabled: true,
   volume: 70,
+  alertMode: 'minute_end',
 }
 
 // Load settings from localStorage
@@ -49,6 +57,7 @@ export function useRestTimerAudio() {
   const [settings, setSettings] = useState<RestTimerAudioSettings>(loadSettings)
   const audioContextRef = useRef<AudioContext | null>(null)
   const lastPlayedSecondRef = useRef<number>(-1)
+  const longBeepOscillatorRef = useRef<OscillatorNode | null>(null)
 
   // Save settings when they change
   useEffect(() => {
@@ -79,7 +88,7 @@ export function useRestTimerAudio() {
     return audioContextRef.current
   }, [initAudioContext])
 
-  // Play a beep sound
+  // Play a short beep sound
   const playBeep = useCallback((frequency: number, duration: number, volumeMultiplier = 1) => {
     if (!settings.enabled) return
 
@@ -108,13 +117,55 @@ export function useRestTimerAudio() {
     }
   }, [settings.enabled, settings.volume, getAudioContext])
 
+  // Play long beep for minute end (3 seconds with fade out)
+  const playLongMinuteBeep = useCallback(() => {
+    if (!settings.enabled) return
+
+    const ctx = getAudioContext()
+    if (!ctx) return
+
+    try {
+      // Stop any existing long beep
+      if (longBeepOscillatorRef.current) {
+        try {
+          longBeepOscillatorRef.current.stop()
+        } catch (e) {
+          // Already stopped
+        }
+      }
+
+      const oscillator = ctx.createOscillator()
+      const gainNode = ctx.createGain()
+
+      oscillator.connect(gainNode)
+      gainNode.connect(ctx.destination)
+
+      oscillator.frequency.value = 700 // Medium-high pitch
+      oscillator.type = 'sine'
+
+      // Apply volume with longer fade
+      const gain = (settings.volume / 100) * 0.35
+      gainNode.gain.setValueAtTime(gain, ctx.currentTime)
+      // Sustain for 2 seconds, then fade out over 1 second
+      gainNode.gain.setValueAtTime(gain, ctx.currentTime + 2)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 3)
+
+      oscillator.start(ctx.currentTime)
+      oscillator.stop(ctx.currentTime + 3)
+
+      longBeepOscillatorRef.current = oscillator
+    } catch (e) {
+      console.warn('Failed to play long minute beep:', e)
+    }
+  }, [settings.enabled, settings.volume, getAudioContext])
+
   // Tick sound for countdown (last 10 seconds of each minute)
   const playTickSound = useCallback(() => {
     playBeep(800, 0.08)
   }, [playBeep])
 
-  // Minute complete sound (two-tone chime)
-  const playMinuteComplete = useCallback(() => {
+  // Short minute complete sound (two-tone chime) for countdown mode
+  const playShortMinuteComplete = useCallback(() => {
     if (!settings.enabled) return
 
     const ctx = getAudioContext()
@@ -146,7 +197,7 @@ export function useRestTimerAudio() {
       osc2.start(ctx.currentTime + 0.15)
       osc2.stop(ctx.currentTime + 0.35)
     } catch (e) {
-      console.warn('Failed to play minute complete sound:', e)
+      console.warn('Failed to play short minute complete sound:', e)
     }
   }, [settings.enabled, settings.volume, getAudioContext])
 
@@ -163,15 +214,21 @@ export function useRestTimerAudio() {
 
     // Minute complete (at 60, 120, 180, etc.)
     if (secondsInMinute === 0 && elapsedSeconds > 0) {
-      playMinuteComplete()
+      if (settings.alertMode === 'minute_end') {
+        // Long 3-second beep for minute_end mode
+        playLongMinuteBeep()
+      } else {
+        // Short two-tone chime for countdown mode
+        playShortMinuteComplete()
+      }
       return
     }
 
-    // Last 10 seconds of each minute (50-59)
-    if (secondsInMinute >= 50) {
+    // Last 10 seconds of each minute (50-59) - only in countdown mode
+    if (settings.alertMode === 'countdown_10s' && secondsInMinute >= 50) {
       playTickSound()
     }
-  }, [settings.enabled, playTickSound, playMinuteComplete])
+  }, [settings.enabled, settings.alertMode, playTickSound, playLongMinuteBeep, playShortMinuteComplete])
 
   // Update settings
   const updateSettings = useCallback((updates: Partial<RestTimerAudioSettings>) => {
@@ -188,26 +245,31 @@ export function useRestTimerAudio() {
     setSettings(prev => ({ ...prev, volume: Math.max(0, Math.min(100, volume)) }))
   }, [])
 
-  // Test sound (for settings UI)
+  // Set alert mode
+  const setAlertMode = useCallback((alertMode: AlertMode) => {
+    setSettings(prev => ({ ...prev, alertMode }))
+  }, [])
+
+  // Test sound (for settings UI) - plays current mode sound
   const playTestSound = useCallback(() => {
-    const wasEnabled = settings.enabled
-    if (!wasEnabled) {
-      // Temporarily enable for test
-      playBeep(800, 0.15, 1)
+    if (settings.alertMode === 'minute_end') {
+      playLongMinuteBeep()
     } else {
       playBeep(800, 0.15, 1)
     }
-  }, [settings.enabled, playBeep])
+  }, [settings.alertMode, playLongMinuteBeep, playBeep])
 
   return {
     settings,
     updateSettings,
     toggleEnabled,
     setVolume,
+    setAlertMode,
     initAudioContext,
     checkAndPlaySound,
     playTickSound,
-    playMinuteComplete,
+    playLongMinuteBeep,
+    playShortMinuteComplete,
     playTestSound,
   }
 }
