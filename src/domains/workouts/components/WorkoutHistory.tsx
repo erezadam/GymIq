@@ -23,6 +23,12 @@ interface DeleteDialogState {
   workout: WorkoutHistorySummary | null
 }
 
+// Dialog for empty workout (in_progress with no reported sets)
+interface EmptyWorkoutDialogState {
+  isOpen: boolean
+  workout: WorkoutHistorySummary | null
+}
+
 export default function WorkoutHistory() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
@@ -37,6 +43,10 @@ export default function WorkoutHistory() {
     workout: null,
   })
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>({
+    isOpen: false,
+    workout: null,
+  })
+  const [emptyWorkoutDialog, setEmptyWorkoutDialog] = useState<EmptyWorkoutDialogState>({
     isOpen: false,
     workout: null,
   })
@@ -217,6 +227,18 @@ export default function WorkoutHistory() {
     return Math.round(duration * 5 + (volume / 100))
   }
 
+  // Helper: Check if workout has any reported sets (actualWeight > 0 or actualReps > 0)
+  const hasReportedSets = (workout: WorkoutHistoryEntry): boolean => {
+    return workout.exercises?.some(ex =>
+      ex.sets?.some(set => {
+        // Check actual values - these indicate user has reported data
+        const weight = set.actualWeight ?? 0
+        const reps = set.actualReps ?? 0
+        return weight > 0 || reps > 0
+      })
+    ) ?? false
+  }
+
   // Handle continue to workout button click
   const handleContinueClick = (workout: WorkoutHistorySummary) => {
     setContinueDialog({ isOpen: true, workout })
@@ -261,6 +283,14 @@ export default function WorkoutHistory() {
 
       // Clear any existing workout in the store
       clearWorkout()
+
+      // Check if this is an in_progress workout with no reported sets
+      if ((workoutSummary.status === 'in_progress' || workoutSummary.status === 'partial') && !hasReportedSets(fullWorkout)) {
+        console.log('📋 Detected in_progress workout with no reported sets')
+        setContinueDialog({ isOpen: false, workout: null })
+        setEmptyWorkoutDialog({ isOpen: true, workout: workoutSummary })
+        return
+      }
 
       // Handle the different cases based on status
       switch (workoutSummary.status) {
@@ -386,6 +416,72 @@ export default function WorkoutHistory() {
   // Close dialog
   const handleCloseDialog = () => {
     setContinueDialog({ isOpen: false, workout: null })
+  }
+
+  // Handle empty workout dialog options
+  const handleEmptyWorkoutContinue = async () => {
+    // Continue with the empty workout - open it with the same exercises
+    if (!emptyWorkoutDialog.workout) return
+
+    const workoutSummary = emptyWorkoutDialog.workout
+    try {
+      const fullWorkout = await getWorkoutById(workoutSummary.id)
+      if (!fullWorkout || !fullWorkout.exercises) return
+
+      clearWorkout()
+
+      // IMPORTANT: Set localStorage BEFORE addExercise() calls!
+      // addExercise triggers useEffect in useActiveWorkout, which reads these values
+      const exercisesWithSets = fullWorkout.exercises.map(exercise => ({
+        exerciseId: exercise.exerciseId,
+        exerciseName: exercise.exerciseName,
+        exerciseNameHe: exercise.exerciseNameHe || '',
+        imageUrl: exercise.imageUrl || '',
+        primaryMuscle: '',
+        sets: exercise.sets || [],
+      }))
+      localStorage.setItem('continueWorkoutData', JSON.stringify(exercisesWithSets))
+      localStorage.setItem('continueWorkoutId', workoutSummary.id)
+      localStorage.setItem('continueWorkoutMode', 'in_progress')
+
+      // Now add exercises to store (this triggers useActiveWorkout initialization)
+      fullWorkout.exercises.forEach(exercise => {
+        addExercise({
+          exerciseId: exercise.exerciseId,
+          exerciseName: exercise.exerciseName,
+          exerciseNameHe: exercise.exerciseNameHe || '',
+          imageUrl: exercise.imageUrl || '',
+          primaryMuscle: '',
+          category: '',
+        })
+      })
+
+      navigate('/workout/session')
+    } catch (error) {
+      console.error('Failed to continue empty workout:', error)
+    }
+    setEmptyWorkoutDialog({ isOpen: false, workout: null })
+  }
+
+  const handleEmptyWorkoutRestart = () => {
+    // Start fresh - go to exercise selection
+    setEmptyWorkoutDialog({ isOpen: false, workout: null })
+    clearWorkout()
+    navigate('/exercises')
+  }
+
+  const handleEmptyWorkoutDelete = async () => {
+    if (!emptyWorkoutDialog.workout) return
+
+    try {
+      await deleteWorkoutHistory(emptyWorkoutDialog.workout.id)
+      setWorkouts((prev) => prev.filter((w) => w.id !== emptyWorkoutDialog.workout!.id))
+      toast.success('האימון נמחק בהצלחה')
+    } catch (error) {
+      console.error('Failed to delete workout:', error)
+      toast.error('שגיאה במחיקת האימון')
+    }
+    setEmptyWorkoutDialog({ isOpen: false, workout: null })
   }
 
   // Get dialog message based on workout status (per spec 11.5)
@@ -679,6 +775,63 @@ export default function WorkoutHistory() {
                   className="flex-1 py-3 px-4 bg-red-500 hover:bg-red-600 text-white font-medium rounded-xl transition-colors"
                 >
                   מחק
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Empty Workout Dialog - for in_progress with no reported sets */}
+      {emptyWorkoutDialog.isOpen && emptyWorkoutDialog.workout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+          <div className="bg-dark-surface border border-dark-border rounded-2xl p-6 max-w-sm w-full animate-scale-in">
+            {/* Close button */}
+            <button
+              onClick={() => setEmptyWorkoutDialog({ isOpen: false, workout: null })}
+              className="absolute top-4 left-4 p-2 text-text-muted hover:text-text-primary transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Dialog content */}
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center bg-workout-status-in-progress-bg">
+                <AlertCircle className="w-8 h-8 text-workout-status-in-progress-text" />
+              </div>
+
+              <h3 className="text-xl font-bold text-text-primary mb-2">
+                אימון ללא התקדמות
+              </h3>
+
+              <p className="text-text-muted mb-6">
+                האימון הזה התחיל אבל לא דווחו סטים.
+                <br />
+                מה תרצה לעשות?
+              </p>
+
+              {/* Options */}
+              <div className="space-y-3">
+                <button
+                  onClick={handleEmptyWorkoutContinue}
+                  className="w-full py-3 px-4 bg-primary-400 hover:bg-primary-500 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <Play className="w-5 h-5" />
+                  המשך אימון
+                </button>
+                <button
+                  onClick={handleEmptyWorkoutRestart}
+                  className="w-full py-3 px-4 bg-dark-card hover:bg-dark-border text-text-primary font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <Dumbbell className="w-5 h-5" />
+                  התחל מחדש (בחר תרגילים)
+                </button>
+                <button
+                  onClick={handleEmptyWorkoutDelete}
+                  className="w-full py-3 px-4 bg-transparent hover:bg-red-500/10 text-red-400 font-medium rounded-xl transition-colors flex items-center justify-center gap-2 border border-red-400/30"
+                >
+                  <Trash2 className="w-5 h-5" />
+                  מחק אימון
                 </button>
               </div>
             </div>

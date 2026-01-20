@@ -52,18 +52,32 @@ export function ExerciseLibrary() {
   const [selectedEquipment, setSelectedEquipment] = useState<string>('all')
   const [imageModal, setImageModal] = useState<{ url: string; name: string } | null>(null)
   const [recentlyDoneExerciseIds, setRecentlyDoneExerciseIds] = useState<Set<string>>(new Set())
+  const [isScheduleForLater, setIsScheduleForLater] = useState(false)
 
   const { selectedExercises, addExercise, removeExercise, clearWorkout, scheduledDate, setScheduledDate } = useWorkoutBuilderStore()
 
-  // Helper: Check if selected date is in the future
+  // Helper: Check if today is selected (no date or date equals today)
+  const isTodaySelected = useMemo(() => {
+    if (!scheduledDate) return true
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const selected = new Date(scheduledDate)
+    selected.setHours(0, 0, 0, 0)
+    return selected.getTime() === today.getTime()
+  }, [scheduledDate])
+
+  // Helper: Check if this is a planned workout (future date OR user chose to plan for today)
   const isPlannedWorkout = useMemo(() => {
+    // User chose to schedule for later today
+    if (isScheduleForLater && isTodaySelected) return true
+    // Future date selected
     if (!scheduledDate) return false
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const selected = new Date(scheduledDate)
     selected.setHours(0, 0, 0, 0)
     return selected > today
-  }, [scheduledDate])
+  }, [scheduledDate, isScheduleForLater, isTodaySelected])
 
   // Helper: Format date for input
   const formatDateForInput = (date: Date | null) => {
@@ -188,17 +202,20 @@ export function ExerciseLibrary() {
       return
     }
 
-    // Check if this is a planned workout (future date)
-    if (isPlannedWorkout && scheduledDate && user) {
+    // Check if this is a planned workout (future date OR "plan for today" selected)
+    if (isPlannedWorkout && user) {
       setSaving(true)
       try {
+        // Use scheduledDate if set, otherwise use today's date (for "plan for today")
+        const workoutDate = scheduledDate || new Date()
+
         // Create planned workout entry
         const plannedWorkout: Omit<WorkoutHistoryEntry, 'id'> = {
           userId: user.uid,
           name: 'אימון מתוכנן',
-          date: scheduledDate,
-          startTime: scheduledDate,
-          endTime: scheduledDate,
+          date: workoutDate,
+          startTime: workoutDate,
+          endTime: workoutDate,
           duration: 0,
           status: 'planned',
           exercises: selectedExercises.map(ex => ({
@@ -229,6 +246,7 @@ export function ExerciseLibrary() {
         await saveWorkoutHistory(plannedWorkout)
         clearWorkout()
         setScheduledDate(null)
+        setIsScheduleForLater(false)
         navigate('/workout/history')
       } catch (error) {
         console.error('Failed to save planned workout:', error)
@@ -288,11 +306,61 @@ export function ExerciseLibrary() {
                       setScheduledDate(null)
                     } else {
                       setScheduledDate(selectedDate)
+                      setIsScheduleForLater(false) // Reset when future date selected
                     }
                   }
                 }}
                 className="flex-1 bg-transparent border-none text-white text-sm cursor-pointer focus:outline-none"
               />
+            </div>
+          )}
+
+          {/* Today Options - Radio buttons to choose start now or plan for later */}
+          {!isAddingToWorkout && isTodaySelected && (
+            <div className="flex gap-3 mt-2">
+              <label className={`flex-1 flex items-center gap-2 p-2 rounded-lg cursor-pointer border transition-colors ${
+                !isScheduleForLater
+                  ? 'border-accent-orange bg-accent-orange/10'
+                  : 'border-border-default bg-background-card hover:border-border-light'
+              }`}>
+                <input
+                  type="radio"
+                  name="workoutTiming"
+                  checked={!isScheduleForLater}
+                  onChange={() => setIsScheduleForLater(false)}
+                  className="sr-only"
+                />
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                  !isScheduleForLater ? 'border-accent-orange' : 'border-border-light'
+                }`}>
+                  {!isScheduleForLater && <div className="w-2 h-2 rounded-full bg-accent-orange" />}
+                </div>
+                <span className={`text-sm ${!isScheduleForLater ? 'text-white' : 'text-text-secondary'}`}>
+                  התחל עכשיו
+                </span>
+              </label>
+
+              <label className={`flex-1 flex items-center gap-2 p-2 rounded-lg cursor-pointer border transition-colors ${
+                isScheduleForLater
+                  ? 'border-red-500 bg-red-500/10'
+                  : 'border-border-default bg-background-card hover:border-border-light'
+              }`}>
+                <input
+                  type="radio"
+                  name="workoutTiming"
+                  checked={isScheduleForLater}
+                  onChange={() => setIsScheduleForLater(true)}
+                  className="sr-only"
+                />
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                  isScheduleForLater ? 'border-red-500' : 'border-border-light'
+                }`}>
+                  {isScheduleForLater && <div className="w-2 h-2 rounded-full bg-red-500" />}
+                </div>
+                <span className={`text-sm ${isScheduleForLater ? 'text-red-400' : 'text-text-secondary'}`}>
+                  תכנן להיום
+                </span>
+              </label>
             </div>
           )}
         </div>
@@ -458,9 +526,11 @@ export function ExerciseLibrary() {
               className={`px-5 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all ${
                 selectedExercises.length === 0 || saving
                   ? 'bg-secondary-main text-text-disabled cursor-not-allowed'
-                  : isPlannedWorkout
-                    ? 'bg-workout-status-planned text-white hover:scale-105'
-                    : 'bg-secondary-main border-2 border-accent-orange text-white shadow-glow-orange hover:scale-105'
+                  : isScheduleForLater && isTodaySelected
+                    ? 'bg-red-500 text-white hover:scale-105 hover:bg-red-600'
+                    : isPlannedWorkout
+                      ? 'bg-workout-status-planned text-white hover:scale-105'
+                      : 'bg-secondary-main border-2 border-accent-orange text-white shadow-glow-orange hover:scale-105'
               }`}
               style={selectedExercises.length > 0 && !isPlannedWorkout && !saving ? {
                 boxShadow: '0 4px 0 #0A0C10, 0 0 12px rgba(255, 107, 53, 0.5)'
@@ -496,6 +566,7 @@ export function ExerciseLibrary() {
                   onClick={() => {
                     clearWorkout()
                     setScheduledDate(null)
+                    setIsScheduleForLater(false)
                   }}
                   className="text-status-error text-sm hover:underline"
                 >

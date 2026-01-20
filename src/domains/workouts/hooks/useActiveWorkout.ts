@@ -171,7 +171,8 @@ export function useActiveWorkout() {
       // Check if we're continuing from history FIRST (before early return check)
       const continueWorkoutData = localStorage.getItem('continueWorkoutData')
       const continueWorkoutMode = localStorage.getItem('continueWorkoutMode')
-      const isContinuingFromHistory = continueWorkoutData && continueWorkoutMode === 'in_progress'
+      const isContinuingFromHistory = continueWorkoutData &&
+        (continueWorkoutMode === 'in_progress' || continueWorkoutMode === 'planned')
 
       if (isContinuingFromHistory) {
         console.log('📋 Detected continue from history - will override existing workout')

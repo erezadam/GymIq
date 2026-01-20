@@ -6,6 +6,34 @@
 
 ---
 
+## [v1.10.75] - 2026-01-20
+
+### 🐛 תיקוני באגים
+
+| תיקון | תיאור |
+|-------|-------|
+| **המשך אימון מתוכנן** | תוקן: סיום אימון שהתחיל מתוכנית עכשיו מעדכן את האימון הקיים במקום ליצור חדש |
+| **המשך אימון ריק** | תוקן: לחיצה על "המשך" באימון ללא דיווחים עכשיו מעדכנת את האימון הקיים |
+
+### 📝 פרטי המימוש
+
+- **תיקון 1:** `useActiveWorkout.ts` - הוספת `'planned'` לתנאי `isContinuingFromHistory` (שורה 174)
+- **תיקון 2:** `WorkoutHistory.tsx` - הוספת `continueWorkoutData` ל-localStorage ב-`handleEmptyWorkoutContinue`
+- **תיקון 3:** `WorkoutHistory.tsx` - תיקון סדר הפעולות: localStorage נשמר **לפני** `addExercise()` כדי שה-`useEffect` יקרא את הערכים הנכונים
+
+### ✏️ קבצים ששונו
+
+| קובץ | שינוי |
+|------|-------|
+| `useActiveWorkout.ts` | תנאי המשך אימון כולל כעת גם `'planned'` mode |
+| `WorkoutHistory.tsx` | סדר פעולות מתוקן ב-`handleEmptyWorkoutContinue` - localStorage נשמר לפני קריאות `addExercise` |
+
+### 🔗 Git
+
+- **Branch:** main
+
+---
+
 ## [v1.10.70] - 2026-01-19 (עדכון תיעוד)
 
 ### 📚 שיפורי תיעוד - קבצי SKILL
