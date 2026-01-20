@@ -173,8 +173,8 @@ export function ExerciseLibrary() {
 
         return true
       })
-      // Sort by Hebrew name (A-Z)
-      .sort((a, b) => (a.nameHe || '').localeCompare(b.nameHe || '', 'he'))
+      // Sort by Hebrew name (A-Z) - trim whitespace for consistent sorting
+      .sort((a, b) => (a.nameHe || '').trim().localeCompare((b.nameHe || '').trim(), 'he'))
   }, [exercises, selectedPrimaryMuscle, selectedSubMuscle, selectedEquipment])
 
   const handleToggleExercise = (exercise: Exercise) => {

@@ -1098,9 +1098,9 @@ export function useActiveWorkout() {
       .map(([muscleGroupHe, exercises]) => ({
         muscleGroup: exercises[0]?.category || exercises[0]?.primaryMuscle || 'other',
         muscleGroupHe,
-        // Sort exercises within group by Hebrew name (A-Z)
+        // Sort exercises within group by Hebrew name (A-Z) - trim whitespace
         exercises: [...exercises].sort((a, b) =>
-          (a.exerciseNameHe || '').localeCompare(b.exerciseNameHe || '', 'he')
+          (a.exerciseNameHe || '').trim().localeCompare((b.exerciseNameHe || '').trim(), 'he')
         ),
       }))
   }, [workout, dynamicMuscleNames])
@@ -1127,9 +1127,9 @@ export function useActiveWorkout() {
       .map(([equipmentHe, exercises]) => ({
         equipment: exercises[0]?.equipment || 'other',
         equipmentHe,
-        // Sort exercises within group by Hebrew name (A-Z)
+        // Sort exercises within group by Hebrew name (A-Z) - trim whitespace
         exercises: [...exercises].sort((a, b) =>
-          (a.exerciseNameHe || '').localeCompare(b.exerciseNameHe || '', 'he')
+          (a.exerciseNameHe || '').trim().localeCompare((b.exerciseNameHe || '').trim(), 'he')
         ),
       }))
   }, [workout])
