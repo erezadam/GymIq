@@ -21,8 +21,8 @@ export interface RestTimerAudioSettings {
   alertMode: AlertMode
 }
 
-// Storage key
-const STORAGE_KEY = 'gymiq_timer_audio_settings'
+// Storage key - v2 adds alertMode
+const STORAGE_KEY = 'gymiq_timer_audio_settings_v2'
 
 // Default settings - minute_end is the default
 const DEFAULT_SETTINGS: RestTimerAudioSettings = {
@@ -36,7 +36,12 @@ const loadSettings = (): RestTimerAudioSettings => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) }
+      const parsed = JSON.parse(stored)
+      // Validate alertMode
+      if (parsed.alertMode !== 'minute_end' && parsed.alertMode !== 'countdown_10s') {
+        parsed.alertMode = 'minute_end'
+      }
+      return { ...DEFAULT_SETTINGS, ...parsed }
     }
   } catch (e) {
     console.warn('Failed to load audio settings:', e)

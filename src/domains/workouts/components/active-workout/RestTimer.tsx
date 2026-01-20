@@ -179,21 +179,14 @@ export function RestTimer({ isVisible, onClose, resetKey }: RestTimerProps) {
             <div className="mb-3">
               <span className="text-sm text-neon-gray-300 block mb-2">סוג התראה</span>
               <div className="space-y-2">
-                <label
+                <div
+                  onClick={() => setAlertMode('minute_end')}
                   className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
                     settings.alertMode === 'minute_end'
                       ? 'bg-primary-500/20 border border-primary-500'
                       : 'bg-neon-gray-800 border border-transparent hover:bg-neon-gray-700'
                   }`}
                 >
-                  <input
-                    type="radio"
-                    name="alertMode"
-                    checked={settings.alertMode === 'minute_end'}
-                    onChange={() => setAlertMode('minute_end')}
-                    disabled={!settings.enabled}
-                    className="sr-only"
-                  />
                   <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                     settings.alertMode === 'minute_end' ? 'border-primary-400' : 'border-neon-gray-500'
                   }`}>
@@ -205,23 +198,16 @@ export function RestTimer({ isVisible, onClose, resetKey }: RestTimerProps) {
                     <span className="text-sm text-white">צפצוף בסיום דקה</span>
                     <span className="text-xs text-neon-gray-500 block">צליל ארוך (3 שניות)</span>
                   </div>
-                </label>
+                </div>
 
-                <label
+                <div
+                  onClick={() => setAlertMode('countdown_10s')}
                   className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
                     settings.alertMode === 'countdown_10s'
                       ? 'bg-primary-500/20 border border-primary-500'
                       : 'bg-neon-gray-800 border border-transparent hover:bg-neon-gray-700'
                   }`}
                 >
-                  <input
-                    type="radio"
-                    name="alertMode"
-                    checked={settings.alertMode === 'countdown_10s'}
-                    onChange={() => setAlertMode('countdown_10s')}
-                    disabled={!settings.enabled}
-                    className="sr-only"
-                  />
                   <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                     settings.alertMode === 'countdown_10s' ? 'border-primary-400' : 'border-neon-gray-500'
                   }`}>
@@ -233,7 +219,7 @@ export function RestTimer({ isVisible, onClose, resetKey }: RestTimerProps) {
                     <span className="text-sm text-white">ספירה לאחור</span>
                     <span className="text-xs text-neon-gray-500 block">10 צפצופים לפני סיום דקה</span>
                   </div>
-                </label>
+                </div>
               </div>
             </div>
 
