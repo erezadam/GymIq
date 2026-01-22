@@ -135,6 +135,10 @@ export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'
     totalVolume: workout.totalVolume || 0,
     personalRecords: workout.personalRecords || 0,
     createdAt: Timestamp.now(),
+    // AI Trainer fields
+    source: workout.source,
+    aiWorkoutNumber: workout.aiWorkoutNumber,
+    bundleId: workout.bundleId,
   })
 
   // Add notes only if exists
