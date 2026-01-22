@@ -177,11 +177,12 @@ function generateFallbackWorkout(
   // Select exercises for each muscle
   // exerciseCount is the number of MAIN exercises (not including warmup)
   const selectedExercises: Exercise[] = []
+  const usedExerciseIds = new Set<string>()
   const exercisesPerMuscle = Math.ceil(exerciseCount / targetMuscleIds.length)
 
   for (const muscleId of targetMuscleIds) {
     const muscleExercises = strengthExercises.filter(ex =>
-      ex.primaryMuscle === muscleId
+      ex.primaryMuscle === muscleId && !usedExerciseIds.has(ex.id)
     )
 
     console.log(`💪 Muscle "${muscleId}": ${muscleExercises.length} exercises available, need ${exercisesPerMuscle}`)
@@ -189,12 +190,33 @@ function generateFallbackWorkout(
     // Shuffle and take exercises
     const shuffled = [...muscleExercises].sort(() => Math.random() - 0.5)
     const toAdd = shuffled.slice(0, exercisesPerMuscle)
-    selectedExercises.push(...toAdd)
+    toAdd.forEach(ex => {
+      selectedExercises.push(ex)
+      usedExerciseIds.add(ex.id)
+    })
   }
 
   console.log(`📊 Total selected: ${selectedExercises.length}, need: ${exerciseCount}`)
 
-  // Trim to exact count if needed
+  // If we don't have enough exercises, fill from other available exercises
+  if (selectedExercises.length < exerciseCount) {
+    const remaining = exerciseCount - selectedExercises.length
+    console.log(`⚠️ Missing ${remaining} exercises, filling from other muscles`)
+
+    // Get exercises from any muscle that weren't already selected
+    const additionalExercises = strengthExercises.filter(ex =>
+      !usedExerciseIds.has(ex.id)
+    )
+
+    // Shuffle and add what we need
+    const shuffledAdditional = [...additionalExercises].sort(() => Math.random() - 0.5)
+    const toAdd = shuffledAdditional.slice(0, remaining)
+    selectedExercises.push(...toAdd)
+
+    console.log(`📊 After fill: ${selectedExercises.length} exercises`)
+  }
+
+  // Trim to exact count if needed (in case we somehow got more)
   const mainExercises = selectedExercises.slice(0, exerciseCount)
   console.log(`📊 Main exercises after trim: ${mainExercises.length}, warmup: ${warmupExercise ? 'YES' : 'NO'}, TOTAL: ${mainExercises.length + (warmupExercise ? 1 : 0)}`)
 

@@ -10,9 +10,11 @@ import {
   ChevronUp,
   Play,
   Trash2,
+  Dumbbell,
 } from 'lucide-react'
 import { getMuscleNameHe } from '@/utils/muscleTranslations'
-import type { WorkoutHistorySummary, WorkoutCompletionStatus } from '@/domains/workouts/types'
+import { getWorkoutById } from '@/lib/firebase/workoutHistory'
+import type { WorkoutHistorySummary, WorkoutHistoryEntry, WorkoutCompletionStatus } from '@/domains/workouts/types'
 
 export interface AIBundleCardProps {
   bundleId: string
@@ -34,6 +36,33 @@ export function AIBundleCard({
   getStatusBadge,
 }: AIBundleCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(null)
+  const [expandedWorkoutDetails, setExpandedWorkoutDetails] = useState<WorkoutHistoryEntry | null>(null)
+  const [loadingDetails, setLoadingDetails] = useState(false)
+
+  // Toggle workout expansion and load details
+  const toggleWorkoutExpanded = async (workoutId: string) => {
+    if (expandedWorkoutId === workoutId) {
+      // Closing the expanded workout
+      setExpandedWorkoutId(null)
+      setExpandedWorkoutDetails(null)
+      return
+    }
+
+    // Opening a new workout - load full details
+    setExpandedWorkoutId(workoutId)
+    setLoadingDetails(true)
+    setExpandedWorkoutDetails(null)
+
+    try {
+      const details = await getWorkoutById(workoutId)
+      setExpandedWorkoutDetails(details)
+    } catch (error) {
+      console.error('Failed to load workout details:', error)
+    } finally {
+      setLoadingDetails(false)
+    }
+  }
 
   // Filter out completed workouts from bundle display
   const pendingWorkouts = workouts.filter(w => w.status !== 'completed')
@@ -120,43 +149,113 @@ export function AIBundleCard({
           {pendingWorkouts.map((workout, index) => (
             <div
               key={workout.id}
-              className="bg-dark-card/50 rounded-xl p-3 border border-purple-500/20 hover:border-purple-500/50 transition-colors"
+              className="bg-dark-card/50 rounded-xl border border-purple-500/20 hover:border-purple-500/50 transition-colors overflow-hidden"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-purple-500/20 text-purple-400 font-bold text-sm">
-                    {workout.aiWorkoutNumber || index + 1}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-text-primary text-sm">
-                        {workout.name}
-                      </p>
-                      {getStatusBadge(workout.status)}
+              {/* Workout Header - clickable to expand */}
+              <div
+                className="p-3 cursor-pointer"
+                onClick={() => toggleWorkoutExpanded(workout.id)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-purple-500/20 text-purple-400 font-bold text-sm">
+                      {workout.aiWorkoutNumber || index + 1}
                     </div>
-                    {workout.muscleGroups && workout.muscleGroups.length > 0 && (
-                      <p className="text-purple-300/60 text-xs mt-0.5">
-                        {workout.muscleGroups
-                          .map(muscle => getMuscleNameHe(muscle, dynamicMuscleNames))
-                          .join(' • ')}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-text-primary text-sm">
+                          {workout.name}
+                        </p>
+                        {getStatusBadge(workout.status)}
+                      </div>
+                      {workout.muscleGroups && workout.muscleGroups.length > 0 && (
+                        <p className="text-purple-300/60 text-xs mt-0.5">
+                          {workout.muscleGroups
+                            .map(muscle => getMuscleNameHe(muscle, dynamicMuscleNames))
+                            .join(' • ')}
+                        </p>
+                      )}
+                      <p className="text-text-muted text-xs mt-0.5">
+                        {workout.totalExercises} תרגילים • {workout.duration} דקות
+                        {expandedWorkoutId !== workout.id && (
+                          <span className="text-purple-400/70 mr-2">• לחץ לפרטים</span>
+                        )}
                       </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {expandedWorkoutId === workout.id ? (
+                      <ChevronUp className="w-4 h-4 text-purple-400" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-purple-400" />
                     )}
-                    <p className="text-text-muted text-xs mt-0.5">
-                      {workout.totalExercises} תרגילים • {workout.duration} דקות
-                    </p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onWorkoutClick(workout)
+                      }}
+                      className="p-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg transition-colors"
+                      aria-label="התחל אימון"
+                    >
+                      <Play className="w-5 h-5 text-purple-400" />
+                    </button>
                   </div>
                 </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onWorkoutClick(workout)
-                  }}
-                  className="p-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg transition-colors"
-                  aria-label="התחל אימון"
-                >
-                  <Play className="w-5 h-5 text-purple-400" />
-                </button>
               </div>
+
+              {/* Expanded workout exercises */}
+              {expandedWorkoutId === workout.id && (
+                <div className="border-t border-purple-500/20 bg-dark-surface/30">
+                  {loadingDetails ? (
+                    <div className="p-4 text-center">
+                      <div className="inline-block w-5 h-5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+                      <p className="text-text-muted text-sm mt-2">טוען תרגילים...</p>
+                    </div>
+                  ) : expandedWorkoutDetails?.exercises ? (
+                    <div className="p-3 space-y-2">
+                      {expandedWorkoutDetails.exercises.map((exercise, exIndex) => (
+                        <div
+                          key={exercise.exerciseId || exIndex}
+                          className="flex items-center gap-3 p-2 rounded-lg bg-dark-card/50"
+                        >
+                          {/* Exercise image or icon */}
+                          <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-purple-500/10">
+                            {exercise.imageUrl ? (
+                              <img
+                                src={exercise.imageUrl}
+                                alt={exercise.exerciseNameHe || exercise.exerciseName}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Dumbbell className="w-5 h-5 text-purple-400" />
+                              </div>
+                            )}
+                          </div>
+                          {/* Exercise info */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-text-primary text-sm font-medium truncate">
+                              {exercise.exerciseNameHe || exercise.exerciseName}
+                            </p>
+                            <p className="text-text-muted text-xs">
+                              {exercise.sets?.length || 0} סטים
+                              {exercise.sets && exercise.sets.length > 0 && (
+                                <span className="mr-1">
+                                  • {exercise.sets[0].targetReps || '-'} חזרות
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center text-text-muted text-sm">
+                      לא נמצאו תרגילים
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
