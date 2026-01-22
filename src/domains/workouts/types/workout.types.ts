@@ -111,6 +111,10 @@ export interface WorkoutHistoryEntry {
   personalRecords: number
   calories?: number // User-entered calories burned
   notes?: string
+  // AI Trainer fields
+  source?: 'manual' | 'ai_trainer' // מקור האימון
+  aiWorkoutNumber?: number // מספר סידורי של אימון AI
+  bundleId?: string // מזהה מקבץ אימונים AI (null לאימון יחיד)
 }
 
 // Summary for display in lists
@@ -126,4 +130,8 @@ export interface WorkoutHistorySummary {
   personalRecords: number
   calories?: number // User-entered calories burned
   muscleGroups?: string[] // Unique muscle groups worked
+  // AI Trainer fields
+  source?: 'manual' | 'ai_trainer' // מקור האימון
+  aiWorkoutNumber?: number // מספר סידורי של אימון AI
+  bundleId?: string // מזהה מקבץ אימונים AI (null לאימון יחיד)
 }

@@ -9,6 +9,7 @@ import { useAuthStore } from '@/domains/authentication/store'
 import { useWorkoutBuilderStore } from '../store'
 import { exerciseService } from '@/domains/exercises/services'
 import { WorkoutCard } from '@/shared/components/WorkoutCard'
+import { AIBundleCard } from './ai-trainer/AIBundleCard'
 import type { WorkoutHistorySummary, WorkoutHistoryEntry, WorkoutCompletionStatus } from '../types'
 
 // Confirmation dialog for continuing workout
@@ -129,6 +130,22 @@ export default function WorkoutHistory() {
       toast.error('שגיאה במחיקת האימון')
     } finally {
       setDeleteDialog({ isOpen: false, workout: null })
+    }
+  }
+
+  // Handle delete bundle (delete all workouts in bundle)
+  const handleDeleteBundle = async (_bundleId: string, workoutIds: string[]) => {
+    if (!window.confirm(`האם למחוק את כל ${workoutIds.length} האימונים במקבץ?`)) {
+      return
+    }
+
+    try {
+      await Promise.all(workoutIds.map(id => deleteWorkoutHistory(id)))
+      setWorkouts((prev) => prev.filter((w) => !workoutIds.includes(w.id)))
+      toast.success('המקבץ נמחק בהצלחה')
+    } catch (error) {
+      console.error('Failed to delete bundle:', error)
+      toast.error('שגיאה במחיקת המקבץ')
     }
   }
 
@@ -516,8 +533,8 @@ export default function WorkoutHistory() {
     }
   }
 
-  // Filter and sort workouts
-  const { plannedWorkouts, otherWorkouts } = useMemo(() => {
+  // Filter and sort workouts, group AI bundles
+  const { plannedWorkouts, otherWorkouts, aiBundles, singleAIWorkouts } = useMemo(() => {
     const now = new Date()
     const twoWeeksAgo = new Date()
     twoWeeksAgo.setDate(now.getDate() - 14)
@@ -530,16 +547,49 @@ export default function WorkoutHistory() {
       return workoutDate >= twoWeeksAgo
     })
 
-    // Separate planned from others
-    const planned = filtered
+    // Group AI workouts by bundleId
+    const bundleMap = new Map<string, WorkoutHistorySummary[]>()
+    const nonBundledWorkouts: WorkoutHistorySummary[] = []
+    const singleAI: WorkoutHistorySummary[] = []
+
+    filtered.forEach(workout => {
+      if (workout.bundleId) {
+        // Part of a bundle
+        const existing = bundleMap.get(workout.bundleId) || []
+        existing.push(workout)
+        bundleMap.set(workout.bundleId, existing)
+      } else if (workout.source === 'ai_trainer') {
+        // Single AI workout (no bundle)
+        singleAI.push(workout)
+      } else {
+        // Regular workout
+        nonBundledWorkouts.push(workout)
+      }
+    })
+
+    // Convert bundle map to array, filter out empty bundles (all completed)
+    const bundles = Array.from(bundleMap.entries())
+      .map(([bundleId, bundleWorkouts]) => ({
+        bundleId,
+        workouts: bundleWorkouts.sort((a, b) => (a.aiWorkoutNumber || 0) - (b.aiWorkoutNumber || 0)),
+      }))
+      .filter(bundle => bundle.workouts.some(w => w.status !== 'completed'))
+
+    // Separate planned from others (non-AI workouts)
+    const planned = nonBundledWorkouts
       .filter(w => w.status === 'planned')
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) // ascending by date
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
-    const others = filtered
+    const others = nonBundledWorkouts
       .filter(w => w.status !== 'planned')
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) // descending by date (newest first)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-    return { plannedWorkouts: planned, otherWorkouts: others }
+    return {
+      plannedWorkouts: planned,
+      otherWorkouts: others,
+      aiBundles: bundles,
+      singleAIWorkouts: singleAI.filter(w => w.status !== 'completed'),
+    }
   }, [workouts])
 
   /* STATS CALCULATION - COMMENTED OUT FOR FUTURE USE
@@ -600,6 +650,61 @@ export default function WorkoutHistory() {
       </div>
 
       {/* Stats summary - REMOVED per request, stats useMemo kept for future use */}
+
+      {/* AI Bundles section */}
+      {(aiBundles.length > 0 || singleAIWorkouts.length > 0) && (
+        <div>
+          <h2 className="text-lg font-semibold text-purple-400 mb-3 flex items-center gap-2">
+            <span className="text-xl">🤖</span>
+            אימוני AI
+          </h2>
+          <div className="space-y-3">
+            {/* AI Bundles */}
+            {aiBundles.map((bundle) => (
+              <AIBundleCard
+                key={bundle.bundleId}
+                bundleId={bundle.bundleId}
+                workouts={bundle.workouts}
+                dynamicMuscleNames={dynamicMuscleNames}
+                onWorkoutClick={handleContinueClick}
+                onDeleteBundle={handleDeleteBundle}
+                formatDate={formatDate}
+                getStatusBadge={getStatusBadge}
+              />
+            ))}
+            {/* Single AI Workouts (no bundle) */}
+            {singleAIWorkouts.map((workout) => (
+              <WorkoutCard
+                key={workout.id}
+                workout={workout}
+                type="planned"
+                isExpanded={expandedWorkoutId === workout.id}
+                statusConfig={{
+                  ...getStatusConfig(workout.status),
+                  borderClass: 'border-purple-500',
+                  iconBgClass: 'bg-purple-500/20',
+                  iconTextClass: 'text-purple-400',
+                }}
+                expandedWorkoutDetails={expandedWorkoutDetails}
+                loadingDetails={loadingDetails}
+                dynamicMuscleNames={dynamicMuscleNames}
+                onToggleExpand={() => toggleWorkoutExpanded(workout.id)}
+                onDeleteClick={(e) => handleDeleteClick(e, workout)}
+                onContinueClick={() => handleContinueClick(workout)}
+                getStatusBadge={getStatusBadge}
+                formatDate={formatDate}
+                formatDuration={formatDuration}
+                estimateCalories={estimateCalories}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Separator if AI and planned sections exist */}
+      {(aiBundles.length > 0 || singleAIWorkouts.length > 0) && plannedWorkouts.length > 0 && (
+        <div className="border-t border-dark-border" />
+      )}
 
       {/* Planned workouts section - pinned to top */}
       {plannedWorkouts.length > 0 && (

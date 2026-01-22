@@ -265,13 +265,14 @@ function createExerciseEntry(
 // Convert AI workout to WorkoutHistoryEntry for saving
 function convertToWorkoutEntry(
   workout: AIGeneratedWorkout,
-  userId: string
+  userId: string,
+  bundleId: string | null // null for single workout, string for bundle
 ): Omit<WorkoutHistoryEntry, 'id'> {
   const now = new Date()
 
   return {
     userId,
-    name: workout.name,
+    name: `אימון AI #${workout.aiWorkoutNumber}`, // שם אחיד לכל אימוני AI
     date: now,
     startTime: now,
     endTime: now,
@@ -294,6 +295,10 @@ function convertToWorkoutEntry(
     totalVolume: 0,
     personalRecords: 0,
     notes: `אימון שנוצר ע"י מאמן AI`,
+    // AI Trainer fields
+    source: 'ai_trainer',
+    aiWorkoutNumber: workout.aiWorkoutNumber,
+    bundleId: bundleId || undefined, // undefined if single workout
   }
 }
 
@@ -329,10 +334,17 @@ export async function generateAIWorkouts(
       console.log(`   📝 Workout ${i + 1}: "${w.name}" - ${w.exercises.length} exercises (${w.muscleGroups.join(', ')})`)
     })
 
+    // Generate bundleId only for multiple workouts
+    const bundleId = request.numWorkouts > 1
+      ? `bundle_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      : null
+
+    console.log(`📦 Bundle: ${bundleId ? bundleId : 'none (single workout)'}`)
+
     // Save workouts to Firebase
     const savedIds: string[] = []
     for (const workout of workouts) {
-      const entry = convertToWorkoutEntry(workout, request.userId)
+      const entry = convertToWorkoutEntry(workout, request.userId, bundleId)
       const id = await saveWorkoutHistory(entry)
       savedIds.push(id)
       const saveTime = new Date().toLocaleString('he-IL')

@@ -40,6 +40,10 @@ function toWorkoutHistory(id: string, data: any): WorkoutHistoryEntry {
     personalRecords: data.personalRecords || 0,
     calories: data.calories,
     notes: data.notes,
+    // AI Trainer fields
+    source: data.source,
+    aiWorkoutNumber: data.aiWorkoutNumber,
+    bundleId: data.bundleId,
   }
 }
 
@@ -63,6 +67,10 @@ function toSummary(entry: WorkoutHistoryEntry): WorkoutHistorySummary {
     personalRecords: entry.personalRecords,
     calories: entry.calories,
     muscleGroups: muscleGroups.length > 0 ? muscleGroups : undefined,
+    // AI Trainer fields
+    source: entry.source,
+    aiWorkoutNumber: entry.aiWorkoutNumber,
+    bundleId: entry.bundleId,
   }
 }
 

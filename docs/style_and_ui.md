@@ -69,6 +69,7 @@ workout: {
   completed: '#10B981', // אימון הושלם - ירוק/כחול
   inProgress: '#FFB020', // אימון בתהליך - צהוב
   planned: '#3B82F6',   // אימון מתוכנן - כחול
+  aiTrainer: '#8B5CF6', // אימון AI - סגול
 }
 ```
 
@@ -92,6 +93,37 @@ className="border-workout-planned text-workout-planned"
 // ❌ לא נכון - שמות שלא קיימים
 className="bg-workout-status-completed-bg"
 ```
+
+---
+
+## 4.5 עיצוב אימוני AI
+
+אימונים שנוצרו על ידי מאמן AI מוצגים בסגנון מיוחד:
+
+| אלמנט | סגנון |
+|-------|-------|
+| כותרת | "אימון AI" |
+| צבע גבול | סגול (#8B5CF6) |
+| צבע טקסט | סגול (#8B5CF6) |
+| אייקון | 🤖 |
+| רקע | שקוף עם גרדיאנט סגול עדין |
+
+### שימוש:
+```typescript
+// כרטיס אימון AI יחיד
+className="border-l-4 border-purple-500 bg-purple-500/10"
+
+// כרטיס מקבץ אימוני AI
+className="border-purple-500 bg-gradient-to-r from-purple-500/20 to-purple-600/10"
+
+// תג "אימון AI"
+className="text-purple-400 bg-purple-500/20 px-2 py-0.5 rounded-full text-xs"
+```
+
+### כללי מקבץ:
+- **אימון יחיד**: כרטיס רגיל עם עיצוב סגול
+- **מקבץ (2+ אימונים)**: כרטיס אחד שנפתח לרשימת אימונים
+- **אימון שהושלם**: יוצא מהמקבץ (לפי status, לא מחיקת bundleId)
 
 ---
 
