@@ -5,6 +5,7 @@ import { getUserWorkoutStats } from '@/lib/firebase/workoutHistory'
 import { getExternalComparisonUrl } from '@/lib/firebase/appSettings'
 import { useVersionCheck } from '@/shared/hooks/useVersionCheck'
 import { colors, spacing, borderRadius, typography } from '@/styles/theme'
+import AITrainerModal from '@/domains/workouts/components/ai-trainer/AITrainerModal'
 
 // Initial stats (will be replaced with Firebase data)
 const defaultStats = {
@@ -68,6 +69,14 @@ const actionCardStyles = {
     subtitleColor: colors.text.secondary,
     iconBg: 'rgba(59, 130, 246, 0.2)',
   },
+  aiTrainer: {
+    background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.2) 0%, rgba(139, 92, 246, 0.15) 100%)',
+    border: '1px solid rgba(236, 72, 153, 0.3)',
+    titleColor: colors.accent.pink,
+    subtitleColor: colors.text.secondary,
+    iconBg: 'rgba(236, 72, 153, 0.2)',
+    boxShadow: '0 4px 20px rgba(236, 72, 153, 0.2)',
+  },
 }
 
 // Get Sunday of current week (D/M format)
@@ -87,6 +96,7 @@ export default function UserDashboard() {
   const [externalUrl, setExternalUrl] = useState<string | null>(null)
   const { currentVersion, performUpdate } = useVersionCheck()
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [showAITrainerModal, setShowAITrainerModal] = useState(false)
 
   // Force refresh function
   const handleForceRefresh = async () => {
@@ -331,6 +341,58 @@ export default function UserDashboard() {
         </Link>
       </div>
 
+      {/* AI Trainer Card */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+        <button
+          onClick={() => setShowAITrainerModal(true)}
+          style={{
+            ...cardBase,
+            ...actionCardStyles.aiTrainer,
+            width: '100%',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: spacing.md,
+            padding: '16px 20px',
+          }}
+        >
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: borderRadius.sm,
+              background: actionCardStyles.aiTrainer.iconBg,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 22,
+            }}
+          >
+            🤖
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div
+              style={{
+                fontSize: typography.fontSize.lg,
+                fontWeight: typography.fontWeight.bold,
+                color: actionCardStyles.aiTrainer.titleColor,
+              }}
+            >
+              מאמן AI
+            </div>
+            <div
+              style={{
+                fontSize: typography.fontSize.xs,
+                color: actionCardStyles.aiTrainer.subtitleColor,
+              }}
+            >
+              תן ל-AI לבנות לך אימון מותאם אישית
+            </div>
+          </div>
+        </button>
+      </div>
+
       {/* International Comparison Card - Only shown if URL is configured */}
       {externalUrl && (
         <div style={{ display: 'flex', gap: 10 }}>
@@ -416,6 +478,12 @@ export default function UserDashboard() {
           {isRefreshing ? '⏳' : '🔄'} {isRefreshing ? 'מרענן...' : 'בדוק עדכונים'}
         </button>
       </div>
+
+      {/* AI Trainer Modal */}
+      <AITrainerModal
+        isOpen={showAITrainerModal}
+        onClose={() => setShowAITrainerModal(false)}
+      />
     </div>
   )
 }

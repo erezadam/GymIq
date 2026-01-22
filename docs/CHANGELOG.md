@@ -6,6 +6,57 @@
 
 ---
 
+## [v1.10.90] - 2026-01-22
+
+### 🚀 פיצ'ר חדש: מאמן AI
+
+| פיצ'ר | תיאור |
+|-------|-------|
+| **מאמן AI** | יצירת אימונים מותאמים אישית באמצעות AI |
+
+### 📝 פרטי המימוש
+
+#### כפתור בדף הבית
+- כפתור 🤖 "מאמן AI" בדשבורד
+- עיצוב ורוד-סגול gradient
+
+#### Modal עם הגדרות
+- **כמות אימונים:** 1-6 אימונים (slider)
+- **משך אימון:** 30/45/60/90 דקות
+- **חימום:** 0/5/10/15 דקות (תרגיל קרדיו)
+- **בחירת שרירים:** אוטומטי/ידני/לכל אימון בנפרד
+
+#### מנוע יצירת אימונים (Fallback)
+- בחירה חכמה של תרגילים לפי שרירים
+- מניעת חזרה על תרגילי אתמול
+- רוטציית שרירים בין אימונים
+- תמיכה ב-1-6 אימונים בקריאה אחת
+
+#### אינטגרציה
+- שמירה ל-Firebase כאימון "מתוכנן"
+- הפניה אוטומטית להיסטוריית אימונים
+
+### ✏️ קבצים חדשים
+
+| קובץ | תיאור |
+|------|-------|
+| `src/domains/workouts/components/ai-trainer/AITrainerModal.tsx` | Modal UI |
+| `src/domains/workouts/services/aiTrainer.types.ts` | Types |
+| `src/domains/workouts/services/aiTrainerService.ts` | Service + Fallback Logic |
+| `docs/ai-trainer-erd.md` | ERD ותכנון |
+
+### ✏️ קבצים ששונו
+
+| קובץ | שינוי |
+|------|-------|
+| `UserDashboard.tsx` | הוספת כפתור מאמן AI |
+
+### 🔗 Git
+
+- **Branch:** main
+
+---
+
 ## [v1.10.82] - 2026-01-20
 
 ### 🐛 תיקוני באגים
