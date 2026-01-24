@@ -260,8 +260,13 @@ export function useActiveWorkout() {
             setFirebaseWorkoutId(existingWorkoutId)
             localStorage.setItem('gymiq_firebase_workout_id', existingWorkoutId)
           } else {
-            // Only clear if no existing ID
-            localStorage.removeItem('gymiq_firebase_workout_id')
+            // Check if we already have a Firebase workout ID (from previous initialization)
+            // Don't clear it - it might be needed for continuing the workout
+            const existingFirebaseId = localStorage.getItem('gymiq_firebase_workout_id')
+            if (existingFirebaseId) {
+              console.log('📋 Keeping existing Firebase workout ID:', existingFirebaseId)
+              setFirebaseWorkoutId(existingFirebaseId)
+            }
           }
 
           // Clear old localStorage workout - we're starting fresh from history data
