@@ -70,6 +70,36 @@ cp file.tsx file.tsx.backup
 - Tailwind CSS with centralized tokens
 - Domain-driven folder structure
 
+## ⚠️ Exercise Data Flow - Critical Pattern
+
+### זרימת נתוני תרגיל:
+```
+Firebase exercises collection
+       ↓
+ExerciseCard / ExerciseLibrary (בחירה)
+       ↓
+addExercise() → Zustand store
+       ↓
+ActiveWorkoutScreen / WorkoutSession
+       ↓
+SetReportRow (שימוש ב-reportType)
+```
+
+### כלל זהב - הוספת שדה לתרגיל:
+> **כשמוסיפים שדה חדש לתרגילים (כמו reportType) - חובה לעדכן את כל הקריאות ל-addExercise!**
+
+**קבצים שחייבים עדכון:**
+1. `src/domains/exercises/components/ExerciseCard.tsx`
+2. `src/domains/exercises/components/ExerciseLibrary.tsx`
+3. `src/domains/workouts/components/WorkoutSession.tsx`
+4. `src/domains/workouts/components/WorkoutHistory.tsx`
+
+**בדיקה מהירה:**
+```bash
+grep -r "addExercise(" src/ | grep -v "removeExercise" | grep -v ".backup"
+# ודא שכל הקריאות מעבירות את השדה החדש
+```
+
 ## קבצים עיקריים בפרויקט
 
 ### מסכים ראשיים

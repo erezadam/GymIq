@@ -51,10 +51,10 @@ export async function getReportTypes(): Promise<ReportType[]> {
 export async function getActiveReportTypes(): Promise<ReportType[]> {
   try {
     const reportTypesRef = collection(db, COLLECTION_NAME)
+    // Simple query without orderBy to avoid needing composite index
     const q = query(
       reportTypesRef,
-      where('isActive', '==', true),
-      orderBy('sortOrder', 'asc')
+      where('isActive', '==', true)
     )
     const snapshot = await getDocs(q)
 
@@ -63,12 +63,15 @@ export async function getActiveReportTypes(): Promise<ReportType[]> {
       return defaultReportTypes.filter(rt => rt.isActive)
     }
 
-    return snapshot.docs.map((doc) => ({
+    const reportTypes = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate(),
       updatedAt: doc.data().updatedAt?.toDate(),
     })) as ReportType[]
+
+    // Sort by sortOrder in JavaScript instead of Firebase
+    return reportTypes.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
   } catch (error) {
     console.error('Error fetching active report types:', error)
     return defaultReportTypes.filter(rt => rt.isActive)

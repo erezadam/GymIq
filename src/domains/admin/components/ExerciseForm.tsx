@@ -231,6 +231,7 @@ export default function ExerciseForm() {
   // Form submit
   const onSubmit = (data: ExerciseFormData) => {
     console.log('🔥 ExerciseForm: onSubmit called with data:', data)
+    console.log('🔥 ExerciseForm: reportType selected:', data.reportType)
 
     const formattedData = {
       ...data,

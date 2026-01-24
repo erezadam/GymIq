@@ -27,6 +27,7 @@ import {
   getInProgressWorkout,
   completeWorkout,
 } from '@/lib/firebase/workoutHistory'
+import { getExerciseById } from '@/lib/firebase/exercises'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { muscleGroupNames } from '@/styles/design-tokens'
 
@@ -301,6 +302,36 @@ export function useActiveWorkout() {
           }))
 
           console.log('✅ Restored workout from localStorage')
+
+          // Fetch missing reportType from Firebase for exercises that don't have it
+          const exercisesMissingReportType = parsed.exercises.filter(
+            (ex: ActiveWorkoutExercise) => !ex.reportType
+          )
+          if (exercisesMissingReportType.length > 0) {
+            console.log(`📋 Fetching reportType for ${exercisesMissingReportType.length} exercises from Firebase`)
+            try {
+              const reportTypeUpdates = await Promise.all(
+                exercisesMissingReportType.map(async (ex: ActiveWorkoutExercise) => {
+                  const exerciseData = await getExerciseById(ex.exerciseId)
+                  return {
+                    exerciseId: ex.exerciseId,
+                    reportType: exerciseData?.reportType || 'weight_reps',
+                  }
+                })
+              )
+              // Update exercises with fetched reportType
+              parsed.exercises = parsed.exercises.map((ex: ActiveWorkoutExercise) => {
+                const update = reportTypeUpdates.find((u) => u.exerciseId === ex.exerciseId)
+                if (update && !ex.reportType) {
+                  console.log(`✅ Updated reportType for ${ex.exerciseNameHe}: ${update.reportType}`)
+                  return { ...ex, reportType: update.reportType }
+                }
+                return ex
+              })
+            } catch (e) {
+              console.error('Failed to fetch reportType from Firebase:', e)
+            }
+          }
 
           // Check if there are new exercises to add (from addToWorkout flow)
           const existingExerciseIds = new Set(parsed.exercises.map((ex: ActiveWorkoutExercise) => ex.exerciseId))

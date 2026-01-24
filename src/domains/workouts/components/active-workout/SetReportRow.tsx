@@ -164,80 +164,60 @@ export function SetReportRow({
     </div>
   )
 
-  // Render inputs based on reportType
-  const renderInputs = () => {
-    switch (reportType) {
-      case 'reps_only':
-        return renderRepsInput()
+  // Parse reportType to determine which fields to show
+  // Supports both exact IDs (e.g., 'time_speed') and field-based parsing
+  const getFieldsFromReportType = (type: string): string[] => {
+    // Normalize: lowercase and split by common separators
+    const normalized = type.toLowerCase()
 
-      case 'time_only':
-        return renderTimeInput()
+    // Check for known field keywords in the reportType string
+    const fields: string[] = []
 
-      case 'reps_time':
-        return (
-          <>
-            {renderRepsInput()}
-            {renderTimeInput()}
-          </>
-        )
+    // Order matters for display - check in display order
+    if (normalized.includes('weight') || normalized.includes('משקל')) fields.push('weight')
+    if (normalized.includes('reps') || normalized.includes('חזרות')) fields.push('reps')
+    if (normalized.includes('time') || normalized.includes('זמן')) fields.push('time')
+    if (normalized.includes('intensity') || normalized.includes('עצימות')) fields.push('intensity')
+    if (normalized.includes('speed') || normalized.includes('מהירות')) fields.push('speed')
+    if (normalized.includes('distance') || normalized.includes('מרחק')) fields.push('distance')
 
-      case 'intensity_time':
-        return (
-          <>
-            {renderIntensityInput()}
-            {renderTimeInput()}
-          </>
-        )
-
-      case 'time_speed':
-        return (
-          <>
-            {renderTimeInput()}
-            {renderSpeedInput()}
-          </>
-        )
-
-      case 'time_distance':
-        return (
-          <>
-            {renderTimeInput()}
-            {renderDistanceInput()}
-          </>
-        )
-
-      case 'speed_distance':
-        return (
-          <>
-            {renderSpeedInput()}
-            {renderDistanceInput()}
-          </>
-        )
-
-      case 'time_speed_distance':
-        return (
-          <>
-            {renderTimeInput()}
-            {renderSpeedInput()}
-            {renderDistanceInput()}
-          </>
-        )
-
-      case 'distance_only':
-        return renderDistanceInput()
-
-      case 'speed_only':
-        return renderSpeedInput()
-
-      case 'weight_reps':
-      default:
-        // Default to weight + reps for unknown types (backward compatibility)
-        return (
-          <>
-            {renderWeightInput()}
-            {renderRepsInput()}
-          </>
-        )
+    // If no fields detected, default to weight + reps
+    if (fields.length === 0) {
+      console.warn(`Unknown reportType: ${type}, defaulting to weight_reps`)
+      return ['weight', 'reps']
     }
+
+    return fields
+  }
+
+  // Render inputs based on reportType - dynamic field parsing
+  const renderInputs = () => {
+    const fields = getFieldsFromReportType(reportType)
+
+    console.log(`🏋️ SetReportRow: reportType=${reportType}, fields=`, fields)
+
+    return (
+      <>
+        {fields.map((field) => {
+          switch (field) {
+            case 'weight':
+              return <span key="weight">{renderWeightInput()}</span>
+            case 'reps':
+              return <span key="reps">{renderRepsInput()}</span>
+            case 'time':
+              return <span key="time">{renderTimeInput()}</span>
+            case 'intensity':
+              return <span key="intensity">{renderIntensityInput()}</span>
+            case 'speed':
+              return <span key="speed">{renderSpeedInput()}</span>
+            case 'distance':
+              return <span key="distance">{renderDistanceInput()}</span>
+            default:
+              return null
+          }
+        })}
+      </>
+    )
   }
 
   return (

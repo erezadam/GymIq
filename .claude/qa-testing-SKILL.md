@@ -131,6 +131,7 @@ caches.keys().then(names => {
 
 | תאריך | בעיה | בדיקה |
 |-------|------|-------|
+| 24/01 | reportType לא מועבר ב-addExercise | `grep -r "addExercise" src/ \| grep -v "removeExercise"` - ודא שכולם מעבירים reportType |
 | 09/01 | קלוריות לא מוצגות בהיסטוריה | `grep -r "workout\.calories" src/` |
 | 08/01 | WorkoutSummaryModal נמחק | `grep -r "WorkoutSummaryModal" src/` |
 | 06/01 | כפתור מחיקת אימון נעלם | `grep -r "handleDeleteWorkout\|Trash2" src/` |
@@ -144,6 +145,31 @@ handleDeleteWorkout - כפתור מחיקת אימון
 handleAddSet - הוספת סט לאימון
 useTimer / RestTimer - טיימר מנוחה
 workout.calories - שדה קלוריות (לא estimateCalories!)
+```
+
+### שדות חובה ב-addExercise:
+> **⚠️ כשמוסיפים שדה חדש לתרגילים - חייבים לעדכן את כל הקריאות ל-addExercise!**
+
+```typescript
+// כל השדות הנדרשים:
+addExercise({
+  exerciseId,     // מזהה תרגיל
+  exerciseName,   // שם באנגלית
+  exerciseNameHe, // שם בעברית
+  imageUrl,       // תמונה
+  primaryMuscle,  // שריר ראשי
+  category,       // קטגוריה
+  equipment,      // ציוד
+  reportType,     // ⚠️ סוג דיווח - חובה!
+})
+```
+
+### קבצים שקוראים ל-addExercise (לעדכן בכולם!):
+```
+src/domains/exercises/components/ExerciseCard.tsx
+src/domains/exercises/components/ExerciseLibrary.tsx
+src/domains/workouts/components/WorkoutSession.tsx
+src/domains/workouts/components/WorkoutHistory.tsx (4 מקומות!)
 ```
 
 ### בדיקת רגרסיות מהירה:

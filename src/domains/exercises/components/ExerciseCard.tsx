@@ -52,6 +52,8 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
         imageUrl: exercise.imageUrl,
         primaryMuscle: exercise.primaryMuscle || exercise.category,
         category: exercise.category,
+        equipment: exercise.equipment,
+        reportType: exercise.reportType,
       })
     }
   }

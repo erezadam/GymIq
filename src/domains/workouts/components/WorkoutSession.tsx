@@ -220,6 +220,8 @@ export default function WorkoutSession() {
       imageUrl: exercise.imageUrl,
       primaryMuscle: exercise.primaryMuscle,
       category: exercise.category,
+      equipment: exercise.equipment,
+      reportType: exercise.reportType,
     })
     setShowAddExercise(false)
     setSearchQuery('')

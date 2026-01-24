@@ -49,6 +49,48 @@ exercises
   └── reportType → reportTypes.id
 ```
 
+## ⚠️ Exercise → Workout Data Flow (Critical!)
+
+### הבעיה שנמצאה (24/01/2026):
+שדה `reportType` נשמר בהגדרת התרגיל (Firebase) אבל לא הועבר לאימון פעיל.
+
+### שורש הבעיה:
+פונקציית `addExercise` נקראת ממספר מקומות - וכשמוסיפים שדה חדש, צריך לעדכן את **כולם**.
+
+### זרימת הנתונים:
+```
+Firebase: exercises/{id}
+  │
+  ├── ExerciseCard.tsx ─────┐
+  ├── ExerciseLibrary.tsx ──┼── addExercise() ──▶ Zustand Store ──▶ Active Workout
+  ├── WorkoutSession.tsx ───┤
+  └── WorkoutHistory.tsx ───┘ (4 מקומות!)
+```
+
+### חובה בעת הוספת שדה חדש לתרגיל:
+
+1. **עדכון הטייפ:** `src/domains/workouts/types/active-workout.types.ts`
+2. **עדכון Firebase:** `src/lib/firebase/exercises.ts` (אם רלוונטי)
+3. **עדכון כל הקריאות ל-addExercise:**
+   ```bash
+   grep -r "addExercise(" src/ | grep -v "removeExercise"
+   ```
+4. **בדיקה שהשדה מגיע לרכיב הסופי** (למשל SetReportRow)
+
+### רשימת שדות נוכחית ב-addExercise:
+```typescript
+addExercise({
+  exerciseId: string,
+  exerciseName: string,
+  exerciseNameHe: string,
+  imageUrl: string,
+  primaryMuscle: string,
+  category: string,
+  equipment: string,
+  reportType: string,  // ⚠️ נוסף 24/01/2026
+})
+```
+
 ### Data Patterns
 
 #### Auto-Save Implementation
