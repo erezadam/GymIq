@@ -130,6 +130,40 @@ export function SetReportRow({
     </div>
   )
 
+  // Render speed input (km/h)
+  const renderSpeedInput = () => (
+    <div className="set-input-group">
+      <label className="set-label">מהירות</label>
+      <input
+        type="number"
+        inputMode="decimal"
+        className="set-input"
+        value={set.speed || ''}
+        onChange={(e) => onUpdate({ speed: parseFloat(e.target.value) || 0 })}
+        placeholder="קמ״ש"
+        step="0.1"
+        min="0"
+      />
+    </div>
+  )
+
+  // Render distance input (km)
+  const renderDistanceInput = () => (
+    <div className="set-input-group">
+      <label className="set-label">מרחק</label>
+      <input
+        type="number"
+        inputMode="decimal"
+        className="set-input"
+        value={set.distance || ''}
+        onChange={(e) => onUpdate({ distance: parseFloat(e.target.value) || 0 })}
+        placeholder="ק״מ"
+        step="0.1"
+        min="0"
+      />
+    </div>
+  )
+
   // Render inputs based on reportType
   const renderInputs = () => {
     switch (reportType) {
@@ -154,6 +188,45 @@ export function SetReportRow({
             {renderTimeInput()}
           </>
         )
+
+      case 'time_speed':
+        return (
+          <>
+            {renderTimeInput()}
+            {renderSpeedInput()}
+          </>
+        )
+
+      case 'time_distance':
+        return (
+          <>
+            {renderTimeInput()}
+            {renderDistanceInput()}
+          </>
+        )
+
+      case 'speed_distance':
+        return (
+          <>
+            {renderSpeedInput()}
+            {renderDistanceInput()}
+          </>
+        )
+
+      case 'time_speed_distance':
+        return (
+          <>
+            {renderTimeInput()}
+            {renderSpeedInput()}
+            {renderDistanceInput()}
+          </>
+        )
+
+      case 'distance_only':
+        return renderDistanceInput()
+
+      case 'speed_only':
+        return renderSpeedInput()
 
       case 'weight_reps':
       default:

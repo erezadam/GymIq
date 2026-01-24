@@ -4,7 +4,7 @@
  */
 
 // Field types available for set reporting
-export type ReportFieldType = 'weight' | 'reps' | 'time' | 'intensity'
+export type ReportFieldType = 'weight' | 'reps' | 'time' | 'intensity' | 'speed' | 'distance'
 
 // Single field configuration
 export interface ReportField {
@@ -93,6 +93,10 @@ export function getDefaultFieldLabel(fieldType: ReportFieldType): string {
       return 'זמן'
     case 'intensity':
       return 'עצימות'
+    case 'speed':
+      return 'מהירות'
+    case 'distance':
+      return 'מרחק'
     default:
       return fieldType
   }

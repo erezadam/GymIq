@@ -24,6 +24,8 @@ const fieldTypeOptions: { value: ReportFieldType; label: string }[] = [
   { value: 'reps', label: 'חזרות' },
   { value: 'time', label: 'זמן' },
   { value: 'intensity', label: 'עצימות' },
+  { value: 'speed', label: 'מהירות' },
+  { value: 'distance', label: 'מרחק' },
 ]
 
 export default function ReportTypeManager() {
@@ -115,8 +117,8 @@ export default function ReportTypeManager() {
         nameEn: newReportType.nameEn || newReportType.id,
         fields: newReportType.fields.map(f => ({
           type: f.type,
-          label: f.label || undefined,
           required: f.required,
+          ...(f.label ? { label: f.label } : {}),
         })),
         isActive: true,
         sortOrder: newReportType.sortOrder || reportTypes.length + 1,

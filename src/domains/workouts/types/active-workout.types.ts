@@ -20,6 +20,8 @@ export interface ReportedSet {
   reps: number
   time?: number           // Time in seconds (for time_only and reps_time)
   intensity?: number      // Intensity 1-10 (for intensity_time)
+  speed?: number          // Speed (km/h or pace)
+  distance?: number       // Distance (meters or km)
   completedAt?: Date
 }
 

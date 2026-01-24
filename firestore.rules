@@ -64,6 +64,15 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // ============ REPORT TYPES ============
+    match /reportTypes/{reportTypeId} {
+      // Anyone can read report types
+      allow read: if true;
+
+      // Only admins can write
+      allow create, update, delete: if isAdmin();
+    }
+
     // ============ EXERCISES ============
     match /exercises/{exerciseId} {
       // Anyone can read exercises (for initial load before auth)
