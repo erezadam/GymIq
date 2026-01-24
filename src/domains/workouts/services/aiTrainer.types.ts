@@ -50,6 +50,7 @@ export interface AIGeneratedWorkout {
   muscleGroups: string[]     // Muscle groups worked (Hebrew names)
   source: 'ai_trainer'
   aiWorkoutNumber: number    // Sequential number (1, 2, 3...)
+  aiExplanation?: string     // AI explanation for workout selection
 }
 
 // Context passed to Claude API

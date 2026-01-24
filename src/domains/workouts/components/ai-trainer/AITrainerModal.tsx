@@ -5,12 +5,12 @@
 
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { X, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
+import { X, Loader2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
 import { getMuscles } from '@/lib/firebase/muscles'
 import { MuscleIcon } from '@/shared/components/MuscleIcon'
 import { useAuthStore } from '@/domains/authentication/store'
 import { generateAIWorkouts } from '@/domains/workouts/services/aiTrainerService'
-import type { AITrainerRequest, MuscleSelectionMode } from '@/domains/workouts/services/aiTrainer.types'
+import type { AITrainerRequest, MuscleSelectionMode, AIGeneratedWorkout } from '@/domains/workouts/services/aiTrainer.types'
 import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
 
 interface AITrainerModalProps {
@@ -62,6 +62,10 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
   const [isLoadingMuscles, setIsLoadingMuscles] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Explanation popup state
+  const [showExplanation, setShowExplanation] = useState(false)
+  const [generatedWorkouts, setGeneratedWorkouts] = useState<AIGeneratedWorkout[]>([])
 
   // Load muscles from Firebase
   useEffect(() => {
@@ -142,8 +146,18 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
 
       console.log(`✅ Created ${result.workouts.length} workouts`)
 
-      onClose()
-      navigate('/workout/history')
+      // Check if we have AI explanations
+      const hasExplanations = result.workouts.some(w => w.aiExplanation)
+
+      if (hasExplanations) {
+        // Show explanation popup
+        setGeneratedWorkouts(result.workouts)
+        setShowExplanation(true)
+      } else {
+        // No explanations (fallback was used), go directly to history
+        onClose()
+        navigate('/workout/history')
+      }
 
     } catch (err: any) {
       console.error('Failed to generate workout:', err)
@@ -151,6 +165,14 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
     } finally {
       setIsGenerating(false)
     }
+  }
+
+  // Close explanation popup and navigate to history
+  const handleCloseExplanation = () => {
+    setShowExplanation(false)
+    setGeneratedWorkouts([])
+    onClose()
+    navigate('/workout/history')
   }
 
   if (!isOpen) return null
@@ -722,6 +744,154 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
           ביטול
         </button>
       </div>
+
+      {/* AI Explanation Popup */}
+      {showExplanation && generatedWorkouts.length > 0 && (
+        <div
+          className="confirmation-modal"
+          onClick={(e) => e.stopPropagation()}
+          dir="rtl"
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            maxWidth: '400px',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            padding: '24px',
+            zIndex: 101,
+            background: '#1F2937',
+            borderRadius: '16px',
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)',
+          }}
+        >
+          {/* Success Icon */}
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <div
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, rgba(45, 212, 191, 0.2) 0%, rgba(16, 185, 129, 0.2) 100%)',
+                border: '2px solid rgba(45, 212, 191, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px',
+              }}
+            >
+              <Sparkles className="w-8 h-8" style={{ color: '#2DD4BF' }} />
+            </div>
+            <h3
+              style={{
+                fontSize: '22px',
+                fontWeight: 700,
+                color: '#FFFFFF',
+                marginBottom: '8px',
+              }}
+            >
+              {generatedWorkouts.length === 1 ? 'האימון נוצר!' : `${generatedWorkouts.length} אימונים נוצרו!`}
+            </h3>
+            <p style={{ fontSize: '14px', color: '#9CA3AF' }}>
+              הנה ההסבר של ה-AI לבחירות שלו
+            </p>
+          </div>
+
+          {/* Explanations */}
+          <div style={{ marginBottom: '24px' }}>
+            {generatedWorkouts.map((workout, index) => (
+              <div
+                key={index}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  marginBottom: index < generatedWorkouts.length - 1 ? '12px' : 0,
+                }}
+              >
+                {generatedWorkouts.length > 1 && (
+                  <div
+                    style={{
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: '#EC4899',
+                      marginBottom: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <span>💪</span>
+                    <span>אימון {index + 1}</span>
+                  </div>
+                )}
+                <p
+                  style={{
+                    fontSize: '14px',
+                    lineHeight: '1.6',
+                    color: '#E5E7EB',
+                    margin: 0,
+                  }}
+                >
+                  {workout.aiExplanation || 'האימון נוצר בהצלחה!'}
+                </p>
+                {workout.muscleGroups.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: '12px',
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '6px',
+                    }}
+                  >
+                    {workout.muscleGroups.map((muscle, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          background: 'rgba(139, 92, 246, 0.2)',
+                          border: '1px solid rgba(139, 92, 246, 0.3)',
+                          borderRadius: '6px',
+                          padding: '4px 8px',
+                          fontSize: '12px',
+                          color: '#A78BFA',
+                        }}
+                      >
+                        {muscle}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Continue button */}
+          <button
+            onClick={handleCloseExplanation}
+            style={{
+              width: '100%',
+              padding: '16px',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #2DD4BF 0%, #10B981 100%)',
+              color: '#FFFFFF',
+              fontSize: '16px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(45, 212, 191, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+            }}
+          >
+            <span>🎯</span>
+            <span>לצפייה באימונים</span>
+          </button>
+        </div>
+      )}
     </div>
   )
 }

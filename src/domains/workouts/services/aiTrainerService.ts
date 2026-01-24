@@ -1,11 +1,13 @@
 /**
  * AI Trainer Service
- * Generates personalized workout plans using AI or fallback logic
+ * Generates personalized workout plans using AI (Cloud Function) or fallback logic
  */
 
 import { getExercises } from '@/lib/firebase/exercises'
 import { getMuscles } from '@/lib/firebase/muscles'
 import { getUserWorkoutHistory, saveWorkoutHistory, getRecentlyDoneExerciseIds } from '@/lib/firebase/workoutHistory'
+import { getFunctions, httpsCallable } from 'firebase/functions'
+import { app } from '@/lib/firebase/config'
 import type { Exercise } from '@/domains/exercises/types'
 import type { WorkoutHistoryEntry } from '@/domains/workouts/types'
 import {
@@ -18,6 +20,83 @@ import {
   getExerciseCount,
   getAIWorkoutName,
 } from './aiTrainer.types'
+
+// Cloud Function response type
+interface CloudFunctionResponse {
+  success: boolean
+  workouts: AIGeneratedWorkout[]
+  usedFallback: boolean
+  error?: string
+  rateLimitInfo?: {
+    remaining: number
+    resetAt: string
+  }
+}
+
+// Initialize Firebase Functions
+const functions = getFunctions(app)
+
+/**
+ * Call Cloud Function to generate workouts via Claude API
+ * Returns null if Cloud Function fails (triggers local fallback)
+ */
+async function callCloudFunction(
+  context: AITrainerContext
+): Promise<CloudFunctionResponse | null> {
+  try {
+    console.log('☁️ Calling Cloud Function for AI workout generation...')
+
+    const generateWorkout = httpsCallable<unknown, CloudFunctionResponse>(
+      functions,
+      'generateAIWorkout'
+    )
+
+    // Prepare data for Cloud Function (minimize payload size)
+    const payload = {
+      request: context.request,
+      availableExercises: context.availableExercises.map(ex => ({
+        id: ex.id,
+        nameHe: ex.nameHe,
+        primaryMuscle: ex.primaryMuscle,
+        category: ex.category,
+        imageUrl: ex.imageUrl,
+      })),
+      muscles: context.muscles.map(m => ({
+        id: m.id,
+        nameHe: m.nameHe,
+      })),
+      recentWorkouts: context.recentWorkouts,
+      yesterdayExerciseIds: context.yesterdayExerciseIds,
+    }
+
+    const result = await generateWorkout(payload)
+
+    console.log('☁️ Cloud Function response:', {
+      success: result.data.success,
+      workoutCount: result.data.workouts?.length || 0,
+      usedFallback: result.data.usedFallback,
+      rateLimitRemaining: result.data.rateLimitInfo?.remaining,
+    })
+
+    return result.data
+  } catch (error: any) {
+    console.error('☁️ Cloud Function call failed:', error.message)
+
+    // Check for specific error types
+    if (error.code === 'functions/resource-exhausted') {
+      // Rate limit error from Cloud Function
+      return {
+        success: false,
+        workouts: [],
+        usedFallback: false,
+        error: 'הגעת למגבלה היומית. נסה שוב מחר.',
+      }
+    }
+
+    // Return null to trigger local fallback
+    return null
+  }
+}
 
 // Get next AI workout number for user
 async function getNextAIWorkoutNumber(userId: string): Promise<number> {
@@ -337,21 +416,59 @@ export async function generateAIWorkouts(
     // Build context
     const context = await buildContext(request)
 
+    // Try Cloud Function first (Claude API)
+    const cloudResult = await callCloudFunction(context)
+
+    // If Cloud Function returned a rate limit error, pass it through
+    if (cloudResult && !cloudResult.success && cloudResult.error) {
+      console.log('❌ Cloud Function returned error:', cloudResult.error)
+      return {
+        success: false,
+        workouts: [],
+        error: cloudResult.error,
+      }
+    }
+
+    // If Cloud Function succeeded with workouts, save them and return
+    if (cloudResult && cloudResult.success && cloudResult.workouts.length > 0) {
+      console.log(`☁️ Cloud Function succeeded with ${cloudResult.workouts.length} workouts`)
+
+      // Generate bundleId only for multiple workouts
+      const bundleId = request.numWorkouts > 1
+        ? `bundle_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        : null
+
+      // Save workouts to Firebase
+      for (const workout of cloudResult.workouts) {
+        const entry = convertToWorkoutEntry(workout, request.userId, bundleId)
+        const id = await saveWorkoutHistory(entry)
+        console.log(`💾 Saved "${workout.name}" → ID: ${id}`)
+      }
+
+      return {
+        success: true,
+        workouts: cloudResult.workouts,
+        usedFallback: cloudResult.usedFallback,
+      }
+    }
+
+    // Cloud Function failed or unavailable - use local fallback
+    console.log('🔄 Using local fallback generation...')
+
     // Get starting workout number
     const startNumber = await getNextAIWorkoutNumber(request.userId)
 
-    // Generate workouts (using fallback for now)
+    // Generate workouts locally
     const workouts: AIGeneratedWorkout[] = []
-    const usedMuscleIds: string[][] = []  // Track muscle IDs used in each workout
+    const usedMuscleIds: string[][] = []
 
     for (let i = 0; i < request.numWorkouts; i++) {
       const { workout, targetMuscleIds } = generateFallbackWorkout(context, startNumber + i, i, usedMuscleIds)
       workouts.push(workout)
-      // Track which muscle IDs were used for this workout (for ai_rotate mode)
       usedMuscleIds.push(targetMuscleIds)
     }
 
-    console.log(`✅ Generated ${workouts.length} workouts`)
+    console.log(`✅ Generated ${workouts.length} workouts (local fallback)`)
     workouts.forEach((w, i) => {
       console.log(`   📝 Workout ${i + 1}: "${w.name}" - ${w.exercises.length} exercises (${w.muscleGroups.join(', ')})`)
     })
@@ -376,7 +493,7 @@ export async function generateAIWorkouts(
     return {
       success: true,
       workouts,
-      usedFallback: true, // TODO: Change when Claude API is integrated
+      usedFallback: true,
     }
 
   } catch (error: any) {

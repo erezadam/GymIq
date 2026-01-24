@@ -152,5 +152,16 @@ service cloud.firestore {
         (resource.data.trainerId == request.auth.uid ||
          resource.data.traineeId == request.auth.uid);
     }
+
+    // ============ AI TRAINER USAGE (Rate Limiting) ============
+    match /aiTrainerUsage/{usageId} {
+      // Only Cloud Functions can read/write (via Admin SDK)
+      // Users can read their own usage for displaying remaining count
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+
+      // No direct client writes - only via Cloud Functions
+      allow create, update, delete: if false;
+    }
   }
 }
