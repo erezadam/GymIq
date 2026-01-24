@@ -344,6 +344,28 @@ export default function ExerciseForm() {
               {errors.nameHe && <p className="text-red-400 text-sm mt-1">{errors.nameHe.message}</p>}
             </div>
 
+            {/* Report Type - moved up to ensure dropdown has space */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">סוג דיווח *</label>
+              <select
+                {...register('reportType')}
+                className={`input-neon w-full ${errors.reportType ? 'border-red-500' : ''}`}
+              >
+                <option value="">בחר סוג דיווח</option>
+                {reportTypesData.map((rt) => (
+                  <option key={rt.id} value={rt.id}>
+                    {rt.nameHe}
+                  </option>
+                ))}
+              </select>
+              {errors.reportType && (
+                <p className="text-red-400 text-sm mt-1">{errors.reportType.message}</p>
+              )}
+              <p className="text-text-muted text-xs mt-1">
+                קובע אילו שדות יוצגו בדיווח סטים
+              </p>
+            </div>
+
             {/* Category - Main Muscle */}
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-2">שריר ראשי *</label>
@@ -396,28 +418,6 @@ export default function ExerciseForm() {
               {errors.equipment && (
                 <p className="text-red-400 text-sm mt-1">{errors.equipment.message}</p>
               )}
-            </div>
-
-            {/* Report Type */}
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-2">סוג דיווח *</label>
-              <select
-                {...register('reportType')}
-                className={`input-neon w-full ${errors.reportType ? 'border-red-500' : ''}`}
-              >
-                <option value="">בחר סוג דיווח</option>
-                {reportTypesData.map((rt) => (
-                  <option key={rt.id} value={rt.id}>
-                    {rt.nameHe}
-                  </option>
-                ))}
-              </select>
-              {errors.reportType && (
-                <p className="text-red-400 text-sm mt-1">{errors.reportType.message}</p>
-              )}
-              <p className="text-text-muted text-xs mt-1">
-                קובע אילו שדות יוצגו בדיווח סטים
-              </p>
             </div>
 
             {/* Primary Muscle - Sub Muscle */}
