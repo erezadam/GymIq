@@ -173,10 +173,15 @@ export const VALID_EXERCISE_CATEGORIES = [
   'cardio', 'functional', 'stretching', 'warmup'
 ] as const
 
-// Valid primary muscle IDs (from MuscleManager in Firebase)
-export const VALID_PRIMARY_MUSCLES = new Set([
-  'cardio', 'arms', 'back', 'chest', 'core', 'glutes', 'legs', 'shoulders'
+// Valid primary categories for exercises (main muscle groups only)
+// IMPORTANT: These are the ONLY valid values for the 'category' field
+// Sub-muscles like 'glutes', 'quads', 'lats' must NOT be used as category!
+export const VALID_EXERCISE_CATEGORIES_SET = new Set([
+  'legs', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio', 'warmup', 'functional', 'stretching'
 ])
+
+// Alias for backward compatibility
+export const VALID_PRIMARY_MUSCLES = VALID_EXERCISE_CATEGORIES_SET
 
 // Mapping from specific muscles to parent muscle groups
 const MUSCLE_TO_PARENT_MAPPING: Record<string, string> = {
@@ -341,4 +346,149 @@ export const fixInvalidPrimaryMuscles = async (): Promise<{ id: string; nameHe: 
     await batch.commit()
   }
   return results
+}
+
+// Mapping from sub-muscles to their parent category
+const SUB_MUSCLE_TO_CATEGORY: Record<string, string> = {
+  // Legs sub-muscles
+  'glutes': 'legs',
+  'quads': 'legs',
+  'quadriceps': 'legs',
+  'hamstrings': 'legs',
+  'calves': 'legs',
+  'adductors': 'legs',
+  'abductors': 'legs',
+  'hip_flexors': 'legs',
+  // Back sub-muscles
+  'lats': 'back',
+  'upper_back': 'back',
+  'lower_back': 'back',
+  'traps': 'back',
+  'rhomboids': 'back',
+  // Chest sub-muscles
+  'upper_chest': 'chest',
+  'mid_chest': 'chest',
+  'lower_chest': 'chest',
+  // Arms sub-muscles
+  'biceps': 'arms',
+  'triceps': 'arms',
+  'forearms': 'arms',
+  // Shoulders sub-muscles
+  'front_delt': 'shoulders',
+  'side_delt': 'shoulders',
+  'rear_delt': 'shoulders',
+  // Core sub-muscles
+  'abs': 'core',
+  'obliques': 'core',
+  'lower_abs': 'core',
+}
+
+// Find exercises with invalid category (sub-muscle used as category)
+export const findExercisesWithInvalidCategory = async (): Promise<{
+  id: string
+  name: string
+  nameHe: string
+  currentCategory: string
+  suggestedCategory: string
+}[]> => {
+  const snapshot = await getDocs(collection(db, COLLECTION))
+  const results: {
+    id: string
+    name: string
+    nameHe: string
+    currentCategory: string
+    suggestedCategory: string
+  }[] = []
+
+  snapshot.docs.forEach((docSnapshot) => {
+    const data = docSnapshot.data()
+    const category = data.category
+
+    // Skip if category is valid
+    if (VALID_EXERCISE_CATEGORIES_SET.has(category)) {
+      return
+    }
+
+    // Check if category is actually a sub-muscle
+    const suggestedCategory = SUB_MUSCLE_TO_CATEGORY[category]
+    if (suggestedCategory) {
+      results.push({
+        id: docSnapshot.id,
+        name: data.name || '',
+        nameHe: data.nameHe || '',
+        currentCategory: category,
+        suggestedCategory,
+      })
+    } else if (category) {
+      // Unknown category - suggest based on primaryMuscle if available
+      const primaryMuscle = data.primaryMuscle
+      const parentFromPrimary = SUB_MUSCLE_TO_CATEGORY[primaryMuscle] || primaryMuscle
+      if (VALID_EXERCISE_CATEGORIES_SET.has(parentFromPrimary)) {
+        results.push({
+          id: docSnapshot.id,
+          name: data.name || '',
+          nameHe: data.nameHe || '',
+          currentCategory: category,
+          suggestedCategory: parentFromPrimary,
+        })
+      }
+    }
+  })
+
+  return results
+}
+
+// Fix all exercises with invalid categories
+export const fixExercisesWithInvalidCategory = async (): Promise<{
+  fixed: { id: string; nameHe: string; oldCategory: string; newCategory: string }[]
+  failed: { id: string; nameHe: string; category: string; reason: string }[]
+}> => {
+  const invalidExercises = await findExercisesWithInvalidCategory()
+  const fixed: { id: string; nameHe: string; oldCategory: string; newCategory: string }[] = []
+  const failed: { id: string; nameHe: string; category: string; reason: string }[] = []
+
+  if (invalidExercises.length === 0) {
+    return { fixed, failed }
+  }
+
+  const batch = writeBatch(db)
+
+  for (const exercise of invalidExercises) {
+    if (exercise.suggestedCategory) {
+      const docRef = doc(db, COLLECTION, exercise.id)
+      batch.update(docRef, { category: exercise.suggestedCategory })
+      fixed.push({
+        id: exercise.id,
+        nameHe: exercise.nameHe,
+        oldCategory: exercise.currentCategory,
+        newCategory: exercise.suggestedCategory,
+      })
+    } else {
+      failed.push({
+        id: exercise.id,
+        nameHe: exercise.nameHe,
+        category: exercise.currentCategory,
+        reason: 'לא נמצאה קטגוריה מתאימה',
+      })
+    }
+  }
+
+  if (fixed.length > 0) {
+    await batch.commit()
+  }
+
+  return { fixed, failed }
+}
+
+// Fix a single exercise's category by ID
+export const fixExerciseCategory = async (
+  exerciseId: string,
+  newCategory: string
+): Promise<void> => {
+  if (!VALID_EXERCISE_CATEGORIES_SET.has(newCategory)) {
+    throw new Error(`קטגוריה לא תקינה: ${newCategory}. קטגוריות תקינות: ${Array.from(VALID_EXERCISE_CATEGORIES_SET).join(', ')}`)
+  }
+
+  const docRef = doc(db, COLLECTION, exerciseId)
+  await updateDoc(docRef, { category: newCategory })
 }

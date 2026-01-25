@@ -131,6 +131,7 @@ caches.keys().then(names => {
 
 | תאריך | בעיה | בדיקה |
 |-------|------|-------|
+| 25/01 | תרגיל מופיע בקטגוריה שגויה (category=sub-muscle) | `grep -r "VALID_EXERCISE_CATEGORIES_SET" src/` - ודא שיש validation |
 | 25/01 | המשך אימון "ללא דיווח" יוצר אימון חדש | `grep -r "case 'cancelled'" src/` - ודא ש-cancelled מטופל עם in_progress |
 | 24/01 | reportType לא מועבר ב-addExercise | `grep -r "addExercise" src/ \| grep -v "removeExercise"` - ודא שכולם מעבירים reportType |
 | 09/01 | קלוריות לא מוצגות בהיסטוריה | `grep -r "workout\.calories" src/` |
@@ -197,6 +198,31 @@ src/domains/workouts/components/WorkoutSession.tsx
 src/domains/workouts/components/WorkoutHistory.tsx (4 מקומות!)
 ```
 
+### ⚠️ קטגוריות תרגילים - כלל קריטי:
+> **category חייב להיות קבוצת שרירים ראשית - לא תת-שריר!**
+
+```typescript
+// ערכים תקינים ל-category:
+'legs', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio', 'warmup', 'functional', 'stretching'
+
+// ❌ אסור - תת-שרירים כ-category:
+'glutes', 'quads', 'biceps', 'lats', 'abs' // שגוי!
+
+// ✅ נכון:
+category: 'legs', primaryMuscle: 'glutes'
+category: 'arms', primaryMuscle: 'biceps'
+```
+
+**בדיקה מהירה:**
+```bash
+# ודא שיש validation ב-ExerciseForm:
+grep -r "VALID_EXERCISE_CATEGORIES_SET" src/domains/admin/
+
+# מצא תרגילים עם category לא תקין:
+# (הפעל מהקונסול או מ-Firebase Console)
+# findExercisesWithInvalidCategory()
+```
+
 ### בדיקת רגרסיות מהירה:
 ```bash
 # הרץ לפני כל deploy:
@@ -243,12 +269,22 @@ grep -r "estimateCalories" src/              # לא אמור להופיע בקו
 □ ב-Firebase: ודא שאין אימונים כפולים אחרי המשך
 ```
 
+### בדיקת קטגוריות תרגילים (P1):
+```
+□ בטופס עריכת תרגיל: נסה לשמור category לא תקין → אמורה להופיע שגיאה
+□ תרגיל מסוג "רגליים" מופיע תחת "רגליים" (לא "גב" או אחר)
+□ תרגיל עם glutes מופיע תחת "רגליים" (לא כקטגוריה נפרדת)
+```
+
 ### Break Detection Commands:
 ```bash
 # אם משהו נראה שבור, הרץ:
 npm run build 2>&1 | grep -i error
-npm run lint 2>&1 | grep -i error  
+npm run lint 2>&1 | grep -i error
 # console.clear() בדפדפן, אז לבדוק שגיאות
+
+# בדוק validation של category:
+grep -r "VALID_EXERCISE_CATEGORIES_SET" src/domains/admin/
 
 # אם יש שגיאות - עצור את הdeploy!
 ```

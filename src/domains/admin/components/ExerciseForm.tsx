@@ -12,6 +12,7 @@ import { equipment, difficultyOptions } from '@/domains/exercises/data/mockExerc
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
 import { getMuscles } from '@/lib/firebase/muscles'
 import { getActiveReportTypes } from '@/lib/firebase/reportTypes'
+import { VALID_EXERCISE_CATEGORIES_SET } from '@/lib/firebase/exercises'
 import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
 import type { ReportType } from '@/domains/exercises/types/reportTypes'
 
@@ -232,6 +233,13 @@ export default function ExerciseForm() {
   const onSubmit = (data: ExerciseFormData) => {
     console.log('🔥 ExerciseForm: onSubmit called with data:', data)
     console.log('🔥 ExerciseForm: reportType selected:', data.reportType)
+
+    // VALIDATION: Ensure category is a valid primary category (not a sub-muscle)
+    if (!VALID_EXERCISE_CATEGORIES_SET.has(data.category)) {
+      console.error('🔥 ExerciseForm: Invalid category:', data.category)
+      toast.error(`קטגוריה לא תקינה: ${data.category}. יש לבחור קטגוריה ראשית (רגליים, חזה, גב וכו')`)
+      return
+    }
 
     const formattedData = {
       ...data,

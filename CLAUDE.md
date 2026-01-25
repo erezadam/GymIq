@@ -88,6 +88,31 @@ grep -r "AIza" --include="*.ts" --include="*.js" --include="*.cjs" --include="*.
 
 **קובץ קריטי:** `src/domains/workouts/components/WorkoutHistory.tsx` - פונקציה `handleConfirmContinue`
 
+### קטגוריות תרגילים - category vs primaryMuscle
+
+| שדה | תפקיד | ערכים תקינים |
+|-----|-------|-------------|
+| `category` | קבוצת שרירים ראשית | `legs`, `chest`, `back`, `shoulders`, `arms`, `core`, `cardio`, `warmup`, `functional`, `stretching` |
+| `primaryMuscle` | שריר ספציפי | תת-שרירים כמו `glutes`, `quads`, `biceps`, `lats` וכו' |
+
+**⚠️ חוקי ברזל:**
+- `category` חייב להיות **רק** מהרשימה התקינה למעלה
+- **אסור** להשתמש בתת-שרירים כ-category (למשל: `glutes` לא תקין, יש להשתמש ב-`legs`)
+- Validation אוטומטי ב-`ExerciseForm.tsx` חוסם שמירת category לא תקין
+- פונקציות תיקון זמינות ב-`src/lib/firebase/exercises.ts`:
+  - `findExercisesWithInvalidCategory()` - מוצא תרגילים עם category שגוי
+  - `fixExercisesWithInvalidCategory()` - מתקן אוטומטית
+
+**מיפוי תת-שרירים לקטגוריות:**
+```
+glutes, quads, hamstrings, calves → legs
+biceps, triceps, forearms → arms
+lats, traps, rhomboids → back
+front_delt, side_delt, rear_delt → shoulders
+abs, obliques → core
+upper_chest, mid_chest, lower_chest → chest
+```
+
 ---
 
 ## טבלת חוקים
@@ -170,6 +195,6 @@ grep -r "AIza" --include="*.ts" --include="*.js" --include="*.cjs" --include="*.
 
 ```
 ══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 19/01/2026 | הוסרו פקודות view, תוקנו נתיבי SKILL
+עדכון אחרון: 25/01/2026 | נוסף תיעוד קטגוריות תרגילים (category vs primaryMuscle)
 ══════════════════════════════════════════════════════════════════════════════
 ```
