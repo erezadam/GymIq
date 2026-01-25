@@ -32,10 +32,6 @@ const suggestedCategory = {
 };
 
 async function fixExercises() {
-  console.log('Initializing Firebase...');
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
   console.log('Fetching exercises...\n');
   const exercisesRef = collection(db, 'exercises');
   const snapshot = await getDocs(exercisesRef);
