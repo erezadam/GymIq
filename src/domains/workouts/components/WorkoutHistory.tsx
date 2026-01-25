@@ -303,9 +303,9 @@ export default function WorkoutHistory() {
       // Clear any existing workout in the store
       clearWorkout()
 
-      // Check if this is an in_progress workout with no reported sets
-      if ((workoutSummary.status === 'in_progress' || workoutSummary.status === 'partial') && !hasReportedSets(fullWorkout)) {
-        console.log('📋 Detected in_progress workout with no reported sets')
+      // Check if this is an in_progress/cancelled/partial workout with no reported sets
+      if ((workoutSummary.status === 'in_progress' || workoutSummary.status === 'partial' || workoutSummary.status === 'cancelled') && !hasReportedSets(fullWorkout)) {
+        console.log('📋 Detected workout with no reported sets, status:', workoutSummary.status)
         setContinueDialog({ isOpen: false, workout: null })
         setEmptyWorkoutDialog({ isOpen: true, workout: workoutSummary })
         return
@@ -313,10 +313,9 @@ export default function WorkoutHistory() {
 
       // Handle the different cases based on status
       switch (workoutSummary.status) {
-        case 'completed':
-        case 'cancelled': {
-          // Completed or cancelled workout - create NEW workout with exercises but EMPTY sets
-          console.log('📋 Creating new workout from completed/cancelled - exercises only, no set data')
+        case 'completed': {
+          // Completed workout - create NEW workout with exercises but EMPTY sets
+          console.log('📋 Creating new workout from completed - exercises only, no set data')
 
           fullWorkout.exercises.forEach(exercise => {
             const details = exerciseDetailsMap.get(exercise.exerciseId)
@@ -337,10 +336,11 @@ export default function WorkoutHistory() {
           break
         }
 
+        case 'cancelled':  // "ללא דיווח" - מעדכן אימון קיים, לא יוצר חדש
         case 'in_progress':
         case 'partial': {
-          // Case 2: In-progress workout - create NEW workout copying ALL set data
-          console.log('📋 Creating new workout from in-progress - copying all set data')
+          // cancelled/in_progress/partial - UPDATE existing workout, copy all set data
+          console.log('📋 Continuing existing workout - updating workout ID:', workoutSummary.id)
 
           // Store the exercise data with sets for the active workout to use
           const exercisesWithSets = fullWorkout.exercises.map(exercise => {
@@ -533,8 +533,8 @@ export default function WorkoutHistory() {
   const getDialogMessage = (status: WorkoutCompletionStatus) => {
     switch (status) {
       case 'completed':
-      case 'cancelled':
         return 'שים לב: אתה מתחיל אימון חדש מאפס עם אותם תרגילים'
+      case 'cancelled':  // "ללא דיווח" - מתנהג כמו in_progress
       case 'in_progress':
       case 'partial':
         return 'שים לב: אתה ממשיך את האימון הקיים עם כל הנתונים שדיווחת'
@@ -549,8 +549,8 @@ export default function WorkoutHistory() {
   const getDialogTitle = (status: WorkoutCompletionStatus) => {
     switch (status) {
       case 'completed':
-      case 'cancelled':
         return 'התחל אימון חדש'
+      case 'cancelled':  // "ללא דיווח" - מתנהג כמו in_progress
       case 'in_progress':
       case 'partial':
         return 'המשך אימון'

@@ -131,6 +131,7 @@ caches.keys().then(names => {
 
 | תאריך | בעיה | בדיקה |
 |-------|------|-------|
+| 25/01 | המשך אימון "ללא דיווח" יוצר אימון חדש | `grep -r "case 'cancelled'" src/` - ודא ש-cancelled מטופל עם in_progress |
 | 24/01 | reportType לא מועבר ב-addExercise | `grep -r "addExercise" src/ \| grep -v "removeExercise"` - ודא שכולם מעבירים reportType |
 | 09/01 | קלוריות לא מוצגות בהיסטוריה | `grep -r "workout\.calories" src/` |
 | 08/01 | WorkoutSummaryModal נמחק | `grep -r "WorkoutSummaryModal" src/` |
@@ -145,6 +146,30 @@ handleDeleteWorkout - כפתור מחיקת אימון
 handleAddSet - הוספת סט לאימון
 useTimer / RestTimer - טיימר מנוחה
 workout.calories - שדה קלוריות (לא estimateCalories!)
+```
+
+### ⚠️ סטטוסי אימון - כלל קריטי:
+> **cancelled, in_progress, partial = מעדכנים אימון קיים**
+> **רק completed = יוצר אימון חדש**
+
+```typescript
+// ב-WorkoutHistory.tsx handleConfirmContinue:
+switch (workoutSummary.status) {
+  case 'completed':        // ✅ יוצר אימון חדש
+    break
+  case 'cancelled':        // ⚠️ חייב להיות עם in_progress!
+  case 'in_progress':      // ✅ מעדכן קיים
+  case 'partial':          // ✅ מעדכן קיים
+    localStorage.setItem('continueWorkoutId', workoutSummary.id)
+    break
+}
+```
+
+**בדיקה מהירה:**
+```bash
+# ודא ש-cancelled מטופל עם in_progress (לא עם completed!)
+grep -A2 "case 'cancelled'" src/domains/workouts/components/WorkoutHistory.tsx
+# צריך לראות: case 'in_progress': מתחתיו
 ```
 
 ### שדות חובה ב-addExercise:
@@ -207,6 +232,15 @@ grep -r "estimateCalories" src/              # לא אמור להופיע בקו
 4. סיום אימון → ודא שפופאפ סיכום מופיע
 5. היסטוריה → ודא שקלוריות מוצגות נכון
 6. חזור לכל מסך → ודא שheader לא "קופץ"
+7. המשך אימון "ללא דיווח" → ודא שמעדכן קיים (לא יוצר חדש!)
+```
+
+### בדיקת סטטוסי אימון (P1):
+```
+□ completed → לחיצה על "המשך" יוצרת אימון חדש
+□ in_progress → לחיצה על "המשך" מעדכנת אימון קיים
+□ cancelled ("ללא דיווח") → לחיצה על "המשך" מעדכנת אימון קיים
+□ ב-Firebase: ודא שאין אימונים כפולים אחרי המשך
 ```
 
 ### Break Detection Commands:
