@@ -4,6 +4,19 @@
 
 ---
 
+## [1.10.115] - 2026-01-25
+
+### תיקוני נתונים
+- **תוקנו 3 תרגילים ב-Firebase** עם חוסר התאמה בין category ל-primaryMuscle:
+  - היפטראסט על רגל אחת: `primaryMuscle` שונה מ-`back` ל-`glutes`
+  - פשיטת הגב בכיסא רומי: `category` שונה מ-`gluteus_maximus` ל-`back`
+  - Superman: `primaryMuscle` שונה מ-`back` ל-`lower_back`
+
+### כלים חדשים
+- `scripts/fix-exercises-admin.cjs` - סקריפט לתיקון תרגילים באמצעות Firebase Admin SDK
+
+---
+
 ## [1.10.114] - 2026-01-25
 
 ### אבטחה
@@ -18,11 +31,8 @@
 ### תיקונים
 - תוקן `scripts/fix-exercise-category.cjs` - הסרת קוד שאריתי שגרם לשגיאות
 
-### בעיות שזוהו (דורשות תיקון ידני ב-Firebase)
-3 תרגילים עם חוסר התאמה בין category ל-primaryMuscle:
-1. **היפטראסט על רגל אחת** - primaryMuscle צריך להיות `glutes` במקום `back`
-2. **פשיטת הגב בכיסא רומי** - category צריך להיות `back` במקום `gluteus_maximus`
-3. **Superman** - primaryMuscle צריך להיות `lower_back` במקום `back`
+### בעיות שזוהו
+- זוהו 3 תרגילים עם חוסר התאמה בין category ל-primaryMuscle (תוקן בגרסה 1.10.115)
 
 ---
 
