@@ -3,18 +3,9 @@
  * Run: npx tsx scripts/createTestUser.ts
  */
 
-import { initializeApp } from 'firebase/app'
-import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth'
-
-const firebaseConfig = {
-  apiKey: 'AIzaSyALBuSomQPQhp1JZABeBRKwsLzmkOdg6yc',
-  authDomain: 'gymiq-e8b4e.firebaseapp.com',
-  projectId: 'gymiq-e8b4e',
-  storageBucket: 'gymiq-e8b4e.firebasestorage.app',
-  messagingSenderId: '406884457868',
-  appId: '1:406884457868:web:d8de2397d14a1929b8caa9',
-}
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { createUserWithEmailAndPassword } from 'firebase/auth'
+import { db, auth } from './firebase-config'
 
 const TEST_USER = {
   email: 'admin@gymiq.app',

@@ -5,20 +5,8 @@
  * Run with: npx tsx scripts/equipmentDryRun.ts
  */
 
-import { initializeApp } from 'firebase/app'
-import { getFirestore, collection, getDocs } from 'firebase/firestore'
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBnBe5o2d6tGLSCOqLNpiLLb2EPpsyo_i4",
-  authDomain: "gymiq-e8b4e.firebaseapp.com",
-  projectId: "gymiq-e8b4e",
-  storageBucket: "gymiq-e8b4e.firebasestorage.app",
-  messagingSenderId: "871867923083",
-  appId: "1:871867923083:web:13e21f2e04a19c1eb21ca2"
-}
-
-const app = initializeApp(firebaseConfig)
-const db = getFirestore(app)
+import { collection, getDocs } from 'firebase/firestore'
+import { db } from './firebase-config'
 
 // Migration mapping
 const EQUIPMENT_MAPPING: Record<string, string> = {

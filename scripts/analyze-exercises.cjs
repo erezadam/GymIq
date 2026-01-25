@@ -3,18 +3,8 @@
  * Run with: node scripts/analyze-exercises.cjs
  */
 
-const { initializeApp } = require('firebase/app');
-const { getFirestore, collection, getDocs } = require('firebase/firestore');
-
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyBnT7jmxMGK8R63hCZG7kLXSFRzBiJajmY",
-  authDomain: "gymiq-e8b4e.firebaseapp.com",
-  projectId: "gymiq-e8b4e",
-  storageBucket: "gymiq-e8b4e.firebasestorage.app",
-  messagingSenderId: "92421097270",
-  appId: "1:92421097270:web:2dfca17764402c31f1ea63"
-};
+const { collection, getDocs } = require('firebase/firestore');
+const { db } = require('./firebase-config.cjs');
 
 // Valid muscle IDs (from MuscleManager)
 const VALID_MUSCLE_IDS = new Set([
@@ -23,8 +13,6 @@ const VALID_MUSCLE_IDS = new Set([
 
 async function analyzeExercises() {
   console.log('Initializing Firebase...');
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
 
   console.log('Fetching exercises...\n');
   const exercisesRef = collection(db, 'exercises');

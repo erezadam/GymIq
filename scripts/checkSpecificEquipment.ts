@@ -1,22 +1,12 @@
 /**
  * Check exercises with specific equipment types
  * READ ONLY
+ *
+ * Usage: npx tsx scripts/checkSpecificEquipment.ts
  */
 
-import { initializeApp } from 'firebase/app'
-import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore'
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBnBe5o2d6tGLSCOqLNpiLLb2EPpsyo_i4",
-  authDomain: "gymiq-e8b4e.firebaseapp.com",
-  projectId: "gymiq-e8b4e",
-  storageBucket: "gymiq-e8b4e.firebasestorage.app",
-  messagingSenderId: "871867923083",
-  appId: "1:871867923083:web:13e21f2e04a19c1eb21ca2"
-}
-
-const app = initializeApp(firebaseConfig)
-const db = getFirestore(app)
+import { collection, getDocs, query, where } from 'firebase/firestore'
+import { db } from './firebase-config'
 
 async function checkEquipment() {
   console.log('\n' + '='.repeat(70))

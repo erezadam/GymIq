@@ -3,18 +3,8 @@
  * Run with: node scripts/fix-categories.cjs
  */
 
-const { initializeApp } = require('firebase/app');
-const { getFirestore, doc, updateDoc } = require('firebase/firestore');
-
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyBnT7jmxMGK8R63hCZG7kLXSFRzBiJajmY",
-  authDomain: "gymiq-e8b4e.firebaseapp.com",
-  projectId: "gymiq-e8b4e",
-  storageBucket: "gymiq-e8b4e.firebasestorage.app",
-  messagingSenderId: "92421097270",
-  appId: "1:92421097270:web:2dfca17764402c31f1ea63"
-};
+const { doc, updateDoc } = require('firebase/firestore');
+const { db } = require('./firebase-config.cjs');
 
 // Exercises to fix
 const exercisesToFix = [

@@ -1,18 +1,11 @@
 /**
  * Check what categories exist in Firebase vs dropdown options
+ *
+ * Usage: npx tsx scripts/checkCategories.ts
  */
 
-import { initializeApp } from 'firebase/app'
-import { getFirestore, collection, getDocs } from 'firebase/firestore'
-
-const firebaseConfig = {
-  apiKey: 'AIzaSyALBuSomQPQhp1JZABeBRKwsLzmkOdg6yc',
-  authDomain: 'gymiq-e8b4e.firebaseapp.com',
-  projectId: 'gymiq-e8b4e',
-  storageBucket: 'gymiq-e8b4e.firebasestorage.app',
-  messagingSenderId: '406884457868',
-  appId: '1:406884457868:web:d8de2397d14a1929b8caa9',
-}
+import { collection, getDocs } from 'firebase/firestore'
+import { db } from './firebase-config'
 
 // Categories from mockExercises.ts
 const dropdownCategories = ['chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'cardio', 'functional', 'stretching']

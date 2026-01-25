@@ -3,17 +3,8 @@
  * Run: npx tsx scripts/updateExerciseImages.ts
  */
 
-import { initializeApp } from 'firebase/app'
-import { getFirestore, collection, getDocs, doc, updateDoc } from 'firebase/firestore'
-
-const firebaseConfig = {
-  apiKey: 'AIzaSyALBuSomQPQhp1JZABeBRKwsLzmkOdg6yc',
-  authDomain: 'gymiq-e8b4e.firebaseapp.com',
-  projectId: 'gymiq-e8b4e',
-  storageBucket: 'gymiq-e8b4e.firebasestorage.app',
-  messagingSenderId: '406884457868',
-  appId: '1:406884457868:web:d8de2397d14a1929b8caa9',
-}
+import { collection, getDocs, doc, updateDoc } from 'firebase/firestore'
+import { db } from './firebase-config'
 
 // Exercise images mapping - using free images from unsplash/pexels
 const exerciseImages: Record<string, string> = {

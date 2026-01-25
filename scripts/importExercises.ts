@@ -9,8 +9,8 @@
  * - The import button in admin panel will use this data
  */
 
-import { initializeApp } from 'firebase/app'
-import { getFirestore, collection, writeBatch, doc, getDocs } from 'firebase/firestore'
+import { collection, writeBatch, doc, getDocs } from 'firebase/firestore'
+import { db } from './firebase-config'
 
 // Exercise data to import
 const exercisesData = [
@@ -391,18 +391,8 @@ const exercisesData = [
   },
 ]
 
-// This function can be called from the app to import exercises
-export async function importExercisesToFirestore(firebaseConfig: {
-  apiKey: string
-  authDomain: string
-  projectId: string
-  storageBucket: string
-  messagingSenderId: string
-  appId: string
-}) {
-  const app = initializeApp(firebaseConfig, 'import-script')
-  const db = getFirestore(app)
-
+// This function imports exercises using the shared db config
+export async function importExercisesToFirestore() {
   // Check if exercises already exist
   const existingSnapshot = await getDocs(collection(db, 'exercises'))
   if (existingSnapshot.size > 0) {
@@ -434,16 +424,7 @@ export async function importExercisesToFirestore(firebaseConfig: {
 export { exercisesData }
 
 // Run import if called directly
-const firebaseConfig = {
-  apiKey: 'AIzaSyALBuSomQPQhp1JZABeBRKwsLzmkOdg6yc',
-  authDomain: 'gymiq-e8b4e.firebaseapp.com',
-  projectId: 'gymiq-e8b4e',
-  storageBucket: 'gymiq-e8b4e.firebasestorage.app',
-  messagingSenderId: '406884457868',
-  appId: '1:406884457868:web:d8de2397d14a1929b8caa9',
-}
-
-importExercisesToFirestore(firebaseConfig)
+importExercisesToFirestore()
   .then((result) => {
     console.log('Import completed:', result)
     process.exit(0)

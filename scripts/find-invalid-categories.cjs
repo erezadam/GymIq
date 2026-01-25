@@ -3,18 +3,8 @@
  * Run with: node scripts/find-invalid-categories.cjs
  */
 
-const { initializeApp } = require('firebase/app');
-const { getFirestore, collection, getDocs } = require('firebase/firestore');
-
-// Firebase config (same as in the app)
-const firebaseConfig = {
-  apiKey: "AIzaSyBnT7jmxMGK8R63hCZG7kLXSFRzBiJajmY",
-  authDomain: "gymiq-e8b4e.firebaseapp.com",
-  projectId: "gymiq-e8b4e",
-  storageBucket: "gymiq-e8b4e.firebasestorage.app",
-  messagingSenderId: "92421097270",
-  appId: "1:92421097270:web:2dfca17764402c31f1ea63"
-};
+const { collection, getDocs } = require('firebase/firestore');
+const { db } = require('./firebase-config.cjs');
 
 // Valid categories
 const VALID_CATEGORIES = new Set([

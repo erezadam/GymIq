@@ -1,18 +1,13 @@
-import { initializeApp } from 'firebase/app'
-import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore'
+/**
+ * Script to find bench press exercises
+ *
+ * Usage: npx tsx scripts/findBenchPress.ts
+ */
 
-const firebaseConfig = {
-  apiKey: 'AIzaSyALBuSomQPQhp1JZABeBRKwsLzmkOdg6yc',
-  authDomain: 'gymiq-e8b4e.firebaseapp.com',
-  projectId: 'gymiq-e8b4e',
-  storageBucket: 'gymiq-e8b4e.firebasestorage.app',
-  messagingSenderId: '406884457868',
-  appId: '1:406884457868:web:d8de2397d14a1929b8caa9',
-}
+import { collection, getDocs } from 'firebase/firestore'
+import { db } from './firebase-config'
 
 async function findBenchPress() {
-  const app = initializeApp(firebaseConfig)
-  const db = getFirestore(app)
 
   const exercisesRef = collection(db, 'exercises')
   const snapshot = await getDocs(exercisesRef)

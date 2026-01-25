@@ -1,19 +1,12 @@
 /**
  * Script to check primaryMuscle values in Firebase exercises
  * and find which ones are not mapped to Hebrew names
+ *
+ * Usage: npx tsx scripts/checkPrimaryMuscles.ts
  */
 
-import { initializeApp } from 'firebase/app'
-import { getFirestore, collection, getDocs } from 'firebase/firestore'
-
-const firebaseConfig = {
-  apiKey: 'AIzaSyALBuSomQPQhp1JZABeBRKwsLzmkOdg6yc',
-  authDomain: 'gymiq-e8b4e.firebaseapp.com',
-  projectId: 'gymiq-e8b4e',
-  storageBucket: 'gymiq-e8b4e.firebasestorage.app',
-  messagingSenderId: '406884457868',
-  appId: '1:406884457868:web:d8de2397d14a1929b8caa9',
-}
+import { collection, getDocs } from 'firebase/firestore'
+import { db } from './firebase-config'
 
 // The muscleGroupNames from design-tokens.ts
 const muscleGroupNames: Record<string, string> = {

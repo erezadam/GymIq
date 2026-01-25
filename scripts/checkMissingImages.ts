@@ -4,21 +4,10 @@
  * Usage: npx tsx scripts/checkMissingImages.ts
  */
 
-import { initializeApp } from 'firebase/app'
-import { getFirestore, collection, getDocs } from 'firebase/firestore'
-
-const firebaseConfig = {
-  apiKey: 'AIzaSyALBuSomQPQhp1JZABeBRKwsLzmkOdg6yc',
-  authDomain: 'gymiq-e8b4e.firebaseapp.com',
-  projectId: 'gymiq-e8b4e',
-  storageBucket: 'gymiq-e8b4e.firebasestorage.app',
-  messagingSenderId: '406884457868',
-  appId: '1:406884457868:web:d8de2397d14a1929b8caa9',
-}
+import { collection, getDocs } from 'firebase/firestore'
+import { db } from './firebase-config'
 
 async function checkMissingImages() {
-  const app = initializeApp(firebaseConfig)
-  const db = getFirestore(app)
 
   console.log('מתחבר ל-Firebase...\n')
 

@@ -1,18 +1,13 @@
-import { initializeApp } from 'firebase/app'
-import { getFirestore, collection, getDocs } from 'firebase/firestore'
+/**
+ * Script to list all exercise IDs
+ *
+ * Usage: npx tsx scripts/listAllExerciseIds.ts
+ */
 
-const firebaseConfig = {
-  apiKey: 'AIzaSyALBuSomQPQhp1JZABeBRKwsLzmkOdg6yc',
-  authDomain: 'gymiq-e8b4e.firebaseapp.com',
-  projectId: 'gymiq-e8b4e',
-  storageBucket: 'gymiq-e8b4e.firebasestorage.app',
-  messagingSenderId: '406884457868',
-  appId: '1:406884457868:web:d8de2397d14a1929b8caa9',
-}
+import { collection, getDocs } from 'firebase/firestore'
+import { db } from './firebase-config'
 
 async function listAllIds() {
-  const app = initializeApp(firebaseConfig)
-  const db = getFirestore(app)
 
   const exercisesRef = collection(db, 'exercises')
   const snapshot = await getDocs(exercisesRef)
