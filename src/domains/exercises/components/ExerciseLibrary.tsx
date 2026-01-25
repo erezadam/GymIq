@@ -10,7 +10,7 @@ import { useWorkoutBuilderStore } from '@/domains/workouts/store'
 import { getMuscles, getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { getEquipment } from '@/lib/firebase/equipment'
 import { MuscleIcon } from '@/shared/components/MuscleIcon'
-import { saveWorkoutHistory, getRecentlyDoneExerciseIds } from '@/lib/firebase/workoutHistory'
+import { saveWorkoutHistory, getRecentlyDoneExerciseIds, getLastMonthExerciseIds } from '@/lib/firebase/workoutHistory'
 import { useAuthStore } from '@/domains/authentication/store'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '@/domains/workouts/types/active-workout.types'
 import type { WorkoutHistoryEntry } from '@/domains/workouts/types'
@@ -52,6 +52,7 @@ export function ExerciseLibrary() {
   const [selectedEquipment, setSelectedEquipment] = useState<string>('all')
   const [imageModal, setImageModal] = useState<{ url: string; name: string } | null>(null)
   const [recentlyDoneExerciseIds, setRecentlyDoneExerciseIds] = useState<Set<string>>(new Set())
+  const [lastMonthExerciseIds, setLastMonthExerciseIds] = useState<Set<string>>(new Set())
   const [isScheduleForLater, setIsScheduleForLater] = useState(false)
 
   const { selectedExercises, addExercise, removeExercise, clearWorkout, scheduledDate, setScheduledDate } = useWorkoutBuilderStore()
@@ -124,12 +125,19 @@ export function ExerciseLibrary() {
     }
   }
 
-  // Load recently done exercises in background (non-blocking)
+  // Load recently done exercises and last month exercises in background (non-blocking)
   useEffect(() => {
     if (user?.uid && !loading) {
-      getRecentlyDoneExerciseIds(user.uid)
-        .then(setRecentlyDoneExerciseIds)
-        .catch(err => console.error('Failed to load recently done:', err))
+      // Load both in parallel
+      Promise.all([
+        getRecentlyDoneExerciseIds(user.uid),
+        getLastMonthExerciseIds(user.uid)
+      ])
+        .then(([recentIds, monthIds]) => {
+          setRecentlyDoneExerciseIds(recentIds)
+          setLastMonthExerciseIds(monthIds)
+        })
+        .catch(err => console.error('Failed to load exercise history:', err))
     }
   }, [user?.uid, loading])
 
@@ -459,6 +467,7 @@ export function ExerciseLibrary() {
               {filteredExercises.map((exercise) => {
                 const isSelected = selectedExercises.some((e) => e.exerciseId === exercise.id)
                 const wasInLastWorkout = recentlyDoneExerciseIds.has(exercise.id)
+                const wasInLastMonth = lastMonthExerciseIds.has(exercise.id)
                 return (
                   <div
                     key={exercise.id}
@@ -482,9 +491,12 @@ export function ExerciseLibrary() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold text-white truncate">{exercise.nameHe}</h3>
-                        {wasInLastWorkout && (
+                        {/* Priority: "אחרון" > "חודש אחרון" */}
+                        {wasInLastWorkout ? (
                           <span className="badge-last-workout flex-shrink-0">אחרון</span>
-                        )}
+                        ) : wasInLastMonth ? (
+                          <span className="badge-last-month flex-shrink-0">חודש אחרון</span>
+                        ) : null}
                       </div>
                       <p className="text-xs text-text-muted truncate">
                         {getMuscleNameHe(exercise.primaryMuscle, dynamicMuscleNames)} • {getEquipmentHe(exercise.equipment)}

@@ -276,6 +276,12 @@
     @apply bg-accent-orange/20 text-accent-orange;
   }
 
+  /* Badge for exercises done in last month */
+  .badge-last-month {
+    @apply px-2 py-0.5 rounded-lg text-xs font-medium;
+    @apply bg-accent-purple/20 text-accent-purple;
+  }
+
   /* ----- PILLS (Filter buttons) ----- */
   .pill {
     @apply flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap;

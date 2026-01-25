@@ -900,6 +900,51 @@ export async function getRecentlyDoneExerciseIds(userId: string): Promise<Set<st
   }
 }
 
+// Get exercise IDs that were done in the last 30 days
+export async function getLastMonthExerciseIds(userId: string): Promise<Set<string>> {
+  const result = new Set<string>()
+  const historyRef = collection(db, COLLECTION_NAME)
+
+  try {
+    // Calculate date 30 days ago
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    thirtyDaysAgo.setHours(0, 0, 0, 0)
+
+    // Query workouts from last 30 days (uses existing index: userId + date)
+    const monthQuery = query(
+      historyRef,
+      where('userId', '==', userId),
+      where('date', '>=', thirtyDaysAgo),
+      orderBy('date', 'desc')
+    )
+
+    const snapshot = await getDocs(monthQuery)
+    console.log('📅 Found', snapshot.docs.length, 'workouts in last 30 days')
+
+    // Collect all exercises from completed workouts
+    for (const doc of snapshot.docs) {
+      const data = doc.data()
+
+      // Only include completed workouts
+      if (data.status === 'completed') {
+        const exercises = data.exercises || []
+        for (const ex of exercises) {
+          if (ex.exerciseId) {
+            result.add(ex.exerciseId)
+          }
+        }
+      }
+    }
+
+    console.log('📅 Last month exercises:', result.size)
+    return result
+  } catch (error) {
+    console.error('❌ Error getting last month exercises:', error)
+    return result
+  }
+}
+
 // Complete a workout (change status from in_progress to completed)
 export async function completeWorkout(
   workoutId: string,
