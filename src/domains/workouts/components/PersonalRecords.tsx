@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Trophy, ChevronRight, ChevronDown, Dumbbell } from 'lucide-react'
 import { getPersonalRecords, getExerciseHistory, PersonalRecord, ExerciseHistoryEntry } from '@/lib/firebase/workoutHistory'
@@ -28,6 +28,7 @@ export default function PersonalRecords() {
   const [expandedExercise, setExpandedExercise] = useState<string | null>(null)
   const [exerciseHistory, setExerciseHistory] = useState<ExerciseHistoryEntry[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
+  const loadingExerciseRef = useRef<string | null>(null) // Track which exercise is being loaded
 
   useEffect(() => {
     loadRecords()
@@ -55,23 +56,33 @@ export default function PersonalRecords() {
       // Collapse
       setExpandedExercise(null)
       setExerciseHistory([])
+      loadingExerciseRef.current = null
       return
     }
 
     // Expand and load history
     setExpandedExercise(exerciseId)
     setHistoryLoading(true)
+    setExerciseHistory([]) // Clear previous history immediately
+    loadingExerciseRef.current = exerciseId // Track which exercise we're loading
 
     try {
       if (user?.uid) {
         const history = await getExerciseHistory(user.uid, exerciseId)
-        setExerciseHistory(history)
+        // Only update if this is still the exercise we're loading (prevent race condition)
+        if (loadingExerciseRef.current === exerciseId) {
+          setExerciseHistory(history)
+        }
       }
     } catch (error) {
       console.error('Failed to load exercise history:', error)
-      setExerciseHistory([])
+      if (loadingExerciseRef.current === exerciseId) {
+        setExerciseHistory([])
+      }
     } finally {
-      setHistoryLoading(false)
+      if (loadingExerciseRef.current === exerciseId) {
+        setHistoryLoading(false)
+      }
     }
   }
 
