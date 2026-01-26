@@ -711,7 +711,14 @@ export default function ExerciseList() {
                           return null
                         })()}
                         <div>
-                          <p className="font-medium text-text-primary">{exercise.nameHe}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-text-primary">{exercise.nameHe}</p>
+                            {exercise.assistanceTypes && exercise.assistanceTypes.length > 0 && (
+                              <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded-full">
+                                גמיש
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-text-muted">{exercise.name}</p>
                         </div>
                       </div>

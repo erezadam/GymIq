@@ -199,6 +199,8 @@ export function ExerciseLibrary() {
         category: exercise.category,
         equipment: exercise.equipment,
         reportType: exercise.reportType,
+        assistanceTypes: exercise.assistanceTypes,   // Pass assistance options
+        availableBands: exercise.availableBands,     // Pass available bands
       })
     }
   }
@@ -491,6 +493,12 @@ export function ExerciseLibrary() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold text-white truncate">{exercise.nameHe}</h3>
+                        {/* Flexible exercise tag */}
+                        {exercise.assistanceTypes && exercise.assistanceTypes.length > 0 && (
+                          <span className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] rounded-full flex-shrink-0">
+                            גמיש
+                          </span>
+                        )}
                         {/* Priority: "אחרון" > "חודש אחרון" */}
                         {wasInLastWorkout ? (
                           <span className="badge-last-workout flex-shrink-0">אחרון</span>

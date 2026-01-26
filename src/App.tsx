@@ -16,6 +16,7 @@ const ExerciseForm = lazy(() => import('@/domains/admin/components/ExerciseForm'
 const UsersList = lazy(() => import('@/domains/admin/components/UsersList'))
 const MuscleManager = lazy(() => import('@/domains/admin/components/MuscleManager'))
 const EquipmentManager = lazy(() => import('@/domains/admin/components/EquipmentManager'))
+const BandTypeManager = lazy(() => import('@/domains/admin/components/BandTypeManager'))
 const ReportTypeManager = lazy(() => import('@/domains/admin/components/ReportTypeManager'))
 const AdminSettings = lazy(() => import('@/domains/admin/components/AdminSettings'))
 
@@ -95,6 +96,7 @@ function App() {
           <Route path="exercises/:id/edit" element={<ExerciseForm />} />
           <Route path="muscles" element={<MuscleManager />} />
           <Route path="equipment" element={<EquipmentManager />} />
+          <Route path="band-types" element={<BandTypeManager />} />
           <Route path="report-types" element={<ReportTypeManager />} />
           <Route path="users" element={<UsersList />} />
           <Route path="settings" element={<AdminSettings />} />

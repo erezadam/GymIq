@@ -42,6 +42,7 @@ export default function ActiveWorkoutScreen() {
     deleteSet,
     finishExercise,
     updateExerciseNotes,
+    setAssistanceType,
 
     // Workout actions
     confirmDeleteExercise,
@@ -230,6 +231,7 @@ export default function ActiveWorkoutScreen() {
             onFinishExercise={handleFinishExercise}
             onDeleteExercise={confirmDeleteExercise}
             onUpdateNotes={updateExerciseNotes}
+            onSetAssistanceType={setAssistanceType}
           />
         ))}
       </div>

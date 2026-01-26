@@ -126,6 +126,9 @@ export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'
         actualReps: set.actualReps || 0,
         actualWeight: set.actualWeight || 0,
         completed: set.completed || false,
+        // Assistance fields (only include if defined - Firebase doesn't accept undefined)
+        ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
+        ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
       })),
     })),
     completedExercises: workout.completedExercises || 0,
@@ -710,6 +713,9 @@ export async function autoSaveWorkout(
         actualReps: set.actualReps || 0,
         actualWeight: set.actualWeight || 0,
         completed: set.completed || false,
+        // Assistance fields (only include if defined - Firebase doesn't accept undefined)
+        ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
+        ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
       })),
     })),
     completedExercises: workout.completedExercises || 0,
@@ -982,6 +988,9 @@ export async function completeWorkout(
         actualReps: set.actualReps || 0,
         actualWeight: set.actualWeight || 0,
         completed: set.completed || false,
+        // Assistance fields (only include if defined - Firebase doesn't accept undefined)
+        ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
+        ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
       })),
     })),
     completedExercises: updates.completedExercises,

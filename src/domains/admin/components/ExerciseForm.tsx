@@ -7,14 +7,19 @@ import { z } from 'zod'
 import { ArrowRight, Save, Plus, Trash2, Image } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { exerciseService } from '@/domains/exercises/services'
-import type { ExerciseCategory, MuscleGroup, EquipmentType } from '@/domains/exercises/types'
+import type { ExerciseCategory, MuscleGroup, EquipmentType, AssistanceType } from '@/domains/exercises/types'
 import { equipment, difficultyOptions } from '@/domains/exercises/data/mockExercises'
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
 import { getMuscles } from '@/lib/firebase/muscles'
 import { getActiveReportTypes } from '@/lib/firebase/reportTypes'
+import { getActiveBandTypes } from '@/lib/firebase/bandTypes'
 import { VALID_EXERCISE_CATEGORIES_SET } from '@/lib/firebase/exercises'
 import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
 import type { ReportType } from '@/domains/exercises/types/reportTypes'
+import type { BandType } from '@/domains/exercises/types/bands'
+
+// Assistance type options (empty = regular exercise using reportType)
+const assistanceTypeEnum = z.enum(['graviton', 'bands'])
 
 // Validation schema
 const exerciseSchema = z.object({
@@ -26,12 +31,23 @@ const exerciseSchema = z.object({
   equipment: z.string().min(1, 'ציוד נדרש'),
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']),
   reportType: z.string().min(1, 'סוג דיווח נדרש'), // Dynamic - loaded from Firebase
+  assistanceTypes: z.array(assistanceTypeEnum), // Empty = regular exercise
+  availableBands: z.array(z.string()),
   instructions: z.array(z.object({ value: z.string() })).min(1, 'נדרשת לפחות הוראה אחת'),
   instructionsHe: z.array(z.object({ value: z.string() })).min(1, 'נדרשת לפחות הוראה אחת בעברית'),
   targetMuscles: z.array(z.string()),
   imageUrl: z.string().url('כתובת תמונה לא תקינה').or(z.literal('')),
   tips: z.array(z.object({ value: z.string() })),
   tipsHe: z.array(z.object({ value: z.string() })),
+}).refine((data) => {
+  // If 'bands' is in assistanceTypes, at least one band must be selected
+  if (data.assistanceTypes.includes('bands')) {
+    return data.availableBands.length > 0
+  }
+  return true
+}, {
+  message: 'יש לבחור לפחות גומיה אחת',
+  path: ['availableBands'],
 })
 
 type ExerciseFormData = z.infer<typeof exerciseSchema>
@@ -61,6 +77,12 @@ export default function ExerciseForm() {
     queryFn: getActiveReportTypes,
   })
 
+  // Fetch band types from Firebase
+  const { data: bandTypesData = [] } = useQuery<BandType[]>({
+    queryKey: ['bandTypes'],
+    queryFn: getActiveBandTypes,
+  })
+
   // Form setup
   const {
     register,
@@ -81,6 +103,8 @@ export default function ExerciseForm() {
       equipment: '',
       difficulty: 'beginner',
       reportType: 'weight_reps',
+      assistanceTypes: [],
+      availableBands: [],
       instructions: [{ value: '' }],
       instructionsHe: [{ value: '' }],
       targetMuscles: [],
@@ -170,6 +194,8 @@ export default function ExerciseForm() {
         categoryToSet,
         primaryMuscleToSet,
         musclesCount: musclesData.length,
+        assistanceTypes: existingExercise.assistanceTypes,
+        availableBands: existingExercise.availableBands,
       })
 
       reset({
@@ -181,6 +207,8 @@ export default function ExerciseForm() {
         equipment: existingExercise.equipment || '',
         difficulty: existingExercise.difficulty || 'beginner',
         reportType: existingExercise.reportType || 'weight_reps',
+        assistanceTypes: existingExercise.assistanceTypes || [],
+        availableBands: existingExercise.availableBands || [],
         instructions: (existingExercise.instructions || []).length > 0
           ? existingExercise.instructions.map((v) => ({ value: v }))
           : [{ value: '' }],
@@ -248,6 +276,9 @@ export default function ExerciseForm() {
       secondaryMuscles: data.secondaryMuscles as MuscleGroup[],
       equipment: data.equipment as EquipmentType,
       reportType: data.reportType, // Dynamic - stored as string
+      assistanceTypes: data.assistanceTypes as AssistanceType[],
+      // Only include availableBands if 'bands' is in assistanceTypes
+      availableBands: data.assistanceTypes.includes('bands') ? data.availableBands : [],
       targetMuscles: data.targetMuscles as MuscleGroup[],
       instructions: data.instructions.map((i) => i.value).filter(Boolean),
       instructionsHe: data.instructionsHe.map((i) => i.value).filter(Boolean),
@@ -268,6 +299,39 @@ export default function ExerciseForm() {
 
   const imageUrl = watch('imageUrl')
   const selectedCategory = watch('category')
+  const selectedAssistanceTypes = watch('assistanceTypes')
+  const selectedBands = watch('availableBands')
+
+  // Handle band checkbox toggle
+  const handleBandToggle = (bandId: string) => {
+    const currentBands = selectedBands || []
+    const newBands = currentBands.includes(bandId)
+      ? currentBands.filter(id => id !== bandId)
+      : [...currentBands, bandId]
+    setValue('availableBands', newBands)
+  }
+
+  // Handle assistance type checkbox toggle
+  const handleAssistanceTypeToggle = (type: 'graviton' | 'bands') => {
+    const currentTypes = selectedAssistanceTypes || []
+    const isSelected = currentTypes.includes(type)
+
+    let newTypes: typeof currentTypes
+    if (isSelected) {
+      // Remove the type (empty array is allowed)
+      newTypes = currentTypes.filter(t => t !== type)
+    } else {
+      // Add the type
+      newTypes = [...currentTypes, type]
+    }
+
+    setValue('assistanceTypes', newTypes)
+
+    // Clear bands if 'bands' is no longer selected
+    if (!newTypes.includes('bands')) {
+      setValue('availableBands', [])
+    }
+  }
 
   // Get selected primary muscle and its sub-muscles
   const selectedPrimaryMuscle = musclesData.find((m) => m.id === selectedCategory)
@@ -459,6 +523,92 @@ export default function ExerciseForm() {
                 </p>
               )}
             </div>
+          </div>
+        </section>
+
+        {/* Assistance Types */}
+        <section className="card-neon">
+          <h2 className="text-lg font-semibold text-text-primary mb-6">אפשרויות עזרה לתרגיל</h2>
+          <div className="space-y-4">
+            <p className="text-text-muted text-sm mb-4">
+              שדה ריק = תרגיל רגיל לפי סוג הדיווח. אם תבחר אפשרויות כאן, המתאמן יבחר באימון.
+            </p>
+
+            {/* Checkboxes for assistance types */}
+            <div className="flex flex-wrap gap-3">
+              <label
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-colors ${
+                  selectedAssistanceTypes?.includes('graviton')
+                    ? 'bg-primary-500/20 border-primary-500 text-primary-400'
+                    : 'bg-dark-card border-dark-border text-text-secondary hover:border-primary-500/50'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedAssistanceTypes?.includes('graviton') || false}
+                  onChange={() => handleAssistanceTypeToggle('graviton')}
+                  className="w-4 h-4 text-primary-500 border-dark-border bg-dark-card focus:ring-primary-500 rounded"
+                />
+                <span>מכונת גרביטון</span>
+              </label>
+              <label
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-colors ${
+                  selectedAssistanceTypes?.includes('bands')
+                    ? 'bg-primary-500/20 border-primary-500 text-primary-400'
+                    : 'bg-dark-card border-dark-border text-text-secondary hover:border-primary-500/50'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedAssistanceTypes?.includes('bands') || false}
+                  onChange={() => handleAssistanceTypeToggle('bands')}
+                  className="w-4 h-4 text-primary-500 border-dark-border bg-dark-card focus:ring-primary-500 rounded"
+                />
+                <span>גומיות</span>
+              </label>
+            </div>
+
+            {/* Conditional band selection - only shown when 'bands' is selected */}
+            {selectedAssistanceTypes?.includes('bands') && (
+              <div className="mt-4 p-4 bg-dark-card/50 rounded-lg border border-dark-border">
+                <label className="block text-sm font-medium text-text-secondary mb-3">
+                  גומיות זמינות לתרגיל זה:
+                </label>
+                {bandTypesData.length === 0 ? (
+                  <p className="text-text-muted text-sm">
+                    אין גומיות מוגדרות. <a href="/admin/band-types" className="text-primary-400 hover:underline">הוסף גומיות</a>
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-3">
+                    {bandTypesData.map((band) => (
+                      <label
+                        key={band.id}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
+                          selectedBands?.includes(band.id)
+                            ? 'bg-primary-500/20 border-primary-500 text-primary-400'
+                            : 'bg-dark-card border-dark-border text-text-secondary hover:border-primary-500/50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedBands?.includes(band.id) || false}
+                          onChange={() => handleBandToggle(band.id)}
+                          className="w-4 h-4 text-primary-500 border-dark-border bg-dark-card focus:ring-primary-500 rounded"
+                        />
+                        <span>{band.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {errors.availableBands && (
+                  <p className="text-red-400 text-sm mt-2">{errors.availableBands.message}</p>
+                )}
+              </div>
+            )}
+
+            <p className="text-text-muted text-xs">
+              הוסף אפשרויות עזרה מיוחדות לתרגיל זה
+            </p>
           </div>
         </section>
 

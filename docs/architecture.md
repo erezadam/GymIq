@@ -90,6 +90,7 @@ GymIQ/
 | `workoutSessions` | אימונים פעילים | userId, exercises[], status, createdAt |
 | `workoutHistory` | היסטוריית אימונים | userId, exercises[], calories, duration, totalVolume |
 | `reportTypes` | סוגי דיווח לתרגילים | id, name, nameHe, fields[], isDefault |
+| `bandTypes` | סוגי גומיות התנגדות | id, name, color, resistanceLevel, isActive |
 | `appSettings` | הגדרות אפליקציה | externalComparisonUrl |
 
 ---
@@ -130,6 +131,7 @@ GymIQ/
 | `/admin/equipment` | EquipmentManager | ניהול ציוד |
 | `/admin/users` | UsersList | ניהול משתמשים |
 | `/admin/report-types` | ReportTypeManager | ניהול סוגי דיווח |
+| `/admin/bands` | BandTypeManager | ניהול סוגי גומיות |
 | `/admin/settings` | AdminSettings | הגדרות אפליקציה |
 
 ---
@@ -193,6 +195,8 @@ interface WorkoutBuilderStore {
 | **Report Types Manager** | ניהול סוגי דיווח דינמיים (weight_reps, reps_only, time_only) | ReportTypeManager.tsx, reportTypes.ts |
 | **Muscle Filter** | פילטר תרגילים לפי שריר מרכזי ב-Admin | ExerciseList.tsx |
 | **Category Fix** | כפתור לתיקון קטגוריות לא תקינות | ExerciseList.tsx, exercises.ts |
+| **Assistance Exercises** | תמיכה בתרגילי עזרה (גרביטון/גומיות) | ExerciseCard.tsx, SetReportRow.tsx, useActiveWorkout.ts |
+| **Band Types Manager** | ניהול סוגי גומיות התנגדות | BandTypeManager.tsx, bandTypes.ts |
 
 ---
 
@@ -228,13 +232,14 @@ export interface ActiveWorkoutExercise { ... }
 | `workouts.ts` | createWorkout, getWorkouts, updateWorkout |
 | `workoutHistory.ts` | getWorkoutHistory, autoSaveWorkout, getInProgressWorkout, completeWorkout |
 | `reportTypes.ts` | getReportTypes, createReportType, updateReportType, deleteReportType |
+| `bandTypes.ts` | getBandTypes, getActiveBandTypes, createBandType, updateBandType, deleteBandType |
 | `appSettings.ts` | getAppSettings, updateAppSettings |
 
 ---
 
 ```
 ═══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 16/01/2026
-גרסה: 1.10.55
+עדכון אחרון: 26/01/2026
+גרסה: 1.11.0
 ═══════════════════════════════════════════════════════════════════════════════
 ```

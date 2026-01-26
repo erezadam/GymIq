@@ -43,6 +43,12 @@ export type EquipmentType =
   | 'bench'
   | 'resistance_band'
 
+// Assistance types for exercises
+// Empty array = regular exercise, use reportType
+// - graviton: machine that reduces load (counterweight)
+// - bands: resistance bands that assist the movement
+export type AssistanceType = 'graviton' | 'bands'
+
 // Exercise report types - how sets are reported
 // NOTE: This is now loaded dynamically from Firebase.
 // These are the legacy/default types for backward compatibility.
@@ -64,6 +70,8 @@ export interface Exercise {
   equipment: EquipmentType
   difficulty: ExerciseDifficulty
   reportType?: string  // סוג דיווח דינמי - ברירת מחדל: weight_reps
+  assistanceTypes?: AssistanceType[]  // אפשרויות עזרה זמינות לתרגיל (מערך)
+  availableBands?: string[]  // רשימת IDs של גומיות זמינות (רק אם 'bands' נמצא ב-assistanceTypes)
   instructions: string[]
   instructionsHe: string[]
   targetMuscles: string[]
@@ -108,6 +116,8 @@ export interface CreateExerciseDto {
   equipment: EquipmentType
   difficulty: ExerciseDifficulty
   reportType?: string  // סוג דיווח דינמי - ברירת מחדל: weight_reps
+  assistanceTypes?: AssistanceType[]  // אפשרויות עזרה זמינות לתרגיל (מערך)
+  availableBands?: string[]  // רשימת IDs של גומיות זמינות (רק אם 'bands' נמצא ב-assistanceTypes)
   instructions: string[]
   instructionsHe: string[]
   targetMuscles: string[]

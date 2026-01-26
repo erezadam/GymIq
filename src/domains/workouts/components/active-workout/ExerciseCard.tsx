@@ -3,13 +3,16 @@
  * Collapsible card showing exercise details and set reporting
  */
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, ChevronUp, Trash2, Check, Plus, MessageSquare } from 'lucide-react'
 import type { ActiveWorkoutExercise, ReportedSet } from '../../types/active-workout.types'
 import { SetReportRow } from './SetReportRow'
 import { NotesModal } from './NotesModal'
 import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '@/domains/exercises/utils'
 import { workoutLabels } from '@/styles/design-tokens'
+import { getActiveBandTypes } from '@/lib/firebase/bandTypes'
+import type { BandType } from '@/domains/exercises/types/bands'
 
 interface ExerciseCardProps {
   exercise: ActiveWorkoutExercise
@@ -20,6 +23,7 @@ interface ExerciseCardProps {
   onFinish: () => void
   onDelete: () => void
   onUpdateNotes: (notes: string) => void
+  onSetAssistanceType?: (assistanceType: 'graviton' | 'bands' | undefined) => void
 }
 
 export function ExerciseCard({
@@ -31,8 +35,29 @@ export function ExerciseCard({
   onFinish,
   onDelete,
   onUpdateNotes,
+  onSetAssistanceType,
 }: ExerciseCardProps) {
   const [showNotesModal, setShowNotesModal] = useState(false)
+
+  // Check if this is a flexible exercise (has assistance options)
+  const isFlexibleExercise = exercise.assistanceTypes && exercise.assistanceTypes.length > 0
+
+  // Fetch band types from Firebase for displaying names (only if needed)
+  const { data: allBandTypes = [] } = useQuery({
+    queryKey: ['bandTypes', 'active'],
+    queryFn: getActiveBandTypes,
+    staleTime: 10 * 60 * 1000, // Cache for 10 minutes
+    enabled: exercise.assistanceType === 'bands', // Only fetch if bands are selected
+  })
+
+  // Create a map of bandId -> bandName for quick lookup
+  const bandNameMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    allBandTypes.forEach((band: BandType) => {
+      map[band.id] = band.name
+    })
+    return map
+  }, [allBandTypes])
 
   // Check if there are historical notes
   const hasHistoricalNotes = exercise.historicalNotes && exercise.historicalNotes.length > 0
@@ -115,6 +140,99 @@ export function ExerciseCard({
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
           </div>
 
+          {/* Assistance Type Selector - only for flexible exercises */}
+          {isFlexibleExercise && onSetAssistanceType && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                padding: '12px',
+                marginBottom: '12px',
+                background: 'rgba(45, 212, 191, 0.1)',
+                borderRadius: '8px',
+                border: '1px solid rgba(45, 212, 191, 0.3)',
+              }}
+            >
+              <span style={{ color: '#9CA3AF', fontSize: '13px', marginBottom: '4px' }}>
+                איך אתה עושה את התרגיל היום?
+              </span>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {/* Default option - use reportType */}
+                <button
+                  onClick={() => onSetAssistanceType(undefined)}
+                  style={{
+                    flex: 1,
+                    minWidth: '80px',
+                    padding: '10px 16px',
+                    background: !exercise.assistanceType
+                      ? 'rgba(45, 212, 191, 0.2)'
+                      : 'rgba(75, 85, 99, 0.3)',
+                    border: `2px solid ${
+                      !exercise.assistanceType ? '#2DD4BF' : '#4B5563'
+                    }`,
+                    borderRadius: '8px',
+                    color: !exercise.assistanceType ? '#2DD4BF' : '#9CA3AF',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  ברירת מחדל
+                </button>
+                {exercise.assistanceTypes?.includes('graviton') && (
+                  <button
+                    onClick={() => onSetAssistanceType('graviton')}
+                    style={{
+                      flex: 1,
+                      minWidth: '80px',
+                      padding: '10px 16px',
+                      background: exercise.assistanceType === 'graviton'
+                        ? 'rgba(45, 212, 191, 0.2)'
+                        : 'rgba(75, 85, 99, 0.3)',
+                      border: `2px solid ${
+                        exercise.assistanceType === 'graviton' ? '#2DD4BF' : '#4B5563'
+                      }`,
+                      borderRadius: '8px',
+                      color: exercise.assistanceType === 'graviton' ? '#2DD4BF' : '#9CA3AF',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    גרביטון
+                  </button>
+                )}
+                {exercise.assistanceTypes?.includes('bands') && (
+                  <button
+                    onClick={() => onSetAssistanceType('bands')}
+                    style={{
+                      flex: 1,
+                      minWidth: '80px',
+                      padding: '10px 16px',
+                      background: exercise.assistanceType === 'bands'
+                        ? 'rgba(45, 212, 191, 0.2)'
+                        : 'rgba(75, 85, 99, 0.3)',
+                      border: `2px solid ${
+                        exercise.assistanceType === 'bands' ? '#2DD4BF' : '#4B5563'
+                      }`,
+                      borderRadius: '8px',
+                      color: exercise.assistanceType === 'bands' ? '#2DD4BF' : '#9CA3AF',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    גומיות
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Last workout data - shown in red below image */}
           {exercise.lastWorkoutData && (
             <div
@@ -143,6 +261,9 @@ export function ExerciseCard({
                 key={set.id}
                 set={set}
                 reportType={exercise.reportType}
+                assistanceType={exercise.assistanceType}
+                availableBands={exercise.availableBands}
+                bandNameMap={bandNameMap}
                 onUpdate={(updates) => onUpdateSet(set.id, updates)}
                 onDelete={() => onDeleteSet(set.id)}
                 canDelete={exercise.reportedSets.length > 1}

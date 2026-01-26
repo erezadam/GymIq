@@ -35,6 +35,7 @@ export interface WorkoutCardProps {
   expandedWorkoutDetails: WorkoutHistoryEntry | null
   loadingDetails: boolean
   dynamicMuscleNames: Record<string, string>
+  bandNameMap?: Record<string, string>  // Map of bandId -> bandName (Hebrew)
   type: 'planned' | 'regular'
   onToggleExpand: () => void
   onDeleteClick: (e: React.MouseEvent) => void
@@ -52,6 +53,7 @@ export function WorkoutCard({
   expandedWorkoutDetails,
   loadingDetails,
   dynamicMuscleNames,
+  bandNameMap = {},
   type,
   onToggleExpand,
   onDeleteClick,
@@ -171,9 +173,22 @@ export function WorkoutCard({
                     <span className="px-2 py-0.5 bg-dark-border/50 rounded">
                       חזרות: {exercise.sets?.[0]?.targetReps || exercise.sets?.[0]?.actualReps || '--'}
                     </span>
-                    <span className="px-2 py-0.5 bg-dark-border/50 rounded">
-                      משקל: {exercise.sets?.[0]?.targetWeight || exercise.sets?.[0]?.actualWeight || '--'} ק"ג
-                    </span>
+                    {/* Graviton - show assistance weight */}
+                    {exercise.sets?.[0]?.assistanceWeight ? (
+                      <span className="px-2 py-0.5 bg-teal-500/20 text-teal-400 rounded">
+                        עזרה: {exercise.sets[0].assistanceWeight} ק"ג
+                      </span>
+                    ) : exercise.sets?.[0]?.assistanceBand ? (
+                      /* Bands - show band name */
+                      <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded">
+                        גומייה: {bandNameMap[exercise.sets[0].assistanceBand] || exercise.sets[0].assistanceBand}
+                      </span>
+                    ) : (
+                      /* Regular exercise - show weight */
+                      <span className="px-2 py-0.5 bg-dark-border/50 rounded">
+                        משקל: {exercise.sets?.[0]?.targetWeight || exercise.sets?.[0]?.actualWeight || '--'} ק"ג
+                      </span>
+                    )}
                   </div>
                   {exercise.notes && (
                     <p className="text-sm text-text-muted mt-2 italic border-r-2 border-primary-main pr-2">

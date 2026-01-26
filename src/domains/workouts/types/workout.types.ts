@@ -11,6 +11,9 @@ export interface WorkoutSet {
   actualWeight?: number
   completed: boolean
   rpe?: number // Rate of Perceived Exertion 1-10
+  // Assistance fields
+  assistanceWeight?: number  // For graviton - counterweight in kg
+  assistanceBand?: string    // For bands - single band ID (one band per set)
 }
 
 // Exercise in workout
@@ -101,6 +104,9 @@ export interface WorkoutHistoryEntry {
       actualReps?: number
       actualWeight?: number
       completed: boolean
+      // Assistance fields
+      assistanceWeight?: number  // For graviton - counterweight in kg
+      assistanceBand?: string    // For bands - single band ID (one band per set)
     }[]
   }[]
   completedExercises: number

@@ -4,6 +4,7 @@ import { Calendar, Dumbbell, CheckCircle, AlertCircle, XCircle, Play, X, ArrowRi
 // Note: Trophy, ChevronDown, ChevronUp, Clock, Zap moved to WorkoutCard
 import { getUserWorkoutHistory, getWorkoutById, updateWorkoutHistory, deleteWorkoutHistory } from '@/lib/firebase/workoutHistory'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
+import { getActiveBandTypes } from '@/lib/firebase/bandTypes'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/domains/authentication/store'
 import { useWorkoutBuilderStore } from '../store'
@@ -52,6 +53,7 @@ export default function WorkoutHistory() {
     workout: null,
   })
   const [dynamicMuscleNames, setDynamicMuscleNames] = useState<Record<string, string>>({})
+  const [bandNameMap, setBandNameMap] = useState<Record<string, string>>({})
 
   useEffect(() => {
     loadWorkouts()
@@ -68,6 +70,23 @@ export default function WorkoutHistory() {
       }
     }
     loadMuscleNames()
+  }, [])
+
+  // Load band names from Firebase
+  useEffect(() => {
+    const loadBandNames = async () => {
+      try {
+        const bands = await getActiveBandTypes()
+        const map: Record<string, string> = {}
+        bands.forEach(band => {
+          map[band.id] = band.name
+        })
+        setBandNameMap(map)
+      } catch (error) {
+        console.error('Failed to load band names:', error)
+      }
+    }
+    loadBandNames()
   }, [])
 
   const loadWorkouts = async () => {
@@ -716,6 +735,7 @@ export default function WorkoutHistory() {
                 expandedWorkoutDetails={expandedWorkoutDetails}
                 loadingDetails={loadingDetails}
                 dynamicMuscleNames={dynamicMuscleNames}
+                bandNameMap={bandNameMap}
                 onToggleExpand={() => toggleWorkoutExpanded(workout.id)}
                 onDeleteClick={(e) => handleDeleteClick(e, workout)}
                 onContinueClick={() => handleContinueClick(workout)}
@@ -752,6 +772,7 @@ export default function WorkoutHistory() {
                 expandedWorkoutDetails={expandedWorkoutDetails}
                 loadingDetails={loadingDetails}
                 dynamicMuscleNames={dynamicMuscleNames}
+                bandNameMap={bandNameMap}
                 onToggleExpand={() => toggleWorkoutExpanded(workout.id)}
                 onDeleteClick={(e) => handleDeleteClick(e, workout)}
                 onContinueClick={() => handleContinueClick(workout)}
@@ -785,6 +806,7 @@ export default function WorkoutHistory() {
                 expandedWorkoutDetails={expandedWorkoutDetails}
                 loadingDetails={loadingDetails}
                 dynamicMuscleNames={dynamicMuscleNames}
+                bandNameMap={bandNameMap}
                 onToggleExpand={() => toggleWorkoutExpanded(workout.id)}
                 onDeleteClick={(e) => handleDeleteClick(e, workout)}
                 onContinueClick={() => handleContinueClick(workout)}

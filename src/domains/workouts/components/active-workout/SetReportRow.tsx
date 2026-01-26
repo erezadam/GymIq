@@ -2,6 +2,7 @@
  * SetReportRow
  * A single row for reporting set data based on exercise reportType
  * Supports dynamic report types from Firebase
+ * Also supports assistance type fields (graviton, bands)
  */
 
 import { Trash2 } from 'lucide-react'
@@ -11,6 +12,9 @@ import { workoutLabels } from '@/styles/design-tokens'
 interface SetReportRowProps {
   set: ReportedSet
   reportType?: string  // Dynamic - loaded from Firebase
+  assistanceType?: 'graviton' | 'bands'  // User's assistance choice
+  availableBands?: string[]  // Available band IDs for this exercise
+  bandNameMap?: Record<string, string>  // Map of bandId -> bandName (passed from parent)
   onUpdate: (updates: Partial<ReportedSet>) => void
   onDelete: () => void
   canDelete: boolean
@@ -31,6 +35,9 @@ const minutesSecondsToSeconds = (minutes: number, seconds: number): number => {
 export function SetReportRow({
   set,
   reportType = 'weight_reps',
+  assistanceType,
+  availableBands,
+  bandNameMap = {},
   onUpdate,
   onDelete,
   canDelete,
@@ -164,6 +171,71 @@ export function SetReportRow({
     </div>
   )
 
+  // Render assistance weight input (for graviton)
+  const renderAssistanceWeightInput = () => (
+    <div className="set-input-group">
+      <label className="set-label">עזרה (ק״ג)</label>
+      <input
+        type="number"
+        inputMode="decimal"
+        className="set-input"
+        value={set.assistanceWeight || ''}
+        onChange={(e) => onUpdate({ assistanceWeight: parseFloat(e.target.value) || 0 })}
+        placeholder="0"
+        min="0"
+        step="2.5"
+      />
+    </div>
+  )
+
+  // Render band selection (for bands assistance) - single select
+  const renderBandsSelection = () => {
+    const selectedBand = set.assistanceBand
+
+    const handleBandSelect = (bandId: string) => {
+      // If clicking the same band, deselect it; otherwise select the new one
+      const newBand = selectedBand === bandId ? undefined : bandId
+      onUpdate({ assistanceBand: newBand })
+    }
+
+    // If no available bands, show a message
+    if (!availableBands || availableBands.length === 0) {
+      return (
+        <div className="set-input-group" style={{ flex: 2 }}>
+          <label className="set-label">גומייה</label>
+          <span style={{ color: '#9CA3AF', fontSize: '12px' }}>אין גומיות מוגדרות</span>
+        </div>
+      )
+    }
+
+    return (
+      <div className="set-input-group" style={{ flex: 2 }}>
+        <label className="set-label">גומייה</label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+          {availableBands.map((bandId) => (
+            <button
+              key={bandId}
+              type="button"
+              onClick={() => handleBandSelect(bandId)}
+              style={{
+                padding: '4px 8px',
+                fontSize: '11px',
+                borderRadius: '4px',
+                border: `1px solid ${selectedBand === bandId ? '#2DD4BF' : '#4B5563'}`,
+                background: selectedBand === bandId ? 'rgba(45, 212, 191, 0.2)' : 'transparent',
+                color: selectedBand === bandId ? '#2DD4BF' : '#9CA3AF',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {bandNameMap[bandId] || bandId}
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   // Parse reportType to determine which fields to show
   // Supports both exact IDs (e.g., 'time_speed') and field-based parsing
   const getFieldsFromReportType = (type: string): string[] => {
@@ -192,8 +264,29 @@ export function SetReportRow({
 
   // Render inputs based on reportType - dynamic field parsing
   const renderInputs = () => {
-    const fields = getFieldsFromReportType(reportType)
+    // If assistance type is selected, show assistance-specific fields
+    if (assistanceType === 'graviton') {
+      console.log(`🏋️ SetReportRow: assistanceType=graviton`)
+      return (
+        <>
+          {renderAssistanceWeightInput()}
+          {renderRepsInput()}
+        </>
+      )
+    }
 
+    if (assistanceType === 'bands') {
+      console.log(`🏋️ SetReportRow: assistanceType=bands`)
+      return (
+        <>
+          {renderBandsSelection()}
+          {renderRepsInput()}
+        </>
+      )
+    }
+
+    // Regular exercise - use reportType fields
+    const fields = getFieldsFromReportType(reportType)
     console.log(`🏋️ SetReportRow: reportType=${reportType}, fields=`, fields)
 
     return (

@@ -23,6 +23,9 @@ export interface ReportedSet {
   speed?: number          // Speed (km/h or pace)
   distance?: number       // Distance (meters or km)
   completedAt?: Date
+  // Assistance fields
+  assistanceWeight?: number  // For graviton - counterweight in kg
+  assistanceBand?: string    // For bands - single band ID (one band per set)
 }
 
 // An exercise in the active workout
@@ -37,6 +40,13 @@ export interface ActiveWorkoutExercise {
   category?: string                   // Exercise category (for grouping)
   equipment?: string                  // Equipment type (for grouping by equipment)
   reportType?: string                 // How sets are reported - dynamic (default: weight_reps)
+
+  // Assistance options (from exercise definition)
+  assistanceTypes?: ('graviton' | 'bands')[]  // Available assistance options for this exercise
+  availableBands?: string[]                    // Available band IDs (if 'bands' is in assistanceTypes)
+
+  // User's assistance selection for this workout
+  assistanceType?: 'graviton' | 'bands' // Type of assistance selected for this workout
 
   // State
   isExpanded: boolean                 // Is card expanded for reporting

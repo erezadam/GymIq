@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { WorkoutExercise, WorkoutSet, SetType } from '../types'
-import type { ExerciseReportType } from '@/domains/exercises/types'
+import type { ExerciseReportType, AssistanceType } from '@/domains/exercises/types'
 
 // ============================================
 // Types
@@ -15,6 +15,8 @@ export interface SelectedExercise {
   category?: string
   equipment?: string
   reportType?: ExerciseReportType
+  assistanceTypes?: AssistanceType[]  // Available assistance options for this exercise
+  availableBands?: string[]           // Available band IDs (if 'bands' is in assistanceTypes)
   sets: WorkoutSet[]
   restTime: number
   order: number

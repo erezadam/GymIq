@@ -69,6 +69,9 @@ export function useActiveWorkout() {
   // Auto-save debounce ref
   const autoSaveTimeoutRef = useRef<number | null>(null)
 
+  // Flag to prevent auto-save from running during finish workflow
+  const isFinishingRef = useRef(false)
+
   // Track if we've already initialized to prevent duplicate creation
   const hasInitialized = useRef(false)
 
@@ -109,6 +112,12 @@ export function useActiveWorkout() {
 
     // Debounce: wait 2 seconds after last change before saving
     autoSaveTimeoutRef.current = window.setTimeout(async () => {
+      // Skip auto-save if we're in the process of finishing the workout
+      if (isFinishingRef.current) {
+        console.log('⏸️ Skipping auto-save - workout is being finished')
+        return
+      }
+
       try {
         const endTime = new Date()
         const duration = Math.floor((endTime.getTime() - workoutToSave.startedAt.getTime()) / 60000)
@@ -129,6 +138,8 @@ export function useActiveWorkout() {
             category: ex.category || '',
             isCompleted: ex.isCompleted,
             notes: ex.notes,
+            // Assistance configuration
+            ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
             sets: ex.reportedSets.map((set) => ({
               type: 'working',
               targetReps: 0,
@@ -136,6 +147,9 @@ export function useActiveWorkout() {
               actualReps: set.reps,
               actualWeight: set.weight,
               completed: set.reps > 0,
+              // Assistance fields (only include if defined - Firebase doesn't accept undefined)
+              ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
+              ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
             })),
           })),
           completedExercises: workoutToSave.stats.completedExercises,
@@ -203,7 +217,7 @@ export function useActiveWorkout() {
               id: firebaseWorkout.id,
               startedAt: firebaseWorkout.startTime,
               userId: firebaseWorkout.userId,
-              exercises: firebaseWorkout.exercises.map((ex, index) => ({
+              exercises: firebaseWorkout.exercises.map((ex: any, index: number) => ({
                 id: `workout_ex_${index}_${Date.now()}`,
                 exerciseId: ex.exerciseId,
                 exerciseName: ex.exerciseName,
@@ -213,12 +227,17 @@ export function useActiveWorkout() {
                 category: undefined, // Will be populated from exercise data
                 isExpanded: false,
                 isCompleted: ex.isCompleted,
-                reportedSets: ex.sets.map((set, setIndex) => ({
+                // Restore assistance type
+                ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
+                reportedSets: ex.sets.map((set: any, setIndex: number) => ({
                   id: `set_${Date.now()}_${setIndex}`,
                   setNumber: setIndex + 1,
                   weight: set.actualWeight || 0,
                   reps: set.actualReps || 0,
                   completedAt: set.completed ? new Date() : undefined,
+                  // Restore assistance fields
+                  assistanceWeight: set.assistanceWeight,
+                  assistanceBand: set.assistanceBand,
                 })),
               })),
               stats: {
@@ -352,27 +371,38 @@ export function useActiveWorkout() {
             }))
 
             // Create new exercise entries
-            const newExercises: ActiveWorkoutExercise[] = newExercisesToAdd.map((ex, index) => ({
-              id: `workout_ex_${parsed.exercises.length + index}_${Date.now()}`,
-              exerciseId: ex.exerciseId,
-              exerciseName: ex.exerciseName,
-              exerciseNameHe: ex.exerciseNameHe,
-              imageUrl: ex.imageUrl,
-              primaryMuscle: ex.primaryMuscle || 'other',
-              category: ex.category,
-              equipment: ex.equipment,
-              reportType: ex.reportType,
-              isExpanded: false, // New exercises start collapsed
-              isCompleted: false,
-              reportedSets: [
-                {
-                  id: `set_${Date.now()}_${index}_1`,
-                  setNumber: 1,
-                  weight: 0,
-                  reps: 0,
-                },
-              ],
-            }))
+            const newExercises: ActiveWorkoutExercise[] = newExercisesToAdd.map((ex, index) => {
+              // Auto-select assistance type if only one option
+              let autoSelectedAssistanceType: 'graviton' | 'bands' | undefined
+              if (ex.assistanceTypes && ex.assistanceTypes.length === 1) {
+                autoSelectedAssistanceType = ex.assistanceTypes[0]
+              }
+
+              return {
+                id: `workout_ex_${parsed.exercises.length + index}_${Date.now()}`,
+                exerciseId: ex.exerciseId,
+                exerciseName: ex.exerciseName,
+                exerciseNameHe: ex.exerciseNameHe,
+                imageUrl: ex.imageUrl,
+                primaryMuscle: ex.primaryMuscle || 'other',
+                category: ex.category,
+                equipment: ex.equipment,
+                reportType: ex.reportType,
+                assistanceTypes: ex.assistanceTypes,    // Pass assistance options
+                availableBands: ex.availableBands,      // Pass available bands
+                assistanceType: autoSelectedAssistanceType, // Auto-select if only one option
+                isExpanded: false, // New exercises start collapsed
+                isCompleted: false,
+                reportedSets: [
+                  {
+                    id: `set_${Date.now()}_${index}_1`,
+                    setNumber: 1,
+                    weight: 0,
+                    reps: 0,
+                  },
+                ],
+              }
+            })
 
             // Fetch last workout data and historical notes for new exercises
             if (user?.uid) {
@@ -437,6 +467,9 @@ export function useActiveWorkout() {
               weight: set.actualWeight || 0,
               reps: set.actualReps || 0,
               completedAt: set.completed ? new Date() : undefined,
+              // Restore assistance fields
+              assistanceWeight: set.assistanceWeight,
+              assistanceBand: set.assistanceBand,
             }))
           } else {
             // Default: one empty set
@@ -450,6 +483,13 @@ export function useActiveWorkout() {
             ]
           }
 
+          // Auto-select assistance type if only one option
+          let autoSelectedAssistanceType: 'graviton' | 'bands' | undefined
+          if (ex.assistanceTypes && ex.assistanceTypes.length === 1) {
+            autoSelectedAssistanceType = ex.assistanceTypes[0]
+            console.log(`🔧 Auto-selecting assistance type for ${ex.exerciseNameHe}: ${autoSelectedAssistanceType}`)
+          }
+
           return {
             id: `workout_ex_${index}_${Date.now()}`,
             exerciseId: ex.exerciseId,
@@ -460,6 +500,9 @@ export function useActiveWorkout() {
             category: ex.category,
             equipment: ex.equipment,
             reportType: ex.reportType,
+            assistanceTypes: ex.assistanceTypes,    // Pass assistance options
+            availableBands: ex.availableBands,      // Pass available bands
+            assistanceType: autoSelectedAssistanceType, // Auto-select if only one option
             isExpanded: false, // All exercises start collapsed
             isCompleted: continueExercise?.isCompleted || false,
             reportedSets,
@@ -537,6 +580,8 @@ export function useActiveWorkout() {
               category: ex.category || '',
               isCompleted: ex.isCompleted,
               notes: ex.notes,
+              // Assistance configuration
+              ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
               sets: ex.reportedSets.map((set) => ({
                 type: 'working',
                 targetReps: 0,
@@ -544,6 +589,9 @@ export function useActiveWorkout() {
                 actualReps: set.reps,
                 actualWeight: set.weight,
                 completed: set.reps > 0,
+                // Assistance fields (only include if defined - Firebase doesn't accept undefined)
+                ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
+                ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
               })),
             })),
             completedExercises: newWorkout.stats.completedExercises,
@@ -657,6 +705,9 @@ export function useActiveWorkout() {
           setNumber: exercise.reportedSets.length + 1,
           weight: lastSet?.weight || 0,
           reps: lastSet?.reps || 0,
+          // Copy assistance fields from previous set
+          assistanceWeight: lastSet?.assistanceWeight,
+          assistanceBand: lastSet?.assistanceBand,
         }
 
         return {
@@ -672,6 +723,19 @@ export function useActiveWorkout() {
           },
         }
       })
+    },
+    [updateWorkout]
+  )
+
+  // Set assistance type for an exercise (undefined = use default reportType)
+  const setAssistanceType = useCallback(
+    (exerciseId: string, assistanceType: 'graviton' | 'bands' | undefined) => {
+      updateWorkout((prev) => ({
+        ...prev,
+        exercises: prev.exercises.map((ex) =>
+          ex.id === exerciseId ? { ...ex, assistanceType } : ex
+        ),
+      }))
     },
     [updateWorkout]
   )
@@ -924,8 +988,21 @@ export function useActiveWorkout() {
       // So we'll handle the finish logic inline
       const doFinish = async () => {
         console.log('=== FINISH WORKOUT START (from effect) ===')
+
+        // Set flag to prevent auto-save from running during finish workflow
+        isFinishingRef.current = true
+
+        // CRITICAL: Cancel any pending auto-save to prevent race condition
+        // where auto-save overwrites the 'completed' status with 'in_progress'
+        if (autoSaveTimeoutRef.current) {
+          console.log('🛑 Cancelling pending auto-save before finishing')
+          clearTimeout(autoSaveTimeoutRef.current)
+          autoSaveTimeoutRef.current = null
+        }
+
         if (!workout) {
           console.error('=== FINISH WORKOUT FAILED - NO WORKOUT ===')
+          isFinishingRef.current = false
           return
         }
 
@@ -952,6 +1029,8 @@ export function useActiveWorkout() {
             category: ex.category || '',
             isCompleted: ex.isCompleted,
             notes: ex.notes,
+            // Assistance configuration
+            ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
             sets: ex.reportedSets.map((set) => ({
               type: 'working' as SetType,
               targetReps: 0,
@@ -959,6 +1038,9 @@ export function useActiveWorkout() {
               actualReps: set.reps,
               actualWeight: set.weight,
               completed: set.reps > 0,
+              // Assistance fields (only include if defined - Firebase doesn't accept undefined)
+              ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
+              ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
             })),
           }))
 
@@ -998,23 +1080,27 @@ export function useActiveWorkout() {
             console.log('=== SAVE WORKOUT SUCCESS (from effect) ===')
           }
           toast.success('האימון נשמר!')
+
+          // Clear everything ONLY after successful save
+          clearStorage()
+          clearWorkout()
+          setWorkout(null)
+          setFirebaseWorkoutId(null)
+          setShowSummaryModal(false)
+          setPendingCalories(undefined)
+          localStorage.removeItem('gymiq_firebase_workout_id')
+          hasInitialized.current = false
+          setConfirmModal({ type: null })
+          navigate('/workout/history')
         } catch (error: any) {
           console.error('=== SAVE WORKOUT FAILED (from effect) ===')
           console.error('Error:', error)
           toast.error('שגיאה בשמירת האימון')
+          // DON'T clear workout on error - let user try again
+          isFinishingRef.current = false
+          setShowSummaryModal(false)
+          setShouldFinish(false)
         }
-
-        // Clear everything
-        clearStorage()
-        clearWorkout()
-        setWorkout(null)
-        setFirebaseWorkoutId(null)
-        setShowSummaryModal(false)
-        setPendingCalories(undefined)
-        localStorage.removeItem('gymiq_firebase_workout_id')
-        hasInitialized.current = false
-        setConfirmModal({ type: null })
-        navigate('/workout/history')
       }
 
       doFinish()
@@ -1045,6 +1131,7 @@ export function useActiveWorkout() {
           category: ex.category || '',
           isCompleted: ex.isCompleted,
           notes: ex.notes,
+          ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
           sets: ex.reportedSets.map((set) => ({
             type: 'working' as SetType,
             targetReps: 0,
@@ -1052,6 +1139,9 @@ export function useActiveWorkout() {
             actualReps: set.reps,
             actualWeight: set.weight,
             completed: set.reps > 0,
+            // Assistance fields (only include if defined - Firebase doesn't accept undefined)
+            ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
+            ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
           })),
         }))
 
@@ -1195,6 +1285,7 @@ export function useActiveWorkout() {
     deleteSet,
     finishExercise,
     updateExerciseNotes,
+    setAssistanceType,
 
     // Workout actions
     confirmDeleteExercise,

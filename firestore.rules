@@ -73,6 +73,15 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // ============ BAND TYPES ============
+    match /bandTypes/{bandTypeId} {
+      // Anyone can read band types
+      allow read: if true;
+
+      // Only admins can write
+      allow create, update, delete: if isAdmin();
+    }
+
     // ============ EXERCISES ============
     match /exercises/{exerciseId} {
       // Anyone can read exercises (for initial load before auth)

@@ -16,6 +16,7 @@ interface MuscleGroupSectionProps {
   onFinishExercise: (exerciseId: string) => void
   onDeleteExercise: (exerciseId: string) => void
   onUpdateNotes: (exerciseId: string, notes: string) => void
+  onSetAssistanceType: (exerciseId: string, assistanceType: 'graviton' | 'bands' | undefined) => void
 }
 
 export function MuscleGroupSection({
@@ -27,6 +28,7 @@ export function MuscleGroupSection({
   onFinishExercise,
   onDeleteExercise,
   onUpdateNotes,
+  onSetAssistanceType,
 }: MuscleGroupSectionProps) {
   return (
     <section className="muscle-group-section" dir="rtl">
@@ -48,6 +50,7 @@ export function MuscleGroupSection({
             onFinish={() => onFinishExercise(exercise.id)}
             onDelete={() => onDeleteExercise(exercise.id)}
             onUpdateNotes={(notes) => onUpdateNotes(exercise.id, notes)}
+            onSetAssistanceType={(type) => onSetAssistanceType(exercise.id, type)}
           />
         ))}
       </div>

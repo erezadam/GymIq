@@ -54,6 +54,8 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
         category: exercise.category,
         equipment: exercise.equipment,
         reportType: exercise.reportType,
+        assistanceTypes: exercise.assistanceTypes,   // Pass assistance options
+        availableBands: exercise.availableBands,     // Pass available bands
       })
     }
   }
