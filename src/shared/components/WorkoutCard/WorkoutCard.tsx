@@ -161,42 +161,65 @@ export function WorkoutCard({
             </div>
           ) : expandedWorkoutDetails?.exercises && expandedWorkoutDetails.exercises.length > 0 ? (
             <div className="space-y-3">
-              {expandedWorkoutDetails.exercises.map((exercise, idx) => (
-                <div key={idx} className="bg-dark-card/30 rounded-xl p-3">
-                  <p className="font-medium text-text-primary mb-2">
-                    {exercise.exerciseNameHe || exercise.exerciseName}
-                  </p>
-                  <div className="flex flex-wrap gap-2 text-sm text-text-muted">
-                    <span className="px-2 py-0.5 bg-dark-border/50 rounded">
-                      סטים: {exercise.sets?.length || 0}
-                    </span>
-                    <span className="px-2 py-0.5 bg-dark-border/50 rounded">
-                      חזרות: {exercise.sets?.[0]?.targetReps || exercise.sets?.[0]?.actualReps || '--'}
-                    </span>
-                    {/* Graviton - show assistance weight */}
-                    {exercise.sets?.[0]?.assistanceWeight ? (
-                      <span className="px-2 py-0.5 bg-teal-500/20 text-teal-400 rounded">
-                        עזרה: {exercise.sets[0].assistanceWeight} ק"ג
-                      </span>
-                    ) : exercise.sets?.[0]?.assistanceBand ? (
-                      /* Bands - show band name */
-                      <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded">
-                        גומייה: {bandNameMap[exercise.sets[0].assistanceBand] || exercise.sets[0].assistanceBand}
-                      </span>
-                    ) : (
-                      /* Regular exercise - show weight */
-                      <span className="px-2 py-0.5 bg-dark-border/50 rounded">
-                        משקל: {exercise.sets?.[0]?.targetWeight || exercise.sets?.[0]?.actualWeight || '--'} ק"ג
-                      </span>
+              {expandedWorkoutDetails.exercises.map((exercise, idx) => {
+                // Determine if this is an assistance exercise (graviton/bands)
+                const hasAssistanceWeight = exercise.sets?.some(s => s.assistanceWeight !== undefined && s.assistanceWeight > 0)
+                const hasAssistanceBand = exercise.sets?.some(s => s.assistanceBand)
+
+                return (
+                  <div key={idx} className="bg-dark-card/30 rounded-xl p-3">
+                    <p className="font-medium text-text-primary mb-2">
+                      {exercise.exerciseNameHe || exercise.exerciseName}
+                      {/* Badge for assistance type */}
+                      {hasAssistanceWeight && (
+                        <span className="mr-2 text-xs px-1.5 py-0.5 bg-teal-500/20 text-teal-400 rounded">גרביטון</span>
+                      )}
+                      {hasAssistanceBand && (
+                        <span className="mr-2 text-xs px-1.5 py-0.5 bg-purple-500/20 text-purple-400 rounded">גומיות</span>
+                      )}
+                    </p>
+
+                    {/* Sets detail table */}
+                    {exercise.sets && exercise.sets.length > 0 && (
+                      <div className="space-y-1.5">
+                        {exercise.sets.map((set, setIdx) => {
+                          const reps = set.actualReps || set.targetReps || 0
+                          const weight = set.actualWeight || set.targetWeight || 0
+
+                          return (
+                            <div key={setIdx} className="flex items-center gap-2 text-sm">
+                              <span className="text-text-muted w-12">סט {setIdx + 1}:</span>
+                              <span className="text-white">{reps} חזרות</span>
+
+                              {/* Show appropriate weight/assistance info */}
+                              {set.assistanceWeight !== undefined && set.assistanceWeight > 0 ? (
+                                <span className="text-teal-400">• עזרה: {set.assistanceWeight} ק"ג</span>
+                              ) : set.assistanceBand ? (
+                                <span className="text-purple-400">• {bandNameMap[set.assistanceBand] || set.assistanceBand}</span>
+                              ) : weight > 0 ? (
+                                <span className="text-text-muted">• {weight} ק"ג</span>
+                              ) : null}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {/* Fallback summary for exercises without sets */}
+                    {(!exercise.sets || exercise.sets.length === 0) && (
+                      <div className="flex flex-wrap gap-2 text-sm text-text-muted">
+                        <span className="px-2 py-0.5 bg-dark-border/50 rounded">אין סטים</span>
+                      </div>
+                    )}
+
+                    {exercise.notes && (
+                      <p className="text-sm text-text-muted mt-2 italic border-r-2 border-primary-main pr-2">
+                        {exercise.notes}
+                      </p>
                     )}
                   </div>
-                  {exercise.notes && (
-                    <p className="text-sm text-text-muted mt-2 italic border-r-2 border-primary-main pr-2">
-                      {exercise.notes}
-                    </p>
-                  )}
-                </div>
-              ))}
+                )
+              })}
             </div>
           ) : null}
 
