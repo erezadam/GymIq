@@ -10,8 +10,14 @@ function formatDate(date: Date): string {
   return `${date.getDate()}/${date.getMonth() + 1}`
 }
 
-// Check improvement types
+// Check improvement types - for bodyweight exercises, only reps matter
 function getImprovementType(record: PersonalRecord): { weight: boolean; reps: boolean } {
+  if (record.isBodyweight) {
+    // Bodyweight: only check reps improvement
+    const repsImproved = record.previousReps !== undefined && record.bestReps > record.previousReps
+    return { weight: false, reps: repsImproved }
+  }
+  // Regular: check both weight and reps
   const weightImproved = record.previousWeight !== undefined && record.bestWeight > record.previousWeight
   const repsImproved = record.previousReps !== undefined && record.bestReps > record.previousReps
   return { weight: weightImproved, reps: repsImproved }
@@ -251,17 +257,33 @@ export default function PersonalRecords() {
                       </p>
                     </div>
 
-                    {/* Best Record */}
+                    {/* Best Record - show reps prominently for bodyweight */}
                     <div className="text-left flex-shrink-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-lg font-bold text-primary-main">
-                          {record.bestWeight}
-                        </span>
-                        <span className="text-sm text-text-secondary">ק"ג</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-text-muted text-xs">
-                        <span>{record.bestReps} חזרות</span>
-                      </div>
+                      {record.isBodyweight ? (
+                        <>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-lg font-bold text-primary-main">
+                              {record.bestReps}
+                            </span>
+                            <span className="text-sm text-text-secondary">חזרות</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-text-muted text-xs">
+                            <span>משקל גוף</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-lg font-bold text-primary-main">
+                              {record.bestWeight}
+                            </span>
+                            <span className="text-sm text-text-secondary">ק"ג</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-text-muted text-xs">
+                            <span>{record.bestReps} חזרות</span>
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {/* Expand/Collapse Indicator */}
@@ -276,12 +298,13 @@ export default function PersonalRecords() {
                   <div className="mt-3 pt-3 border-t border-border-default flex items-center justify-between text-xs">
                     <span className="text-text-muted">{formatDate(record.bestDate)}</span>
 
-                    {record.previousWeight !== undefined && (
+                    {/* Show comparison - for bodyweight check previousReps, otherwise previousWeight */}
+                    {(record.isBodyweight ? record.previousReps !== undefined : record.previousWeight !== undefined) && (
                       <div className="text-text-muted">
                         {(() => {
                           const improvement = getImprovementType(record)
                           const parts = []
-                          if (improvement.weight) {
+                          if (improvement.weight && !record.isBodyweight) {
                             parts.push(`+${record.bestWeight - (record.previousWeight || 0)} ק"ג`)
                           }
                           if (improvement.reps && record.previousReps !== undefined) {
@@ -289,6 +312,10 @@ export default function PersonalRecords() {
                           }
                           if (parts.length > 0) {
                             return <span className="text-[#00ff88]">{parts.join(' | ')}</span>
+                          }
+                          // Show previous best
+                          if (record.isBodyweight) {
+                            return <span>קודם: {record.previousReps} חזרות</span>
                           }
                           return <span>קודם: {record.previousWeight} ק"ג</span>
                         })()}

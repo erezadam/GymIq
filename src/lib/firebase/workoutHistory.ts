@@ -472,6 +472,7 @@ export interface PersonalRecord {
   previousDate?: Date
   workoutCount: number // How many times this exercise was performed
   hasImproved: boolean // True if best > previous
+  isBodyweight: boolean // True if this is a bodyweight exercise (weight always 0)
 }
 
 // Get personal records for all exercises
@@ -497,6 +498,7 @@ export async function getPersonalRecords(userId: string): Promise<PersonalRecord
     imageUrl?: string
     records: { weight: number; reps: number; date: Date }[]
     workoutCount: number
+    isBodyweight: boolean // All recorded weights are 0
   }> = new Map()
 
   // Process all workouts (filter completed client-side)
@@ -525,10 +527,28 @@ export async function getPersonalRecords(userId: string): Promise<PersonalRecord
 
       if (validSets.length === 0) continue
 
+      // Check if this is a bodyweight exercise (all weights are 0 or undefined)
+      const allWeightsZero = validSets.every((set: any) => !set.actualWeight || set.actualWeight === 0)
+
+      // Find best set: for bodyweight exercises compare by reps, otherwise by weight
       const bestSet = validSets.reduce((best: any, current: any) => {
-        const currentWeight = current.actualWeight || 0
-        const bestWeight = best.actualWeight || 0
-        return currentWeight > bestWeight ? current : best
+        if (allWeightsZero) {
+          // Bodyweight: compare by reps
+          const currentReps = current.actualReps || 0
+          const bestReps = best.actualReps || 0
+          return currentReps > bestReps ? current : best
+        } else {
+          // Regular: compare by weight, then by reps if equal
+          const currentWeight = current.actualWeight || 0
+          const bestWeight = best.actualWeight || 0
+          if (currentWeight > bestWeight) return current
+          if (currentWeight === bestWeight) {
+            const currentReps = current.actualReps || 0
+            const bestReps = best.actualReps || 0
+            return currentReps > bestReps ? current : best
+          }
+          return best
+        }
       }, validSets[0])
 
       const weight = bestSet.actualWeight || 0
@@ -541,6 +561,8 @@ export async function getPersonalRecords(userId: string): Promise<PersonalRecord
       if (existing) {
         existing.records.push({ weight, reps, date: workoutDate })
         existing.workoutCount++
+        // Update isBodyweight - stays true only if ALL records have weight 0
+        if (weight > 0) existing.isBodyweight = false
       } else {
         exerciseMap.set(exercise.exerciseId, {
           exerciseId: exercise.exerciseId,
@@ -549,6 +571,7 @@ export async function getPersonalRecords(userId: string): Promise<PersonalRecord
           imageUrl: exercise.imageUrl,
           records: [{ weight, reps, date: workoutDate }],
           workoutCount: 1,
+          isBodyweight: allWeightsZero, // Start with whether this workout had all 0 weights
         })
       }
     }
@@ -558,24 +581,50 @@ export async function getPersonalRecords(userId: string): Promise<PersonalRecord
   const results: PersonalRecord[] = []
 
   for (const [, data] of exerciseMap) {
-    // Sort records by WEIGHT descending to find best and second best PR
-    const sortedByWeight = [...data.records].sort((a, b) => b.weight - a.weight)
-    const bestRecord = sortedByWeight[0]
-    const secondBestRecord = sortedByWeight.length > 1 ? sortedByWeight[1] : undefined
+    let bestRecord: { weight: number; reps: number; date: Date }
+    let secondBestRecord: { weight: number; reps: number; date: Date } | undefined
+    let hasImproved = false
 
-    // Sort by DATE to find most recent workout
-    const sortedByDate = [...data.records].sort((a, b) => b.date.getTime() - a.date.getTime())
-    const mostRecentRecord = sortedByDate[0]
+    if (data.isBodyweight) {
+      // Bodyweight exercises: sort by REPS descending
+      const sortedByReps = [...data.records].sort((a, b) => b.reps - a.reps)
+      bestRecord = sortedByReps[0]
+      secondBestRecord = sortedByReps.length > 1 ? sortedByReps[1] : undefined
 
-    // hasImproved = the most recent workout achieved the current best (new PR!)
-    // AND there was a previous best to compare against
-    const hasImproved = secondBestRecord
-      ? (mostRecentRecord.weight === bestRecord.weight &&
-         mostRecentRecord.date.getTime() === bestRecord.date.getTime() &&
-         bestRecord.weight > secondBestRecord.weight)
-      : false
+      // Sort by DATE to find most recent workout
+      const sortedByDate = [...data.records].sort((a, b) => b.date.getTime() - a.date.getTime())
+      const mostRecentRecord = sortedByDate[0]
 
-    console.log(`🏆 ${data.exerciseNameHe}: best=${bestRecord.weight}kg, secondBest=${secondBestRecord?.weight}kg, mostRecent=${mostRecentRecord.weight}kg, improved=${hasImproved}`)
+      // hasImproved for bodyweight = most recent achieved best reps AND better than previous
+      hasImproved = secondBestRecord
+        ? (mostRecentRecord.reps === bestRecord.reps &&
+           mostRecentRecord.date.getTime() === bestRecord.date.getTime() &&
+           bestRecord.reps > secondBestRecord.reps)
+        : false
+    } else {
+      // Regular exercises: sort by WEIGHT descending, then by reps
+      const sortedByWeight = [...data.records].sort((a, b) => {
+        if (b.weight !== a.weight) return b.weight - a.weight
+        return b.reps - a.reps // Secondary sort by reps
+      })
+      bestRecord = sortedByWeight[0]
+      secondBestRecord = sortedByWeight.length > 1 ? sortedByWeight[1] : undefined
+
+      // Sort by DATE to find most recent workout
+      const sortedByDate = [...data.records].sort((a, b) => b.date.getTime() - a.date.getTime())
+      const mostRecentRecord = sortedByDate[0]
+
+      // hasImproved for regular = most recent achieved best weight AND better than previous
+      hasImproved = secondBestRecord
+        ? (mostRecentRecord.weight === bestRecord.weight &&
+           mostRecentRecord.date.getTime() === bestRecord.date.getTime() &&
+           (bestRecord.weight > secondBestRecord.weight ||
+            (bestRecord.weight === secondBestRecord.weight && bestRecord.reps > secondBestRecord.reps)))
+        : false
+    }
+
+    const logType = data.isBodyweight ? 'BW' : 'WT'
+    console.log(`🏆 [${logType}] ${data.exerciseNameHe}: best=${bestRecord.weight}kg/${bestRecord.reps}reps, secondBest=${secondBestRecord?.weight}kg/${secondBestRecord?.reps}reps, improved=${hasImproved}`)
 
     results.push({
       exerciseId: data.exerciseId,
@@ -590,6 +639,7 @@ export async function getPersonalRecords(userId: string): Promise<PersonalRecord
       previousDate: secondBestRecord?.date,
       workoutCount: data.workoutCount,
       hasImproved,
+      isBodyweight: data.isBodyweight,
     })
   }
 
@@ -775,6 +825,7 @@ export async function getExerciseHistory(
 
   // Map: date string -> best values for that date
   const dateMap: Map<string, { date: Date; weight: number; reps: number; time?: number }> = new Map()
+  let isBodyweightExercise = true // Assume bodyweight until we see a weight > 0
 
   for (const docSnap of snapshot.docs) {
     const data = docSnap.data()
@@ -798,6 +849,11 @@ export async function getExerciseHistory(
 
     if (validSets.length === 0) continue
 
+    // Check if any set has weight > 0
+    if (validSets.some((set: any) => (set.actualWeight || 0) > 0)) {
+      isBodyweightExercise = false
+    }
+
     // Find best values
     let bestWeight = 0
     let bestReps = 0
@@ -806,19 +862,31 @@ export async function getExerciseHistory(
       const weight = set.actualWeight || 0
       const reps = set.actualReps || 0
 
-      // Best = highest weight
-      if (weight > bestWeight) {
-        bestWeight = weight
-        bestReps = reps
-      } else if (weight === bestWeight && reps > bestReps) {
-        bestReps = reps
+      if (isBodyweightExercise) {
+        // Bodyweight: best = highest reps
+        if (reps > bestReps) {
+          bestReps = reps
+          bestWeight = weight
+        }
+      } else {
+        // Regular: best = highest weight, then reps
+        if (weight > bestWeight) {
+          bestWeight = weight
+          bestReps = reps
+        } else if (weight === bestWeight && reps > bestReps) {
+          bestReps = reps
+        }
       }
     }
 
     // Update date map - keep best values for each date
     const existing = dateMap.get(dateKey)
-    if (!existing || bestWeight > existing.weight ||
-        (bestWeight === existing.weight && bestReps > existing.reps)) {
+    const shouldUpdate = !existing ||
+      (isBodyweightExercise
+        ? bestReps > existing.reps
+        : (bestWeight > existing.weight || (bestWeight === existing.weight && bestReps > existing.reps)))
+
+    if (shouldUpdate) {
       dateMap.set(dateKey, {
         date: workoutDate,
         weight: bestWeight,
@@ -830,11 +898,18 @@ export async function getExerciseHistory(
   // Convert to array and find overall best
   const entries = Array.from(dateMap.values())
 
-  // Find overall best weight
+  // Find overall best (by reps for bodyweight, by weight for regular)
   let overallBestWeight = 0
+  let overallBestReps = 0
   for (const entry of entries) {
-    if (entry.weight > overallBestWeight) {
-      overallBestWeight = entry.weight
+    if (isBodyweightExercise) {
+      if (entry.reps > overallBestReps) {
+        overallBestReps = entry.reps
+      }
+    } else {
+      if (entry.weight > overallBestWeight) {
+        overallBestWeight = entry.weight
+      }
     }
   }
 
@@ -847,7 +922,9 @@ export async function getExerciseHistory(
     bestWeight: entry.weight,
     bestReps: entry.reps,
     bestTime: entry.time,
-    isOverallBest: entry.weight === overallBestWeight && overallBestWeight > 0,
+    isOverallBest: isBodyweightExercise
+      ? entry.reps === overallBestReps && overallBestReps > 0
+      : entry.weight === overallBestWeight && overallBestWeight > 0,
   }))
 }
 
