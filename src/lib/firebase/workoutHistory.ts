@@ -803,6 +803,7 @@ export interface ExerciseHistoryEntry {
   date: Date
   bestWeight: number
   bestReps: number
+  setCount: number // Number of sets performed
   bestTime?: number // For time-based exercises (in seconds)
   isOverallBest: boolean // Is this the all-time best?
 }
@@ -824,7 +825,7 @@ export async function getExerciseHistory(
   const snapshot = await getDocs(q)
 
   // Map: date string -> best values for that date
-  const dateMap: Map<string, { date: Date; weight: number; reps: number; time?: number }> = new Map()
+  const dateMap: Map<string, { date: Date; weight: number; reps: number; setCount: number; time?: number }> = new Map()
   let isBodyweightExercise = true // Assume bodyweight until we see a weight > 0
 
   for (const docSnap of snapshot.docs) {
@@ -879,18 +880,29 @@ export async function getExerciseHistory(
       }
     }
 
-    // Update date map - keep best values for each date
+    // Update date map - keep best values for each date, sum up sets
     const existing = dateMap.get(dateKey)
-    const shouldUpdate = !existing ||
-      (isBodyweightExercise
-        ? bestReps > existing.reps
-        : (bestWeight > existing.weight || (bestWeight === existing.weight && bestReps > existing.reps)))
+    const currentSetCount = validSets.length
 
-    if (shouldUpdate) {
+    if (!existing) {
+      // First entry for this date
       dateMap.set(dateKey, {
         date: workoutDate,
         weight: bestWeight,
         reps: bestReps,
+        setCount: currentSetCount,
+      })
+    } else {
+      // Update existing entry: sum sets, keep best weight/reps
+      const shouldUpdateBest = isBodyweightExercise
+        ? bestReps > existing.reps
+        : (bestWeight > existing.weight || (bestWeight === existing.weight && bestReps > existing.reps))
+
+      dateMap.set(dateKey, {
+        date: workoutDate,
+        weight: shouldUpdateBest ? bestWeight : existing.weight,
+        reps: shouldUpdateBest ? bestReps : existing.reps,
+        setCount: existing.setCount + currentSetCount, // Sum up sets from multiple workouts
       })
     }
   }
@@ -921,6 +933,7 @@ export async function getExerciseHistory(
     date: entry.date,
     bestWeight: entry.weight,
     bestReps: entry.reps,
+    setCount: entry.setCount,
     bestTime: entry.time,
     isOverallBest: isBodyweightExercise
       ? entry.reps === overallBestReps && overallBestReps > 0

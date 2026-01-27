@@ -340,7 +340,7 @@ export default function PersonalRecords() {
                         {/* History Table Header */}
                         <div className="grid grid-cols-3 gap-2 text-xs text-text-muted mb-2 px-2">
                           <span>תאריך</span>
-                          <span className="text-center">חזרות</span>
+                          <span className="text-center">סטים</span>
                           <span className="text-left">משקל</span>
                         </div>
                         {/* History Rows */}
@@ -358,7 +358,7 @@ export default function PersonalRecords() {
                                 {formatHistoryDate(entry.date)}
                               </span>
                               <span className="text-center text-white">
-                                {entry.bestReps}
+                                {entry.setCount}
                               </span>
                               <span className="text-left flex items-center gap-1">
                                 <span className={entry.isOverallBest ? 'text-primary-main font-semibold' : 'text-white'}>
