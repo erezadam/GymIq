@@ -131,6 +131,7 @@ caches.keys().then(names => {
 
 | תאריך | בעיה | בדיקה |
 |-------|------|-------|
+| 29/01 | המשך אימון מאבד extended fields (time/intensity/speed/distance/incline) | ודא שכל save/restore points ב-useActiveWorkout.ts ו-workoutHistory.ts כוללים extended fields |
 | 29/01 | המשך אימון ריק/שחזור מ-Firebase לא מעביר category/primaryMuscle | `npm run test` - בדיקת רגרסיה 29/01 + ודא שכל addExercise מעביר details |
 | 25/01 | תרגיל מופיע בקטגוריה שגויה (category=sub-muscle) | `grep -r "VALID_EXERCISE_CATEGORIES_SET" src/` - ודא שיש validation |
 | 25/01 | המשך אימון "ללא דיווח" יוצר אימון חדש | `grep -r "case 'cancelled'" src/` - ודא ש-cancelled מטופל עם in_progress |
@@ -148,6 +149,45 @@ handleDeleteWorkout - כפתור מחיקת אימון
 handleAddSet - הוספת סט לאימון
 useTimer / RestTimer - טיימר מנוחה
 workout.calories - שדה קלוריות (לא estimateCalories!)
+```
+
+### ⚠️ Extended Set Fields - כלל קריטי:
+> **כל save/restore point חייב לכלול את כל שדות הסט: weight, reps, time, intensity, speed, distance, incline, assistanceWeight, assistanceBand**
+
+```
+שמירה: set.time/intensity/speed/distance/incline → Firebase: time/intensity/speed/distance/incline
+שחזור: Firebase: time/intensity/speed/distance/incline → ReportedSet: time/intensity/speed/distance/incline
+```
+
+**Save points שחייבים לכלול extended fields:**
+```
+useActiveWorkout.ts:
+  - triggerAutoSave (~line 143)
+  - initWorkout initial save (~line 629)
+  - finishWorkout (~line 1084)
+  - exitWorkout (~line 1191)
+
+workoutHistory.ts:
+  - saveWorkoutHistory (~line 122)
+  - autoSaveWorkout (~line 765)
+  - completeWorkout (~line 1086)
+```
+
+**Restore points שחייבים לכלול extended fields:**
+```
+useActiveWorkout.ts:
+  - Firebase recovery (~line 263)
+  - Continue from history (~line 502)
+```
+
+**בדיקה מהירה:**
+```bash
+# ודא שכל save points כוללים extended fields:
+grep -n "set.time\|set\.intensity\|set\.speed\|set\.distance\|set\.incline" src/domains/workouts/hooks/useActiveWorkout.ts | wc -l
+# אמור להיות >= 20 (5 fields × 4 save points)
+
+grep -n "set.time\|set\.intensity\|set\.speed\|set\.distance\|set\.incline" src/lib/firebase/workoutHistory.ts | wc -l
+# אמור להיות >= 15 (5 fields × 3 save points)
 ```
 
 ### ⚠️ סטטוסי אימון - כלל קריטי:

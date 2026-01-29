@@ -11,6 +11,12 @@ export interface WorkoutSet {
   actualWeight?: number
   completed: boolean
   rpe?: number // Rate of Perceived Exertion 1-10
+  // Extended report fields (for non-standard report types)
+  time?: number        // Time in seconds (time-based exercises)
+  intensity?: number   // Intensity level (cardio machines)
+  speed?: number       // Speed (treadmill, etc.)
+  distance?: number    // Distance in meters
+  incline?: number     // Incline percentage
   // Assistance fields
   assistanceWeight?: number  // For graviton - counterweight in kg
   assistanceBand?: string    // For bands - single band ID (one band per set)
@@ -104,6 +110,12 @@ export interface WorkoutHistoryEntry {
       actualReps?: number
       actualWeight?: number
       completed: boolean
+      // Extended report fields (for non-standard report types)
+      time?: number        // Time in seconds (time-based exercises)
+      intensity?: number   // Intensity level (cardio machines)
+      speed?: number       // Speed (treadmill, etc.)
+      distance?: number    // Distance in meters
+      incline?: number     // Incline percentage
       // Assistance fields
       assistanceWeight?: number  // For graviton - counterweight in kg
       assistanceBand?: string    // For bands - single band ID (one band per set)

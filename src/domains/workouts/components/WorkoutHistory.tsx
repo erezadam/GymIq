@@ -263,14 +263,19 @@ export default function WorkoutHistory() {
     return Math.round(duration * 5 + (volume / 100))
   }
 
-  // Helper: Check if workout has any reported sets (actualWeight > 0 or actualReps > 0)
+  // Helper: Check if workout has any reported sets (weight/reps/time/intensity/speed/distance)
   const hasReportedSets = (workout: WorkoutHistoryEntry): boolean => {
     return workout.exercises?.some(ex =>
       ex.sets?.some(set => {
         // Check actual values - these indicate user has reported data
         const weight = set.actualWeight ?? 0
         const reps = set.actualReps ?? 0
-        return weight > 0 || reps > 0
+        // Also check extended fields for non-standard report types (cardio, time-based, etc.)
+        const time = (set as any).time ?? 0
+        const intensity = (set as any).intensity ?? 0
+        const speed = (set as any).speed ?? 0
+        const distance = (set as any).distance ?? 0
+        return weight > 0 || reps > 0 || time > 0 || intensity > 0 || speed > 0 || distance > 0
       })
     ) ?? false
   }

@@ -147,7 +147,13 @@ export function useActiveWorkout() {
               actualReps: set.reps,
               actualWeight: set.weight,
               completed: set.reps > 0,
-              // Assistance fields (only include if defined - Firebase doesn't accept undefined)
+              // Extended fields (only include if defined - Firebase doesn't accept undefined)
+              ...(set.time !== undefined && set.time > 0 && { time: set.time }),
+              ...(set.intensity !== undefined && set.intensity > 0 && { intensity: set.intensity }),
+              ...(set.speed !== undefined && set.speed > 0 && { speed: set.speed }),
+              ...(set.distance !== undefined && set.distance > 0 && { distance: set.distance }),
+              ...(set.incline !== undefined && set.incline > 0 && { incline: set.incline }),
+              // Assistance fields
               ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
               ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
             })),
@@ -260,7 +266,13 @@ export function useActiveWorkout() {
                     weight: set.actualWeight || 0,
                     reps: set.actualReps || 0,
                     completedAt: set.completed ? new Date() : undefined,
-                    // Restore assistance fields
+                    // Extended fields
+                    ...(set.time && { time: set.time }),
+                    ...(set.intensity && { intensity: set.intensity }),
+                    ...(set.speed && { speed: set.speed }),
+                    ...(set.distance && { distance: set.distance }),
+                    ...(set.incline && { incline: set.incline }),
+                    // Assistance fields
                     assistanceWeight: set.assistanceWeight,
                     assistanceBand: set.assistanceBand,
                   })),
@@ -493,7 +505,13 @@ export function useActiveWorkout() {
               weight: set.actualWeight || 0,
               reps: set.actualReps || 0,
               completedAt: set.completed ? new Date() : undefined,
-              // Restore assistance fields
+              // Extended fields
+              ...(set.time && { time: set.time }),
+              ...(set.intensity && { intensity: set.intensity }),
+              ...(set.speed && { speed: set.speed }),
+              ...(set.distance && { distance: set.distance }),
+              ...(set.incline && { incline: set.incline }),
+              // Assistance fields
               assistanceWeight: set.assistanceWeight,
               assistanceBand: set.assistanceBand,
             }))
@@ -615,7 +633,13 @@ export function useActiveWorkout() {
                 actualReps: set.reps,
                 actualWeight: set.weight,
                 completed: set.reps > 0,
-                // Assistance fields (only include if defined - Firebase doesn't accept undefined)
+                // Extended fields
+                ...(set.time !== undefined && set.time > 0 && { time: set.time }),
+                ...(set.intensity !== undefined && set.intensity > 0 && { intensity: set.intensity }),
+                ...(set.speed !== undefined && set.speed > 0 && { speed: set.speed }),
+                ...(set.distance !== undefined && set.distance > 0 && { distance: set.distance }),
+                ...(set.incline !== undefined && set.incline > 0 && { incline: set.incline }),
+                // Assistance fields
                 ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
                 ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
               })),
@@ -1064,7 +1088,13 @@ export function useActiveWorkout() {
               actualReps: set.reps,
               actualWeight: set.weight,
               completed: set.reps > 0,
-              // Assistance fields (only include if defined - Firebase doesn't accept undefined)
+              // Extended fields (only include if defined - Firebase doesn't accept undefined)
+              ...(set.time !== undefined && set.time > 0 && { time: set.time }),
+              ...(set.intensity !== undefined && set.intensity > 0 && { intensity: set.intensity }),
+              ...(set.speed !== undefined && set.speed > 0 && { speed: set.speed }),
+              ...(set.distance !== undefined && set.distance > 0 && { distance: set.distance }),
+              ...(set.incline !== undefined && set.incline > 0 && { incline: set.incline }),
+              // Assistance fields
               ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
               ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
             })),
@@ -1165,7 +1195,13 @@ export function useActiveWorkout() {
             actualReps: set.reps,
             actualWeight: set.weight,
             completed: set.reps > 0,
-            // Assistance fields (only include if defined - Firebase doesn't accept undefined)
+            // Extended fields (only include if defined - Firebase doesn't accept undefined)
+            ...(set.time !== undefined && set.time > 0 && { time: set.time }),
+            ...(set.intensity !== undefined && set.intensity > 0 && { intensity: set.intensity }),
+            ...(set.speed !== undefined && set.speed > 0 && { speed: set.speed }),
+            ...(set.distance !== undefined && set.distance > 0 && { distance: set.distance }),
+            ...(set.incline !== undefined && set.incline > 0 && { incline: set.incline }),
+            // Assistance fields
             ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
             ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
           })),

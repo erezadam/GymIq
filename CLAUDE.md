@@ -103,6 +103,23 @@ grep -r "AIza" --include="*.ts" --include="*.js" --include="*.cjs" --include="*.
 
 **בדיקה אוטומטית:** `npm run test` - רגרסיה 29/01 בודקת את כל הנתיבים
 
+### שמירת נתוני סטים מורחבים - חוק ברזל (29/01/2026)
+
+> **כל save/restore point של נתוני סטים חייב לכלול את כל השדות: weight, reps + time, intensity, speed, distance, incline + assistanceWeight, assistanceBand**
+
+**סיבה:** באג קריטי - בהמשך אימון, נתוני תרגילים עם report types מורחבים (זמן, עצימות, מהירות וכו') אבדו כי רק weight/reps נשמרו.
+
+**Save points (חייבים extended fields):**
+- `useActiveWorkout.ts`: triggerAutoSave, initWorkout save, finishWorkout, exitWorkout
+- `workoutHistory.ts`: saveWorkoutHistory, autoSaveWorkout, completeWorkout
+
+**Restore points (חייבים extended fields):**
+- `useActiveWorkout.ts`: Firebase recovery, Continue from history
+
+**Types שחייבים extended fields:**
+- `WorkoutSet` ב-`workout.types.ts`
+- `WorkoutHistoryEntry.exercises[].sets[]` ב-`workout.types.ts`
+
 ### קטגוריות תרגילים - category vs primaryMuscle
 
 | שדה | תפקיד | ערכים תקינים |
