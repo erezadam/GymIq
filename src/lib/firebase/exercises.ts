@@ -170,14 +170,14 @@ export const deleteAllExercises = async (): Promise<number> => {
 // Valid categories for exercises
 export const VALID_EXERCISE_CATEGORIES = [
   'chest', 'back', 'legs', 'shoulders', 'arms', 'core',
-  'cardio', 'functional', 'stretching', 'warmup'
+  'cardio', 'functional', 'stretching', 'warmup', 'glutes'
 ] as const
 
 // Valid primary categories for exercises (main muscle groups only)
 // IMPORTANT: These are the ONLY valid values for the 'category' field
-// Sub-muscles like 'glutes', 'quads', 'lats' must NOT be used as category!
 export const VALID_EXERCISE_CATEGORIES_SET = new Set([
-  'legs', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio', 'warmup', 'functional', 'stretching'
+  'legs', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio', 'warmup', 'functional', 'stretching',
+  'glutes', 'gluteus_maximus' // Support both IDs for glutes
 ])
 
 // Alias for backward compatibility
@@ -236,10 +236,6 @@ const MUSCLE_TO_PARENT_MAPPING: Record<string, string> = {
   'lower_chest': 'chest',
   'middle_chest': 'chest',
   'mid_chest': 'chest',
-  // Glutes
-  'gluteus_maximus': 'glutes',
-  'gluteus_medius': 'glutes',
-  'gluteus_minimus': 'glutes',
   // Cardio - Hebrew variations
   'חימום': 'cardio',
   'אירובי': 'cardio',
@@ -349,9 +345,13 @@ export const fixInvalidPrimaryMuscles = async (): Promise<{ id: string; nameHe: 
 }
 
 // Mapping from sub-muscles to their parent category
-const SUB_MUSCLE_TO_CATEGORY: Record<string, string> = {
+// Exported for use in ExerciseForm when loading exercises with invalid categories
+export const SUB_MUSCLE_TO_CATEGORY: Record<string, string> = {
+  // Glutes sub-muscles (glutes is now a primary category)
+  'gluteus_maximus': 'glutes',
+  'gluteus_medius': 'glutes',
+  'gluteus_minimus': 'glutes',
   // Legs sub-muscles
-  'glutes': 'legs',
   'quads': 'legs',
   'quadriceps': 'legs',
   'hamstrings': 'legs',
@@ -361,10 +361,14 @@ const SUB_MUSCLE_TO_CATEGORY: Record<string, string> = {
   'hip_flexors': 'legs',
   // Back sub-muscles
   'lats': 'back',
+  'latissimus_dorsi': 'back',
   'upper_back': 'back',
   'lower_back': 'back',
   'traps': 'back',
+  'trapezius': 'back',
   'rhomboids': 'back',
+  'erector_spinae': 'back',
+  'longissimus': 'back',
   // Chest sub-muscles
   'upper_chest': 'chest',
   'mid_chest': 'chest',

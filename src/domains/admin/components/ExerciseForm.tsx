@@ -13,7 +13,7 @@ import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
 import { getMuscles } from '@/lib/firebase/muscles'
 import { getActiveReportTypes } from '@/lib/firebase/reportTypes'
 import { getActiveBandTypes } from '@/lib/firebase/bandTypes'
-import { VALID_EXERCISE_CATEGORIES_SET } from '@/lib/firebase/exercises'
+import { VALID_EXERCISE_CATEGORIES_SET, SUB_MUSCLE_TO_CATEGORY } from '@/lib/firebase/exercises'
 import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
 import type { ReportType } from '@/domains/exercises/types/reportTypes'
 import type { BandType } from '@/domains/exercises/types/bands'
@@ -188,6 +188,19 @@ export default function ExerciseForm() {
         categoryToSet = originalCategory
       }
 
+      // VALIDATION FIX: If the category is not valid, try to map it to a valid category
+      // This handles cases where exercises were saved with sub-muscle IDs as category
+      if (categoryToSet && !VALID_EXERCISE_CATEGORIES_SET.has(categoryToSet)) {
+        const mappedCategory = SUB_MUSCLE_TO_CATEGORY[categoryToSet]
+        if (mappedCategory && VALID_EXERCISE_CATEGORIES_SET.has(mappedCategory)) {
+          console.log('🔥 ExerciseForm: Mapping invalid category to valid one:', {
+            original: categoryToSet,
+            mapped: mappedCategory,
+          })
+          categoryToSet = mappedCategory
+        }
+      }
+
       console.log('🔥 ExerciseForm: Loading existing exercise', {
         originalCategory,
         originalPrimaryMuscle: existingExercise.primaryMuscle,
@@ -247,7 +260,9 @@ export default function ExerciseForm() {
     },
     onSuccess: () => {
       console.log('🔥 ExerciseForm: Update SUCCESS!')
+      // Invalidate both the exercises list and the specific exercise cache
       queryClient.invalidateQueries({ queryKey: ['exercises'] })
+      queryClient.invalidateQueries({ queryKey: ['exercise', id] })
       toast.success('התרגיל עודכן בהצלחה')
       navigate('/admin/exercises')
     },
@@ -448,7 +463,10 @@ export default function ExerciseForm() {
                 className={`input-neon w-full ${errors.category ? 'border-red-500' : ''}`}
               >
                 <option value="">בחר שריר ראשי</option>
-                {musclesData.map((muscle) => (
+                {/* Filter to only show muscles with valid category IDs */}
+                {musclesData
+                  .filter(muscle => VALID_EXERCISE_CATEGORIES_SET.has(muscle.id))
+                  .map((muscle) => (
                   <option key={muscle.id} value={muscle.id}>
                     {muscle.nameHe}
                   </option>

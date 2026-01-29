@@ -19,9 +19,10 @@ export interface ReportedSet {
   weight: number
   reps: number
   time?: number           // Time in seconds (for time_only and reps_time)
-  intensity?: number      // Intensity 1-10 (for intensity_time)
+  intensity?: number      // Intensity 1-100 (for cardio machines)
   speed?: number          // Speed (km/h or pace)
   distance?: number       // Distance (meters or km)
+  incline?: number        // Incline 1-20 (for treadmills, bikes, etc.)
   completedAt?: Date
   // Assistance fields
   assistanceWeight?: number  // For graviton - counterweight in kg

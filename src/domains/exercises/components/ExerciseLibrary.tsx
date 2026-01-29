@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronRight, Check, Home, Calendar } from 'lucide-react'
 import type { Exercise, MuscleGroup } from '../types'
@@ -54,6 +54,8 @@ export function ExerciseLibrary() {
   const [recentlyDoneExerciseIds, setRecentlyDoneExerciseIds] = useState<Set<string>>(new Set())
   const [lastMonthExerciseIds, setLastMonthExerciseIds] = useState<Set<string>>(new Set())
   const [isScheduleForLater, setIsScheduleForLater] = useState(false)
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const dateInputRef = useRef<HTMLInputElement>(null)
 
   const { selectedExercises, addExercise, removeExercise, clearWorkout, scheduledDate, setScheduledDate } = useWorkoutBuilderStore()
 
@@ -91,6 +93,30 @@ export function ExerciseLibrary() {
     return new Date().toISOString().split('T')[0]
   }
 
+  // Helper: Format date in Hebrew for display
+  const formatDateHe = (date: Date) => {
+    const day = date.getDate()
+    const months = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳']
+    const month = months[date.getMonth()]
+    return `${day} ב${month}`
+  }
+
+  // Workout mode: 'now' | 'today' | 'date'
+  type WorkoutMode = 'now' | 'today' | 'date'
+  const workoutMode: WorkoutMode = useMemo(() => {
+    if (scheduledDate) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const selected = new Date(scheduledDate)
+      selected.setHours(0, 0, 0, 0)
+      if (selected.getTime() === today.getTime()) {
+        return isScheduleForLater ? 'today' : 'now'
+      }
+      return 'date'
+    }
+    return isScheduleForLater ? 'today' : 'now'
+  }, [scheduledDate, isScheduleForLater])
+
   useEffect(() => {
     loadData()
   }, [])
@@ -99,6 +125,16 @@ export function ExerciseLibrary() {
   useEffect(() => {
     setSelectedSubMuscle('all')
   }, [selectedPrimaryMuscle])
+
+  // Auto-open date picker when modal shows (desktop fix)
+  useEffect(() => {
+    if (showDatePicker && dateInputRef.current) {
+      // Small delay to ensure the input is rendered
+      setTimeout(() => {
+        dateInputRef.current?.showPicker?.()
+      }, 100)
+    }
+  }, [showDatePicker])
 
   const loadData = async () => {
     setLoading(true)
@@ -299,81 +335,191 @@ export function ExerciseLibrary() {
             </h1>
           </div>
 
-          {/* Date Picker - Simple row under title */}
+          {/* Workout Mode Selection - 3 buttons in one row */}
           {!isAddingToWorkout && (
-            <div className="flex items-center gap-2 mt-3 bg-background-card border border-border-default rounded-lg px-3 py-2">
-              <Calendar className="w-4 h-4 text-text-secondary flex-shrink-0" />
-              <span className="text-sm text-text-secondary">בחר תאריך לאימון:</span>
-              <input
-                type="date"
-                min={getMinDate()}
-                value={formatDateForInput(scheduledDate) || getMinDate()}
-                onChange={(e) => {
-                  if (e.target.value) {
-                    const selectedDate = new Date(e.target.value)
-                    const today = new Date()
-                    today.setHours(0, 0, 0, 0)
-                    selectedDate.setHours(0, 0, 0, 0)
-                    // If today is selected, set to null (default)
-                    if (selectedDate.getTime() === today.getTime()) {
-                      setScheduledDate(null)
-                    } else {
-                      setScheduledDate(selectedDate)
-                      setIsScheduleForLater(false) // Reset when future date selected
-                    }
-                  }
+            <div
+              className="mt-3"
+              style={{
+                display: 'flex',
+                gap: '4px',
+                background: '#0d1f35',
+                borderRadius: '12px',
+                padding: '4px',
+                border: '1px solid rgba(255,255,255,0.1)',
+                flexWrap: 'nowrap',
+              }}
+            >
+              {/* עכשיו */}
+              <button
+                onClick={() => {
+                  setScheduledDate(null)
+                  setIsScheduleForLater(false)
                 }}
-                className="flex-1 bg-transparent border-none text-white text-sm cursor-pointer focus:outline-none"
-              />
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  padding: '10px 2px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  cursor: 'pointer',
+                  background: workoutMode === 'now' ? 'rgba(0,191,165,0.15)' : 'transparent',
+                  color: workoutMode === 'now' ? '#00bfa5' : 'rgba(255,255,255,0.6)',
+                }}
+              >
+                <div
+                  style={{
+                    width: '14px',
+                    height: '14px',
+                    borderRadius: '50%',
+                    border: `2px solid ${workoutMode === 'now' ? '#00bfa5' : 'rgba(255,255,255,0.3)'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  {workoutMode === 'now' && (
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00bfa5' }} />
+                  )}
+                </div>
+                <span>עכשיו</span>
+              </button>
+
+              {/* להיום */}
+              <button
+                onClick={() => {
+                  setScheduledDate(null)
+                  setIsScheduleForLater(true)
+                }}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  padding: '10px 2px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  cursor: 'pointer',
+                  background: workoutMode === 'today' ? 'rgba(249,115,22,0.15)' : 'transparent',
+                  color: workoutMode === 'today' ? '#f97316' : 'rgba(255,255,255,0.6)',
+                }}
+              >
+                <div
+                  style={{
+                    width: '14px',
+                    height: '14px',
+                    borderRadius: '50%',
+                    border: `2px solid ${workoutMode === 'today' ? '#f97316' : 'rgba(255,255,255,0.3)'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  {workoutMode === 'today' && (
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f97316' }} />
+                  )}
+                </div>
+                <span>להיום</span>
+              </button>
+
+              {/* תאריך */}
+              <button
+                onClick={() => setShowDatePicker(true)}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  padding: '10px 2px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  cursor: 'pointer',
+                  background: workoutMode === 'date' ? 'rgba(167,139,250,0.15)' : 'transparent',
+                  color: workoutMode === 'date' ? '#a78bfa' : 'rgba(255,255,255,0.6)',
+                }}
+              >
+                <div
+                  style={{
+                    width: '14px',
+                    height: '14px',
+                    borderRadius: '50%',
+                    border: `2px solid ${workoutMode === 'date' ? '#a78bfa' : 'rgba(255,255,255,0.3)'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  {workoutMode === 'date' && (
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#a78bfa' }} />
+                  )}
+                </div>
+                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {workoutMode === 'date' && scheduledDate
+                    ? formatDateHe(scheduledDate)
+                    : '📅 תאריך'
+                  }
+                </span>
+              </button>
             </div>
           )}
 
-          {/* Today Options - Radio buttons to choose start now or plan for later */}
-          {!isAddingToWorkout && isTodaySelected && (
-            <div className="flex gap-3 mt-2">
-              <label className={`flex-1 flex items-center gap-2 p-2 rounded-lg cursor-pointer border transition-colors ${
-                !isScheduleForLater
-                  ? 'border-accent-orange bg-accent-orange/10'
-                  : 'border-border-default bg-background-card hover:border-border-light'
-              }`}>
+          {/* Hidden Date Picker Modal */}
+          {showDatePicker && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+              onClick={() => setShowDatePicker(false)}
+            >
+              <div
+                className="bg-background-card rounded-xl p-4 max-w-xs w-full"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 className="text-white text-lg font-semibold mb-4 text-center">בחר תאריך</h3>
                 <input
-                  type="radio"
-                  name="workoutTiming"
-                  checked={!isScheduleForLater}
-                  onChange={() => setIsScheduleForLater(false)}
-                  className="sr-only"
+                  ref={dateInputRef}
+                  type="date"
+                  min={getMinDate()}
+                  value={formatDateForInput(scheduledDate) || ''}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const selectedDate = new Date(e.target.value)
+                      const today = new Date()
+                      today.setHours(0, 0, 0, 0)
+                      selectedDate.setHours(0, 0, 0, 0)
+                      setScheduledDate(selectedDate)
+                      setIsScheduleForLater(false)
+                      setShowDatePicker(false)
+                    }
+                  }}
+                  onClick={() => {
+                    // Open native date picker on click (for desktop)
+                    dateInputRef.current?.showPicker?.()
+                  }}
+                  className="w-full p-3 rounded-lg bg-background-elevated text-white border border-border-default cursor-pointer"
+                  style={{ colorScheme: 'dark' }}
                 />
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  !isScheduleForLater ? 'border-accent-orange' : 'border-border-light'
-                }`}>
-                  {!isScheduleForLater && <div className="w-2 h-2 rounded-full bg-accent-orange" />}
-                </div>
-                <span className={`text-sm ${!isScheduleForLater ? 'text-white' : 'text-text-secondary'}`}>
-                  התחל עכשיו
-                </span>
-              </label>
-
-              <label className={`flex-1 flex items-center gap-2 p-2 rounded-lg cursor-pointer border transition-colors ${
-                isScheduleForLater
-                  ? 'border-red-500 bg-red-500/10'
-                  : 'border-border-default bg-background-card hover:border-border-light'
-              }`}>
-                <input
-                  type="radio"
-                  name="workoutTiming"
-                  checked={isScheduleForLater}
-                  onChange={() => setIsScheduleForLater(true)}
-                  className="sr-only"
-                />
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  isScheduleForLater ? 'border-red-500' : 'border-border-light'
-                }`}>
-                  {isScheduleForLater && <div className="w-2 h-2 rounded-full bg-red-500" />}
-                </div>
-                <span className={`text-sm ${isScheduleForLater ? 'text-red-400' : 'text-text-secondary'}`}>
-                  תכנן להיום
-                </span>
-              </label>
+                <button
+                  onClick={() => setShowDatePicker(false)}
+                  className="w-full mt-3 p-3 rounded-lg bg-background-elevated text-text-secondary hover:text-white transition-colors"
+                >
+                  ביטול
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -545,21 +691,26 @@ export function ExerciseLibrary() {
       >
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between">
-            {/* Start Workout Button - Left side with orange glow */}
+            {/* Start Workout Button - Left side with mode-specific styling */}
             <button
               onClick={handleStartWorkout}
               disabled={selectedExercises.length === 0 || saving}
               className={`px-5 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all ${
                 selectedExercises.length === 0 || saving
                   ? 'bg-secondary-main text-text-disabled cursor-not-allowed'
-                  : isScheduleForLater && isTodaySelected
-                    ? 'bg-red-500 text-white hover:scale-105 hover:bg-red-600'
-                    : isPlannedWorkout
-                      ? 'bg-workout-status-planned text-white hover:scale-105'
-                      : 'bg-secondary-main border-2 border-accent-orange text-white shadow-glow-orange hover:scale-105'
+                  : workoutMode === 'now'
+                    ? 'text-white hover:scale-105'
+                    : workoutMode === 'today'
+                      ? 'text-white hover:scale-105'
+                      : 'text-white hover:scale-105'
               }`}
-              style={selectedExercises.length > 0 && !isPlannedWorkout && !saving ? {
-                boxShadow: '0 4px 0 #0A0C10, 0 0 12px rgba(255, 107, 53, 0.5)'
+              style={selectedExercises.length > 0 && !saving ? {
+                background: workoutMode === 'now' ? '#00bfa5' : workoutMode === 'today' ? '#f97316' : '#a78bfa',
+                boxShadow: workoutMode === 'now'
+                  ? '0 4px 0 #0A0C10, 0 0 12px rgba(0, 191, 165, 0.5)'
+                  : workoutMode === 'today'
+                    ? '0 4px 0 #0A0C10, 0 0 12px rgba(249, 115, 22, 0.5)'
+                    : '0 4px 0 #0A0C10, 0 0 12px rgba(167, 139, 250, 0.5)'
               } : {}}
             >
               {saving ? (
@@ -570,17 +721,22 @@ export function ExerciseLibrary() {
               ) : isAddingToWorkout ? (
                 <>
                   <span>+</span>
-                  <span>הוסף לאימון</span>
+                  <span>הוסף לאימון ({selectedExercises.length})</span>
                 </>
-              ) : isPlannedWorkout ? (
+              ) : workoutMode === 'now' ? (
+                <>
+                  <Home className="w-5 h-5" />
+                  <span>התחל אימון ({selectedExercises.length})</span>
+                </>
+              ) : workoutMode === 'today' ? (
                 <>
                   <Calendar className="w-5 h-5" />
-                  <span>שמור לתוכנית</span>
+                  <span>שמור להיום ({selectedExercises.length})</span>
                 </>
               ) : (
                 <>
-                  <Home className="w-5 h-5" />
-                  <span>התחל אימון</span>
+                  <Calendar className="w-5 h-5" />
+                  <span>שמור אימון ({selectedExercises.length})</span>
                 </>
               )}
             </button>

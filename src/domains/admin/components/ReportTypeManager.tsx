@@ -23,9 +23,10 @@ const fieldTypeOptions: { value: ReportFieldType; label: string }[] = [
   { value: 'weight', label: 'משקל' },
   { value: 'reps', label: 'חזרות' },
   { value: 'time', label: 'זמן' },
-  { value: 'intensity', label: 'עצימות' },
+  { value: 'intensity', label: 'עצימות (1-100)' },
   { value: 'speed', label: 'מהירות' },
   { value: 'distance', label: 'מרחק' },
+  { value: 'incline', label: 'שיפוע (1-20)' },
 ]
 
 export default function ReportTypeManager() {

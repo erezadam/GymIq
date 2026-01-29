@@ -5,6 +5,7 @@
  * Also supports assistance type fields (graviton, bands)
  */
 
+import { useRef } from 'react'
 import { Trash2 } from 'lucide-react'
 import type { ReportedSet } from '../../types/active-workout.types'
 import { workoutLabels } from '@/styles/design-tokens'
@@ -43,9 +44,15 @@ export function SetReportRow({
   canDelete,
 }: SetReportRowProps) {
   const { minutes, seconds } = secondsToMinutesSeconds(set.time || 0)
+  const secondsInputRef = useRef<HTMLInputElement>(null)
 
-  const handleMinutesChange = (newMinutes: number) => {
+  const handleMinutesChange = (newMinutes: number, inputValue: string) => {
     onUpdate({ time: minutesSecondsToSeconds(newMinutes, seconds) })
+    // Auto-focus seconds input when 2 digits are entered in minutes
+    if (inputValue.length >= 2) {
+      secondsInputRef.current?.focus()
+      secondsInputRef.current?.select()
+    }
   }
 
   const handleSecondsChange = (newSeconds: number) => {
@@ -55,21 +62,24 @@ export function SetReportRow({
   }
 
   // Render time input (minutes:seconds)
+  // Using dir="ltr" to keep time display in standard MM:SS format (left to right)
   const renderTimeInput = () => (
     <div className="set-input-group set-input-group--time">
       <label className="set-label">זמן</label>
-      <div className="time-inputs">
+      <div className="time-inputs" dir="ltr">
         <input
           type="number"
           inputMode="numeric"
           className="set-input set-input--time"
           value={minutes || ''}
-          onChange={(e) => handleMinutesChange(parseInt(e.target.value) || 0)}
+          onChange={(e) => handleMinutesChange(parseInt(e.target.value) || 0, e.target.value)}
           placeholder="0"
           min="0"
+          maxLength={2}
         />
         <span className="time-separator">:</span>
         <input
+          ref={secondsInputRef}
           type="number"
           inputMode="numeric"
           className="set-input set-input--time"
@@ -78,6 +88,7 @@ export function SetReportRow({
           placeholder="00"
           min="0"
           max="59"
+          maxLength={2}
         />
       </div>
     </div>
@@ -115,7 +126,7 @@ export function SetReportRow({
     </div>
   )
 
-  // Render intensity input (1-10 scale)
+  // Render intensity input (1-100 scale)
   const renderIntensityInput = () => (
     <div className="set-input-group">
       <label className="set-label">עצימות</label>
@@ -126,13 +137,35 @@ export function SetReportRow({
         value={set.intensity || ''}
         onChange={(e) => {
           const value = parseInt(e.target.value) || 0
-          // Clamp to 1-10 range
-          const clamped = Math.min(10, Math.max(0, value))
+          // Clamp to 1-100 range
+          const clamped = Math.min(100, Math.max(0, value))
           onUpdate({ intensity: clamped })
         }}
-        placeholder="1-10"
+        placeholder="1-100"
         min="1"
-        max="10"
+        max="100"
+      />
+    </div>
+  )
+
+  // Render incline input (1-20 scale)
+  const renderInclineInput = () => (
+    <div className="set-input-group">
+      <label className="set-label">שיפוע</label>
+      <input
+        type="number"
+        inputMode="numeric"
+        className="set-input"
+        value={set.incline || ''}
+        onChange={(e) => {
+          const value = parseInt(e.target.value) || 0
+          // Clamp to 1-20 range
+          const clamped = Math.min(20, Math.max(0, value))
+          onUpdate({ incline: clamped })
+        }}
+        placeholder="1-20"
+        min="1"
+        max="20"
       />
     </div>
   )
@@ -250,8 +283,11 @@ export function SetReportRow({
     if (normalized.includes('reps') || normalized.includes('חזרות')) fields.push('reps')
     if (normalized.includes('time') || normalized.includes('זמן')) fields.push('time')
     if (normalized.includes('intensity') || normalized.includes('עצימות')) fields.push('intensity')
-    if (normalized.includes('speed') || normalized.includes('מהירות')) fields.push('speed')
+    // Support typos and variations for speed
+    if (normalized.includes('speed') || normalized.includes('spead') || normalized.includes('מהירות')) fields.push('speed')
     if (normalized.includes('distance') || normalized.includes('מרחק')) fields.push('distance')
+    // Support variations for incline: incline, slope, slop, slot, שיפוע
+    if (normalized.includes('incline') || normalized.includes('slope') || normalized.includes('slop') || normalized.includes('slot') || normalized.includes('שיפוע')) fields.push('incline')
 
     // If no fields detected, default to weight + reps
     if (fields.length === 0) {
@@ -305,6 +341,8 @@ export function SetReportRow({
               return <span key="speed">{renderSpeedInput()}</span>
             case 'distance':
               return <span key="distance">{renderDistanceInput()}</span>
+            case 'incline':
+              return <span key="incline">{renderInclineInput()}</span>
             default:
               return null
           }

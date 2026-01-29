@@ -4,7 +4,7 @@
  */
 
 // Field types available for set reporting
-export type ReportFieldType = 'weight' | 'reps' | 'time' | 'intensity' | 'speed' | 'distance'
+export type ReportFieldType = 'weight' | 'reps' | 'time' | 'intensity' | 'speed' | 'distance' | 'incline'
 
 // Single field configuration
 export interface ReportField {
@@ -74,7 +74,7 @@ export const defaultReportTypes: ReportType[] = [
     nameHe: 'עצימות + זמן',
     nameEn: 'Intensity + Time',
     fields: [
-      { type: 'intensity', label: 'עצימות (1-10)', required: true },
+      { type: 'intensity', label: 'עצימות (1-100)', required: true },
       { type: 'time', required: true },
     ],
     isActive: true,
@@ -92,11 +92,13 @@ export function getDefaultFieldLabel(fieldType: ReportFieldType): string {
     case 'time':
       return 'זמן'
     case 'intensity':
-      return 'עצימות'
+      return 'עצימות (1-100)'
     case 'speed':
       return 'מהירות'
     case 'distance':
       return 'מרחק'
+    case 'incline':
+      return 'שיפוע (1-20)'
     default:
       return fieldType
   }
