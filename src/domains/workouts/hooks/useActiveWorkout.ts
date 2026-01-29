@@ -212,34 +212,60 @@ export function useActiveWorkout() {
           if (firebaseWorkout) {
             console.log('🔥 Found in_progress workout in Firebase:', firebaseWorkout.id)
 
+            // Fetch exercise details (category, primaryMuscle, equipment) from exercise service
+            const exerciseDetailsMap = new Map<string, { primaryMuscle: string; category: string; equipment: string; imageUrl: string; name: string; nameHe: string }>()
+            await Promise.all(
+              firebaseWorkout.exercises.map(async (ex: any) => {
+                try {
+                  const details = await getExerciseById(ex.exerciseId)
+                  if (details) {
+                    exerciseDetailsMap.set(ex.exerciseId, {
+                      primaryMuscle: details.primaryMuscle || '',
+                      category: details.category || '',
+                      equipment: details.equipment || '',
+                      imageUrl: details.imageUrl || '',
+                      name: details.name || '',
+                      nameHe: details.nameHe || '',
+                    })
+                  }
+                } catch {
+                  // Silently continue - exercise data from Firebase is used as fallback
+                }
+              })
+            )
+
             // Convert Firebase workout to ActiveWorkout format
             const restoredWorkout: ActiveWorkout = {
               id: firebaseWorkout.id,
               startedAt: firebaseWorkout.startTime,
               userId: firebaseWorkout.userId,
-              exercises: firebaseWorkout.exercises.map((ex: any, index: number) => ({
-                id: `workout_ex_${index}_${Date.now()}`,
-                exerciseId: ex.exerciseId,
-                exerciseName: ex.exerciseName,
-                exerciseNameHe: ex.exerciseNameHe,
-                imageUrl: ex.imageUrl,
-                primaryMuscle: 'other', // Will be populated from exercise data
-                category: undefined, // Will be populated from exercise data
-                isExpanded: false,
-                isCompleted: ex.isCompleted,
-                // Restore assistance type
-                ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
-                reportedSets: ex.sets.map((set: any, setIndex: number) => ({
-                  id: `set_${Date.now()}_${setIndex}`,
-                  setNumber: setIndex + 1,
-                  weight: set.actualWeight || 0,
-                  reps: set.actualReps || 0,
-                  completedAt: set.completed ? new Date() : undefined,
-                  // Restore assistance fields
-                  assistanceWeight: set.assistanceWeight,
-                  assistanceBand: set.assistanceBand,
-                })),
-              })),
+              exercises: firebaseWorkout.exercises.map((ex: any, index: number) => {
+                const details = exerciseDetailsMap.get(ex.exerciseId)
+                return {
+                  id: `workout_ex_${index}_${Date.now()}`,
+                  exerciseId: ex.exerciseId,
+                  exerciseName: details?.name || ex.exerciseName,
+                  exerciseNameHe: details?.nameHe || ex.exerciseNameHe,
+                  imageUrl: details?.imageUrl || ex.imageUrl,
+                  primaryMuscle: details?.primaryMuscle || 'other',
+                  category: details?.category || undefined,
+                  equipment: details?.equipment || undefined,
+                  isExpanded: false,
+                  isCompleted: ex.isCompleted,
+                  // Restore assistance type
+                  ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
+                  reportedSets: ex.sets.map((set: any, setIndex: number) => ({
+                    id: `set_${Date.now()}_${setIndex}`,
+                    setNumber: setIndex + 1,
+                    weight: set.actualWeight || 0,
+                    reps: set.actualReps || 0,
+                    completedAt: set.completed ? new Date() : undefined,
+                    // Restore assistance fields
+                    assistanceWeight: set.assistanceWeight,
+                    assistanceBand: set.assistanceBand,
+                  })),
+                }
+              }),
               stats: {
                 totalExercises: firebaseWorkout.totalExercises,
                 completedExercises: firebaseWorkout.completedExercises,

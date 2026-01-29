@@ -472,14 +472,20 @@ export default function WorkoutHistory() {
       const fullWorkout = await getWorkoutById(workoutSummary.id)
       if (!fullWorkout || !fullWorkout.exercises) return
 
-      // Fetch exercise details to get reportType
-      const exerciseDetailsMap = new Map<string, { reportType?: string }>()
+      // Fetch full exercise details (category, primaryMuscle, equipment, etc.)
+      const exerciseDetailsMap = new Map<string, { imageUrl: string; primaryMuscle: string; category: string; name: string; nameHe: string; equipment: string; reportType?: string }>()
       await Promise.all(
         fullWorkout.exercises.map(async (ex) => {
           try {
             const exerciseDetails = await exerciseService.getExerciseById(ex.exerciseId)
             if (exerciseDetails) {
               exerciseDetailsMap.set(ex.exerciseId, {
+                imageUrl: exerciseDetails.imageUrl || '',
+                primaryMuscle: exerciseDetails.primaryMuscle || '',
+                category: exerciseDetails.category || '',
+                name: exerciseDetails.name || '',
+                nameHe: exerciseDetails.nameHe || '',
+                equipment: exerciseDetails.equipment || '',
                 reportType: exerciseDetails.reportType,
               })
             }
@@ -493,14 +499,17 @@ export default function WorkoutHistory() {
 
       // IMPORTANT: Set localStorage BEFORE addExercise() calls!
       // addExercise triggers useEffect in useActiveWorkout, which reads these values
-      const exercisesWithSets = fullWorkout.exercises.map(exercise => ({
-        exerciseId: exercise.exerciseId,
-        exerciseName: exercise.exerciseName,
-        exerciseNameHe: exercise.exerciseNameHe || '',
-        imageUrl: exercise.imageUrl || '',
-        primaryMuscle: '',
-        sets: exercise.sets || [],
-      }))
+      const exercisesWithSets = fullWorkout.exercises.map(exercise => {
+        const details = exerciseDetailsMap.get(exercise.exerciseId)
+        return {
+          exerciseId: exercise.exerciseId,
+          exerciseName: details?.name || exercise.exerciseName,
+          exerciseNameHe: details?.nameHe || exercise.exerciseNameHe || '',
+          imageUrl: details?.imageUrl || exercise.imageUrl || '',
+          primaryMuscle: details?.primaryMuscle || '',
+          sets: exercise.sets || [],
+        }
+      })
       localStorage.setItem('continueWorkoutData', JSON.stringify(exercisesWithSets))
       localStorage.setItem('continueWorkoutId', workoutSummary.id)
       localStorage.setItem('continueWorkoutMode', 'in_progress')
@@ -510,12 +519,12 @@ export default function WorkoutHistory() {
         const details = exerciseDetailsMap.get(exercise.exerciseId)
         addExercise({
           exerciseId: exercise.exerciseId,
-          exerciseName: exercise.exerciseName,
-          exerciseNameHe: exercise.exerciseNameHe || '',
-          imageUrl: exercise.imageUrl || '',
-          primaryMuscle: '',
-          category: '',
-          equipment: '',
+          exerciseName: details?.name || exercise.exerciseName,
+          exerciseNameHe: details?.nameHe || exercise.exerciseNameHe || '',
+          imageUrl: details?.imageUrl || exercise.imageUrl || '',
+          primaryMuscle: details?.primaryMuscle || '',
+          category: details?.category || '',
+          equipment: details?.equipment || '',
           reportType: details?.reportType,
         })
       })

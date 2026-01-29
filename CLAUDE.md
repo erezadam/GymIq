@@ -6,7 +6,8 @@
 ║   🚨 התחלה קבועה לכל משימה                                                    ║
 ║                                                                              ║
 ║   1. קרא CLAUDE.md הזה (נעשה אוטומטית)                                        ║
-║   2. קרא project-control: `.claude/project-control-SKILL.md`         ║
+║   2. קרא project-control: `.claude/project-control-SKILL.md`                 ║
+║   3. לפני כל שינוי קוד: `.claude/development-flow-SKILL.md` ⚠️               ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -88,6 +89,20 @@ grep -r "AIza" --include="*.ts" --include="*.js" --include="*.cjs" --include="*.
 
 **קובץ קריטי:** `src/domains/workouts/components/WorkoutHistory.tsx` - פונקציה `handleConfirmContinue`
 
+### העברת נתוני תרגיל - חוק ברזל (29/01/2026)
+
+> **כל נתיב שמוסיף תרגיל לאימון פעיל חייב להעביר `category`, `primaryMuscle`, `equipment` מנתוני התרגיל ב-Firebase.**
+> **אסור להעביר ערכים ריקים (`''`) או hardcoded (`'other'`) - חובה לטעון מ-exercise service!**
+
+**נתיבים קריטיים (כולם חייבים לטעון פרטי תרגיל מלאים):**
+1. `ExerciseLibrary.tsx` - בחירת תרגילים חדשים
+2. `WorkoutSession.tsx` - הוספת תרגיל באמצע אימון
+3. `WorkoutHistory.tsx` → `handleConfirmContinue` - המשך אימון (completed/in_progress/planned)
+4. `WorkoutHistory.tsx` → `handleEmptyWorkoutContinue` - המשך אימון ריק
+5. `useActiveWorkout.ts` → Firebase recovery - שחזור אימון אחרי סגירת אפליקציה
+
+**בדיקה אוטומטית:** `npm run test` - רגרסיה 29/01 בודקת את כל הנתיבים
+
 ### קטגוריות תרגילים - category vs primaryMuscle
 
 | שדה | תפקיד | ערכים תקינים |
@@ -111,6 +126,45 @@ lats, traps, rhomboids → back
 front_delt, side_delt, rear_delt → shoulders
 abs, obliques → core
 upper_chest, mid_chest, lower_chest → chest
+```
+
+---
+
+## 🚦 חובה לפני כל שינוי קוד
+
+> **זה הסעיף שמונע תקלות!** קרא `.claude/development-flow-SKILL.md` לפרטים מלאים.
+
+### צעדים מינימליים (חובה!):
+
+**1. מיפוי תלויות:**
+```bash
+# מצא מה תלוי בקוד שאתה משנה:
+grep -r "FunctionOrComponentName" src/ --include="*.tsx" --include="*.ts"
+```
+
+**2. בדיקת אזורים רגישים:**
+```
+האם נוגע באחד מאלה? (אם כן - זהירות כפולה!)
+□ addExercise / workout status / calories
+□ WorkoutHistory / WorkoutSession
+□ category / primaryMuscle
+```
+
+**3. הגדרת גבולות:**
+```
+מה אני משנה: _______________
+מה אני לא נוגע בו: _______________
+```
+
+**4. Self-Review לפני commit:**
+```bash
+# רגרסיות:
+grep -r "WorkoutSummaryModal\|handleDeleteWorkout\|workout\.calories" src/ | wc -l
+# אמור להיות > 0
+
+# אבטחה:
+grep -r "AIza" --include="*.ts" --include="*.tsx" . | grep -v node_modules
+# אמור להיות ריק!
 ```
 
 ---
@@ -140,6 +194,8 @@ upper_chest, mid_chest, lower_chest → chest
 
 | קטגוריית משימה | מילות מפתח | Skills לפתוח |
 |----------------|-------------|-------------|
+| **⚠️ כל שינוי קוד** | code, implement, add, change, update, modify, create | `.claude/development-flow-SKILL.md` (חובה!) |
+| **חקירת באגים** | bug, investigate, debug, why, broken, not working, לא עובד | `.claude/development-flow-SKILL.md` + `.claude/qa-testing-SKILL.md` |
 | **באגים ובדיקות** | bug, fix, regression, test, failing, error, crash, broken, debug | `.claude/qa-testing-SKILL.md` |
 | **עברית ומובייל** | hebrew, rtl, ios, mobile, layout, responsive, iphone, android, touch | `.claude/mobile-rtl-SKILL.md` |
 | **פריסה ותשתיות** | deploy, release, ci, env, firebase, hosting, production, build | `.claude/deployment-SKILL.md` |
@@ -155,10 +211,11 @@ upper_chest, mid_chest, lower_chest → chest
 ## כלל ביצוע
 
 1. **קרא project_control** תמיד ראשון
-2. **זהה טריגרים** במשימה ופתח Skills רלוונטיים
-3. **בצע לפי הצ'קליסט** שבתוך ה-Skills
-4. **בדוק אבטחה** - אם יצרת/שינית קבצים, הרץ בדיקת סודות
-5. **סיים עם סיכום** קצר + מה נבדק
+2. **לפני כל קוד - קרא development-flow** ⚠️ (זה מונע תקלות!)
+3. **זהה טריגרים** במשימה ופתח Skills רלוונטיים
+4. **בצע לפי הצ'קליסט** שבתוך ה-Skills
+5. **בדוק אבטחה** - אם יצרת/שינית קבצים, הרץ בדיקת סודות
+6. **סיים עם סיכום** קצר + מה נבדק
 
 ---
 
@@ -195,6 +252,6 @@ upper_chest, mid_chest, lower_chest → chest
 
 ```
 ══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 25/01/2026 | נוסף תיעוד קטגוריות תרגילים (category vs primaryMuscle)
+עדכון אחרון: 26/01/2026 | נוסף development-flow-SKILL למניעת תקלות בפיתוח
 ══════════════════════════════════════════════════════════════════════════════
 ```

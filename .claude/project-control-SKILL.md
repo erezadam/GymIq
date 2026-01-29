@@ -92,7 +92,9 @@ SetReportRow (שימוש ב-reportType)
 1. `src/domains/exercises/components/ExerciseCard.tsx`
 2. `src/domains/exercises/components/ExerciseLibrary.tsx`
 3. `src/domains/workouts/components/WorkoutSession.tsx`
-4. `src/domains/workouts/components/WorkoutHistory.tsx`
+4. `src/domains/workouts/components/WorkoutHistory.tsx` - **handleConfirmContinue** (3 cases)
+5. `src/domains/workouts/components/WorkoutHistory.tsx` - **handleEmptyWorkoutContinue** (אימון ריק!)
+6. `src/domains/workouts/hooks/useActiveWorkout.ts` - **Firebase recovery** (שחזור אימון)
 
 **בדיקה מהירה:**
 ```bash

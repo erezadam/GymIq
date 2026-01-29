@@ -131,6 +131,7 @@ caches.keys().then(names => {
 
 | תאריך | בעיה | בדיקה |
 |-------|------|-------|
+| 29/01 | המשך אימון ריק/שחזור מ-Firebase לא מעביר category/primaryMuscle | `npm run test` - בדיקת רגרסיה 29/01 + ודא שכל addExercise מעביר details |
 | 25/01 | תרגיל מופיע בקטגוריה שגויה (category=sub-muscle) | `grep -r "VALID_EXERCISE_CATEGORIES_SET" src/` - ודא שיש validation |
 | 25/01 | המשך אימון "ללא דיווח" יוצר אימון חדש | `grep -r "case 'cancelled'" src/` - ודא ש-cancelled מטופל עם in_progress |
 | 24/01 | reportType לא מועבר ב-addExercise | `grep -r "addExercise" src/ \| grep -v "removeExercise"` - ודא שכולם מעבירים reportType |
