@@ -7,8 +7,8 @@ import * as admin from 'firebase-admin'
 import * as functions from 'firebase-functions'
 import type { RateLimitResult } from './types'
 
-// Daily limit for AI generations per user
-const DAILY_LIMIT = 5
+// Daily limit for AI generations per user (disabled for testing)
+const DAILY_LIMIT = 9999
 
 // Collection name for tracking usage
 const USAGE_COLLECTION = 'aiTrainerUsage'

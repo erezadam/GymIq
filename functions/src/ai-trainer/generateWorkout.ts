@@ -318,7 +318,7 @@ export const generateAIWorkout = onCall(
           success: false,
           workouts: [],
           usedFallback: false,
-          error: `הגעת למגבלה היומית (${5} אימונים). נסה שוב מחר.`,
+          error: `הגעת למגבלה היומית. נסה שוב מחר.`,
           rateLimitInfo: {
             remaining: 0,
             resetAt: rateLimitResult.resetAt.toISOString(),
