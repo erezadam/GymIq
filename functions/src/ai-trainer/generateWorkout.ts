@@ -70,23 +70,34 @@ function convertClaudeResponse(
   workoutNumber: number,
   duration: number
 ): GeneratedWorkout {
-  const exercises: GeneratedExercise[] = claudeWorkout.exercises.map((ce) => {
-    const exercise = exerciseMap.get(ce.exerciseId)
+  const exercises: GeneratedExercise[] = claudeWorkout.exercises
+    .filter((ce) => {
+      const found = exerciseMap.has(ce.exerciseId)
+      if (!found) {
+        functions.logger.warn('GPT returned unrecognized exerciseId - skipping', {
+          exerciseId: ce.exerciseId,
+          availableIds: Array.from(exerciseMap.keys()).slice(0, 5),
+        })
+      }
+      return found
+    })
+    .map((ce) => {
+      const exercise = exerciseMap.get(ce.exerciseId)!
 
-    return {
-      exerciseId: ce.exerciseId,
-      exerciseName: exercise?.nameHe || ce.exerciseId,
-      exerciseNameHe: exercise?.nameHe || ce.exerciseId,
-      imageUrl: exercise?.imageUrl,
-      category: exercise?.category,
-      primaryMuscle: exercise?.primaryMuscle,
-      isWarmup: ce.isWarmup,
-      targetSets: ce.targetSets,
-      targetReps: ce.targetReps,
-      aiNotes: ce.aiNotes,
-      sets: createSets(ce.isWarmup, ce.targetSets, ce.targetReps),
-    }
-  })
+      return {
+        exerciseId: ce.exerciseId,
+        exerciseName: exercise.nameHe,
+        exerciseNameHe: exercise.nameHe,
+        imageUrl: exercise.imageUrl,
+        category: exercise.category,
+        primaryMuscle: exercise.primaryMuscle,
+        isWarmup: ce.isWarmup,
+        targetSets: ce.targetSets,
+        targetReps: ce.targetReps,
+        aiNotes: ce.aiNotes,
+        sets: createSets(ce.isWarmup, ce.targetSets, ce.targetReps),
+      }
+    })
 
   return {
     name: getAIWorkoutName(workoutNumber),
