@@ -64,6 +64,9 @@ export interface ActiveWorkoutExercise {
 
   // User notes for this exercise
   notes?: string
+
+  // AI recommendation for this exercise (from AI trainer)
+  aiRecommendation?: { weight: number; repRange: string; sets: number }
 }
 
 // Exercises grouped by muscle

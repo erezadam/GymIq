@@ -242,7 +242,7 @@ export function ExerciseCard({
                 justifyContent: 'center',
                 gap: '6px',
                 padding: '8px 12px',
-                marginBottom: '12px',
+                marginBottom: exercise.aiRecommendation ? '4px' : '12px',
                 background: 'rgba(239, 68, 68, 0.1)',
                 borderRadius: '8px',
                 border: '1px solid rgba(239, 68, 68, 0.3)',
@@ -250,6 +250,29 @@ export function ExerciseCard({
             >
               <span style={{ color: '#EF4444', fontSize: '14px', fontWeight: 600 }}>
                 {workoutLabels.lastWorkout} {exercise.lastWorkoutData.reps} חזרות @ {exercise.lastWorkoutData.weight}kg
+              </span>
+            </div>
+          )}
+
+          {/* AI Recommendation - shown in purple below last workout data */}
+          {exercise.aiRecommendation && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                marginBottom: '12px',
+                background: 'rgba(168, 85, 247, 0.1)',
+                borderRadius: '8px',
+                border: '1px solid rgba(168, 85, 247, 0.3)',
+              }}
+            >
+              <span style={{ color: '#A855F7', fontSize: '14px', fontWeight: 600 }}>
+                {'\u{1F4A1}'} המלצה: {exercise.aiRecommendation.weight > 0
+                  ? `${exercise.aiRecommendation.weight}kg \u00D7 `
+                  : ''}{exercise.aiRecommendation.repRange} ({exercise.aiRecommendation.sets} סטים)
               </span>
             </div>
           )}

@@ -304,11 +304,19 @@ export function useActiveWorkout() {
 
       // Process continueWorkoutData from history (already detected above)
       let continueData: any[] | null = null
+      let aiRecommendations: Record<string, { weight: number; repRange: string; sets: number }> | null = null
 
       if (isContinuingFromHistory) {
         try {
           continueData = JSON.parse(continueWorkoutData!)
           console.log('📋 Parsing continueWorkoutData with', continueData?.length, 'exercises')
+
+          // Load AI recommendations if available
+          const storedRecommendations = localStorage.getItem('continueAIRecommendations')
+          if (storedRecommendations) {
+            aiRecommendations = JSON.parse(storedRecommendations)
+            console.log('💡 Loaded AI recommendations for', Object.keys(aiRecommendations!).length, 'exercises')
+          }
 
           // Check for existing workout ID to prevent duplication
           const existingWorkoutId = localStorage.getItem('continueWorkoutId')
@@ -337,6 +345,7 @@ export function useActiveWorkout() {
         localStorage.removeItem('continueWorkoutData')
         localStorage.removeItem('continueWorkoutMode')
         localStorage.removeItem('continueWorkoutId')
+        localStorage.removeItem('continueAIRecommendations')
       }
 
       // Try to restore from localStorage (only if not continuing from history)
@@ -550,6 +559,10 @@ export function useActiveWorkout() {
             isExpanded: false, // All exercises start collapsed
             isCompleted: continueExercise?.isCompleted || false,
             reportedSets,
+            // Attach AI recommendation if available
+            ...(aiRecommendations?.[ex.exerciseId] && {
+              aiRecommendation: aiRecommendations[ex.exerciseId],
+            }),
           }
         })
 

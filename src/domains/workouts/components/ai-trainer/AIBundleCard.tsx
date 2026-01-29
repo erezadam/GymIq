@@ -237,14 +237,14 @@ export function AIBundleCard({
                             <p className="text-text-primary text-sm font-medium truncate">
                               {exercise.exerciseNameHe || exercise.exerciseName}
                             </p>
-                            <p className="text-text-muted text-xs">
-                              {exercise.sets?.length || 0} סטים
-                              {exercise.sets && exercise.sets.length > 0 && (
-                                <span className="mr-1">
-                                  • {exercise.sets[0].targetReps || '-'} חזרות
-                                </span>
-                              )}
-                            </p>
+                            {/* AI Recommendation line */}
+                            {expandedWorkoutDetails.aiRecommendations?.[exercise.exerciseId] ? (
+                              <p className="text-xs mt-0.5" style={{ color: '#A855F7' }}>
+                                {'\u{1F4A1}'} המלצה: {expandedWorkoutDetails.aiRecommendations[exercise.exerciseId].weight > 0
+                                  ? `${expandedWorkoutDetails.aiRecommendations[exercise.exerciseId].weight}kg \u00D7 `
+                                  : ''}{expandedWorkoutDetails.aiRecommendations[exercise.exerciseId].repRange} ({expandedWorkoutDetails.aiRecommendations[exercise.exerciseId].sets} סטים)
+                              </p>
+                            ) : null}
                           </div>
                         </div>
                       ))}

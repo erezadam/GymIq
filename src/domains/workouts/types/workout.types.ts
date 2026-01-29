@@ -133,6 +133,7 @@ export interface WorkoutHistoryEntry {
   source?: 'manual' | 'ai_trainer' // מקור האימון
   aiWorkoutNumber?: number // מספר סידורי של אימון AI
   bundleId?: string // מזהה מקבץ אימונים AI (null לאימון יחיד)
+  aiRecommendations?: Record<string, { weight: number; repRange: string; sets: number; reasoning?: string }> // המלצות AI לכל תרגיל
 }
 
 // Summary for display in lists

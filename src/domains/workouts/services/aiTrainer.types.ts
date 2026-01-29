@@ -6,6 +6,27 @@
 import type { Exercise } from '@/domains/exercises/types'
 import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
 
+// AI recommendation for an exercise
+export interface AIRecommendation {
+  weight: number      // Recommended weight in kg
+  repRange: string    // e.g., "8-10"
+  sets: number        // Number of sets
+  reasoning?: string  // Why this recommendation (for debugging)
+}
+
+// Per-exercise performance history from user's past workouts
+export interface ExercisePerformanceData {
+  exerciseId: string
+  lastWeight: number       // Last weight used (kg)
+  lastReps: number         // Last reps completed
+  lastDate: string         // ISO date of last performance
+  recentSessions?: {       // Last 3-5 sessions (optional)
+    weight: number
+    reps: number
+    date: string
+  }[]
+}
+
 // Muscle selection mode for multiple workouts
 export type MuscleSelectionMode = 'ai_rotate' | 'same' | 'manual'
 
@@ -51,6 +72,7 @@ export interface AIGeneratedWorkout {
   source: 'ai_trainer'
   aiWorkoutNumber: number    // Sequential number (1, 2, 3...)
   aiExplanation?: string     // AI explanation for workout selection
+  aiRecommendations?: Record<string, AIRecommendation>  // exerciseId → recommendation
 }
 
 // Context passed to Claude API
@@ -60,6 +82,7 @@ export interface AITrainerContext {
   muscles: PrimaryMuscle[]
   recentWorkouts: RecentWorkoutSummary[]
   yesterdayExerciseIds: string[]
+  exerciseHistory: ExercisePerformanceData[]  // Per-exercise performance data
 }
 
 // Summary of recent workout for context

@@ -5,7 +5,7 @@
 
 import { getExercises } from '@/lib/firebase/exercises'
 import { getMuscles } from '@/lib/firebase/muscles'
-import { getUserWorkoutHistory, saveWorkoutHistory, getRecentlyDoneExerciseIds } from '@/lib/firebase/workoutHistory'
+import { getUserWorkoutHistory, getUserWorkoutHistoryFull, saveWorkoutHistory, getRecentlyDoneExerciseIds } from '@/lib/firebase/workoutHistory'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import { app } from '@/lib/firebase/config'
 import type { Exercise } from '@/domains/exercises/types'
@@ -17,6 +17,7 @@ import {
   AIGeneratedExercise,
   AITrainerContext,
   RecentWorkoutSummary,
+  ExercisePerformanceData,
   getExerciseCount,
   getAIWorkoutName,
 } from './aiTrainer.types'
@@ -67,6 +68,7 @@ async function callCloudFunction(
       })),
       recentWorkouts: context.recentWorkouts,
       yesterdayExerciseIds: context.yesterdayExerciseIds,
+      exerciseHistory: context.exerciseHistory,
     }
 
     const result = await generateWorkout(payload)
@@ -118,15 +120,76 @@ async function getNextAIWorkoutNumber(userId: string): Promise<number> {
   }
 }
 
+// Extract per-exercise performance data from recent workout history
+function extractExerciseHistory(recentHistory: WorkoutHistoryEntry[]): ExercisePerformanceData[] {
+  // Map: exerciseId → list of { weight, reps, date } sorted by date (newest first)
+  const exerciseMap = new Map<string, { weight: number; reps: number; date: string }[]>()
+
+  // Only look at completed or in_progress workouts (not planned)
+  const relevantWorkouts = recentHistory.filter(w =>
+    w.status === 'completed' || w.status === 'in_progress' || w.status === 'partial'
+  )
+
+  for (const workout of relevantWorkouts) {
+    const dateStr = workout.date.toISOString().split('T')[0]
+
+    for (const exercise of workout.exercises) {
+      if (!exercise.exerciseId) continue
+
+      // Find best completed set (highest weight with reps > 0)
+      const completedSets = exercise.sets.filter(s =>
+        s.completed && (s.actualWeight || 0) > 0 && (s.actualReps || 0) > 0
+      )
+
+      if (completedSets.length === 0) continue
+
+      // Get the heaviest set
+      const bestSet = completedSets.reduce((best, s) =>
+        (s.actualWeight || 0) > (best.actualWeight || 0) ? s : best
+      )
+
+      const entry = {
+        weight: bestSet.actualWeight || 0,
+        reps: bestSet.actualReps || 0,
+        date: dateStr,
+      }
+
+      if (!exerciseMap.has(exercise.exerciseId)) {
+        exerciseMap.set(exercise.exerciseId, [])
+      }
+      exerciseMap.get(exercise.exerciseId)!.push(entry)
+    }
+  }
+
+  // Convert map to array of ExercisePerformanceData
+  const result: ExercisePerformanceData[] = []
+
+  for (const [exerciseId, sessions] of exerciseMap.entries()) {
+    // Sort by date (newest first)
+    sessions.sort((a, b) => b.date.localeCompare(a.date))
+
+    result.push({
+      exerciseId,
+      lastWeight: sessions[0].weight,
+      lastReps: sessions[0].reps,
+      lastDate: sessions[0].date,
+      recentSessions: sessions.slice(0, 5), // Last 5 sessions
+    })
+  }
+
+  return result
+}
+
 // Build context for AI generation
 async function buildContext(request: AITrainerRequest): Promise<AITrainerContext> {
   console.log('🤖 Building AI context...')
 
   // Load all data in parallel
-  const [exercises, muscles, recentHistory, yesterdayExerciseIdsSet] = await Promise.all([
+  const [exercises, muscles, recentSummaries, recentFullHistory, yesterdayExerciseIdsSet] = await Promise.all([
     getExercises(),
     getMuscles(),
     getUserWorkoutHistory(request.userId, 7),
+    getUserWorkoutHistoryFull(request.userId, 10), // Full entries for exercise performance data
     getRecentlyDoneExerciseIds(request.userId),
   ])
 
@@ -134,14 +197,18 @@ async function buildContext(request: AITrainerRequest): Promise<AITrainerContext
   const yesterdayExerciseIds = Array.from(yesterdayExerciseIdsSet)
 
   console.log(`📊 Loaded ${exercises.length} exercises, ${muscles.length} muscles`)
-  console.log(`📊 Recent workouts: ${recentHistory.length}, Yesterday exercises: ${yesterdayExerciseIds.length}`)
+  console.log(`📊 Recent summaries: ${recentSummaries.length}, Full history: ${recentFullHistory.length}, Yesterday exercises: ${yesterdayExerciseIds.length}`)
 
   // Convert recent history to summaries
-  const recentWorkouts: RecentWorkoutSummary[] = recentHistory.map(w => ({
+  const recentWorkouts: RecentWorkoutSummary[] = recentSummaries.map(w => ({
     date: w.date.toISOString().split('T')[0],
     muscleGroups: w.muscleGroups || [],
     exerciseIds: [], // We don't have exercise IDs in summary
   }))
+
+  // Extract per-exercise performance data from full history
+  const exerciseHistory = extractExerciseHistory(recentFullHistory)
+  console.log(`📊 Exercise history: ${exerciseHistory.length} exercises with past performance data`)
 
   return {
     request,
@@ -149,6 +216,7 @@ async function buildContext(request: AITrainerRequest): Promise<AITrainerContext
     muscles,
     recentWorkouts,
     yesterdayExerciseIds,
+    exerciseHistory,
   }
 }
 
@@ -340,7 +408,6 @@ function createExerciseEntry(
   targetSets: number
 ): AIGeneratedExercise {
   const targetReps = isWarmup ? '5-10' : '8-12'
-  const repsNum = isWarmup ? 5 : 10
 
   return {
     exerciseId: exercise.id,
@@ -352,14 +419,7 @@ function createExerciseEntry(
     isWarmup,
     targetSets,
     targetReps,
-    sets: Array(targetSets).fill(null).map(() => ({
-      type: isWarmup ? 'warmup' as const : 'working' as const,
-      targetReps: repsNum,
-      targetWeight: 0,
-      actualReps: 0,
-      actualWeight: 0,
-      completed: false,
-    })),
+    sets: [], // AI workouts don't pre-create sets - trainee opens sets themselves
   }
 }
 
@@ -400,6 +460,7 @@ function convertToWorkoutEntry(
     source: 'ai_trainer',
     aiWorkoutNumber: workout.aiWorkoutNumber,
     bundleId: bundleId || undefined, // undefined if single workout
+    aiRecommendations: workout.aiRecommendations || undefined,
   }
 }
 

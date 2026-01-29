@@ -5,16 +5,16 @@
 
 import * as functions from 'firebase-functions'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
-import { callGPTForBundle } from './openaiClient'
+import { callGPTForMuscleSelection, callGPTForBundle, filterExercisesByMuscles } from './openaiClient'
 import { checkRateLimit, incrementUsage } from './rateLimiter'
 import type {
   GenerateWorkoutRequest,
   GenerateWorkoutResponse,
   GeneratedWorkout,
   GeneratedExercise,
-  WorkoutSet,
   ClaudeWorkoutResponse,
   ExerciseSummary,
+  AIRecommendation,
 } from './types'
 
 /**
@@ -36,33 +36,10 @@ function getAIWorkoutName(workoutNumber: number): string {
   return `מאמן #${workoutNumber} (${time})`
 }
 
-/**
- * Create default sets array for an exercise
- */
-function createSets(isWarmup: boolean, targetSets: number, targetRepsStr: string): WorkoutSet[] {
-  // Parse target reps (e.g., "8-12" -> 10, "5-10" -> 7)
-  const repsMatch = targetRepsStr.match(/(\d+)(?:-(\d+))?/)
-  let targetReps = 10
-  if (repsMatch) {
-    const low = parseInt(repsMatch[1])
-    const high = repsMatch[2] ? parseInt(repsMatch[2]) : low
-    targetReps = Math.round((low + high) / 2)
-  }
-
-  return Array(targetSets)
-    .fill(null)
-    .map(() => ({
-      type: isWarmup ? 'warmup' : 'working',
-      targetReps,
-      targetWeight: 0,
-      actualReps: 0,
-      actualWeight: 0,
-      completed: false,
-    }))
-}
 
 /**
  * Convert Claude response to GeneratedWorkout format
+ * Extracts AI recommendations from each exercise
  */
 function convertClaudeResponse(
   claudeWorkout: ClaudeWorkoutResponse,
@@ -70,6 +47,8 @@ function convertClaudeResponse(
   workoutNumber: number,
   duration: number
 ): GeneratedWorkout {
+  const aiRecommendations: Record<string, AIRecommendation> = {}
+
   const exercises: GeneratedExercise[] = claudeWorkout.exercises
     .filter((ce) => {
       const found = exerciseMap.has(ce.exerciseId)
@@ -84,6 +63,16 @@ function convertClaudeResponse(
     .map((ce) => {
       const exercise = exerciseMap.get(ce.exerciseId)!
 
+      // Extract recommendation if present
+      if (ce.recommendation) {
+        aiRecommendations[ce.exerciseId] = {
+          weight: ce.recommendation.weight || 0,
+          repRange: ce.recommendation.repRange || ce.targetReps,
+          sets: ce.recommendation.sets || ce.targetSets,
+          ...(ce.recommendation.reasoning && { reasoning: ce.recommendation.reasoning }),
+        }
+      }
+
       return {
         exerciseId: ce.exerciseId,
         exerciseName: exercise.nameHe,
@@ -92,10 +81,10 @@ function convertClaudeResponse(
         category: exercise.category,
         primaryMuscle: exercise.primaryMuscle,
         isWarmup: ce.isWarmup,
-        targetSets: ce.targetSets,
-        targetReps: ce.targetReps,
+        targetSets: ce.recommendation?.sets || ce.targetSets,
+        targetReps: ce.recommendation?.repRange || ce.targetReps,
         aiNotes: ce.aiNotes,
-        sets: createSets(ce.isWarmup, ce.targetSets, ce.targetReps),
+        sets: [], // AI workouts don't pre-create sets - trainee opens sets themselves
       }
     })
 
@@ -107,6 +96,7 @@ function convertClaudeResponse(
     source: 'ai_trainer',
     aiWorkoutNumber: workoutNumber,
     aiExplanation: claudeWorkout.explanation,
+    aiRecommendations: Object.keys(aiRecommendations).length > 0 ? aiRecommendations : undefined,
   }
 }
 
@@ -218,7 +208,7 @@ function generateFallbackWorkout(
       isWarmup: true,
       targetSets: 1,
       targetReps: '5-10',
-      sets: createSets(true, 1, '5-10'),
+      sets: [], // AI workouts don't pre-create sets - trainee opens sets themselves
     })
   }
 
@@ -234,7 +224,7 @@ function generateFallbackWorkout(
       isWarmup: false,
       targetSets: 3,
       targetReps: '8-12',
-      sets: createSets(false, 3, '8-12'),
+      sets: [], // AI workouts don't pre-create sets - trainee opens sets themselves
     })
   })
 
@@ -344,8 +334,52 @@ export const generateAIWorkout = onCall(
       // Get starting workout number (simple increment based on current time)
       const startNumber = Math.floor(Date.now() / 1000) % 1000
 
-      // Try OpenAI API first
-      const gptResult = await callGPTForBundle(data)
+      // Determine if we need muscle selection (Call 1)
+      const needsMuscleSelection =
+        data.request.muscleSelectionMode === 'ai_rotate' ||
+        (!data.request.muscleSelectionMode && data.request.muscleTargets.length === 0) ||
+        (data.request.muscleSelectionMode === 'same' && data.request.muscleTargets.length === 0)
+
+      let filteredExercises: ExerciseSummary[] | undefined
+      let workoutMuscleAssignments: string[][] | undefined
+
+      if (needsMuscleSelection) {
+        // Call 1: Ask GPT to select muscles
+        functions.logger.info('Muscles not pre-selected - running Call 1 (muscle selection)')
+        const muscleResult = await callGPTForMuscleSelection(data)
+
+        if (muscleResult && muscleResult.workoutMuscles.length > 0) {
+          workoutMuscleAssignments = muscleResult.workoutMuscles
+          const allSelectedMuscles = [...new Set(muscleResult.workoutMuscles.flat())]
+          filteredExercises = filterExercisesByMuscles(data.availableExercises, allSelectedMuscles)
+          functions.logger.info('Filtered exercises by selected muscles', {
+            originalCount: data.availableExercises.length,
+            filteredCount: filteredExercises.length,
+            muscles: allSelectedMuscles,
+          })
+        }
+        // If Call 1 fails, proceed without filtering (Call 2 will use all exercises)
+      } else {
+        // User selected muscles - filter exercises
+        let selectedMuscleIds: string[] = []
+        if (data.request.muscleSelectionMode === 'manual' && data.request.perWorkoutMuscles) {
+          selectedMuscleIds = [...new Set(data.request.perWorkoutMuscles.flat())]
+        } else if (data.request.muscleTargets.length > 0) {
+          selectedMuscleIds = data.request.muscleTargets
+        }
+
+        if (selectedMuscleIds.length > 0) {
+          filteredExercises = filterExercisesByMuscles(data.availableExercises, selectedMuscleIds)
+          functions.logger.info('Filtered exercises by user-selected muscles', {
+            originalCount: data.availableExercises.length,
+            filteredCount: filteredExercises.length,
+            muscles: selectedMuscleIds,
+          })
+        }
+      }
+
+      // Call 2: Generate workouts with filtered exercise list
+      const gptResult = await callGPTForBundle(data, filteredExercises, workoutMuscleAssignments)
 
       let workouts: GeneratedWorkout[] = []
       let usedFallback = false

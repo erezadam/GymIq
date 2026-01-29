@@ -1,13 +1,15 @@
 /**
  * OpenAI API Client
- * Wrapper for OpenAI GPT-4o-mini API calls
+ * Two-call approach: (1) muscle selection, (2) workout generation with recommendations
  */
 
 import * as functions from 'firebase-functions'
 import type {
   GenerateWorkoutRequest,
   ClaudeFullResponse,
-  ClaudeWorkoutResponse,
+  MuscleSelectionResponse,
+  ExerciseSummary,
+  ExercisePerformanceData,
 } from './types'
 
 // Initialize OpenAI client (lazy - only when needed)
@@ -27,223 +29,150 @@ async function getClient(): Promise<any> {
 }
 
 /**
- * Call OpenAI API to generate workouts
+ * Call 1 - Select muscles for workouts based on training history
+ * Only called when user didn't select muscles manually
  * Returns null if GPT fails (triggers fallback)
  */
-export async function callGPT(
-  data: GenerateWorkoutRequest,
-  workoutIndex: number,
-  totalWorkouts: number,
-  usedMuscleGroups: string[][]
-): Promise<ClaudeWorkoutResponse | null> {
+export async function callGPTForMuscleSelection(
+  data: GenerateWorkoutRequest
+): Promise<MuscleSelectionResponse | null> {
   try {
     const client = await getClient()
 
-    const systemPrompt = buildSystemPrompt()
-    const userPrompt = buildUserPrompt(data, workoutIndex, totalWorkouts, usedMuscleGroups)
+    const systemPrompt = `אתה מאמן כושר AI שבוחר קבוצות שרירים לאימון.
+בהתבסס על היסטוריית האימונים של המתאמן, בחר 2-3 קבוצות שרירים לכל אימון.
+הקפד לסובב בין קבוצות שרירים שונות כדי לאפשר התאוששות.
+החזר JSON בלבד.`
 
-    functions.logger.info('Calling OpenAI API', {
-      workoutIndex,
-      totalWorkouts,
-      muscleTargets: data.request.muscleTargets,
-      duration: data.request.duration,
+    const userPrompt = `בהתבסס על היסטוריית האימונים, איזה שרירים לאמן?
+
+**מספר אימונים לתכנן:** ${data.request.numWorkouts}
+
+**שרירים זמינים:**
+${JSON.stringify(data.muscles.map(m => ({ id: m.id, nameHe: m.nameHe })), null, 0)}
+
+**היסטוריית אימונים (5 אחרונים):**
+${JSON.stringify(data.recentWorkouts.slice(0, 5))}
+
+**פורמט תגובה (JSON בלבד):**
+{
+  "workoutMuscles": [
+    ["muscleId1", "muscleId2"],
+    ["muscleId3", "muscleId4"]
+  ]
+}
+
+בחר 2-3 שרירים לכל אימון. הימנע מלתת אותם שרירים לאימונים עוקבים.
+החזר JSON בלבד.`
+
+    functions.logger.info('Call 1: Muscle selection', {
+      numWorkouts: data.request.numWorkouts,
     })
 
     const completion = await client.chat.completions.create({
       model: 'gpt-4o-mini',
-      max_tokens: 2048,
+      max_tokens: 512,
+      response_format: { type: 'json_object' },
       messages: [
-        {
-          role: 'system',
-          content: systemPrompt,
-        },
-        {
-          role: 'user',
-          content: userPrompt,
-        },
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
       ],
     })
 
-    // Extract text content from response
     const textContent = completion.choices[0]?.message?.content
-    if (!textContent) {
-      functions.logger.error('OpenAI response has no text content')
+    if (!textContent) return null
+
+    const parsed = JSON.parse(textContent.trim()) as MuscleSelectionResponse
+
+    if (!parsed.workoutMuscles || !Array.isArray(parsed.workoutMuscles)) {
+      functions.logger.error('Muscle selection response missing workoutMuscles')
       return null
     }
 
-    // Parse JSON response
-    const responseText = textContent.trim()
-
-    // Try to extract JSON from response (GPT sometimes adds explanations)
-    let jsonStr = responseText
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      jsonStr = jsonMatch[0]
-    }
-
-    const parsed = JSON.parse(jsonStr) as ClaudeWorkoutResponse
-
-    // Validate response structure
-    if (!parsed.exercises || !Array.isArray(parsed.exercises)) {
-      functions.logger.error('OpenAI response missing exercises array')
-      return null
-    }
-
-    functions.logger.info('OpenAI response parsed successfully', {
-      exerciseCount: parsed.exercises.length,
-      muscleGroups: parsed.muscleGroups,
+    functions.logger.info('Call 1 result: muscles selected', {
+      workoutMuscles: parsed.workoutMuscles,
     })
 
     return parsed
   } catch (error: any) {
-    functions.logger.error('OpenAI API call failed', {
-      error: error.message,
-      code: error.code,
-    })
+    functions.logger.error('Call 1 (muscle selection) failed', { error: error.message })
     return null
   }
 }
 
 /**
- * Call OpenAI to generate all workouts at once (more efficient for bundles)
+ * Filter exercises to only include those matching selected muscles + warmup/cardio
+ */
+export function filterExercisesByMuscles(
+  exercises: ExerciseSummary[],
+  selectedMuscleIds: string[]
+): ExerciseSummary[] {
+  const muscleSet = new Set(selectedMuscleIds)
+
+  return exercises.filter(ex =>
+    muscleSet.has(ex.primaryMuscle) ||
+    ex.primaryMuscle === 'cardio' ||
+    ex.category === 'cardio' ||
+    ex.category === 'warmup'
+  )
+}
+
+/**
+ * Call 2 - Generate workouts with filtered exercise list and weight recommendations
  * Returns null if GPT fails
  */
 export async function callGPTForBundle(
-  data: GenerateWorkoutRequest
+  data: GenerateWorkoutRequest,
+  filteredExercises?: ExerciseSummary[],
+  workoutMuscleAssignments?: string[][]
 ): Promise<ClaudeFullResponse | null> {
   try {
     const client = await getClient()
 
     const systemPrompt = buildSystemPrompt()
-    const userPrompt = buildBundlePrompt(data)
+    const exercisesToUse = filteredExercises || data.availableExercises
+    const userPrompt = buildBundlePrompt(data, exercisesToUse, workoutMuscleAssignments)
 
-    functions.logger.info('Calling OpenAI API for bundle', {
+    functions.logger.info('Call 2: Workout generation', {
       numWorkouts: data.request.numWorkouts,
       duration: data.request.duration,
+      filteredExercises: exercisesToUse.length,
+      totalExercises: data.availableExercises.length,
     })
 
     const completion = await client.chat.completions.create({
       model: 'gpt-4o-mini',
-      max_tokens: 4096, // More tokens for multiple workouts
+      max_tokens: 4096,
+      response_format: { type: 'json_object' },
       messages: [
-        {
-          role: 'system',
-          content: systemPrompt,
-        },
-        {
-          role: 'user',
-          content: userPrompt,
-        },
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
       ],
     })
 
     const textContent = completion.choices[0]?.message?.content
-    if (!textContent) {
-      return null
-    }
+    if (!textContent) return null
 
-    const responseText = textContent.trim()
-    let jsonStr = responseText
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      jsonStr = jsonMatch[0]
-    }
-
-    const parsed = JSON.parse(jsonStr) as ClaudeFullResponse
+    const parsed = JSON.parse(textContent.trim()) as ClaudeFullResponse
 
     if (!parsed.workouts || !Array.isArray(parsed.workouts)) {
       functions.logger.error('OpenAI bundle response missing workouts array')
       return null
     }
 
-    // Log explanations for debugging
-    functions.logger.info('OpenAI bundle response parsed', {
+    functions.logger.info('Call 2 result: workouts generated', {
       workoutCount: parsed.workouts.length,
-      explanations: parsed.workouts.map((w, i) => ({
-        workout: i + 1,
-        hasExplanation: !!w.explanation,
-        explanation: w.explanation?.substring(0, 100),
-      })),
     })
 
     return parsed
   } catch (error: any) {
-    functions.logger.error('OpenAI bundle API call failed', { error: error.message })
+    functions.logger.error('Call 2 (workout generation) failed', { error: error.message })
     return null
   }
 }
 
 /**
- * Build prompt for generating multiple workouts at once
- */
-function buildBundlePrompt(data: GenerateWorkoutRequest): string {
-  const { request, availableExercises, muscles, recentWorkouts, yesterdayExerciseIds } = data
-
-  // Muscle targets description
-  let muscleDesc = ''
-  if (request.muscleSelectionMode === 'ai_rotate') {
-    muscleDesc = 'בחר שרירים שונים לכל אימון (סיבוב אוטומטי)'
-  } else if (request.muscleSelectionMode === 'same' && request.muscleTargets.length > 0) {
-    const targetNames = request.muscleTargets
-      .map((id) => muscles.find((m) => m.id === id)?.nameHe || id)
-      .join(', ')
-    muscleDesc = `אותם שרירים לכל האימונים: ${targetNames}`
-  } else if (request.muscleSelectionMode === 'manual' && request.perWorkoutMuscles) {
-    muscleDesc = 'שרירים ידניים לכל אימון (ראה למטה)'
-  } else {
-    muscleDesc = 'AI יבחר שרירים מתאימים'
-  }
-
-  // Exercise count based on duration
-  const exerciseCounts: Record<number, number> = { 30: 6, 45: 8, 60: 9, 90: 11 }
-  const targetExercises = exerciseCounts[request.duration] || 9
-
-  return `צור ${request.numWorkouts} אימונים עם הפרטים הבאים:
-
-**בקשת משתמש:**
-- כמות אימונים: ${request.numWorkouts}
-- משך כל אימון: ${request.duration} דקות
-- חימום: ${request.warmupDuration > 0 ? `${request.warmupDuration} דקות (תרגיל קרדיו אחד)` : 'ללא'}
-- קבוצות שרירים: ${muscleDesc}
-- תרגילים נדרשים: ${targetExercises} תרגילי כוח + ${request.warmupDuration > 0 ? '1 חימום' : '0 חימום'} = ${targetExercises + (request.warmupDuration > 0 ? 1 : 0)} סה"כ
-
-${request.muscleSelectionMode === 'manual' && request.perWorkoutMuscles ? `
-**שרירים לכל אימון:**
-${request.perWorkoutMuscles.map((m, i) => `אימון ${i + 1}: ${m.map((id) => muscles.find((mu) => mu.id === id)?.nameHe || id).join(', ')}`).join('\n')}
-` : ''}
-
-**תרגילים זמינים:**
-${JSON.stringify(availableExercises.map((e) => ({ id: e.id, nameHe: e.nameHe, muscle: e.primaryMuscle })), null, 0)}
-
-**שרירים זמינים:**
-${JSON.stringify(muscles.map((m) => ({ id: m.id, nameHe: m.nameHe })), null, 0)}
-
-**תרגילים לא לכלול (נעשו אתמול):**
-${JSON.stringify(yesterdayExerciseIds)}
-
-**היסטוריית אימונים (7 ימים אחרונים):**
-${JSON.stringify(recentWorkouts)}
-
-**פורמט תגובה נדרש (JSON בלבד):**
-{
-  "workouts": [
-    {
-      "exercises": [
-        { "exerciseId": "string", "isWarmup": boolean, "targetSets": number, "targetReps": "string", "aiNotes": "string" }
-      ],
-      "muscleGroups": ["string"],
-      "explanation": "string (הסבר קצר בעברית למה בחרת את האימון הזה - 2-3 משפטים)"
-    }
-  ]
-}
-
-חשוב: הוסף לכל אימון הסבר קצר (2-3 משפטים) שמסביר למה בחרת את התרגילים ומה ההיגיון.
-החזר JSON בלבד.`
-}
-
-/**
- * Build the system prompt for OpenAI
- * Defines the AI trainer's role and response format
+ * Build the system prompt for workout generation (Call 2)
  */
 function buildSystemPrompt(): string {
   return `אתה מאמן כושר AI מקצועי שיוצר תוכניות אימון מותאמות אישית.
@@ -253,25 +182,45 @@ function buildSystemPrompt(): string {
 2. אל תחזור על תרגילים שנעשו אתמול (רשימת IDs מסופקת)
 3. התאם את מספר התרגילים למשך האימון המבוקש
 4. אם נבחרו שרירים ספציפיים - התמקד בהם
-5. אם לא נבחרו שרירים - בחר 2-3 קבוצות שרירים מגוונות
-6. אזן בין תרגילי compound (מרובי-מפרקים) ו-isolation (בידוד)
-7. התחל באימון חימום אם נדרש (תרגיל קרדיו)
-8. הוסף הסבר קצר (2-3 משפטים) שמסביר למה בחרת את התרגילים האלו ומה הגיון האימון
-9. החזר JSON בלבד
+5. אזן בין תרגילי compound (מרובי-מפרקים) ו-isolation (בידוד)
+6. התחל באימון חימום אם נדרש (תרגיל קרדיו)
+7. הוסף הסבר קצר (2-3 משפטים) לכל אימון
+8. החזר JSON בלבד
+
+## כללי המלצות משקל (קריטי!):
+- בסס את ההמלצה על הביצוע האחרון של המשתמש (מסופק כ-exerciseHistory)
+- אם למשתמש יש היסטוריית ביצוע לתרגיל: המלץ על משקל קרוב למה שעשה (±5%)
+  - אם עשה 64kg × 8 בהצלחה → המלץ 64-67kg
+  - אם עשה 22.5kg × 10 בהצלחה → המלץ 22.5-25kg
+- לעולם אל תמליץ על ירידה של יותר מ-10% ממה שהמשתמש עשה
+- לעולם אל תמליץ על עלייה של יותר מ-5% ממה שהמשתמש עשה
+- אם אין היסטוריה לתרגיל ספציפי: המלץ על משקל שמרני למתאמן ממוצע
+- לתרגילי משקל גוף או חימום: weight = 0
+- הוסף reasoning קצר בעברית שמסביר למה בחרת את המשקל הזה
 
 ## פורמט תגובה (JSON בלבד):
 {
-  "exercises": [
+  "workouts": [
     {
-      "exerciseId": "string (ID מרשימת התרגילים)",
-      "isWarmup": boolean,
-      "targetSets": number (1 לחימום, 3-4 לתרגיל רגיל),
-      "targetReps": "string (טווח חזרות, למשל: '8-12')",
-      "aiNotes": "string (טיפ קצר אופציונלי בעברית)"
+      "exercises": [
+        {
+          "exerciseId": "string (ID מרשימת התרגילים)",
+          "isWarmup": boolean,
+          "targetSets": number (1 לחימום, 3-4 לתרגיל רגיל),
+          "targetReps": "string (טווח חזרות, למשל: '8-12')",
+          "aiNotes": "string (טיפ קצר אופציונלי בעברית)",
+          "recommendation": {
+            "weight": number (המלצת משקל בק"ג - מבוסס על היסטוריית המשתמש!),
+            "repRange": "string (טווח חזרות, למשל: '8-10')",
+            "sets": number (מספר סטים מומלץ),
+            "reasoning": "string (הסבר קצר בעברית - למה משקל זה)"
+          }
+        }
+      ],
+      "muscleGroups": ["string (שמות השרירים בעברית)"],
+      "explanation": "string (הסבר קצר בעברית - 2-3 משפטים)"
     }
-  ],
-  "muscleGroups": ["string (שמות השרירים בעברית)"],
-  "explanation": "string (הסבר קצר בעברית למה בחרת את האימון הזה - 2-3 משפטים)"
+  ]
 }
 
 ## דוגמאות לתרגילים לפי משך:
@@ -282,75 +231,103 @@ function buildSystemPrompt(): string {
 }
 
 /**
- * Build the user prompt for a single workout
+ * Build exercise history section for prompt
+ * Maps exerciseId → last performance for GPT context
  */
-function buildUserPrompt(
+function buildExerciseHistorySection(exerciseHistory?: ExercisePerformanceData[]): string {
+  if (!exerciseHistory || exerciseHistory.length === 0) {
+    return `\n**היסטוריית ביצוע לתרגילים:** אין נתונים - זה משתמש חדש, המלץ משקלות שמרניים\n`
+  }
+
+  // Format as compact JSON: exerciseId → { weight, reps }
+  const historyMap = exerciseHistory.map(eh => ({
+    id: eh.exerciseId,
+    lastWeight: eh.lastWeight,
+    lastReps: eh.lastReps,
+    date: eh.lastDate,
+  }))
+
+  return `
+**היסטוריית ביצוע לתרגילים (קריטי - בסס המלצות על זה!):**
+${JSON.stringify(historyMap, null, 0)}
+
+⚠️ חובה: לכל תרגיל שיש לו היסטוריה למעלה, ההמלצה חייבת להיות מבוססת על המשקל האחרון שלו.
+- אם עשה Xkg - המלץ בין X*0.9 ל-X*1.05
+- לעולם לא להמליץ על משקל שונה ביותר מ-10% ממה שעשה
+`
+}
+
+/**
+ * Build prompt for generating multiple workouts (Call 2)
+ * Uses filtered exercise list for reduced token count
+ */
+function buildBundlePrompt(
   data: GenerateWorkoutRequest,
-  workoutIndex: number,
-  totalWorkouts: number,
-  usedMuscleGroups: string[][]
+  exercises: ExerciseSummary[],
+  workoutMuscleAssignments?: string[][]
 ): string {
-  const { request, availableExercises, muscles, recentWorkouts, yesterdayExerciseIds } = data
+  const { request, muscles, recentWorkouts, yesterdayExerciseIds, exerciseHistory } = data
 
-  // Determine exercise count based on duration
-  const exerciseCounts: Record<number, number> = { 30: 6, 45: 8, 60: 9, 90: 11 }
-  const targetExercises = exerciseCounts[request.duration] || 9
-
-  // Determine muscle targets for this workout
-  let muscleTargetDesc = ''
-  if (request.muscleSelectionMode === 'manual' && request.perWorkoutMuscles?.[workoutIndex]) {
-    const targetMuscleIds = request.perWorkoutMuscles[workoutIndex]
-    const targetNames = targetMuscleIds
-      .map((id) => muscles.find((m) => m.id === id)?.nameHe || id)
-      .join(', ')
-    muscleTargetDesc = `שרירים נבחרים: ${targetNames}`
+  // Muscle targets description
+  let muscleDesc = ''
+  if (workoutMuscleAssignments && workoutMuscleAssignments.length > 0) {
+    // Muscles selected by Call 1
+    muscleDesc = 'שרירים שנבחרו לכל אימון (ראה למטה)'
   } else if (request.muscleSelectionMode === 'same' && request.muscleTargets.length > 0) {
     const targetNames = request.muscleTargets
       .map((id) => muscles.find((m) => m.id === id)?.nameHe || id)
       .join(', ')
-    muscleTargetDesc = `שרירים נבחרים: ${targetNames}`
-  } else if (request.muscleSelectionMode === 'ai_rotate') {
-    const usedMuscles = usedMuscleGroups.flat()
-    if (usedMuscles.length > 0) {
-      muscleTargetDesc = `AI יבחר שרירים (הימנע מ: ${usedMuscles.join(', ')})`
-    } else {
-      muscleTargetDesc = 'AI יבחר 2-3 קבוצות שרירים מגוונות'
-    }
+    muscleDesc = `אותם שרירים לכל האימונים: ${targetNames}`
+  } else if (request.muscleSelectionMode === 'manual' && request.perWorkoutMuscles) {
+    muscleDesc = 'שרירים ידניים לכל אימון (ראה למטה)'
   } else {
-    muscleTargetDesc = 'AI יבחר 2-3 קבוצות שרירים מגוונות'
+    muscleDesc = 'בחר 2-3 קבוצות שרירים מגוונות'
   }
 
-  const exerciseList = availableExercises.map((e) => ({
-    id: e.id,
-    nameHe: e.nameHe,
-    muscle: e.primaryMuscle,
-  }))
+  // Exercise count based on duration
+  const exerciseCounts: Record<number, number> = { 30: 6, 45: 8, 60: 9, 90: 11 }
+  const targetExercises = exerciseCounts[request.duration] || 9
 
-  const muscleList = muscles.map((m) => ({
-    id: m.id,
-    nameHe: m.nameHe,
-  }))
+  // Build per-workout muscle section
+  let perWorkoutMuscleSection = ''
+  if (workoutMuscleAssignments && workoutMuscleAssignments.length > 0) {
+    perWorkoutMuscleSection = `
+**שרירים לכל אימון:**
+${workoutMuscleAssignments.map((m, i) => `אימון ${i + 1}: ${m.map((id) => muscles.find((mu) => mu.id === id)?.nameHe || id).join(', ')}`).join('\n')}
+`
+  } else if (request.muscleSelectionMode === 'manual' && request.perWorkoutMuscles) {
+    perWorkoutMuscleSection = `
+**שרירים לכל אימון:**
+${request.perWorkoutMuscles.map((m, i) => `אימון ${i + 1}: ${m.map((id) => muscles.find((mu) => mu.id === id)?.nameHe || id).join(', ')}`).join('\n')}
+`
+  }
 
-  return `צור אימון עם הפרטים הבאים:
+  return `צור ${request.numWorkouts} אימונים עם הפרטים הבאים:
 
 **בקשת משתמש:**
-- משך אימון: ${request.duration} דקות
-- חימום: ${request.warmupDuration > 0 ? `${request.warmupDuration} דקות (בחר תרגיל קרדיו אחד)` : 'ללא חימום'}
-- ${muscleTargetDesc}
-- מספר אימון: ${workoutIndex + 1} מתוך ${totalWorkouts}
-- תרגילים נדרשים: ${targetExercises} תרגילי כוח${request.warmupDuration > 0 ? ' + 1 תרגיל חימום' : ''} = ${targetExercises + (request.warmupDuration > 0 ? 1 : 0)} סה"כ
-
-**תרגילים זמינים (JSON):**
-${JSON.stringify(exerciseList, null, 0)}
+- כמות אימונים: ${request.numWorkouts}
+- משך כל אימון: ${request.duration} דקות
+- חימום: ${request.warmupDuration > 0 ? `${request.warmupDuration} דקות (תרגיל קרדיו אחד)` : 'ללא'}
+- קבוצות שרירים: ${muscleDesc}
+- תרגילים נדרשים: ${targetExercises} תרגילי כוח + ${request.warmupDuration > 0 ? '1 חימום' : '0 חימום'} = ${targetExercises + (request.warmupDuration > 0 ? 1 : 0)} סה"כ
+${perWorkoutMuscleSection}
+**תרגילים זמינים:**
+${JSON.stringify(exercises.map((e) => ({ id: e.id, nameHe: e.nameHe, muscle: e.primaryMuscle })), null, 0)}
 
 **שרירים זמינים:**
-${JSON.stringify(muscleList, null, 0)}
+${JSON.stringify(muscles.map((m) => ({ id: m.id, nameHe: m.nameHe })), null, 0)}
 
 **תרגילים לא לכלול (נעשו אתמול):**
 ${JSON.stringify(yesterdayExerciseIds)}
 
-**היסטוריית אימונים אחרונה (7 ימים):**
+**היסטוריית אימונים (5 אחרונים):**
 ${JSON.stringify(recentWorkouts.slice(0, 5))}
-
-החזר JSON בלבד.`
+${buildExerciseHistorySection(exerciseHistory)}
+חשוב:
+- לכל תרגיל הוסף recommendation עם המלצת משקל, טווח חזרות, סטים ו-reasoning
+- המלצת המשקל חייבת להתבסס על היסטוריית הביצוע של המשתמש (אם קיימת)
+- אם אין היסטוריה לתרגיל: המלץ משקל שמרני (0 לתרגילי משקל גוף)
+- הוסף reasoning קצר בעברית לכל המלצה (למשל: "עשה 64kg×8, ממליץ להישאר")
+- הוסף הסבר קצר (2-3 משפטים) לכל אימון
+- החזר JSON בלבד`
 }

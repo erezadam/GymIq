@@ -3,6 +3,32 @@
  * Shared types between client and server
  */
 
+// AI recommendation for an exercise (weight, reps, sets)
+export interface AIRecommendation {
+  weight: number      // Recommended weight in kg
+  repRange: string    // e.g., "8-10"
+  sets: number        // Number of sets
+  reasoning?: string  // Why this recommendation (for debugging)
+}
+
+// Per-exercise performance history from user's past workouts
+export interface ExercisePerformanceData {
+  exerciseId: string
+  lastWeight: number       // Last weight used (kg)
+  lastReps: number         // Last reps completed
+  lastDate: string         // ISO date of last performance
+  recentSessions?: {       // Last 3-5 sessions (optional)
+    weight: number
+    reps: number
+    date: string
+  }[]
+}
+
+// Response from muscle selection call (Call 1)
+export interface MuscleSelectionResponse {
+  workoutMuscles: string[][]  // per-workout muscle IDs
+}
+
 // Exercise summary for prompt (minimal data to reduce tokens)
 export interface ExerciseSummary {
   id: string
@@ -40,6 +66,7 @@ export interface GenerateWorkoutRequest {
   muscles: MuscleSummary[]
   recentWorkouts: RecentWorkoutSummary[]
   yesterdayExerciseIds: string[]
+  exerciseHistory?: ExercisePerformanceData[]  // Per-exercise performance from past workouts
 }
 
 // Exercise in Claude's response
@@ -49,6 +76,7 @@ export interface ClaudeExerciseResponse {
   targetSets: number
   targetReps: string
   aiNotes?: string
+  recommendation?: AIRecommendation
 }
 
 // Single workout in Claude's response
@@ -97,6 +125,7 @@ export interface GeneratedWorkout {
   source: 'ai_trainer'
   aiWorkoutNumber: number
   aiExplanation?: string
+  aiRecommendations?: Record<string, AIRecommendation>  // exerciseId → recommendation
 }
 
 // Response from Cloud Function to client

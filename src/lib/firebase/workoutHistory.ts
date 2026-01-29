@@ -44,6 +44,7 @@ function toWorkoutHistory(id: string, data: any): WorkoutHistoryEntry {
     source: data.source,
     aiWorkoutNumber: data.aiWorkoutNumber,
     bundleId: data.bundleId,
+    aiRecommendations: data.aiRecommendations,
   }
 }
 
@@ -148,6 +149,7 @@ export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'
     source: workout.source,
     aiWorkoutNumber: workout.aiWorkoutNumber,
     bundleId: workout.bundleId,
+    aiRecommendations: workout.aiRecommendations,
   })
 
   // Add notes only if exists
@@ -203,6 +205,28 @@ export async function getUserWorkoutHistory(
     return results
   } catch (error) {
     console.error('❌ Error fetching workout history:', error)
+    throw error
+  }
+}
+
+// Get full workout history entries (with exercise data) for AI context
+export async function getUserWorkoutHistoryFull(
+  userId: string,
+  limitCount: number = 10
+): Promise<WorkoutHistoryEntry[]> {
+  const historyRef = collection(db, COLLECTION_NAME)
+  const q = query(
+    historyRef,
+    where('userId', '==', userId),
+    orderBy('date', 'desc'),
+    limit(limitCount)
+  )
+
+  try {
+    const snapshot = await getDocs(q)
+    return snapshot.docs.map(doc => toWorkoutHistory(doc.id, doc.data()))
+  } catch (error) {
+    console.error('❌ Error fetching full workout history:', error)
     throw error
   }
 }

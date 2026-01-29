@@ -384,6 +384,10 @@ export default function WorkoutHistory() {
           localStorage.setItem('continueWorkoutData', JSON.stringify(exercisesWithSets))
           localStorage.setItem('continueWorkoutMode', 'in_progress')
           localStorage.setItem('continueWorkoutId', workoutSummary.id)  // שמירת ID למניעת כפילויות
+          // Store AI recommendations if available
+          if (fullWorkout.aiRecommendations) {
+            localStorage.setItem('continueAIRecommendations', JSON.stringify(fullWorkout.aiRecommendations))
+          }
 
           // Add exercises to store (basic info)
           fullWorkout.exercises.forEach(exercise => {
@@ -432,6 +436,10 @@ export default function WorkoutHistory() {
             }
           })
           localStorage.setItem('continueWorkoutData', JSON.stringify(exercisesWithSets))
+          // Store AI recommendations if available
+          if (fullWorkout.aiRecommendations) {
+            localStorage.setItem('continueAIRecommendations', JSON.stringify(fullWorkout.aiRecommendations))
+          }
 
           // Add exercises to store
           fullWorkout.exercises.forEach(exercise => {
@@ -518,6 +526,10 @@ export default function WorkoutHistory() {
       localStorage.setItem('continueWorkoutData', JSON.stringify(exercisesWithSets))
       localStorage.setItem('continueWorkoutId', workoutSummary.id)
       localStorage.setItem('continueWorkoutMode', 'in_progress')
+      // Store AI recommendations if available
+      if (fullWorkout.aiRecommendations) {
+        localStorage.setItem('continueAIRecommendations', JSON.stringify(fullWorkout.aiRecommendations))
+      }
 
       // Now add exercises to store (this triggers useActiveWorkout initialization)
       fullWorkout.exercises.forEach(exercise => {

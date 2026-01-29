@@ -162,6 +162,10 @@ export function WorkoutCard({
           ) : expandedWorkoutDetails?.exercises && expandedWorkoutDetails.exercises.length > 0 ? (
             <div className="space-y-3">
               {expandedWorkoutDetails.exercises.map((exercise, idx) => {
+                // Check if this workout has AI recommendations
+                const recommendation = expandedWorkoutDetails.aiRecommendations?.[exercise.exerciseId]
+                const isAIWorkout = expandedWorkoutDetails.source === 'ai_trainer'
+
                 // Determine if this is an assistance exercise (graviton/bands)
                 const hasAssistanceWeight = exercise.sets?.some(s => s.assistanceWeight !== undefined && s.assistanceWeight > 0)
                 const hasAssistanceBand = exercise.sets?.some(s => s.assistanceBand)
@@ -179,37 +183,49 @@ export function WorkoutCard({
                       )}
                     </p>
 
-                    {/* Sets detail table */}
-                    {exercise.sets && exercise.sets.length > 0 && (
-                      <div className="space-y-1.5">
-                        {exercise.sets.map((set, setIdx) => {
-                          const reps = set.actualReps || set.targetReps || 0
-                          const weight = set.actualWeight || set.targetWeight || 0
+                    {/* AI Recommendation - single line instead of sets table */}
+                    {isAIWorkout && recommendation ? (
+                      <p className="text-sm" style={{ color: '#A855F7' }}>
+                        {'\u{1F4A1}'} המלצה: {recommendation.weight > 0 ? `${recommendation.weight}kg \u00D7 ` : ''}{recommendation.repRange} ({recommendation.sets} סטים)
+                      </p>
+                    ) : isAIWorkout ? (
+                      // AI workout without recommendation - don't show empty sets
+                      null
+                    ) : (
+                      <>
+                        {/* Sets detail table (for non-AI workouts) */}
+                        {exercise.sets && exercise.sets.length > 0 && (
+                          <div className="space-y-1.5">
+                            {exercise.sets.map((set, setIdx) => {
+                              const reps = set.actualReps || set.targetReps || 0
+                              const weight = set.actualWeight || set.targetWeight || 0
 
-                          return (
-                            <div key={setIdx} className="flex items-center gap-2 text-sm">
-                              <span className="text-text-muted w-12">סט {setIdx + 1}:</span>
-                              <span className="text-white">{reps} חזרות</span>
+                              return (
+                                <div key={setIdx} className="flex items-center gap-2 text-sm">
+                                  <span className="text-text-muted w-12">סט {setIdx + 1}:</span>
+                                  <span className="text-white">{reps} חזרות</span>
 
-                              {/* Show appropriate weight/assistance info */}
-                              {set.assistanceWeight !== undefined && set.assistanceWeight > 0 ? (
-                                <span className="text-teal-400">• עזרה: {set.assistanceWeight} ק"ג</span>
-                              ) : set.assistanceBand ? (
-                                <span className="text-purple-400">• {bandNameMap[set.assistanceBand] || set.assistanceBand}</span>
-                              ) : weight > 0 ? (
-                                <span className="text-text-muted">• {weight} ק"ג</span>
-                              ) : null}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
+                                  {/* Show appropriate weight/assistance info */}
+                                  {set.assistanceWeight !== undefined && set.assistanceWeight > 0 ? (
+                                    <span className="text-teal-400">• עזרה: {set.assistanceWeight} ק"ג</span>
+                                  ) : set.assistanceBand ? (
+                                    <span className="text-purple-400">• {bandNameMap[set.assistanceBand] || set.assistanceBand}</span>
+                                  ) : weight > 0 ? (
+                                    <span className="text-text-muted">• {weight} ק"ג</span>
+                                  ) : null}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
 
-                    {/* Fallback summary for exercises without sets */}
-                    {(!exercise.sets || exercise.sets.length === 0) && (
-                      <div className="flex flex-wrap gap-2 text-sm text-text-muted">
-                        <span className="px-2 py-0.5 bg-dark-border/50 rounded">אין סטים</span>
-                      </div>
+                        {/* Fallback summary for exercises without sets */}
+                        {(!exercise.sets || exercise.sets.length === 0) && (
+                          <div className="flex flex-wrap gap-2 text-sm text-text-muted">
+                            <span className="px-2 py-0.5 bg-dark-border/50 rounded">אין סטים</span>
+                          </div>
+                        )}
+                      </>
                     )}
 
                     {exercise.notes && (
