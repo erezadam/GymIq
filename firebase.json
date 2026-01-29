@@ -5,6 +5,8 @@
   "functions": {
     "source": "functions",
     "codebase": "default",
+    "runtime": "nodejs20",
+    "discoveryTimeout": 30000,
     "ignore": [
       "node_modules",
       ".git",

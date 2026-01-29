@@ -5,7 +5,7 @@
 
 import * as functions from 'firebase-functions'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
-import { callClaudeForBundle } from './claudeClient'
+import { callGPTForBundle } from './openaiClient'
 import { checkRateLimit, incrementUsage } from './rateLimiter'
 import type {
   GenerateWorkoutRequest,
@@ -289,7 +289,7 @@ function validateRequest(data: any, authUid: string): GenerateWorkoutRequest {
  */
 export const generateAIWorkout = onCall(
   {
-    secrets: ['CLAUDE_API_KEY'],
+    secrets: ['OPENAI_API_KEY'],
     timeoutSeconds: 60,
     memory: '256MiB',
   },
@@ -333,20 +333,20 @@ export const generateAIWorkout = onCall(
       // Get starting workout number (simple increment based on current time)
       const startNumber = Math.floor(Date.now() / 1000) % 1000
 
-      // Try Claude API first
-      const claudeResult = await callClaudeForBundle(data)
+      // Try OpenAI API first
+      const gptResult = await callGPTForBundle(data)
 
       let workouts: GeneratedWorkout[] = []
       let usedFallback = false
 
-      if (claudeResult && claudeResult.workouts.length === data.request.numWorkouts) {
-        // Claude succeeded - convert response
-        functions.logger.info('Claude API succeeded')
-        workouts = claudeResult.workouts.map((cw, index) =>
+      if (gptResult && gptResult.workouts.length === data.request.numWorkouts) {
+        // OpenAI succeeded - convert response
+        functions.logger.info('OpenAI API succeeded')
+        workouts = gptResult.workouts.map((cw, index) =>
           convertClaudeResponse(cw, exerciseMap, startNumber + index, data.request.duration)
         )
       } else {
-        // Claude failed or returned wrong count - use fallback
+        // OpenAI failed or returned wrong count - use fallback
         functions.logger.info('Using fallback generation')
         usedFallback = true
 
