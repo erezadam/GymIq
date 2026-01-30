@@ -55,6 +55,7 @@ export function useActiveWorkout() {
   const [isLoading, setIsLoading] = useState(true)
   const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({ type: null })
   const [showSummaryModal, setShowSummaryModal] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   // Dynamic muscle name mapping from Firebase
   const [dynamicMuscleNames, setDynamicMuscleNames] = useState<Record<string, string>>({})
@@ -998,20 +999,16 @@ export function useActiveWorkout() {
   const [pendingCalories, setPendingCalories] = useState<number | undefined>(undefined)
 
   const confirmFinish = useCallback(() => {
-    console.log('=== CONFIRM FINISH CLICKED ===')
-
     if (!workout) {
-      console.log('❌ No workout - returning')
+      toast.error('שגיאה - אין אימון פעיל')
       return
     }
 
     // Check if there are incomplete exercises
     const incompleteCount = workout.stats.totalExercises - workout.stats.completedExercises
-    console.log(`📊 Incomplete exercises: ${incompleteCount}/${workout.stats.totalExercises}`)
 
     if (incompleteCount > 0) {
       // Show warning modal
-      console.log('⚠️ Showing incomplete exercises warning')
       setConfirmModal({
         type: 'incomplete_exercises_warning',
         incompleteCount,
@@ -1019,14 +1016,12 @@ export function useActiveWorkout() {
       return
     }
 
-    console.log('✅ All exercises complete - showing summary modal')
     // All exercises complete - show summary modal directly
     setShowSummaryModal(true)
   }, [workout])
 
   // Called when user confirms finish from confirmation modal (partial workout)
   const handleConfirmFinish = useCallback(() => {
-    console.log('=== CONFIRM FINISH FROM MODAL ===')
     setConfirmModal({ type: null })
     setShowSummaryModal(true)
   }, [])
@@ -1045,27 +1040,23 @@ export function useActiveWorkout() {
   // This is needed because finishWorkout is defined after confirmFinish
   useEffect(() => {
     if (shouldFinish) {
-      console.log('=== shouldFinish triggered, calling finishWorkout ===')
       setShouldFinish(false)
       // We need to call finishWorkout here, but it's not defined yet
       // So we'll handle the finish logic inline
       const doFinish = async () => {
-        console.log('=== FINISH WORKOUT START (from effect) ===')
-
-        // Set flag to prevent auto-save from running during finish workflow
+        // isFinishingRef and auto-save cancellation already done in finishWorkoutWithCalories
+        // Re-confirm here as safety net
         isFinishingRef.current = true
-
-        // CRITICAL: Cancel any pending auto-save to prevent race condition
-        // where auto-save overwrites the 'completed' status with 'in_progress'
         if (autoSaveTimeoutRef.current) {
-          console.log('🛑 Cancelling pending auto-save before finishing')
           clearTimeout(autoSaveTimeoutRef.current)
           autoSaveTimeoutRef.current = null
         }
 
         if (!workout) {
-          console.error('=== FINISH WORKOUT FAILED - NO WORKOUT ===')
+          toast.error('שגיאה - אין אימון פעיל')
           isFinishingRef.current = false
+          setIsSaving(false)
+          setShowSummaryModal(false)
           return
         }
 
@@ -1076,12 +1067,6 @@ export function useActiveWorkout() {
           : workout.stats.completedExercises === 0
           ? 'cancelled'
           : 'partial'
-
-        console.log('=== SAVING TO FIREBASE (from effect) ===')
-        console.log('userId:', workout.userId)
-        console.log('exercises:', workout.exercises.length)
-        console.log('status:', status)
-        console.log('calories:', pendingCalories)
 
         try {
           const exercises = workout.exercises.map((ex) => ({
@@ -1127,7 +1112,6 @@ export function useActiveWorkout() {
               totalVolume: workout.stats.totalVolume,
               calories: pendingCalories,
             })
-            console.log('=== COMPLETE WORKOUT SUCCESS (from effect) ===')
           } else {
             await saveWorkoutHistory({
               userId: workout.userId,
@@ -1146,15 +1130,15 @@ export function useActiveWorkout() {
               personalRecords: 0,
               calories: pendingCalories,
             })
-            console.log('=== SAVE WORKOUT SUCCESS (from effect) ===')
           }
-          toast.success('האימון נשמר!')
+          toast.success('האימון נשמר בהצלחה!')
 
           // Clear everything ONLY after successful save
           clearStorage()
           clearWorkout()
           setWorkout(null)
           setFirebaseWorkoutId(null)
+          setIsSaving(false)
           setShowSummaryModal(false)
           setPendingCalories(undefined)
           localStorage.removeItem('gymiq_firebase_workout_id')
@@ -1162,12 +1146,12 @@ export function useActiveWorkout() {
           setConfirmModal({ type: null })
           navigate('/workout/history')
         } catch (error: any) {
-          console.error('=== SAVE WORKOUT FAILED (from effect) ===')
-          console.error('Error:', error)
-          toast.error('שגיאה בשמירת האימון')
+          console.error('Error saving workout:', error)
+          toast.error('שגיאה בשמירת האימון', { duration: 5000 })
           // DON'T clear workout on error - let user try again
+          // Keep modal open so user can retry
           isFinishingRef.current = false
-          setShowSummaryModal(false)
+          setIsSaving(false)
           setShouldFinish(false)
         }
       }
@@ -1261,17 +1245,21 @@ export function useActiveWorkout() {
 
   // Finish workout with calories (called from summary modal)
   const finishWorkoutWithCalories = useCallback((calories?: number) => {
-    console.log('=== FINISH WORKOUT WITH CALORIES ===')
-    console.log('calories:', calories)
+    // CRITICAL: Block auto-save IMMEDIATELY to prevent race condition
+    // Must happen before the effect fires, not inside it
+    isFinishingRef.current = true
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current)
+      autoSaveTimeoutRef.current = null
+    }
+
     setPendingCalories(calories)
-    setShowSummaryModal(false)
+    setIsSaving(true)
     setShouldFinish(true)
   }, [])
 
   // Finish workout (save to Firebase and clear) - legacy, triggers summary modal flow
   const finishWorkout = useCallback(async () => {
-    console.log('=== FINISH WORKOUT START ===')
-    // Show summary modal instead of finishing directly
     setShowSummaryModal(true)
   }, [])
 
@@ -1352,6 +1340,7 @@ export function useActiveWorkout() {
     exercisesByMuscle,
     exercisesByEquipment,
     showSummaryModal,
+    isSaving,
 
     // Exercise actions
     toggleExercise,

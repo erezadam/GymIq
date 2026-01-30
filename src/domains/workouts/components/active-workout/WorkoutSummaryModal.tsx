@@ -10,6 +10,7 @@ interface WorkoutSummaryModalProps {
   isOpen: boolean
   onClose: () => void
   onSave: (calories?: number) => void
+  isSaving?: boolean
   stats: {
     completedExercises: number
     totalExercises: number
@@ -23,6 +24,7 @@ export function WorkoutSummaryModal({
   isOpen,
   onClose,
   onSave,
+  isSaving = false,
   stats,
 }: WorkoutSummaryModalProps) {
   const [calories, setCalories] = useState<string>('')
@@ -37,7 +39,7 @@ export function WorkoutSummaryModal({
   return (
     <div
       className="confirmation-modal-backdrop"
-      onClick={onClose}
+      onClick={undefined}
       style={{ zIndex: 100 }}
     >
       <div
@@ -50,13 +52,15 @@ export function WorkoutSummaryModal({
         }}
       >
         {/* Close button */}
-        <button
-          className="confirmation-modal-close"
-          onClick={onClose}
-          style={{ top: '12px', left: '12px' }}
-        >
-          <X className="w-5 h-5" />
-        </button>
+        {!isSaving && (
+          <button
+            className="confirmation-modal-close"
+            onClick={onClose}
+            style={{ top: '12px', left: '12px' }}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
 
         {/* Trophy Icon */}
         <div
@@ -221,6 +225,7 @@ export function WorkoutSummaryModal({
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
             onClick={onClose}
+            disabled={isSaving}
             style={{
               flex: 1,
               padding: '14px',
@@ -230,27 +235,31 @@ export function WorkoutSummaryModal({
               color: '#9CA3AF',
               fontSize: '15px',
               fontWeight: 600,
-              cursor: 'pointer',
+              cursor: isSaving ? 'not-allowed' : 'pointer',
+              opacity: isSaving ? 0.5 : 1,
             }}
           >
             חזור לאימון
           </button>
           <button
             onClick={handleSave}
+            disabled={isSaving}
             style={{
               flex: 1,
               padding: '14px',
-              background: 'linear-gradient(180deg, #FF6B35 0%, #E85A2A 100%)',
+              background: isSaving
+                ? 'linear-gradient(180deg, #9CA3AF 0%, #6B7280 100%)'
+                : 'linear-gradient(180deg, #FF6B35 0%, #E85A2A 100%)',
               border: 'none',
               borderRadius: '12px',
               color: '#FFFFFF',
               fontSize: '15px',
               fontWeight: 700,
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(255, 107, 53, 0.3)',
+              cursor: isSaving ? 'not-allowed' : 'pointer',
+              boxShadow: isSaving ? 'none' : '0 4px 12px rgba(255, 107, 53, 0.3)',
             }}
           >
-            שמור וסיים
+            {isSaving ? 'שומר...' : 'שמור וסיים'}
           </button>
         </div>
       </div>

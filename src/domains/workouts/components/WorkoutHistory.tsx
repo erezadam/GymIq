@@ -626,13 +626,18 @@ export default function WorkoutHistory() {
     const singleAI: WorkoutHistorySummary[] = []
 
     filtered.forEach(workout => {
-      if (workout.bundleId) {
-        // Part of a bundle
+      // Completed AI workouts show in "שבועיים אחרונים" like regular workouts
+      const isCompletedAI = workout.source === 'ai_trainer' && workout.status === 'completed'
+
+      if (isCompletedAI) {
+        nonBundledWorkouts.push(workout)
+      } else if (workout.bundleId) {
+        // Part of a bundle (non-completed)
         const existing = bundleMap.get(workout.bundleId) || []
         existing.push(workout)
         bundleMap.set(workout.bundleId, existing)
       } else if (workout.source === 'ai_trainer') {
-        // Single AI workout (no bundle)
+        // Single AI workout (non-completed, no bundle)
         singleAI.push(workout)
       } else {
         // Regular workout

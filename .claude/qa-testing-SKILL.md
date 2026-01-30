@@ -131,6 +131,7 @@ caches.keys().then(names => {
 
 | תאריך | בעיה | בדיקה |
 |-------|------|-------|
+| 30/01 | אימון AI שהושלם לא מוצג בתוכנית אימונים | ודא שאימוני AI completed מופיעים ב"שבועיים אחרונים" ב-WorkoutHistory.tsx |
 | 29/01 | המשך אימון מאבד extended fields (time/intensity/speed/distance/incline) | ודא שכל save/restore points ב-useActiveWorkout.ts ו-workoutHistory.ts כוללים extended fields |
 | 29/01 | המשך אימון ריק/שחזור מ-Firebase לא מעביר category/primaryMuscle | `npm run test` - בדיקת רגרסיה 29/01 + ודא שכל addExercise מעביר details |
 | 25/01 | תרגיל מופיע בקטגוריה שגויה (category=sub-muscle) | `grep -r "VALID_EXERCISE_CATEGORIES_SET" src/` - ודא שיש validation |
@@ -300,6 +301,7 @@ grep -r "estimateCalories" src/              # לא אמור להופיע בקו
 5. היסטוריה → ודא שקלוריות מוצגות נכון
 6. חזור לכל מסך → ודא שheader לא "קופץ"
 7. המשך אימון "ללא דיווח" → ודא שמעדכן קיים (לא יוצר חדש!)
+8. סיום אימון AI → ודא שמופיע ב"שבועיים אחרונים" בתוכנית אימונים!
 ```
 
 ### בדיקת סטטוסי אימון (P1):

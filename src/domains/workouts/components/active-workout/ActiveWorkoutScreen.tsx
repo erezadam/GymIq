@@ -34,6 +34,7 @@ export default function ActiveWorkoutScreen() {
     exercisesByMuscle,
     exercisesByEquipment,
     showSummaryModal,
+    isSaving,
 
     // Exercise actions
     toggleExercise,
@@ -322,6 +323,7 @@ export default function ActiveWorkoutScreen() {
         isOpen={showSummaryModal}
         onClose={closeSummaryModal}
         onSave={finishWorkoutWithCalories}
+        isSaving={isSaving}
         stats={{
           completedExercises: workout.stats.completedExercises,
           totalExercises: workout.stats.totalExercises,
