@@ -78,7 +78,7 @@ function SortableSetRow({
   onEdit: (id: string) => void
   onDelete: (id: string) => void
   onToggleActive: (set: ExerciseSet) => void
-  onImageClick: (url: string, name: string) => void
+  onImageClick: (urls: string[], name: string) => void
 }) {
   const {
     attributes,
@@ -117,13 +117,32 @@ function SortableSetRow({
           <GripVertical className="w-5 h-5" />
         </button>
 
-        {/* Image - square, clickable */}
-        {exerciseSet.setImage ? (
+        {/* 2x2 Image Grid - clickable */}
+        {exerciseSet.exerciseImages && exerciseSet.exerciseImages.length === 4 ? (
+          <div
+            className="w-24 h-24 rounded-xl overflow-hidden grid grid-cols-2 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => onImageClick(exerciseSet.exerciseImages, exerciseSet.name)}
+          >
+            {exerciseSet.exerciseImages.map((url, i) => (
+              <div key={i} className="aspect-square bg-background-elevated overflow-hidden">
+                <img
+                  src={url}
+                  alt={`תרגיל ${i + 1}`}
+                  className="w-full h-full object-contain object-center"
+                  onError={(e) => {
+                    ;(e.target as HTMLImageElement).src =
+                      '/images/exercise-placeholder.svg'
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        ) : exerciseSet.setImage ? (
           <img
             src={exerciseSet.setImage}
             alt={exerciseSet.name}
             className="w-24 h-24 rounded-xl object-cover flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => onImageClick(exerciseSet.setImage, exerciseSet.name)}
+            onClick={() => onImageClick([exerciseSet.setImage!], exerciseSet.name)}
           />
         ) : (
           <div className="w-24 h-24 rounded-xl bg-dark-elevated flex items-center justify-center flex-shrink-0">
@@ -201,7 +220,7 @@ export default function ExerciseSetManager() {
   const [filterMuscle, setFilterMuscle] = useState<string>('all')
   const [editingSetId, setEditingSetId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
-  const [imagePreview, setImagePreview] = useState<{ url: string; name: string } | null>(null)
+  const [imagePreview, setImagePreview] = useState<{ urls: string[]; name: string } | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -350,7 +369,7 @@ export default function ExerciseSetManager() {
               onEdit={handleEdit}
               onDelete={handleDelete}
               onToggleActive={handleToggleActive}
-              onImageClick={(url, name) => setImagePreview({ url, name })}
+              onImageClick={(urls, name) => setImagePreview({ urls, name })}
             />
           ))}
         </div>
@@ -466,11 +485,29 @@ export default function ExerciseSetManager() {
           onClick={() => setImagePreview(null)}
         >
           <div className="max-w-lg w-full">
-            <img
-              src={imagePreview.url}
-              alt={imagePreview.name}
-              className="w-full rounded-xl"
-            />
+            {imagePreview.urls.length === 4 ? (
+              <div className="grid grid-cols-2 gap-1.5 rounded-xl overflow-hidden">
+                {imagePreview.urls.map((url, i) => (
+                  <div key={i} className="aspect-square bg-background-elevated rounded-lg overflow-hidden">
+                    <img
+                      src={url}
+                      alt={`תרגיל ${i + 1}`}
+                      className="w-full h-full object-contain object-center"
+                      onError={(e) => {
+                        ;(e.target as HTMLImageElement).src =
+                          '/images/exercise-placeholder.svg'
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <img
+                src={imagePreview.urls[0]}
+                alt={imagePreview.name}
+                className="w-full rounded-xl"
+              />
+            )}
             <p className="text-white text-center mt-3 font-semibold">
               {imagePreview.name}
             </p>

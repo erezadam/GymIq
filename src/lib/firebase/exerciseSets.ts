@@ -112,7 +112,7 @@ export async function createExerciseSet(
       nameEn: data.nameEn || '',
       muscleGroup: data.muscleGroup,
       exerciseIds: data.exerciseIds,
-      setImage: data.setImage,
+      exerciseImages: data.exerciseImages || [],
       description: data.description || '',
       difficulty: data.difficulty,
       order: data.order,

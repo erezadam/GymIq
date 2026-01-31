@@ -13,12 +13,14 @@ import { getExerciseImageUrl } from '@/domains/exercises/utils/getExerciseImageU
 interface ExerciseSetExercisePickerProps {
   selectedIds: string[]
   onChange: (ids: string[]) => void
+  onExerciseImagesResolved?: (images: string[]) => void
   muscleGroup?: string // pre-filter by muscle group
 }
 
 export default function ExerciseSetExercisePicker({
   selectedIds,
   onChange,
+  onExerciseImagesResolved,
   muscleGroup,
 }: ExerciseSetExercisePickerProps) {
   const [exercises, setExercises] = useState<Exercise[]>([])
@@ -50,6 +52,14 @@ export default function ExerciseSetExercisePicker({
     [selectedIds, exercises]
   )
 
+  // Notify parent of resolved exercise images when selection changes
+  useEffect(() => {
+    if (onExerciseImagesResolved && selectedExercises.length > 0) {
+      const images = selectedExercises.map((e) => getExerciseImageUrl(e))
+      onExerciseImagesResolved(images)
+    }
+  }, [selectedExercises, onExerciseImagesResolved])
+
   const availableExercises = useMemo(() => {
     let filtered = exercises.filter((e) => !selectedIds.includes(e.id))
 
@@ -74,7 +84,7 @@ export default function ExerciseSetExercisePicker({
   const handleToggle = (exerciseId: string) => {
     if (selectedIds.includes(exerciseId)) {
       onChange(selectedIds.filter((id) => id !== exerciseId))
-    } else {
+    } else if (selectedIds.length < 4) {
       onChange([...selectedIds, exerciseId])
     }
   }
@@ -111,7 +121,7 @@ export default function ExerciseSetExercisePicker({
   return (
     <div className="space-y-4">
       <label className="block text-sm font-medium text-text-secondary">
-        בחירת תרגילים * (מינימום 2)
+        בחירת תרגילים * (בדיוק 4)
       </label>
 
       {/* Selected exercises - reorderable list */}

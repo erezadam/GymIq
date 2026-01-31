@@ -9,8 +9,9 @@ export interface ExerciseSet {
   name: string // שם בעברית (ראשי)
   nameEn?: string // שם באנגלית (אופציונלי)
   muscleGroup: ExerciseCategory
-  exerciseIds: string[] // מזהי תרגילים מ-exercises collection
-  setImage: string // URL מ-Firebase Storage
+  exerciseIds: string[] // מזהי תרגילים מ-exercises collection (בדיוק 4)
+  exerciseImages: string[] // מערך של 4 URLs לתמונות התרגילים (auto-generated)
+  setImage?: string // deprecated - backward compat for old sets
   description?: string
   difficulty: ExerciseDifficulty
   order: number // סדר הצגה בתוך קבוצת השריר
@@ -28,7 +29,7 @@ export interface CreateExerciseSetDto {
   nameEn?: string
   muscleGroup: ExerciseCategory
   exerciseIds: string[]
-  setImage: string
+  exerciseImages: string[]
   description?: string
   difficulty: ExerciseDifficulty
   order: number

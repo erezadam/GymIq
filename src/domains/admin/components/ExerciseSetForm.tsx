@@ -55,7 +55,7 @@ export default function ExerciseSetForm({
   const [muscleGroup, setMuscleGroup] = useState<ExerciseCategory>('chest')
   const [difficulty, setDifficulty] = useState<ExerciseDifficulty>('beginner')
   const [description, setDescription] = useState('')
-  const [setImage, setSetImage] = useState('')
+  const [exerciseImages, setExerciseImages] = useState<string[]>([])
   const [exerciseIds, setExerciseIds] = useState<string[]>([])
   const [isActive, setIsActive] = useState(true)
 
@@ -75,7 +75,7 @@ export default function ExerciseSetForm({
         setMuscleGroup(data.muscleGroup)
         setDifficulty(data.difficulty)
         setDescription(data.description || '')
-        setSetImage(data.setImage)
+        setExerciseImages(data.exerciseImages || [])
         setExerciseIds(data.exerciseIds)
         setIsActive(data.isActive)
       }
@@ -95,14 +95,8 @@ export default function ExerciseSetForm({
     if (!muscleGroup) {
       newErrors.muscleGroup = 'יש לבחור קבוצת שריר'
     }
-    if (exerciseIds.length < 2) {
-      newErrors.exerciseIds = 'יש לבחור לפחות 2 תרגילים'
-    }
-    if (exerciseIds.length > 10) {
-      newErrors.exerciseIds = 'מקסימום 10 תרגילים'
-    }
-    if (!setImage) {
-      newErrors.setImage = 'יש להעלות תמונה'
+    if (exerciseIds.length !== 4) {
+      newErrors.exerciseIds = 'יש לבחור בדיוק 4 תרגילים'
     }
 
     setErrors(newErrors)
@@ -120,7 +114,7 @@ export default function ExerciseSetForm({
         nameEn: nameEn.trim() || undefined,
         muscleGroup,
         exerciseIds,
-        setImage,
+        exerciseImages,
         description: description.trim() || undefined,
         difficulty,
         isActive,
@@ -262,41 +256,36 @@ export default function ExerciseSetForm({
           />
         </div>
 
-        {/* Image URL */}
-        <div>
-          <label className="block text-sm font-medium text-text-secondary mb-1">
-            קישור לתמונה *
-          </label>
-          <input
-            type="url"
-            value={setImage}
-            onChange={(e) => setSetImage(e.target.value)}
-            placeholder="https://raw.githubusercontent.com/..."
-            className="input-primary w-full"
-            dir="ltr"
-          />
-          {setImage && (
-            <div className="mt-2 rounded-xl overflow-hidden bg-dark-elevated">
-              <img
-                src={setImage}
-                alt="תצוגה מקדימה"
-                className="w-full h-40 object-cover"
-                onError={(e) => {
-                  ;(e.target as HTMLImageElement).style.display = 'none'
-                }}
-              />
+        {/* 2x2 Image Grid Preview */}
+        {exerciseImages.length === 4 && (
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1">
+              תמונת הסט (אוטומטית מהתרגילים)
+            </label>
+            <div className="grid grid-cols-2 gap-1 rounded-xl overflow-hidden w-48">
+              {exerciseImages.map((url, i) => (
+                <div key={i} className="aspect-square bg-background-elevated rounded-lg overflow-hidden">
+                  <img
+                    src={url}
+                    alt={`תרגיל ${i + 1}`}
+                    className="w-full h-full object-contain object-center"
+                    onError={(e) => {
+                      ;(e.target as HTMLImageElement).src =
+                        '/images/exercise-placeholder.svg'
+                    }}
+                  />
+                </div>
+              ))}
             </div>
-          )}
-          {errors.setImage && (
-            <p className="text-sm text-red-400 mt-1">{errors.setImage}</p>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Exercise Picker */}
         <div>
           <ExerciseSetExercisePicker
             selectedIds={exerciseIds}
             onChange={setExerciseIds}
+            onExerciseImagesResolved={setExerciseImages}
             muscleGroup={muscleGroup}
           />
           {errors.exerciseIds && (
