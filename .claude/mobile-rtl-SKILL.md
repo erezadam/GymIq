@@ -7,6 +7,97 @@ description: "Specialized mobile-first and Hebrew RTL development for GymIQ. Han
 
 **מתי להפעיל:** כשעובדים על רכיבי UI, עיצוב רספונסיבי, תצוגת טקסט עברי, או בדיקות מובייל
 
+---
+
+## 🚨 חוק ברזל: NO INLINE STYLES
+
+> **רקע:** ב-29/01/2026 נמצאו 217 שימושים ב-`style={{}}` ב-12 קבצים.
+> הפרויקט מגדיר Design System ב-`tailwind-tokens.js` - חובה להשתמש בו!
+
+### ❌ אסור בתכלית האיסור:
+
+```jsx
+// ❌ לעולם לא ככה!
+<div style={{ color: '#A855F7' }}>
+<div style={{ background: 'rgba(168, 85, 247, 0.1)' }}>
+<div style={{ display: 'flex', gap: '8px', padding: '12px' }}>
+<div style={{ fontSize: '14px', fontWeight: 'bold' }}>
+<div style={{ border: '1px solid rgba(168, 85, 247, 0.3)' }}>
+```
+
+### ✅ חובה - להשתמש ב-Tailwind classes:
+
+```jsx
+// ✅ נכון - Tailwind classes
+<div className="text-purple-500">
+<div className="bg-purple-500/10">
+<div className="flex gap-2 p-3">
+<div className="text-sm font-bold">
+<div className="border border-purple-500/30">
+```
+
+### 📋 טבלת המרה מהירה:
+
+| Inline Style | Tailwind Class |
+|--------------|----------------|
+| `color: '#A855F7'` | `text-purple-500` |
+| `color: '#EF4444'` | `text-red-500` |
+| `color: '#9CA3AF'` | `text-gray-400` |
+| `color: '#2DD4BF'` | `text-teal-400` |
+| `background: 'rgba(168, 85, 247, 0.1)'` | `bg-purple-500/10` |
+| `background: 'rgba(239, 68, 68, 0.1)'` | `bg-red-500/10` |
+| `display: 'flex'` | `flex` |
+| `flexDirection: 'column'` | `flex-col` |
+| `gap: '8px'` | `gap-2` |
+| `gap: '12px'` | `gap-3` |
+| `padding: '8px'` | `p-2` |
+| `padding: '12px'` | `p-3` |
+| `padding: '16px'` | `p-4` |
+| `fontSize: '12px'` | `text-xs` |
+| `fontSize: '14px'` | `text-sm` |
+| `fontSize: '16px'` | `text-base` |
+| `fontWeight: 'bold'` | `font-bold` |
+| `fontWeight: '500'` | `font-medium` |
+| `borderRadius: '4px'` | `rounded` |
+| `borderRadius: '8px'` | `rounded-lg` |
+| `border: '1px solid ...'` | `border border-[color]` |
+| `cursor: 'pointer'` | `cursor-pointer` |
+| `transition: '...'` | `transition-all` |
+
+### 🎨 צבעי הפרויקט (מתוך tailwind-tokens.js):
+
+```
+# צבעים ראשיים - להשתמש רק באלה!
+primary.main: #00D4AA  → text-primary / bg-primary
+accent.purple: #8B5CF6 → text-purple-500 / bg-purple-500
+status.error: #EF4444  → text-red-500 / bg-red-500
+status.warning: #F59E0B → text-amber-500 / bg-amber-500
+status.success: #10B981 → text-emerald-500 / bg-emerald-500
+
+# צבעים שנמצאו בקוד אבל לא ב-tokens (לתקן!):
+#A855F7 → להחליף ל-purple-500 (#8B5CF6)
+#2DD4BF → להחליף ל-teal-400 או primary
+```
+
+### 🔍 בדיקה לפני commit:
+
+```bash
+# בדוק שאין inline styles חדשים:
+grep -r "style={{" src/ --include="*.tsx" | wc -l
+
+# אם המספר עלה - לתקן לפני commit!
+```
+
+### ⚠️ חריגים מותרים (נדירים מאוד):
+
+1. **ערכים דינמיים שחייבים חישוב** - כמו `width` שמגיע מ-state
+2. **אנימציות מורכבות** - שאי אפשר לבטא ב-Tailwind
+3. **תאימות לספריות צד שלישי** - שדורשות inline
+
+**בכל מקרה אחר - להשתמש ב-Tailwind!**
+
+---
+
 ## Mobile-First Rules (90% Mobile Usage)
 
 ### Screen Sizes
@@ -27,6 +118,8 @@ description: "Specialized mobile-first and Hebrew RTL development for GymIQ. Han
 3. Verify all buttons are reachable
 4. Test touch interactions
 ```
+
+---
 
 ## Hebrew RTL Implementation
 
@@ -52,9 +145,11 @@ html[dir="rtl"] {
 </div>
 ```
 
+---
+
 ## Design Tokens (Tailwind)
 
-> **כל הצבעים והסגנונות מוגדרים ב-`tailwind.config.js`**
+> **כל הצבעים והסגנונות מוגדרים ב-`tailwind.config.js` ו-`tailwind-tokens.js`**
 
 ### צבעים עיקריים:
 ```javascript
@@ -86,6 +181,8 @@ colors: {
 - CSS גלובלי: `src/index.css`
 - קלאסים מותאמים: `.btn-neon`, `.input-neon`, `.badge-last-workout`
 
+---
+
 ## Component Guidelines
 
 ### Headers
@@ -110,6 +207,8 @@ colors: {
 />
 ```
 
+---
+
 ## Testing Protocol
 
 ### Mobile Verification
@@ -124,6 +223,13 @@ colors: {
 3. **Forms**: Right-aligned inputs
 4. **Navigation**: Logical flow direction
 
+### Styling Verification (חדש!)
+1. **No inline styles**: `grep -r "style={{" src/ --include="*.tsx"` returns 0 new instances
+2. **Colors from tokens**: All colors exist in `tailwind-tokens.js`
+3. **Consistent spacing**: Using Tailwind spacing scale (p-2, gap-3, etc.)
+
+---
+
 ## Common Issues
 
 ### Avoid These Patterns
@@ -134,13 +240,35 @@ colors: {
 // ❌ Hardcoded margins
 <div className="ml-4">
 
+// ❌ Inline styles (הכי חשוב!)
+<div style={{ color: '#A855F7', padding: '12px' }}>
+
 // ✅ RTL-aware spacing  
 <div className="mr-4 rtl:ml-4 rtl:mr-0">
+
+// ✅ Tailwind classes
+<div className="text-purple-500 p-3">
 ```
 
 ### Safe Patterns
 - Use Tailwind's RTL variants: `rtl:text-left`
 - Prefer logical properties: `ps-4` (padding-inline-start)
 - Test on actual device when possible
+- **Always use Tailwind classes, never inline styles**
 
-This skill ensures GymIQ provides excellent mobile experience for Hebrew-speaking fitness enthusiasts.
+---
+
+## צ'קליסט לפני סיום משימת UI
+
+```
+□ אין inline styles חדשים (בדיקת grep)
+□ כל הצבעים מתוך tailwind-tokens.js
+□ נבדק על 375px width
+□ כל כפתור לפחות 44x44px
+□ RTL תקין - טקסט וכיוונים
+□ אין horizontal scroll
+```
+
+---
+
+This skill ensures GymIQ provides excellent mobile experience for Hebrew-speaking fitness enthusiasts, with consistent styling through the Design System.
