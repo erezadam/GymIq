@@ -32,6 +32,7 @@ interface WorkoutBuilderActions {
   setWorkoutName: (name: string) => void
   setScheduledDate: (date: Date | null) => void
   addExercise: (exercise: Omit<SelectedExercise, 'order' | 'sets' | 'restTime'>) => void
+  addExercisesFromSet: (exercises: Omit<SelectedExercise, 'order' | 'sets' | 'restTime'>[]) => void
   removeExercise: (exerciseId: string) => void
   reorderExercise: (fromIndex: number, toIndex: number) => void
   updateRestTime: (exerciseId: string, restTime: number) => void
@@ -113,6 +114,26 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
       }
 
       return { selectedExercises: [...state.selectedExercises, newExercise] }
+    })
+  },
+
+  addExercisesFromSet: (exercises) => {
+    set((state) => {
+      const existingIds = new Set(state.selectedExercises.map((e) => e.exerciseId))
+      const newExercises = exercises.filter((e) => !existingIds.has(e.exerciseId))
+
+      if (newExercises.length === 0) return state
+
+      let nextOrder = state.selectedExercises.length + 1
+      const mapped: SelectedExercise[] = newExercises.map((exercise) => ({
+        ...exercise,
+        primaryMuscle: exercise.primaryMuscle || 'other',
+        order: nextOrder++,
+        sets: createDefaultSets(),
+        restTime: DEFAULT_REST_TIME,
+      }))
+
+      return { selectedExercises: [...state.selectedExercises, ...mapped] }
     })
   },
 
