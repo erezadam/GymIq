@@ -45,6 +45,7 @@ function toWorkoutHistory(id: string, data: any): WorkoutHistoryEntry {
     aiWorkoutNumber: data.aiWorkoutNumber,
     bundleId: data.bundleId,
     aiRecommendations: data.aiRecommendations,
+    aiExplanation: data.aiExplanation,
   }
 }
 
@@ -150,6 +151,7 @@ export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'
     aiWorkoutNumber: workout.aiWorkoutNumber,
     bundleId: workout.bundleId,
     aiRecommendations: workout.aiRecommendations,
+    aiExplanation: workout.aiExplanation,
   })
 
   // Add notes only if exists

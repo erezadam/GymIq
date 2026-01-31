@@ -461,6 +461,7 @@ function convertToWorkoutEntry(
     aiWorkoutNumber: workout.aiWorkoutNumber,
     bundleId: bundleId || undefined, // undefined if single workout
     aiRecommendations: workout.aiRecommendations || undefined,
+    aiExplanation: workout.aiExplanation || undefined,
   }
 }
 

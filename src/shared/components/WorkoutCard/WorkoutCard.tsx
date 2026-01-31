@@ -145,6 +145,13 @@ export function WorkoutCard({
             </div>
           </div>
 
+          {/* AI Explanation */}
+          {expandedWorkoutDetails?.aiExplanation && (
+            <p className="text-sm text-text-muted leading-relaxed px-1">
+              {expandedWorkoutDetails.aiExplanation}
+            </p>
+          )}
+
           {/* Continue button */}
           <button
             onClick={onContinueClick}
