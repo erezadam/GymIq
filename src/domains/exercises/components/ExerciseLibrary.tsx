@@ -10,6 +10,7 @@ import { useWorkoutBuilderStore } from '@/domains/workouts/store'
 import { getMuscles, getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { getEquipment } from '@/lib/firebase/equipment'
 import { MuscleIcon } from '@/shared/components/MuscleIcon'
+import RecommendedSets from './RecommendedSets'
 import { saveWorkoutHistory, getRecentlyDoneExerciseIds, getLastMonthExerciseIds } from '@/lib/firebase/workoutHistory'
 import { useAuthStore } from '@/domains/authentication/store'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '@/domains/workouts/types/active-workout.types'
@@ -57,7 +58,7 @@ export function ExerciseLibrary() {
   const [showDatePicker, setShowDatePicker] = useState(false)
   const dateInputRef = useRef<HTMLInputElement>(null)
 
-  const { selectedExercises, addExercise, removeExercise, clearWorkout, scheduledDate, setScheduledDate } = useWorkoutBuilderStore()
+  const { selectedExercises, addExercise, addExercisesFromSet, removeExercise, clearWorkout, scheduledDate, setScheduledDate } = useWorkoutBuilderStore()
 
   // Helper: Check if today is selected (no date or date equals today)
   const isTodaySelected = useMemo(() => {
@@ -239,6 +240,23 @@ export function ExerciseLibrary() {
         availableBands: exercise.availableBands,     // Pass available bands
       })
     }
+  }
+
+  const handleSelectSet = (exerciseIds: string[]) => {
+    const exercisesToAdd = exercises.filter((ex) => exerciseIds.includes(ex.id))
+    const mapped = exercisesToAdd.map((exercise) => ({
+      exerciseId: exercise.id,
+      exerciseName: exercise.name,
+      exerciseNameHe: exercise.nameHe,
+      imageUrl: exercise.imageUrl,
+      primaryMuscle: exercise.primaryMuscle || exercise.category,
+      category: exercise.category,
+      equipment: exercise.equipment,
+      reportType: exercise.reportType,
+      assistanceTypes: exercise.assistanceTypes,
+      availableBands: exercise.availableBands,
+    }))
+    addExercisesFromSet(mapped)
   }
 
   const handleStartWorkout = async () => {
@@ -598,6 +616,15 @@ export function ExerciseLibrary() {
               ))}
             </div>
           </div>
+
+          {/* Recommended Sets */}
+          {!loading && (
+            <RecommendedSets
+              muscleGroup={selectedPrimaryMuscle}
+              onSelectSet={handleSelectSet}
+              selectedExerciseIds={selectedExercises.map((e) => e.exerciseId)}
+            />
+          )}
 
           {/* Exercise List */}
           {loading ? (
