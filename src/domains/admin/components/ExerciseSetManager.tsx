@@ -40,6 +40,7 @@ import {
 } from '@/lib/firebase/exerciseSets'
 import { deleteExerciseSetImage } from '@/lib/firebase/exerciseSetStorage'
 import type { ExerciseSet } from '@/domains/exercises/types/exerciseSet.types'
+import ExerciseSetForm from './ExerciseSetForm'
 
 // Difficulty labels
 const difficultyLabels: Record<string, { label: string; className: string }> = {
@@ -266,7 +267,6 @@ export default function ExerciseSetManager() {
   const handleFormClose = () => {
     setShowForm(false)
     setEditingSetId(null)
-    loadSets()
   }
 
   const filteredSets =
@@ -347,24 +347,13 @@ export default function ExerciseSetManager() {
         </div>
       )}
 
-      {/* Form placeholder - will be replaced with ExerciseSetForm in Step 3 */}
+      {/* Create/Edit Form */}
       {showForm && (
-        <div className="card p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-white">
-              {editingSetId ? 'עריכת סט' : 'סט חדש'}
-            </h3>
-            <button onClick={handleFormClose} className="btn-icon">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <p className="text-text-muted text-sm">
-            טופס יצירה/עריכה יתווסף בשלב 3
-          </p>
-          <p className="text-text-muted text-xs">
-            {editingSetId ? `עריכת סט: ${editingSetId}` : 'יצירת סט חדש'}
-          </p>
-        </div>
+        <ExerciseSetForm
+          setId={editingSetId}
+          onClose={handleFormClose}
+          onSaved={loadSets}
+        />
       )}
 
       {/* Sets list with D&D */}
