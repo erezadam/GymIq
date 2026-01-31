@@ -13,12 +13,14 @@ interface RecommendedSetsProps {
   muscleGroup?: string // filter by muscle group ('all' or undefined = show all)
   onSelectSet: (exerciseIds: string[]) => void
   selectedExerciseIds: string[] // currently selected exercise IDs
+  availableExerciseIds?: Set<string> // IDs of exercises that exist in the DB
 }
 
 export default function RecommendedSets({
   muscleGroup,
   onSelectSet,
   selectedExerciseIds,
+  availableExerciseIds,
 }: RecommendedSetsProps) {
   const [sets, setSets] = useState<ExerciseSet[]>([])
   const [loading, setLoading] = useState(true)
@@ -71,7 +73,11 @@ export default function RecommendedSets({
       {expanded && (
         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide mt-1">
           {filteredSets.map((exerciseSet) => {
-            const newCount = exerciseSet.exerciseIds.filter(
+            // Only count exercises that exist in the DB
+            const validIds = availableExerciseIds
+              ? exerciseSet.exerciseIds.filter((id) => availableExerciseIds.has(id))
+              : exerciseSet.exerciseIds
+            const newCount = validIds.filter(
               (id) => !selectedSet.has(id)
             ).length
             const allSelected = newCount === 0

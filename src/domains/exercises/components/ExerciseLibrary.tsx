@@ -192,6 +192,12 @@ export function ExerciseLibrary() {
     return primaryMuscle?.subMuscles || []
   }, [selectedPrimaryMuscle, muscles])
 
+  // Set of all available exercise IDs (for RecommendedSets accuracy)
+  const availableExerciseIds = useMemo(
+    () => new Set(exercises.map((e) => e.id)),
+    [exercises]
+  )
+
   // Filter and sort exercises (Hebrew A-Z)
   const filteredExercises = useMemo(() => {
     return exercises
@@ -623,6 +629,7 @@ export function ExerciseLibrary() {
               muscleGroup={selectedPrimaryMuscle}
               onSelectSet={handleSelectSet}
               selectedExerciseIds={selectedExercises.map((e) => e.exerciseId)}
+              availableExerciseIds={availableExerciseIds}
             />
           )}
 
