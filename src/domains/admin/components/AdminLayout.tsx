@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { Dumbbell, LayoutDashboard, Users, Settings, LogOut, Menu, X, ArrowRight, Activity, Wrench, ClipboardList, Ribbon } from 'lucide-react'
+import { Dumbbell, LayoutDashboard, Users, Settings, LogOut, Menu, X, ArrowRight, Activity, Wrench, ClipboardList, Ribbon, Layers } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '@/domains/authentication/store'
 
@@ -8,6 +8,7 @@ const navigation = [
   { name: 'תרגילים', href: '/admin/exercises', icon: Dumbbell },
   { name: 'שרירים', href: '/admin/muscles', icon: Activity },
   { name: 'ציוד', href: '/admin/equipment', icon: Wrench },
+  { name: 'סטים מומלצים', href: '/admin/exercise-sets', icon: Layers },
   { name: 'גומיות', href: '/admin/band-types', icon: Ribbon },
   { name: 'סוגי דיווח', href: '/admin/report-types', icon: ClipboardList },
   { name: 'משתמשים', href: '/admin/users', icon: Users },
