@@ -6,6 +6,64 @@
 
 ---
 
+## [v1.12.0] - 2026-01-31
+
+### 🚀 פיצ'רים חדשים
+
+| פיצ'ר | תיאור |
+|-------|-------|
+| **סטים מומלצים (Exercise Sets)** | מערכת סטים מומלצים מלאה - אדמין יכול ליצור סטים של תרגילים מקובצים, והמשתמש יכול להוסיף סט שלם לאימון בלחיצה אחת |
+| **תמונת סט אוטומטית** | תמונת Grid 2x2 נוצרת אוטומטית מתמונות התרגילים בסט |
+| **GPT-4o-mini + המלצות משקל** | מעבר מ-Claude ל-GPT-4o-mini עם המלצות משקל חכמות מבוססות היסטוריית ביצוע |
+
+### 📝 שלבי מימוש - סטים מומלצים
+
+| שלב | תיאור | סטטוס |
+|-----|-------|-------|
+| **שלב 1** | תשתית: Firestore collection, types, CRUD functions | ✅ |
+| **שלב 2** | פאנל אדמין: רשימת סטים עם Drag & Drop לסידור | ✅ |
+| **שלב 3** | טופס יצירה/עריכה עם העלאת תמונה | ✅ |
+| **שלב 4** | הרחבת Store עם addExercisesFromSet | ✅ |
+| **שלב 5** | ממשק משתמש לסטים מומלצים בבחירת תרגילים | ✅ |
+
+### 🐛 תיקוני באגים
+
+| תיקון | תיאור |
+|-------|-------|
+| **נתונים מורחבים בהמשך אימון** | שמירת שדות time, intensity, speed, distance, incline בהמשך אימון |
+| **קטגוריות באימון פעיל** | תיקון קטגוריות תרגילים בהמשך אימון ריק + שחזור Firebase |
+| **תרגילים שנמחקו מסטים** | טיפול בתרגילים שנמחקו מסטים מומלצים |
+| **סינון תרגילים AI** | סינון תרגילים לא מזוהים מתוצאות AI trainer |
+
+### 📁 קבצים חדשים
+
+```
+src/domains/exercises/types/exerciseSet.types.ts  # Types לסטים מומלצים
+src/lib/firebase/exerciseSets.ts                  # Firebase CRUD לסטים
+src/domains/admin/components/ExerciseSetManager.tsx  # ניהול סטים באדמין
+src/domains/admin/components/ExerciseSetForm.tsx   # טופס יצירה/עריכה
+src/domains/admin/components/ExerciseSetExercisePicker.tsx  # בוחר תרגילים לסט
+src/domains/exercises/components/ExerciseSetCard.tsx  # כרטיס סט בספרייה
+docs/ai-trainer-spec.md                           # איפיון טכני מאמן AI
+```
+
+### ✏️ קבצים ששונו
+
+| קובץ | שינוי |
+|------|-------|
+| `openaiClient.ts` | מעבר מ-Claude ל-GPT-4o-mini + system prompt עם כללי המלצות משקל |
+| `generateWorkout.ts` | חילוץ recommendations מתגובת GPT |
+| `useActiveWorkout.ts` | שמירת נתונים מורחבים + תיקון קטגוריות |
+| `WorkoutHistory.tsx` | תצוגת אימוני AI שהושלמו + ניקוי toasts |
+| `workoutHistory.ts` | תמיכה בשדות מורחבים |
+
+### 🔗 Git
+
+- **Branch:** main
+- **Commit:** `741f72b`
+
+---
+
 ## [v1.11.2] - 2026-01-30
 
 ### 🐛 תיקוני באגים
