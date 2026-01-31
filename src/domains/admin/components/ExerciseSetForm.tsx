@@ -12,7 +12,6 @@ import {
   getExerciseSets,
 } from '@/lib/firebase/exerciseSets'
 import { useAuthStore } from '@/domains/authentication/store'
-import ExerciseSetImageUpload from './ExerciseSetImageUpload'
 import ExerciseSetExercisePicker from './ExerciseSetExercisePicker'
 import type { ExerciseCategory, ExerciseDifficulty } from '@/domains/exercises/types/exercise.types'
 
@@ -263,13 +262,31 @@ export default function ExerciseSetForm({
           />
         </div>
 
-        {/* Image Upload */}
+        {/* Image URL */}
         <div>
-          <ExerciseSetImageUpload
+          <label className="block text-sm font-medium text-text-secondary mb-1">
+            קישור לתמונה *
+          </label>
+          <input
+            type="url"
             value={setImage}
-            onChange={setSetImage}
-            setId={setId || undefined}
+            onChange={(e) => setSetImage(e.target.value)}
+            placeholder="https://raw.githubusercontent.com/..."
+            className="input-primary w-full"
+            dir="ltr"
           />
+          {setImage && (
+            <div className="mt-2 rounded-xl overflow-hidden bg-dark-elevated">
+              <img
+                src={setImage}
+                alt="תצוגה מקדימה"
+                className="w-full h-40 object-cover"
+                onError={(e) => {
+                  ;(e.target as HTMLImageElement).style.display = 'none'
+                }}
+              />
+            </div>
+          )}
           {errors.setImage && (
             <p className="text-sm text-red-400 mt-1">{errors.setImage}</p>
           )}

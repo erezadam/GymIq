@@ -3,7 +3,7 @@
  * Admin UI for managing exercise sets (recommended workout sets)
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Plus,
   Trash2,
@@ -38,8 +38,9 @@ import {
   toggleExerciseSetActive,
   updateExerciseSetsOrder,
 } from '@/lib/firebase/exerciseSets'
-import { deleteExerciseSetImage } from '@/lib/firebase/exerciseSetStorage'
+import { getExercises } from '@/lib/firebase/exercises'
 import type { ExerciseSet } from '@/domains/exercises/types/exerciseSet.types'
+import type { Exercise } from '@/domains/exercises/types/exercise.types'
 import ExerciseSetForm from './ExerciseSetForm'
 
 // Difficulty labels
@@ -66,14 +67,18 @@ const muscleGroupLabels: Record<string, string> = {
 /** Sortable row component */
 function SortableSetRow({
   exerciseSet,
+  exerciseNames,
   onEdit,
   onDelete,
   onToggleActive,
+  onImageClick,
 }: {
   exerciseSet: ExerciseSet
+  exerciseNames: Map<string, string>
   onEdit: (id: string) => void
   onDelete: (id: string) => void
   onToggleActive: (set: ExerciseSet) => void
+  onImageClick: (url: string, name: string) => void
 }) {
   const {
     attributes,
@@ -91,52 +96,72 @@ function SortableSetRow({
 
   const diff = difficultyLabels[exerciseSet.difficulty] || difficultyLabels.beginner
 
+  // Resolve exercise names
+  const exerciseNamesList = exerciseSet.exerciseIds
+    .map((id) => exerciseNames.get(id))
+    .filter(Boolean) as string[]
+
   return (
     <div
       ref={setNodeRef}
       style={dragStyle}
       className={`card p-4 ${!exerciseSet.isActive ? 'opacity-60' : ''} ${isDragging ? 'z-50 shadow-lg ring-2 ring-primary-500/50' : ''}`}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-4">
         {/* Drag handle */}
         <button
-          className="cursor-grab active:cursor-grabbing text-text-muted hover:text-text-secondary touch-none"
+          className="cursor-grab active:cursor-grabbing text-text-muted hover:text-text-secondary touch-none mt-4"
           {...attributes}
           {...listeners}
         >
           <GripVertical className="w-5 h-5" />
         </button>
 
-        {/* Image */}
+        {/* Image - square, clickable */}
         {exerciseSet.setImage ? (
           <img
             src={exerciseSet.setImage}
             alt={exerciseSet.name}
-            className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+            className="w-24 h-24 rounded-xl object-cover flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => onImageClick(exerciseSet.setImage, exerciseSet.name)}
           />
         ) : (
-          <div className="w-12 h-12 rounded-lg bg-dark-elevated flex items-center justify-center flex-shrink-0">
-            <Layers className="w-6 h-6 text-text-muted" />
+          <div className="w-24 h-24 rounded-xl bg-dark-elevated flex items-center justify-center flex-shrink-0">
+            <Layers className="w-8 h-8 text-text-muted" />
           </div>
         )}
 
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-white truncate">{exerciseSet.name}</h3>
+            <h3 className="font-semibold text-white text-lg">{exerciseSet.name}</h3>
             <span className={`text-xs px-2 py-0.5 rounded-full ${diff.className}`}>
               {diff.label}
             </span>
+            <span className="text-xs text-text-muted">#{exerciseSet.order}</span>
           </div>
-          <div className="flex items-center gap-3 text-sm text-text-muted mt-0.5">
-            <span>{muscleGroupLabels[exerciseSet.muscleGroup] || exerciseSet.muscleGroup}</span>
-            <span>{exerciseSet.exerciseIds.length} תרגילים</span>
-            <span>#{exerciseSet.order}</span>
+
+          <div className="text-sm text-text-muted mt-1">
+            {muscleGroupLabels[exerciseSet.muscleGroup] || exerciseSet.muscleGroup} &bull; {exerciseSet.exerciseIds.length} תרגילים
           </div>
+
+          {/* Exercise names */}
+          {exerciseNamesList.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {exerciseNamesList.map((name, i) => (
+                <span
+                  key={i}
+                  className="text-xs px-2 py-0.5 rounded-md bg-dark-elevated text-text-secondary"
+                >
+                  {name}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1 flex-shrink-0 mt-1">
           <button
             onClick={() => onToggleActive(exerciseSet)}
             className={`btn-icon ${exerciseSet.isActive ? 'text-green-400' : 'text-text-muted'}`}
@@ -170,12 +195,13 @@ function SortableSetRow({
 
 export default function ExerciseSetManager() {
   const [exerciseSets, setExerciseSets] = useState<ExerciseSet[]>([])
+  const [exercises, setExercises] = useState<Exercise[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filterMuscle, setFilterMuscle] = useState<string>('all')
-  // editingSetId will be used when form component is ready
   const [editingSetId, setEditingSetId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const [imagePreview, setImagePreview] = useState<{ url: string; name: string } | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -187,33 +213,40 @@ export default function ExerciseSetManager() {
   )
 
   useEffect(() => {
-    loadSets()
+    loadData()
   }, [])
 
-  const loadSets = async () => {
+  const loadData = async () => {
     setLoading(true)
     try {
-      const data = await getExerciseSets()
-      setExerciseSets(data)
+      const [setsData, exercisesData] = await Promise.all([
+        getExerciseSets(),
+        getExercises(),
+      ])
+      setExerciseSets(setsData)
+      setExercises(exercisesData)
     } catch (err) {
-      console.error('Error loading exercise sets:', err)
-      setError('שגיאה בטעינת סטים')
+      console.error('Error loading data:', err)
+      setError('שגיאה בטעינת נתונים')
     } finally {
       setLoading(false)
     }
   }
+
+  // Map exercise ID -> Hebrew name
+  const exerciseNames = useMemo(() => {
+    const map = new Map<string, string>()
+    exercises.forEach((e) => map.set(e.id, e.nameHe))
+    return map
+  }, [exercises])
 
   const handleDelete = async (setId: string) => {
     setError(null)
     if (!confirm('האם למחוק את הסט?')) return
 
     try {
-      const set = exerciseSets.find((s) => s.id === setId)
-      if (set?.setImage) {
-        await deleteExerciseSetImage(set.setImage)
-      }
       await deleteExerciseSet(setId)
-      await loadSets()
+      await loadData()
     } catch (err) {
       console.error('Error deleting set:', err)
       setError('שגיאה במחיקת הסט')
@@ -223,7 +256,7 @@ export default function ExerciseSetManager() {
   const handleToggleActive = async (set: ExerciseSet) => {
     try {
       await toggleExerciseSetActive(set.id, !set.isActive)
-      await loadSets()
+      await loadData()
     } catch (err) {
       console.error('Error toggling set:', err)
     }
@@ -237,7 +270,6 @@ export default function ExerciseSetManager() {
     const newIndex = filteredSets.findIndex((s) => s.id === over.id)
 
     const reordered = arrayMove(filteredSets, oldIndex, newIndex)
-    // Optimistic update
     setExerciseSets((prev) => {
       const otherSets = prev.filter(
         (s) => !reordered.some((r) => r.id === s.id)
@@ -247,10 +279,10 @@ export default function ExerciseSetManager() {
 
     try {
       await updateExerciseSetsOrder(reordered.map((s) => s.id))
-      await loadSets()
+      await loadData()
     } catch (err) {
       console.error('Error reordering sets:', err)
-      await loadSets() // Revert on error
+      await loadData()
     }
   }
 
@@ -274,6 +306,18 @@ export default function ExerciseSetManager() {
       ? exerciseSets
       : exerciseSets.filter((s) => s.muscleGroup === filterMuscle)
 
+  // Group sets by muscle group for display
+  const groupedSets = useMemo(() => {
+    if (filterMuscle !== 'all') return null // no grouping when filtered
+    const groups = new Map<string, ExerciseSet[]>()
+    exerciseSets.forEach((s) => {
+      const list = groups.get(s.muscleGroup) || []
+      list.push(s)
+      groups.set(s.muscleGroup, list)
+    })
+    return groups
+  }, [exerciseSets, filterMuscle])
+
   // Get unique muscle groups from existing sets
   const availableMuscleGroups = [
     ...new Set(exerciseSets.map((s) => s.muscleGroup)),
@@ -286,6 +330,33 @@ export default function ExerciseSetManager() {
       </div>
     )
   }
+
+  const renderSetsList = (sets: ExerciseSet[]) => (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext
+        items={sets.map((s) => s.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="space-y-3">
+          {sets.map((set) => (
+            <SortableSetRow
+              key={set.id}
+              exerciseSet={set}
+              exerciseNames={exerciseNames}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onToggleActive={handleToggleActive}
+              onImageClick={(url, name) => setImagePreview({ url, name })}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
+  )
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -352,33 +423,28 @@ export default function ExerciseSetManager() {
         <ExerciseSetForm
           setId={editingSetId}
           onClose={handleFormClose}
-          onSaved={loadSets}
+          onSaved={loadData}
         />
       )}
 
-      {/* Sets list with D&D */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={filteredSets.map((s) => s.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="space-y-3">
-            {filteredSets.map((set) => (
-              <SortableSetRow
-                key={set.id}
-                exerciseSet={set}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onToggleActive={handleToggleActive}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+      {/* Sets list - grouped or flat */}
+      {groupedSets && groupedSets.size > 1 ? (
+        // Grouped by muscle
+        <div className="space-y-8">
+          {Array.from(groupedSets.entries()).map(([mg, sets]) => (
+            <div key={mg}>
+              <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                {muscleGroupLabels[mg] || mg}
+                <span className="text-sm font-normal text-text-muted">({sets.length})</span>
+              </h2>
+              {renderSetsList(sets)}
+            </div>
+          ))}
+        </div>
+      ) : (
+        // Flat list (filtered or single group)
+        renderSetsList(filteredSets)
+      )}
 
       {/* Empty state */}
       {filteredSets.length === 0 && (
@@ -390,6 +456,25 @@ export default function ExerciseSetManager() {
           <p className="empty-state-text">
             לחץ על "הוסף סט" ליצירת סט מומלץ חדש
           </p>
+        </div>
+      )}
+
+      {/* Image Preview Popup */}
+      {imagePreview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setImagePreview(null)}
+        >
+          <div className="max-w-lg w-full">
+            <img
+              src={imagePreview.url}
+              alt={imagePreview.name}
+              className="w-full rounded-xl"
+            />
+            <p className="text-white text-center mt-3 font-semibold">
+              {imagePreview.name}
+            </p>
+          </div>
         </div>
       )}
     </div>

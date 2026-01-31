@@ -1,10 +1,11 @@
 /**
  * ExerciseSetExercisePicker
- * Multi-select exercise picker for exercise sets
+ * Grid-based multi-select exercise picker with image preview popup
+ * Desktop-optimized for admin use
  */
 
 import { useState, useEffect, useMemo } from 'react'
-import { Search, Plus, X, GripVertical } from 'lucide-react'
+import { Search, X, GripVertical } from 'lucide-react'
 import { getExercises } from '@/lib/firebase/exercises'
 import type { Exercise } from '@/domains/exercises/types/exercise.types'
 import { getExerciseImageUrl } from '@/domains/exercises/utils/getExerciseImageUrl'
@@ -23,6 +24,7 @@ export default function ExerciseSetExercisePicker({
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null)
 
   useEffect(() => {
     loadExercises()
@@ -66,11 +68,15 @@ export default function ExerciseSetExercisePicker({
       )
     }
 
-    return filtered.slice(0, 30) // Limit for performance
+    return filtered.slice(0, 40)
   }, [exercises, selectedIds, muscleGroup, search])
 
-  const handleAdd = (exerciseId: string) => {
-    onChange([...selectedIds, exerciseId])
+  const handleToggle = (exerciseId: string) => {
+    if (selectedIds.includes(exerciseId)) {
+      onChange(selectedIds.filter((id) => id !== exerciseId))
+    } else {
+      onChange([...selectedIds, exerciseId])
+    }
   }
 
   const handleRemove = (exerciseId: string) => {
@@ -82,6 +88,16 @@ export default function ExerciseSetExercisePicker({
     const [moved] = updated.splice(fromIndex, 1)
     updated.splice(toIndex, 0, moved)
     onChange(updated)
+  }
+
+  const handleImageClick = (e: React.MouseEvent, exercise: Exercise) => {
+    e.stopPropagation()
+    const url = getExerciseImageUrl(exercise)
+    if (previewImage?.url === url) {
+      setPreviewImage(null)
+    } else {
+      setPreviewImage({ url, name: exercise.nameHe })
+    }
   }
 
   if (loading) {
@@ -98,7 +114,7 @@ export default function ExerciseSetExercisePicker({
         בחירת תרגילים * (מינימום 2)
       </label>
 
-      {/* Selected exercises */}
+      {/* Selected exercises - reorderable list */}
       {selectedExercises.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs text-text-muted">
@@ -156,55 +172,79 @@ export default function ExerciseSetExercisePicker({
         </div>
       )}
 
-      {/* Search & available exercises */}
-      <div className="border border-dark-border rounded-xl overflow-hidden">
-        {/* Search */}
-        <div className="p-2 border-b border-dark-border">
-          <div className="relative">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-            <input
-              type="text"
-              placeholder="חפש תרגיל..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="input-primary text-sm pr-9 w-full"
-            />
-          </div>
-        </div>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+        <input
+          type="text"
+          placeholder="חפש תרגיל..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="input-primary text-sm pr-9 w-full"
+        />
+      </div>
 
-        {/* Available list */}
-        <div className="max-h-60 overflow-y-auto">
-          {availableExercises.length === 0 ? (
-            <div className="p-4 text-center text-sm text-text-muted">
-              {search ? 'לא נמצאו תרגילים' : 'כל התרגילים נבחרו'}
-            </div>
-          ) : (
-            availableExercises.map((exercise) => (
-              <button
-                key={exercise.id}
-                type="button"
-                onClick={() => handleAdd(exercise.id)}
-                className="w-full flex items-center gap-2 p-2 hover:bg-dark-elevated transition-colors border-b border-dark-border/50 last:border-b-0"
+      {/* Exercise grid */}
+      {availableExercises.length === 0 ? (
+        <div className="p-6 text-center text-sm text-text-muted">
+          {search ? 'לא נמצאו תרגילים' : 'כל התרגילים נבחרו'}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 max-h-[620px] overflow-y-auto pb-2">
+          {availableExercises.map((exercise) => (
+            <div
+              key={exercise.id}
+              onClick={() => handleToggle(exercise.id)}
+              className="relative rounded-xl bg-dark-elevated border border-dark-border hover:border-primary-500/50 cursor-pointer transition-colors overflow-hidden"
+            >
+              {/* Image - clickable for popup, contain full image */}
+              <div
+                onClick={(e) => handleImageClick(e, exercise)}
+                className="relative w-full aspect-[4/3] bg-dark-bg"
               >
                 <img
                   src={getExerciseImageUrl(exercise)}
                   alt={exercise.nameHe}
-                  className="w-8 h-8 rounded object-cover flex-shrink-0"
+                  className="w-full h-full object-contain"
                   onError={(e) => {
                     ;(e.target as HTMLImageElement).src =
                       '/images/exercise-placeholder.svg'
                   }}
                 />
-                <div className="flex-1 text-right min-w-0">
-                  <p className="text-sm text-white truncate">{exercise.nameHe}</p>
-                  <p className="text-xs text-text-muted truncate">{exercise.name}</p>
-                </div>
-                <Plus className="w-4 h-4 text-primary-500 flex-shrink-0" />
-              </button>
-            ))
-          )}
+              </div>
+
+              {/* Info */}
+              <div className="p-2 text-right">
+                <p className="text-sm font-medium text-white truncate">
+                  {exercise.nameHe}
+                </p>
+                <p className="text-[11px] text-text-muted truncate" dir="ltr">
+                  {exercise.name}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
+      )}
+
+      {/* Image Preview Popup */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="max-w-lg w-full">
+            <img
+              src={previewImage.url}
+              alt={previewImage.name}
+              className="w-full rounded-xl"
+            />
+            <p className="text-white text-center mt-3 font-semibold">
+              {previewImage.name}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
