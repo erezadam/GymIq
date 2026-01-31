@@ -82,6 +82,15 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // ============ EXERCISE SETS ============
+    match /exerciseSets/{setId} {
+      // Anyone can read exercise sets
+      allow read: if true;
+
+      // Only admins can write
+      allow create, update, delete: if isAdmin();
+    }
+
     // ============ EXERCISES ============
     match /exercises/{exerciseId} {
       // Anyone can read exercises (for initial load before auth)
