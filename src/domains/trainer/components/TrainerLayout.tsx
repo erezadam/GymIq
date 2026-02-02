@@ -6,6 +6,7 @@ import {
   X,
   ArrowRight,
   ClipboardList,
+  MessageSquare,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '@/domains/authentication/store'
@@ -13,6 +14,7 @@ import { useAuthStore } from '@/domains/authentication/store'
 const navigation = [
   { name: 'מתאמנים', href: '/trainer', icon: Users, end: true },
   { name: 'תוכניות', href: '/trainer/program/new', icon: ClipboardList },
+  { name: 'הודעות', href: '/trainer/messages', icon: MessageSquare },
 ]
 
 export default function TrainerLayout() {

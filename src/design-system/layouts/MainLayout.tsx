@@ -9,7 +9,8 @@ import {
   X,
   Library,
   TrendingUp,
-  Shield
+  Shield,
+  Mail,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '@/domains/authentication/store'
@@ -187,6 +188,27 @@ export default function MainLayout() {
                 <span>ממשק ניהול</span>
               </NavLink>
             )}
+            {/* Inbox Link (for trainees with a trainer) */}
+            {user?.trainerId && (
+              <NavLink
+                to="/inbox"
+                onClick={() => setMobileMenuOpen(false)}
+                style={({ isActive }) => ({
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.md,
+                  padding: `${spacing.md}px ${spacing.lg}px`,
+                  borderRadius: borderRadius.lg,
+                  textDecoration: 'none',
+                  background: isActive ? colors.accent.pink : 'transparent',
+                  color: isActive ? colors.text.inverse : colors.accent.pink,
+                  border: isActive ? 'none' : `1px solid rgba(236, 72, 153, 0.3)`,
+                })}
+              >
+                <Mail size={20} />
+                <span>הודעות</span>
+              </NavLink>
+            )}
             <button
               onClick={handleLogout}
               style={{
@@ -320,6 +342,28 @@ export default function MainLayout() {
             >
               <Shield size={20} />
               <span>ממשק ניהול</span>
+            </NavLink>
+          )}
+          {/* Inbox Link (for trainees with a trainer) */}
+          {user?.trainerId && (
+            <NavLink
+              to="/inbox"
+              style={({ isActive }) => ({
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.md,
+                padding: `${spacing.md}px ${spacing.lg}px`,
+                borderRadius: borderRadius.lg,
+                textDecoration: 'none',
+                transition: '0.2s ease',
+                background: isActive ? colors.accent.pink : 'transparent',
+                color: isActive ? colors.text.inverse : colors.accent.pink,
+                border: isActive ? 'none' : `1px solid rgba(236, 72, 153, 0.3)`,
+                fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.normal,
+              })}
+            >
+              <Mail size={20} />
+              <span>הודעות</span>
             </NavLink>
           )}
         </nav>

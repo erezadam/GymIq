@@ -14,6 +14,8 @@ const TrainerLayout = lazy(() => import('@/domains/trainer/components/TrainerLay
 const TrainerDashboard = lazy(() => import('@/domains/trainer/components/TrainerDashboard'))
 const ProgramBuilder = lazy(() => import('@/domains/trainer/components/ProgramBuilder/ProgramBuilder'))
 const TraineeDetail = lazy(() => import('@/domains/trainer/components/TraineeDetail'))
+const MessageCenter = lazy(() => import('@/domains/trainer/components/Messages/MessageCenter'))
+const TraineeInbox = lazy(() => import('@/domains/trainer/components/TraineeInbox/TraineeInbox'))
 
 // Admin
 const AdminLayout = lazy(() => import('@/domains/admin/components/AdminLayout'))
@@ -84,6 +86,7 @@ function App() {
           <Route path="workout/history" element={<WorkoutHistory />} />
           <Route path="workout/history/:id" element={<WorkoutHistory />} />
           <Route path="personal-records" element={<PersonalRecords />} />
+          <Route path="inbox" element={<TraineeInbox />} />
           <Route path="progress" element={<UserDashboard />} /> {/* TODO: Progress page */}
           <Route path="profile" element={<UserDashboard />} /> {/* TODO: Profile page */}
         </Route>
@@ -102,6 +105,7 @@ function App() {
           <Route path="trainee/:id/messages" element={<TraineeDetail />} />
           <Route path="program/new" element={<ProgramBuilder />} />
           <Route path="program/:id/edit" element={<ProgramBuilder />} />
+          <Route path="messages" element={<MessageCenter />} />
         </Route>
 
         {/* Admin Routes (Protected - Admin only) */}
