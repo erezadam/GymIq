@@ -32,6 +32,9 @@ service cloud.firestore {
       // Users can create their own profile on registration
       allow create: if isOwner(userId);
 
+      // Trainers can create user profiles (for trainee registration)
+      allow create: if isTrainer();
+
       // Users can update their own profile (but not role)
       allow update: if isOwner(userId) &&
         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
