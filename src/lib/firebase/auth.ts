@@ -22,6 +22,16 @@ export interface AppUser {
   role: 'user' | 'trainer' | 'admin'
   createdAt: Date
   updatedAt: Date
+  // Trainer-specific (when role === 'trainer')
+  trainerProfile?: {
+    specializations?: string[]
+    bio?: string
+    maxTrainees?: number // default 50
+  }
+  // Trainee-specific (when linked to trainer)
+  trainerId?: string
+  trainingGoals?: string[]
+  injuriesOrLimitations?: string
 }
 
 // Convert Firebase user to App user

@@ -130,11 +130,15 @@ export interface WorkoutHistoryEntry {
   calories?: number // User-entered calories burned
   notes?: string
   // AI Trainer fields
-  source?: 'manual' | 'ai_trainer' // מקור האימון
+  source?: 'manual' | 'ai_trainer' | 'trainer_program' // מקור האימון
   aiWorkoutNumber?: number // מספר סידורי של אימון AI
   bundleId?: string // מזהה מקבץ אימונים AI (null לאימון יחיד)
   aiRecommendations?: Record<string, { weight: number; repRange: string; sets: number; reasoning?: string }> // המלצות AI לכל תרגיל
   aiExplanation?: string // הסבר AI למה נבחרו התרגילים באימון
+  // Trainer program fields
+  programId?: string // reference to trainingPrograms collection
+  programDayLabel?: string // e.g., "יום A"
+  programModifications?: import('@/domains/trainer/types').ProgramModification[]
 }
 
 // Summary for display in lists
@@ -151,7 +155,9 @@ export interface WorkoutHistorySummary {
   calories?: number // User-entered calories burned
   muscleGroups?: string[] // Unique muscle groups worked
   // AI Trainer fields
-  source?: 'manual' | 'ai_trainer' // מקור האימון
+  source?: 'manual' | 'ai_trainer' | 'trainer_program' // מקור האימון
   aiWorkoutNumber?: number // מספר סידורי של אימון AI
   bundleId?: string // מזהה מקבץ אימונים AI (null לאימון יחיד)
+  // Trainer program fields
+  programId?: string
 }

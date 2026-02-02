@@ -44,6 +44,9 @@ service cloud.firestore {
 
       // Admins can update any user including role
       allow update: if isAdmin();
+
+      // Trainers can read user profiles (app filters to own trainees)
+      allow read: if isTrainer();
     }
 
     // ============ MUSCLES ============
@@ -142,6 +145,9 @@ service cloud.firestore {
       // Users can delete their own workout history
       allow delete: if isAuthenticated() &&
         resource.data.userId == request.auth.uid;
+
+      // Trainers can read workout history (app filters to own trainees)
+      allow read: if isTrainer();
     }
 
     // ============ WORKOUT TEMPLATES ============
@@ -178,6 +184,57 @@ service cloud.firestore {
       allow delete: if isAuthenticated() &&
         (resource.data.trainerId == request.auth.uid ||
          resource.data.traineeId == request.auth.uid);
+
+      // Admin can read/write all relationships
+      allow read, write: if isAdmin();
+    }
+
+    // ============ TRAINING PROGRAMS ============
+    match /trainingPrograms/{programId} {
+      // Trainer and trainee can read their programs
+      allow read: if isAuthenticated() &&
+        (resource.data.trainerId == request.auth.uid ||
+         resource.data.traineeId == request.auth.uid ||
+         isAdmin());
+
+      // Trainers can create programs for their trainees
+      allow create: if isTrainer() &&
+        request.resource.data.trainerId == request.auth.uid;
+
+      // Trainer or admin can update programs
+      allow update: if isAuthenticated() &&
+        (resource.data.trainerId == request.auth.uid || isAdmin());
+
+      // Trainer or admin can delete programs
+      allow delete: if isAuthenticated() &&
+        (resource.data.trainerId == request.auth.uid || isAdmin());
+    }
+
+    // ============ TRAINER MESSAGES ============
+    match /trainerMessages/{messageId} {
+      // Trainer and trainee can read messages between them
+      allow read: if isAuthenticated() &&
+        (resource.data.traineeId == request.auth.uid ||
+         resource.data.trainerId == request.auth.uid ||
+         isAdmin());
+
+      // Trainers can create messages
+      allow create: if isTrainer() &&
+        request.resource.data.trainerId == request.auth.uid;
+
+      // Trainee can only update isRead/readAt/replies
+      allow update: if isAuthenticated() &&
+        resource.data.traineeId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['isRead', 'readAt', 'replies']);
+
+      // Trainer can update their own messages (edit, add replies)
+      allow update: if isAuthenticated() &&
+        (resource.data.trainerId == request.auth.uid || isAdmin());
+
+      // Trainer or admin can delete messages
+      allow delete: if isAuthenticated() &&
+        (resource.data.trainerId == request.auth.uid || isAdmin());
     }
 
     // ============ AI TRAINER USAGE (Rate Limiting) ============
