@@ -13,6 +13,7 @@ const LoginPage = lazy(() => import('@/domains/authentication/components/LoginPa
 const TrainerLayout = lazy(() => import('@/domains/trainer/components/TrainerLayout'))
 const TrainerDashboard = lazy(() => import('@/domains/trainer/components/TrainerDashboard'))
 const ProgramBuilder = lazy(() => import('@/domains/trainer/components/ProgramBuilder/ProgramBuilder'))
+const TraineeDetail = lazy(() => import('@/domains/trainer/components/TraineeDetail'))
 
 // Admin
 const AdminLayout = lazy(() => import('@/domains/admin/components/AdminLayout'))
@@ -97,6 +98,8 @@ function App() {
           }
         >
           <Route index element={<TrainerDashboard />} />
+          <Route path="trainee/:id" element={<TraineeDetail />} />
+          <Route path="trainee/:id/messages" element={<TraineeDetail />} />
           <Route path="program/new" element={<ProgramBuilder />} />
           <Route path="program/:id/edit" element={<ProgramBuilder />} />
         </Route>

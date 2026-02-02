@@ -8,6 +8,7 @@ import { colors, spacing, borderRadius, typography } from '@/styles/theme'
 import AITrainerModal from '@/domains/workouts/components/ai-trainer/AITrainerModal'
 
 const TraineeProgramView = lazy(() => import('@/domains/trainer/components/ProgramView/TraineeProgramView'))
+const TrainerDashboardTile = lazy(() => import('@/domains/trainer/components/TrainerDashboardTile').then(m => ({ default: m.TrainerDashboardTile })))
 
 // Initial stats (will be replaced with Firebase data)
 const defaultStats = {
@@ -398,6 +399,15 @@ export default function UserDashboard() {
           </div>
         </button>
       </div>
+
+      {/* Trainer Dashboard Tile - shown for trainers */}
+      {(user?.role === 'trainer' || user?.role === 'admin') && (
+        <div style={{ marginBottom: 12 }}>
+          <Suspense fallback={null}>
+            <TrainerDashboardTile />
+          </Suspense>
+        </div>
+      )}
 
       {/* Trainer Program Section - shown if trainee has an active program */}
       {user?.trainerId && (
