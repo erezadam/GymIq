@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { WorkoutExercise, WorkoutSet, SetType } from '../types'
 import type { ExerciseReportType, AssistanceType } from '@/domains/exercises/types'
+import type { ProgramDay } from '@/domains/trainer/types'
 
 // ============================================
 // Types
@@ -26,6 +27,9 @@ interface WorkoutBuilderState {
   workoutName: string
   selectedExercises: SelectedExercise[]
   scheduledDate: Date | null // null = today, Date = scheduled for that date
+  // Trainer program fields
+  programId?: string
+  programDayLabel?: string
 }
 
 interface WorkoutBuilderActions {
@@ -39,6 +43,7 @@ interface WorkoutBuilderActions {
   addSet: (exerciseId: string) => void
   removeSet: (exerciseId: string, setIndex: number) => void
   updateSet: (exerciseId: string, setIndex: number, updates: Partial<WorkoutSet>) => void
+  loadFromProgram: (day: ProgramDay, programId: string, programName: string) => void
   clearWorkout: () => void
   getWorkoutExercises: () => WorkoutExercise[]
 }
@@ -93,6 +98,8 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
   workoutName: '',
   selectedExercises: [],
   scheduledDate: null,
+  programId: undefined,
+  programDayLabel: undefined,
 
   // Actions
   setWorkoutName: (name) => set({ workoutName: name }),
@@ -208,8 +215,58 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
     }))
   },
 
+  loadFromProgram: (day, programId, programName) => {
+    const exercises: SelectedExercise[] = day.exercises
+      .filter((ex) => ex.exerciseId)
+      .map((ex, index) => {
+        // Parse target reps - take the middle/first value from range like "8-12"
+        const repsParts = ex.targetReps.split('-')
+        const targetReps = parseInt(repsParts[0]) || 10
+
+        // Create sets based on targetSets
+        const sets: WorkoutSet[] = Array.from(
+          { length: ex.targetSets },
+          () =>
+            createDefaultSet(
+              'working',
+              targetReps,
+              ex.targetWeight || 0
+            )
+        )
+
+        return {
+          exerciseId: ex.exerciseId,
+          exerciseName: ex.exerciseName,
+          exerciseNameHe: ex.exerciseNameHe,
+          imageUrl: ex.imageUrl || '',
+          primaryMuscle: ex.primaryMuscle || '',
+          category: ex.category,
+          equipment: ex.equipment,
+          reportType: ex.reportType as ExerciseReportType | undefined,
+          assistanceTypes: ex.assistanceTypes as AssistanceType[] | undefined,
+          sets,
+          restTime: ex.restTime || DEFAULT_REST_TIME,
+          order: index + 1,
+        }
+      })
+
+    set({
+      workoutName: `${programName} - ${day.dayLabel}${day.name ? ` (${day.name})` : ''}`,
+      selectedExercises: exercises,
+      scheduledDate: null,
+      programId,
+      programDayLabel: day.dayLabel,
+    })
+  },
+
   clearWorkout: () => {
-    set({ workoutName: '', selectedExercises: [], scheduledDate: null })
+    set({
+      workoutName: '',
+      selectedExercises: [],
+      scheduledDate: null,
+      programId: undefined,
+      programDayLabel: undefined,
+    })
   },
 
   getWorkoutExercises: (): WorkoutExercise[] => {

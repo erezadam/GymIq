@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense, lazy } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/domains/authentication/store'
 import { getUserWorkoutStats } from '@/lib/firebase/workoutHistory'
@@ -6,6 +6,8 @@ import { getExternalComparisonUrl } from '@/lib/firebase/appSettings'
 import { useVersionCheck } from '@/shared/hooks/useVersionCheck'
 import { colors, spacing, borderRadius, typography } from '@/styles/theme'
 import AITrainerModal from '@/domains/workouts/components/ai-trainer/AITrainerModal'
+
+const TraineeProgramView = lazy(() => import('@/domains/trainer/components/ProgramView/TraineeProgramView'))
 
 // Initial stats (will be replaced with Firebase data)
 const defaultStats = {
@@ -396,6 +398,15 @@ export default function UserDashboard() {
           </div>
         </button>
       </div>
+
+      {/* Trainer Program Section - shown if trainee has an active program */}
+      {user?.trainerId && (
+        <div style={{ marginBottom: 12 }}>
+          <Suspense fallback={null}>
+            <TraineeProgramView />
+          </Suspense>
+        </div>
+      )}
 
       {/* International Comparison Card - Only shown if URL is configured */}
       {externalUrl && (
