@@ -1,0 +1,157 @@
+import {
+  collection,
+  doc,
+  getDocs,
+  getDoc,
+  setDoc,
+  updateDoc,
+  query,
+  where,
+  serverTimestamp,
+} from 'firebase/firestore'
+import { db } from '@/lib/firebase/config'
+import type { TrainerRelationship, TraineeWithStats, TraineeStats } from '../types'
+import { getUserWorkoutStats } from '@/lib/firebase/workoutHistory'
+import { getUserWorkoutHistory } from '@/lib/firebase/workoutHistory'
+import type { AppUser } from '@/lib/firebase/auth'
+
+export const trainerService = {
+  // Get all active trainees for a trainer
+  async getTrainerTrainees(trainerId: string): Promise<TrainerRelationship[]> {
+    const q = query(
+      collection(db, 'trainerRelationships'),
+      where('trainerId', '==', trainerId),
+      where('status', '==', 'active')
+    )
+    const snapshot = await getDocs(q)
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate?.() || doc.data().createdAt || new Date(),
+      updatedAt: doc.data().updatedAt?.toDate?.() || doc.data().updatedAt || new Date(),
+    } as TrainerRelationship))
+  },
+
+  // Create a new trainer-trainee relationship
+  async createRelationship(
+    data: Omit<TrainerRelationship, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<string> {
+    const docRef = doc(collection(db, 'trainerRelationships'))
+    await setDoc(docRef, {
+      ...data,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+    return docRef.id
+  },
+
+  // End a relationship
+  async endRelationship(
+    relationshipId: string,
+    endedBy: 'trainer' | 'trainee' | 'admin',
+    reason?: string
+  ): Promise<void> {
+    const docRef = doc(db, 'trainerRelationships', relationshipId)
+    await updateDoc(docRef, {
+      status: 'ended',
+      endedAt: serverTimestamp(),
+      endedBy,
+      endReason: reason || '',
+      updatedAt: serverTimestamp(),
+    })
+  },
+
+  // Pause a relationship
+  async pauseRelationship(relationshipId: string): Promise<void> {
+    const docRef = doc(db, 'trainerRelationships', relationshipId)
+    await updateDoc(docRef, {
+      status: 'paused',
+      updatedAt: serverTimestamp(),
+    })
+  },
+
+  // Resume a paused relationship
+  async resumeRelationship(relationshipId: string): Promise<void> {
+    const docRef = doc(db, 'trainerRelationships', relationshipId)
+    await updateDoc(docRef, {
+      status: 'active',
+      updatedAt: serverTimestamp(),
+    })
+  },
+
+  // Get a trainee's user profile
+  async getTraineeProfile(traineeId: string): Promise<AppUser | null> {
+    const docRef = doc(db, 'users', traineeId)
+    const snapshot = await getDoc(docRef)
+    if (!snapshot.exists()) return null
+    const data = snapshot.data()
+    return {
+      ...data,
+      createdAt: data.createdAt?.toDate?.() || data.createdAt || new Date(),
+      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt || new Date(),
+    } as AppUser
+  },
+
+  // Get workout stats for a trainee
+  async getTraineeStats(traineeId: string): Promise<TraineeStats> {
+    const stats = await getUserWorkoutStats(traineeId)
+    return {
+      totalWorkouts: stats.totalWorkouts || 0,
+      thisWeekWorkouts: stats.thisWeekWorkouts || 0,
+      thisMonthWorkouts: stats.thisMonthWorkouts || 0,
+      currentStreak: stats.currentStreak || 0,
+      totalVolume: stats.totalVolume || 0,
+      programCompletionRate: 0, // Will be implemented with programs in Phase 3
+    }
+  },
+
+  // Get all trainees with their profiles and stats
+  async getTraineesWithStats(trainerId: string): Promise<TraineeWithStats[]> {
+    const relationships = await this.getTrainerTrainees(trainerId)
+
+    const traineesWithStats = await Promise.all(
+      relationships.map(async (rel) => {
+        try {
+          const [profile, stats, recentWorkouts] = await Promise.all([
+            this.getTraineeProfile(rel.traineeId),
+            this.getTraineeStats(rel.traineeId),
+            getUserWorkoutHistory(rel.traineeId, 1),
+          ])
+
+          return {
+            relationship: rel,
+            traineeProfile: profile
+              ? {
+                  uid: profile.uid,
+                  firstName: profile.firstName,
+                  lastName: profile.lastName,
+                  displayName: profile.displayName,
+                  email: profile.email,
+                  phoneNumber: profile.phoneNumber,
+                  trainingGoals: profile.trainingGoals as any,
+                  injuriesOrLimitations: profile.injuriesOrLimitations,
+                }
+              : undefined,
+            lastWorkoutDate:
+              recentWorkouts.length > 0 ? recentWorkouts[0].date : undefined,
+            thisWeekWorkouts: stats.thisWeekWorkouts,
+            thisMonthWorkouts: stats.thisMonthWorkouts,
+            currentStreak: stats.currentStreak,
+            programCompletionRate: stats.programCompletionRate,
+          } as TraineeWithStats
+        } catch (error) {
+          console.error(`Error loading data for trainee ${rel.traineeId}:`, error)
+          return {
+            relationship: rel,
+            thisWeekWorkouts: 0,
+            thisMonthWorkouts: 0,
+            currentStreak: 0,
+            programCompletionRate: 0,
+          } as TraineeWithStats
+        }
+      })
+    )
+
+    return traineesWithStats
+  },
+}

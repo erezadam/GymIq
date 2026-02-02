@@ -9,6 +9,10 @@ import { AuthGuard, GuestGuard } from '@/app/router/guards'
 // Auth
 const LoginPage = lazy(() => import('@/domains/authentication/components/LoginPage'))
 
+// Trainer
+const TrainerLayout = lazy(() => import('@/domains/trainer/components/TrainerLayout'))
+const TrainerDashboard = lazy(() => import('@/domains/trainer/components/TrainerDashboard'))
+
 // Admin
 const AdminLayout = lazy(() => import('@/domains/admin/components/AdminLayout'))
 const ExerciseList = lazy(() => import('@/domains/admin/components/ExerciseList'))
@@ -80,6 +84,18 @@ function App() {
           <Route path="personal-records" element={<PersonalRecords />} />
           <Route path="progress" element={<UserDashboard />} /> {/* TODO: Progress page */}
           <Route path="profile" element={<UserDashboard />} /> {/* TODO: Profile page */}
+        </Route>
+
+        {/* Trainer Routes (Protected - Trainer and Admin) */}
+        <Route
+          path="/trainer"
+          element={
+            <AuthGuard requiredRole="trainer">
+              <TrainerLayout />
+            </AuthGuard>
+          }
+        >
+          <Route index element={<TrainerDashboard />} />
         </Route>
 
         {/* Admin Routes (Protected - Admin only) */}
