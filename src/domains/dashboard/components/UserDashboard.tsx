@@ -11,6 +11,7 @@ import AITrainerModal from '@/domains/workouts/components/ai-trainer/AITrainerMo
 const defaultStats = {
   totalWorkouts: 0,
   thisWeek: 0,
+  thisMonth: 0,
   currentStreak: 0,
 }
 
@@ -79,18 +80,20 @@ const actionCardStyles = {
   },
 }
 
-// Get Sunday of current week (D/M format)
-function getSundayOfWeek(): string {
+// Get current week range (Sunday-Saturday) in D/M-D/M format
+function getWeekRange(): string {
   const now = new Date()
   const dayOfWeek = now.getDay() // 0 = Sunday
   const sunday = new Date(now)
   sunday.setDate(now.getDate() - dayOfWeek)
-  return `${sunday.getDate()}/${sunday.getMonth() + 1}`
+  const saturday = new Date(sunday)
+  saturday.setDate(sunday.getDate() + 6)
+  return `${sunday.getDate()}/${sunday.getMonth() + 1}-${saturday.getDate()}/${saturday.getMonth() + 1}`
 }
 
 export default function UserDashboard() {
   const { user } = useAuthStore()
-  const sundayDate = getSundayOfWeek()
+  const weekRange = getWeekRange()
   const [userStats, setUserStats] = useState(defaultStats)
   const [isLoading, setIsLoading] = useState(true)
   const [externalUrl, setExternalUrl] = useState<string | null>(null)
@@ -127,6 +130,7 @@ export default function UserDashboard() {
         setUserStats({
           totalWorkouts: stats.totalWorkouts,
           thisWeek: stats.thisWeekWorkouts,
+          thisMonth: stats.thisMonthWorkouts,
           currentStreak: stats.currentStreak,
         })
         setExternalUrl(url)
@@ -202,7 +206,7 @@ export default function UserDashboard() {
               marginBottom: 4,
             }}
           >
-            {sundayDate}
+            {weekRange}
           </div>
           <div
             style={{
@@ -230,10 +234,10 @@ export default function UserDashboard() {
               opacity: isLoading ? 0.5 : 1,
             }}
           >
-            {isLoading ? '-' : userStats.totalWorkouts}
+            {isLoading ? '-' : userStats.thisMonth}
           </div>
           <div style={{ fontSize: typography.fontSize.xs, color: colors.text.secondary }}>
-            אימונים
+            אימונים חודש
           </div>
         </div>
       </div>

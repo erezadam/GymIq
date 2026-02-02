@@ -434,6 +434,7 @@ export async function getLastWorkoutForExercises(
 export async function getUserWorkoutStats(userId: string): Promise<{
   totalWorkouts: number
   thisWeekWorkouts: number
+  thisMonthWorkouts: number
   totalVolume: number
   currentStreak: number
 }> {
@@ -456,6 +457,11 @@ export async function getUserWorkoutStats(userId: string): Promise<{
   weekStart.setHours(0, 0, 0, 0)
 
   const thisWeekWorkouts = workouts.filter(w => w.date >= weekStart).length
+
+  // Calculate this month's workouts (1st of current month to end of month)
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  monthStart.setHours(0, 0, 0, 0)
+  const thisMonthWorkouts = workouts.filter(w => w.date >= monthStart).length
 
   // Calculate total volume
   const totalVolume = workouts.reduce((sum, w) => sum + w.totalVolume, 0)
@@ -485,6 +491,7 @@ export async function getUserWorkoutStats(userId: string): Promise<{
   return {
     totalWorkouts: workouts.length,
     thisWeekWorkouts,
+    thisMonthWorkouts,
     totalVolume,
     currentStreak,
   }
