@@ -160,4 +160,5 @@ export interface WorkoutHistorySummary {
   bundleId?: string // מזהה מקבץ אימונים AI (null לאימון יחיד)
   // Trainer program fields
   programId?: string
+  programDayLabel?: string
 }

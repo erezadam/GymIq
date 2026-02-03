@@ -78,6 +78,7 @@ function toSummary(entry: WorkoutHistoryEntry): WorkoutHistorySummary {
     bundleId: entry.bundleId,
     // Trainer program fields
     programId: entry.programId,
+    programDayLabel: entry.programDayLabel,
   }
 }
 

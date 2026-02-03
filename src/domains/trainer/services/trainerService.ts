@@ -13,6 +13,7 @@ import { db } from '@/lib/firebase/config'
 import type { TrainerRelationship, TraineeWithStats, TraineeStats } from '../types'
 import { getUserWorkoutStats } from '@/lib/firebase/workoutHistory'
 import { getUserWorkoutHistory } from '@/lib/firebase/workoutHistory'
+import { programService } from './programService'
 import type { AppUser } from '@/lib/firebase/auth'
 
 export const trainerService = {
@@ -112,11 +113,17 @@ export const trainerService = {
     const traineesWithStats = await Promise.all(
       relationships.map(async (rel) => {
         try {
-          const [profile, stats, recentWorkouts] = await Promise.all([
+          const [profile, stats, recentWorkouts, activeProgram] = await Promise.all([
             this.getTraineeProfile(rel.traineeId),
             this.getTraineeStats(rel.traineeId),
             getUserWorkoutHistory(rel.traineeId, 1),
+            programService.getTraineeActiveProgram(rel.traineeId),
           ])
+
+          // Calculate program completion from active program
+          const completionRate = activeProgram?.durationWeeks
+            ? Math.round(((activeProgram.currentWeek || 0) / activeProgram.durationWeeks) * 100)
+            : 0
 
           return {
             relationship: rel,
@@ -137,7 +144,8 @@ export const trainerService = {
             thisWeekWorkouts: stats.thisWeekWorkouts,
             thisMonthWorkouts: stats.thisMonthWorkouts,
             currentStreak: stats.currentStreak,
-            programCompletionRate: stats.programCompletionRate,
+            programCompletionRate: completionRate,
+            activeProgram: activeProgram || undefined,
           } as TraineeWithStats
         } catch (error) {
           console.error(`Error loading data for trainee ${rel.traineeId}:`, error)

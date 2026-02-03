@@ -1,4 +1,3 @@
-import { TrendingUp, Flame, Calendar, Dumbbell } from 'lucide-react'
 import type { TraineeStats } from '../types'
 
 interface TraineePerformanceProps {
@@ -11,48 +10,50 @@ export function TraineePerformance({ stats, isLoading }: TraineePerformanceProps
     {
       label: 'סה"כ אימונים',
       value: stats.totalWorkouts,
-      icon: Dumbbell,
       color: 'text-primary-main',
-      bg: 'bg-primary-main/10',
-    },
-    {
-      label: 'השבוע',
-      value: stats.thisWeekWorkouts,
-      icon: Calendar,
-      color: 'text-accent-gold',
-      bg: 'bg-accent-gold/10',
+      trend: stats.thisMonthWorkouts > 0 ? `↑ ${stats.thisMonthWorkouts} החודש` : undefined,
+      trendColor: 'text-status-success',
     },
     {
       label: 'רצף ימים',
       value: stats.currentStreak,
-      icon: Flame,
       color: 'text-accent-orange',
-      bg: 'bg-accent-orange/10',
+      trend: stats.currentStreak >= 7 ? '🔥 שיא!' : undefined,
+      trendColor: 'text-accent-orange',
     },
     {
       label: 'נפח כולל (ק"ג)',
-      value: stats.totalVolume > 1000
-        ? `${(stats.totalVolume / 1000).toFixed(1)}K`
-        : stats.totalVolume,
-      icon: TrendingUp,
-      color: 'text-status-success',
-      bg: 'bg-status-success/10',
+      value:
+        stats.totalVolume > 1000
+          ? `${(stats.totalVolume / 1000).toFixed(0)}K`
+          : stats.totalVolume,
+      color: 'text-status-info',
+      trend: undefined,
+      trendColor: 'text-status-success',
+    },
+    {
+      label: 'השבוע',
+      value: `${stats.thisWeekWorkouts}/3`,
+      color: 'text-accent-purple',
+      trend: stats.thisWeekWorkouts >= 3 ? '✓ הושלם!' : undefined,
+      trendColor: 'text-status-success',
     },
   ]
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       {statCards.map((card) => (
-        <div key={card.label} className="card flex items-center gap-3 py-3 px-4">
-          <div className={`w-10 h-10 rounded-xl ${card.bg} flex items-center justify-center flex-shrink-0`}>
-            <card.icon className={`w-5 h-5 ${card.color}`} />
+        <div
+          key={card.label}
+          className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-4 text-center"
+        >
+          <div
+            className={`text-3xl font-black ${card.color} mb-1 ${isLoading ? 'opacity-50' : ''}`}
+          >
+            {isLoading ? '-' : card.value}
           </div>
-          <div>
-            <p className={`text-xl font-bold ${card.color} ${isLoading ? 'opacity-50' : ''}`}>
-              {isLoading ? '-' : card.value}
-            </p>
-            <p className="text-xs text-text-muted">{card.label}</p>
-          </div>
+          <p className="text-text-muted text-sm">{card.label}</p>
+          {card.trend && <p className={`${card.trendColor} text-xs mt-1`}>{card.trend}</p>}
         </div>
       ))}
     </div>

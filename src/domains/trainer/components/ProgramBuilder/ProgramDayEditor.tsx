@@ -1,62 +1,71 @@
 import { useState } from 'react'
-import { Plus, Search, X, ArrowRight, Moon, Sun } from 'lucide-react'
+import { Plus, ArrowRight, Moon, Sun } from 'lucide-react'
 import type { ProgramDay, ProgramExercise } from '../../types'
 import { ProgramExerciseEditor } from './ProgramExerciseEditor'
-import { exerciseService } from '@/domains/exercises/services/exerciseService'
+import { ExerciseLibrary } from '@/domains/exercises/components/ExerciseLibrary'
 import type { Exercise } from '@/domains/exercises/types'
 
 interface ProgramDayEditorProps {
   day: ProgramDay
+  dayIndex: number
   onUpdate: (day: ProgramDay) => void
   onBack: () => void
 }
 
-export function ProgramDayEditor({ day, onUpdate, onBack }: ProgramDayEditorProps) {
+const DAY_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+
+const DAY_LETTER_GRADIENTS = [
+  'from-primary-main to-teal-600',
+  'from-status-info to-blue-600',
+  'from-accent-purple to-purple-600',
+  'from-accent-orange to-orange-600',
+  'from-accent-pink to-pink-600',
+  'from-accent-gold to-yellow-600',
+  'from-status-success to-green-600',
+]
+
+export function ProgramDayEditor({ day, dayIndex, onUpdate, onBack }: ProgramDayEditorProps) {
   const [showPicker, setShowPicker] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<Exercise[]>([])
-  const [isSearching, setIsSearching] = useState(false)
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query)
-    if (query.length < 2) {
-      setSearchResults([])
-      return
-    }
-    setIsSearching(true)
-    try {
-      const results = await exerciseService.getExercises({ search: query })
-      setSearchResults(results)
-    } catch (error) {
-      console.error('Error searching exercises:', error)
-    } finally {
-      setIsSearching(false)
-    }
-  }
+  const letter = DAY_LETTERS[dayIndex] || String(dayIndex + 1)
+  const gradient = DAY_LETTER_GRADIENTS[dayIndex % DAY_LETTER_GRADIENTS.length]
 
-  const addExercise = (exercise: Exercise) => {
-    const newExercise: ProgramExercise = {
-      exerciseId: exercise.id,
-      exerciseName: exercise.name,
-      exerciseNameHe: exercise.nameHe,
-      imageUrl: exercise.imageUrl,
-      category: exercise.category,
-      primaryMuscle: exercise.primaryMuscle,
-      equipment: exercise.equipment,
-      order: day.exercises.length + 1,
-      targetSets: 3,
-      targetReps: '8-12',
-      restTime: 90,
-      reportType: exercise.reportType,
-      assistanceTypes: exercise.assistanceTypes,
+  const totalSets = day.exercises.reduce((sum, ex) => sum + ex.targetSets, 0)
+  const estimatedMinutes = Math.round(
+    day.exercises.reduce((sum, ex) => {
+      return sum + ex.targetSets * (45 + ex.restTime)
+    }, 0) / 60 + day.exercises.length * 2
+  )
+
+  const handleExerciseToggle = (exercise: Exercise, isAdding: boolean) => {
+    if (isAdding) {
+      const alreadyExists = day.exercises.some(e => e.exerciseId === exercise.id)
+      if (alreadyExists) return
+
+      const newExercise: ProgramExercise = {
+        exerciseId: exercise.id,
+        exerciseName: exercise.name,
+        exerciseNameHe: exercise.nameHe,
+        imageUrl: exercise.imageUrl,
+        category: exercise.category,
+        primaryMuscle: exercise.primaryMuscle,
+        equipment: exercise.equipment,
+        order: day.exercises.length + 1,
+        targetSets: 3,
+        targetReps: '8-12',
+        restTime: 90,
+        reportType: exercise.reportType,
+        assistanceTypes: exercise.assistanceTypes,
+      }
+      onUpdate({
+        ...day,
+        exercises: [...day.exercises, newExercise],
+      })
+    } else {
+      const updated = day.exercises.filter(e => e.exerciseId !== exercise.id)
+      updated.forEach((ex, i) => (ex.order = i + 1))
+      onUpdate({ ...day, exercises: updated })
     }
-    onUpdate({
-      ...day,
-      exercises: [...day.exercises, newExercise],
-    })
-    setShowPicker(false)
-    setSearchQuery('')
-    setSearchResults([])
   }
 
   const updateExercise = (index: number, updates: Partial<ProgramExercise>) => {
@@ -79,171 +88,204 @@ export function ProgramDayEditor({ day, onUpdate, onBack }: ProgramDayEditorProp
     })
   }
 
+  // Group exercises for superset display
+  type ExerciseGroup = {
+    supersetGroup: string | null
+    exercises: { exercise: ProgramExercise; originalIndex: number }[]
+  }
+  const exerciseGroups: ExerciseGroup[] = []
+  day.exercises.forEach((exercise, index) => {
+    const group = exercise.supersetGroup || null
+    if (group) {
+      const existing = exerciseGroups.find(g => g.supersetGroup === group)
+      if (existing) {
+        existing.exercises.push({ exercise, originalIndex: index })
+      } else {
+        exerciseGroups.push({ supersetGroup: group, exercises: [{ exercise, originalIndex: index }] })
+      }
+    } else {
+      exerciseGroups.push({ supersetGroup: null, exercises: [{ exercise, originalIndex: index }] })
+    }
+  })
+
+  // Full-screen ExerciseLibrary picker
+  if (showPicker) {
+    return (
+      <div className="fixed inset-0 z-50 bg-dark-bg overflow-y-auto">
+        <ExerciseLibrary
+          programMode
+          programExerciseIds={day.exercises.map(e => e.exerciseId)}
+          onProgramExerciseToggle={handleExerciseToggle}
+          onProgramBack={() => setShowPicker(false)}
+        />
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <button onClick={onBack} className="btn-icon">
-          <ArrowRight className="w-5 h-5" />
-        </button>
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-text-primary">{day.dayLabel}</h3>
-          <input
-            type="text"
-            value={day.name}
-            onChange={(e) => onUpdate({ ...day, name: e.target.value })}
-            className="input-primary text-sm py-1 mt-1"
-            placeholder="שם היום (למשל: חזה + טרייספס)"
-          />
-        </div>
+    <div className="max-w-2xl mx-auto space-y-6">
+      {/* Back + Title */}
+      <div className="flex items-center justify-between">
         <button
-          onClick={toggleRestDay}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-colors ${
-            day.restDay
-              ? 'bg-status-info/20 text-status-info border border-status-info/30'
-              : 'bg-dark-card text-text-muted border border-dark-border'
-          }`}
+          onClick={onBack}
+          className="flex items-center gap-2 text-text-muted hover:text-text-primary transition"
         >
-          {day.restDay ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-          <span>{day.restDay ? 'מנוחה' : 'אימון'}</span>
+          <ArrowRight className="w-5 h-5" />
+          <span>חזרה למבנה</span>
         </button>
+        <h1 className="text-xl sm:text-2xl font-bold text-text-primary">
+          עריכת יום {letter}
+        </h1>
+        <div className="w-20" />
+      </div>
+
+      {/* Day Header Card */}
+      <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-5 sm:p-6">
+        <div className="flex items-center gap-4 sm:gap-5">
+          {/* Day letter icon */}
+          <div
+            className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center text-3xl sm:text-4xl font-black text-white flex-shrink-0`}
+          >
+            {letter}
+          </div>
+
+          {/* Name + stats */}
+          <div className="flex-1 min-w-0">
+            <input
+              type="text"
+              value={day.name}
+              onChange={(e) => onUpdate({ ...day, name: e.target.value })}
+              className="bg-transparent text-xl sm:text-2xl font-bold text-text-primary focus:outline-none border-b-2 border-transparent focus:border-primary-main w-full mb-2"
+              placeholder="שם האימון (למשל: חזה + טרייספס)"
+            />
+            <div className="flex items-center gap-3 sm:gap-4 text-text-muted text-sm flex-wrap">
+              <span className="flex items-center gap-1">
+                📅 {day.dayLabel}
+              </span>
+              <span className="flex items-center gap-1">
+                🏋️ {day.exercises.length} תרגילים
+              </span>
+              {estimatedMinutes > 0 && (
+                <span className="flex items-center gap-1">
+                  ⏱️ ~{estimatedMinutes} דקות
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Total sets counter */}
+          {totalSets > 0 && (
+            <div className="flex flex-col items-center flex-shrink-0">
+              <div className="text-2xl sm:text-3xl font-black text-primary-main">{totalSets}</div>
+              <div className="text-sm text-text-muted">סטים</div>
+            </div>
+          )}
+        </div>
+
+        {/* Rest day toggle */}
+        <div className="mt-4 pt-4 border-t border-white/10 flex justify-end">
+          <button
+            onClick={toggleRestDay}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm transition ${
+              day.restDay
+                ? 'bg-status-info/20 text-status-info border border-status-info/30'
+                : 'bg-dark-surface text-text-muted border border-dark-border hover:border-primary-main/30'
+            }`}
+          >
+            {day.restDay ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            <span>{day.restDay ? 'יום מנוחה' : 'יום אימון'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Rest day message */}
       {day.restDay && (
-        <div className="card text-center py-8 text-text-muted">
-          <Moon className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p>יום מנוחה - אין תרגילים</p>
+        <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl text-center py-12 text-text-muted">
+          <Moon className="w-16 h-16 mx-auto mb-4 opacity-30" />
+          <p className="text-lg">יום מנוחה - אין תרגילים</p>
         </div>
       )}
 
       {/* Exercises */}
       {!day.restDay && (
         <>
-          <div className="space-y-3">
-            {day.exercises.map((exercise, index) => (
-              <ProgramExerciseEditor
-                key={`${exercise.exerciseId}-${index}`}
-                exercise={exercise}
-                onUpdate={(updates) => updateExercise(index, updates)}
-                onRemove={() => removeExercise(index)}
-              />
-            ))}
+          <div className="space-y-4">
+            {exerciseGroups.map((group, groupIndex) => {
+              // Superset group with multiple exercises
+              if (group.supersetGroup && group.exercises.length > 1) {
+                return (
+                  <div key={groupIndex} className="relative">
+                    {/* Superset accent bar */}
+                    <div className="absolute right-2 top-4 bottom-4 w-1.5 rounded-full bg-gradient-to-b from-accent-purple to-accent-pink" />
+                    {/* Superset label */}
+                    <div className="absolute -right-1 top-1/2 -translate-y-1/2 z-10">
+                      <div className="px-2 py-1 bg-accent-purple text-white text-xs rounded font-bold -rotate-90 origin-center whitespace-nowrap">
+                        סופרסט
+                      </div>
+                    </div>
+                    {/* Exercises */}
+                    <div className="mr-7 space-y-2">
+                      {group.exercises.map(({ exercise, originalIndex }) => (
+                        <ProgramExerciseEditor
+                          key={`${exercise.exerciseId}-${originalIndex}`}
+                          exercise={exercise}
+                          onUpdate={(updates) => updateExercise(originalIndex, updates)}
+                          onRemove={() => removeExercise(originalIndex)}
+                          isSuperset
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )
+              }
+
+              // Regular exercise(s)
+              return group.exercises.map(({ exercise, originalIndex }) => (
+                <ProgramExerciseEditor
+                  key={`${exercise.exerciseId}-${originalIndex}`}
+                  exercise={exercise}
+                  onUpdate={(updates) => updateExercise(originalIndex, updates)}
+                  onRemove={() => removeExercise(originalIndex)}
+                />
+              ))
+            })}
           </div>
 
           {/* Add exercise button */}
           <button
             onClick={() => setShowPicker(true)}
-            className="add-set-btn"
+            className="w-full py-5 border-2 border-dashed border-dark-border rounded-2xl text-text-muted hover:border-primary-main hover:text-primary-main transition flex items-center justify-center gap-3 text-lg"
           >
-            <Plus className="w-4 h-4" />
-            <span>הוסף תרגיל</span>
+            <Plus className="w-5 h-5" />
+            הוסף תרגיל
           </button>
 
           {/* Day notes */}
           <div>
-            <input
-              type="text"
+            <div className="flex items-center gap-2 text-sm text-text-muted mb-2">
+              📝 הערות ליום:
+            </div>
+            <textarea
               value={day.notes || ''}
               onChange={(e) => onUpdate({ ...day, notes: e.target.value || undefined })}
-              className="input-primary text-sm"
-              placeholder="הערות ליום..."
+              className="w-full bg-dark-surface/50 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary-main placeholder-text-muted resize-none"
+              placeholder="הערות כלליות ליום האימון..."
+              rows={2}
             />
           </div>
         </>
       )}
 
-      {/* Exercise Picker Modal */}
-      {showPicker && (
-        <div className="modal-backdrop" onClick={() => setShowPicker(false)}>
-          <div
-            className="bg-dark-surface rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Picker header */}
-            <div className="flex items-center justify-between p-4 border-b border-dark-border">
-              <h3 className="text-lg font-semibold text-text-primary">בחר תרגיל</h3>
-              <button onClick={() => setShowPicker(false)} className="btn-icon">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Search */}
-            <div className="p-4 border-b border-dark-border">
-              <div className="relative">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="input-primary pr-10 text-sm"
-                  placeholder="חפש תרגיל..."
-                  autoFocus
-                />
-              </div>
-            </div>
-
-            {/* Results */}
-            <div className="flex-1 overflow-y-auto p-2">
-              {isSearching && (
-                <div className="flex justify-center py-8">
-                  <div className="spinner-small" />
-                </div>
-              )}
-              {!isSearching && searchQuery.length >= 2 && searchResults.length === 0 && (
-                <p className="text-center py-8 text-text-muted text-sm">
-                  לא נמצאו תרגילים
-                </p>
-              )}
-              {!isSearching && searchQuery.length < 2 && (
-                <p className="text-center py-8 text-text-muted text-sm">
-                  הקלד לפחות 2 תווים לחיפוש
-                </p>
-              )}
-              {searchResults.map((exercise) => {
-                const alreadyAdded = day.exercises.some(
-                  (e) => e.exerciseId === exercise.id
-                )
-                return (
-                  <button
-                    key={exercise.id}
-                    onClick={() => !alreadyAdded && addExercise(exercise)}
-                    disabled={alreadyAdded}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl text-right transition-colors ${
-                      alreadyAdded
-                        ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:bg-dark-card cursor-pointer'
-                    }`}
-                  >
-                    {exercise.imageUrl ? (
-                      <img
-                        src={exercise.imageUrl}
-                        alt={exercise.nameHe}
-                        className="w-10 h-10 rounded-lg object-cover bg-dark-card"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-lg bg-dark-card flex items-center justify-center text-lg">
-                        🏋️
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-text-primary truncate">
-                        {exercise.nameHe}
-                      </p>
-                      <p className="text-xs text-text-muted">
-                        {exercise.category} · {exercise.equipment}
-                      </p>
-                    </div>
-                    {alreadyAdded && (
-                      <span className="text-xs text-status-success">נוסף</span>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Bottom actions */}
+      <div className="flex justify-between pt-4">
+        <button
+          onClick={onBack}
+          className="px-5 sm:px-6 py-3 sm:py-4 bg-dark-surface rounded-xl hover:bg-dark-card transition flex items-center gap-2 text-text-secondary"
+        >
+          <ArrowRight className="w-4 h-4" />
+          <span>חזרה למבנה</span>
+        </button>
+      </div>
     </div>
   )
 }

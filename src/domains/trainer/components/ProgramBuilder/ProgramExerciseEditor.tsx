@@ -1,115 +1,166 @@
-import { Trash2, GripVertical } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import type { ProgramExercise } from '../../types'
 
 interface ProgramExerciseEditorProps {
   exercise: ProgramExercise
   onUpdate: (updates: Partial<ProgramExercise>) => void
   onRemove: () => void
+  isSuperset?: boolean
 }
 
 export function ProgramExerciseEditor({
   exercise,
   onUpdate,
   onRemove,
+  isSuperset,
 }: ProgramExerciseEditorProps) {
+  const formatRestTime = (seconds: number): string => {
+    if (seconds >= 60) return `${Math.round(seconds / 60)}ד`
+    return `${seconds}ש`
+  }
+
   return (
-    <div className="card bg-dark-bg border-dark-border">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-3">
-        <GripVertical className="w-4 h-4 text-text-muted flex-shrink-0" />
-        {exercise.imageUrl ? (
-          <img
-            src={exercise.imageUrl}
-            alt={exercise.exerciseNameHe}
-            className="w-10 h-10 rounded-lg object-cover bg-dark-card"
-          />
-        ) : (
-          <div className="w-10 h-10 rounded-lg bg-dark-card flex items-center justify-center text-text-muted text-lg">
-            🏋️
+    <div
+      className={`bg-dark-card/80 backdrop-blur-lg border rounded-2xl overflow-hidden hover:border-primary-main/30 transition ${
+        isSuperset ? 'border-accent-purple/30' : 'border-white/10'
+      }`}
+    >
+      {/* Main row */}
+      <div className="p-4 sm:p-5">
+        <div className="flex items-center gap-3 sm:gap-4">
+          {/* Drag handle */}
+          <div className="cursor-move text-text-muted hover:text-text-primary text-xl flex-shrink-0">
+            ⋮⋮
           </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-text-primary truncate">
-            {exercise.exerciseNameHe}
-          </p>
-          <p className="text-xs text-text-muted truncate">
-            {exercise.category} · {exercise.equipment}
-          </p>
+
+          {/* Exercise image */}
+          {exercise.imageUrl ? (
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-dark-surface overflow-hidden flex-shrink-0">
+              <img
+                src={exercise.imageUrl}
+                alt={exercise.exerciseNameHe}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-dark-surface flex items-center justify-center text-2xl flex-shrink-0">
+              🏋️
+            </div>
+          )}
+
+          {/* Name & info */}
+          <div className="flex-1 min-w-0">
+            <h4 className="font-bold text-base sm:text-lg text-text-primary truncate">
+              {exercise.exerciseNameHe}
+            </h4>
+            <p className="text-text-muted text-sm truncate">
+              {exercise.exerciseName} • {exercise.category}
+            </p>
+          </div>
+
+          {/* Inline inputs - desktop */}
+          <div className="hidden sm:flex items-center gap-3">
+            <div className="text-center px-3 py-2 bg-dark-surface rounded-xl">
+              <div className="text-xs text-text-muted mb-1">סטים</div>
+              <input
+                type="number"
+                min={1}
+                max={10}
+                value={exercise.targetSets}
+                onChange={(e) => onUpdate({ targetSets: parseInt(e.target.value) || 1 })}
+                className="w-12 bg-transparent text-center text-lg sm:text-xl font-bold text-text-primary focus:outline-none"
+              />
+            </div>
+            <div className="text-center px-3 py-2 bg-dark-surface rounded-xl">
+              <div className="text-xs text-text-muted mb-1">חזרות</div>
+              <input
+                type="text"
+                value={exercise.targetReps}
+                onChange={(e) => onUpdate({ targetReps: e.target.value })}
+                className="w-14 bg-transparent text-center text-lg sm:text-xl font-bold text-text-primary focus:outline-none"
+                placeholder="8-12"
+              />
+            </div>
+            <div className="text-center px-3 py-2 bg-dark-surface rounded-xl">
+              <div className="text-xs text-text-muted mb-1">מנוחה</div>
+              <select
+                value={exercise.restTime}
+                onChange={(e) => onUpdate({ restTime: parseInt(e.target.value) })}
+                className="w-14 bg-transparent text-center text-lg sm:text-xl font-bold text-text-primary focus:outline-none appearance-none cursor-pointer"
+              >
+                <option value={0}>0ש</option>
+                <option value={30}>30ש</option>
+                <option value={45}>45ש</option>
+                <option value={60}>{formatRestTime(60)}</option>
+                <option value={90}>{formatRestTime(90)}</option>
+                <option value={120}>{formatRestTime(120)}</option>
+                <option value={180}>{formatRestTime(180)}</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Delete button */}
+          <button
+            onClick={onRemove}
+            className="p-2 sm:p-3 hover:bg-status-error/20 rounded-xl text-status-error/70 hover:text-status-error transition flex-shrink-0"
+          >
+            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
         </div>
-        <button onClick={onRemove} className="btn-icon text-text-muted hover:text-status-error">
-          <Trash2 className="w-4 h-4" />
-        </button>
       </div>
 
-      {/* Config fields */}
-      <div className="grid grid-cols-4 gap-3">
-        {/* Sets */}
-        <div>
-          <label className="block text-xs text-text-muted mb-1">סטים</label>
+      {/* Mobile inputs - shown below on small screens */}
+      <div className="sm:hidden grid grid-cols-3 gap-3 px-4 pb-4">
+        <div className="text-center px-2 py-2 bg-dark-surface rounded-xl">
+          <div className="text-xs text-text-muted mb-1">סטים</div>
           <input
             type="number"
             min={1}
             max={10}
             value={exercise.targetSets}
             onChange={(e) => onUpdate({ targetSets: parseInt(e.target.value) || 1 })}
-            className="input-primary text-center text-sm py-1.5"
+            className="w-full bg-transparent text-center text-lg font-bold text-text-primary focus:outline-none"
           />
         </div>
-
-        {/* Reps */}
-        <div>
-          <label className="block text-xs text-text-muted mb-1">חזרות</label>
+        <div className="text-center px-2 py-2 bg-dark-surface rounded-xl">
+          <div className="text-xs text-text-muted mb-1">חזרות</div>
           <input
             type="text"
             value={exercise.targetReps}
             onChange={(e) => onUpdate({ targetReps: e.target.value })}
-            className="input-primary text-center text-sm py-1.5"
+            className="w-full bg-transparent text-center text-lg font-bold text-text-primary focus:outline-none"
             placeholder="8-12"
           />
         </div>
-
-        {/* Weight */}
-        <div>
-          <label className="block text-xs text-text-muted mb-1">משקל</label>
-          <input
-            type="number"
-            min={0}
-            step={2.5}
-            value={exercise.targetWeight || ''}
-            onChange={(e) =>
-              onUpdate({ targetWeight: e.target.value ? parseFloat(e.target.value) : undefined })
-            }
-            className="input-primary text-center text-sm py-1.5"
-            placeholder="ק&quot;ג"
-          />
-        </div>
-
-        {/* Rest */}
-        <div>
-          <label className="block text-xs text-text-muted mb-1">מנוחה</label>
+        <div className="text-center px-2 py-2 bg-dark-surface rounded-xl">
+          <div className="text-xs text-text-muted mb-1">מנוחה</div>
           <select
             value={exercise.restTime}
             onChange={(e) => onUpdate({ restTime: parseInt(e.target.value) })}
-            className="input-primary text-center text-sm py-1.5"
+            className="w-full bg-transparent text-center text-lg font-bold text-text-primary focus:outline-none appearance-none"
           >
+            <option value={0}>0ש</option>
             <option value={30}>30ש</option>
             <option value={45}>45ש</option>
-            <option value={60}>60ש</option>
-            <option value={90}>90ש</option>
-            <option value={120}>2ד</option>
-            <option value={180}>3ד</option>
+            <option value={60}>{formatRestTime(60)}</option>
+            <option value={90}>{formatRestTime(90)}</option>
+            <option value={120}>{formatRestTime(120)}</option>
+            <option value={180}>{formatRestTime(180)}</option>
           </select>
         </div>
       </div>
 
-      {/* Notes */}
-      <div className="mt-3">
+      {/* Trainer notes */}
+      <div className="px-4 sm:px-5 pb-4 sm:pb-5">
+        <div className="flex items-center gap-2 text-sm text-text-muted mb-2">
+          💬 הערה למתאמן:
+        </div>
         <input
           type="text"
           value={exercise.notes || ''}
           onChange={(e) => onUpdate({ notes: e.target.value || undefined })}
-          className="input-primary text-sm py-1.5"
-          placeholder="הערות למתאמן..."
+          className="w-full bg-dark-surface/50 rounded-xl px-4 py-3 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:ring-1 focus:ring-primary-main"
+          placeholder="הוסף הערה..."
         />
       </div>
     </div>
