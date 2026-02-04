@@ -201,6 +201,10 @@ export interface CreateTraineeData {
   trainingGoals?: TrainingGoal[]
   notes?: string
   injuries?: string
+  age?: number
+  height?: number
+  weight?: number
+  bodyFatPercentage?: number
 }
 
 // ============ HEBREW LABELS ============

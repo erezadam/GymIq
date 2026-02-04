@@ -202,6 +202,77 @@ export function TraineeRegistrationModal({
             />
           </div>
 
+          {/* Body Metrics */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-2">
+              מדדים גופניים
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-text-muted mb-1">
+                  גיל
+                </label>
+                <input
+                  type="number"
+                  value={formData.age ?? ''}
+                  onChange={(e) => updateField('age', e.target.value ? Number(e.target.value) : undefined)}
+                  className="input-primary"
+                  placeholder="25"
+                  dir="ltr"
+                  min="10"
+                  max="120"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-text-muted mb-1">
+                  גובה (ס&quot;מ)
+                </label>
+                <input
+                  type="number"
+                  value={formData.height ?? ''}
+                  onChange={(e) => updateField('height', e.target.value ? Number(e.target.value) : undefined)}
+                  className="input-primary"
+                  placeholder="175"
+                  dir="ltr"
+                  min="100"
+                  max="250"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-text-muted mb-1">
+                  משקל (ק&quot;ג)
+                </label>
+                <input
+                  type="number"
+                  value={formData.weight ?? ''}
+                  onChange={(e) => updateField('weight', e.target.value ? Number(e.target.value) : undefined)}
+                  className="input-primary"
+                  placeholder="75"
+                  dir="ltr"
+                  min="20"
+                  max="300"
+                  step="0.1"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-text-muted mb-1">
+                  אחוז שומן (%)
+                </label>
+                <input
+                  type="number"
+                  value={formData.bodyFatPercentage ?? ''}
+                  onChange={(e) => updateField('bodyFatPercentage', e.target.value ? Number(e.target.value) : undefined)}
+                  className="input-primary"
+                  placeholder="15"
+                  dir="ltr"
+                  min="3"
+                  max="60"
+                  step="0.1"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Training Goals */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
@@ -242,7 +313,7 @@ export function TraineeRegistrationModal({
           {/* Notes */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1.5">
-              הערות
+              הערות מאמן
             </label>
             <textarea
               value={formData.notes}

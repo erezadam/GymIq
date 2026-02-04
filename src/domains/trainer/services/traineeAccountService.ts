@@ -67,6 +67,18 @@ export const traineeAccountService = {
       if (data.phone) {
         userData.phoneNumber = data.phone
       }
+      if (data.age != null) {
+        userData.age = data.age
+      }
+      if (data.height != null) {
+        userData.height = data.height
+      }
+      if (data.weight != null) {
+        userData.weight = data.weight
+      }
+      if (data.bodyFatPercentage != null) {
+        userData.bodyFatPercentage = data.bodyFatPercentage
+      }
 
       await setDoc(userRef, userData)
 
@@ -78,6 +90,7 @@ export const traineeAccountService = {
         traineeName: `${data.firstName} ${data.lastName}`,
         traineeEmail: data.email,
         status: 'active',
+        notes: data.notes?.trim() || undefined,
       })
 
       // Step 5: Send password reset email so trainee can set their own password

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { UserPlus, Users, RefreshCw, Dumbbell, TrendingUp, MessageSquare } from 'lucide-react'
+import { UserPlus, Users, RefreshCw } from 'lucide-react'
 import { useTrainerData } from '../hooks/useTrainerData'
 import { useAuthStore } from '@/domains/authentication/store'
 import { messageService } from '../services/messageService'
@@ -36,41 +36,33 @@ export default function TrainerDashboard() {
       {/* Stats Row */}
       {trainees.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-dark-card border border-white/5 rounded-2xl p-4 shadow-card">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-3xl font-black text-accent-orange">{stats.activeCount}</span>
-              <div className="w-10 h-10 rounded-xl bg-accent-orange/15 flex items-center justify-center">
-                <Users className="w-5 h-5 text-accent-orange" />
-              </div>
+          <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-4 shadow-glow-cyan">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-2xl">👥</span>
+              <span className="text-2xl font-black text-primary-main">{stats.activeCount}</span>
             </div>
-            <p className="text-text-muted text-xs">מתאמנים פעילים</p>
+            <p className="text-text-muted text-sm">מתאמנים פעילים</p>
           </div>
-          <div className="bg-dark-card border border-white/5 rounded-2xl p-4 shadow-card">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-3xl font-black text-primary-main">{stats.weeklyWorkouts}</span>
-              <div className="w-10 h-10 rounded-xl bg-primary-main/15 flex items-center justify-center">
-                <Dumbbell className="w-5 h-5 text-primary-main" />
-              </div>
+          <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-2xl">🏋️</span>
+              <span className="text-2xl font-black text-status-info">{stats.weeklyWorkouts}</span>
             </div>
-            <p className="text-text-muted text-xs">אימונים השבוע</p>
+            <p className="text-text-muted text-sm">אימונים השבוע</p>
           </div>
-          <div className="bg-dark-card border border-white/5 rounded-2xl p-4 shadow-card">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-3xl font-black text-accent-purple">{stats.avgCompletion}%</span>
-              <div className="w-10 h-10 rounded-xl bg-accent-purple/15 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-accent-purple" />
-              </div>
+          <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-2xl">🔥</span>
+              <span className="text-2xl font-black text-accent-orange">{stats.avgCompletion}%</span>
             </div>
-            <p className="text-text-muted text-xs">אחוז ביצוע</p>
+            <p className="text-text-muted text-sm">אחוז ביצוע</p>
           </div>
-          <div className="bg-dark-card border border-white/5 rounded-2xl p-4 shadow-card">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-3xl font-black text-status-info">{totalMessages}</span>
-              <div className="w-10 h-10 rounded-xl bg-status-info/15 flex items-center justify-center">
-                <MessageSquare className="w-5 h-5 text-status-info" />
-              </div>
+          <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-2xl">💬</span>
+              <span className="text-2xl font-black text-accent-purple">{totalMessages}</span>
             </div>
-            <p className="text-text-muted text-xs">הודעות שנשלחו</p>
+            <p className="text-text-muted text-sm">הודעות שנשלחו</p>
           </div>
         </div>
       )}
