@@ -34,10 +34,31 @@ function getEquipmentHe(equipment: string): string {
 }
 
 
-export function ExerciseLibrary() {
+export interface ProgramDayExerciseInfo {
+  exerciseId: string
+  dayLetter: string
+}
+
+export interface ExerciseLibraryProps {
+  programMode?: boolean
+  programExerciseIds?: string[]
+  onProgramExerciseToggle?: (exercise: Exercise, isAdding: boolean) => void
+  onProgramBack?: () => void
+  targetUserId?: string // When building program for trainee, pass trainee's uid to show their history tags
+  programOtherDaysExercises?: ProgramDayExerciseInfo[] // Exercises from other days in the same program
+}
+
+export function ExerciseLibrary({
+  programMode = false,
+  programExerciseIds = [],
+  onProgramExerciseToggle,
+  onProgramBack,
+  targetUserId,
+  programOtherDaysExercises = [],
+}: ExerciseLibraryProps = {}) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const isAddingToWorkout = searchParams.get('addToWorkout') === 'true'
+  const isAddingToWorkout = !programMode && searchParams.get('addToWorkout') === 'true'
   const { user } = useAuthStore()
 
   const [exercises, setExercises] = useState<Exercise[]>([])
@@ -59,6 +80,29 @@ export function ExerciseLibrary() {
   const dateInputRef = useRef<HTMLInputElement>(null)
 
   const { selectedExercises, addExercise, addExercisesFromSet, removeExercise, clearWorkout, scheduledDate, setScheduledDate } = useWorkoutBuilderStore()
+
+  // Program mode: computed selection state
+  const effectiveSelectedIds = useMemo(() => {
+    if (programMode) return new Set(programExerciseIds)
+    return new Set(selectedExercises.map(e => e.exerciseId))
+  }, [programMode, programExerciseIds, selectedExercises])
+
+  const effectiveCount = programMode ? programExerciseIds.length : selectedExercises.length
+
+  // Program mode: lookup for exercises in other days of the program
+  const otherDaysMap = useMemo(() => {
+    if (!programMode || programOtherDaysExercises.length === 0) return new Map<string, string[]>()
+    const map = new Map<string, string[]>()
+    for (const entry of programOtherDaysExercises) {
+      const existing = map.get(entry.exerciseId)
+      if (existing) {
+        if (!existing.includes(entry.dayLetter)) existing.push(entry.dayLetter)
+      } else {
+        map.set(entry.exerciseId, [entry.dayLetter])
+      }
+    }
+    return map
+  }, [programMode, programOtherDaysExercises])
 
   // Helper: Check if today is selected (no date or date equals today)
   const isTodaySelected = useMemo(() => {
@@ -163,12 +207,14 @@ export function ExerciseLibrary() {
   }
 
   // Load recently done exercises and last month exercises in background (non-blocking)
+  // When targetUserId is provided (e.g., building program for trainee), use that instead of current user
+  const historyUserId = targetUserId || user?.uid
   useEffect(() => {
-    if (user?.uid && !loading) {
+    if (historyUserId && !loading) {
       // Load both in parallel
       Promise.all([
-        getRecentlyDoneExerciseIds(user.uid),
-        getLastMonthExerciseIds(user.uid)
+        getRecentlyDoneExerciseIds(historyUserId),
+        getLastMonthExerciseIds(historyUserId)
       ])
         .then(([recentIds, monthIds]) => {
           setRecentlyDoneExerciseIds(recentIds)
@@ -176,7 +222,7 @@ export function ExerciseLibrary() {
         })
         .catch(err => console.error('Failed to load exercise history:', err))
     }
-  }, [user?.uid, loading])
+  }, [historyUserId, loading])
 
   // Get selected muscle name in Hebrew
   const selectedMuscleName = useMemo(() => {
@@ -229,6 +275,11 @@ export function ExerciseLibrary() {
   }, [exercises, selectedPrimaryMuscle, selectedSubMuscle, selectedEquipment])
 
   const handleToggleExercise = (exercise: Exercise) => {
+    if (programMode) {
+      const isSelected = effectiveSelectedIds.has(exercise.id)
+      onProgramExerciseToggle?.(exercise, !isSelected)
+      return
+    }
     const isSelected = selectedExercises.some((e) => e.exerciseId === exercise.id)
     if (isSelected) {
       removeExercise(exercise.id)
@@ -348,19 +399,19 @@ export function ExerciseLibrary() {
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate(isAddingToWorkout ? '/workout/session' : '/dashboard')}
+              onClick={() => programMode ? onProgramBack?.() : navigate(isAddingToWorkout ? '/workout/session' : '/dashboard')}
               className="flex items-center gap-1 text-text-secondary hover:text-white transition-colors"
             >
               <ChevronRight className="w-5 h-5" />
-              <span className="text-sm">{isAddingToWorkout ? 'חזרה לאימון' : 'חזור'}</span>
+              <span className="text-sm">{programMode ? 'חזרה לאימון' : isAddingToWorkout ? 'חזרה לאימון' : 'חזור'}</span>
             </button>
             <h1 className="text-xl font-bold text-white">
-              {isAddingToWorkout ? 'הוספת תרגילים לאימון' : 'בחירת תרגילים'}
+              {programMode ? 'בחירת תרגילים לאימון' : isAddingToWorkout ? 'הוספת תרגילים לאימון' : 'בחירת תרגילים'}
             </h1>
           </div>
 
           {/* Workout Mode Selection - 3 buttons in one row */}
-          {!isAddingToWorkout && (
+          {!isAddingToWorkout && !programMode && (
             <div
               className="mt-3"
               style={{
@@ -624,7 +675,7 @@ export function ExerciseLibrary() {
           </div>
 
           {/* Recommended Sets */}
-          {!loading && (
+          {!loading && !programMode && (
             <RecommendedSets
               muscleGroup={selectedPrimaryMuscle}
               onSelectSet={handleSelectSet}
@@ -647,9 +698,10 @@ export function ExerciseLibrary() {
           ) : (
             <div className="space-y-2">
               {filteredExercises.map((exercise) => {
-                const isSelected = selectedExercises.some((e) => e.exerciseId === exercise.id)
+                const isSelected = effectiveSelectedIds.has(exercise.id)
                 const wasInLastWorkout = recentlyDoneExerciseIds.has(exercise.id)
                 const wasInLastMonth = lastMonthExerciseIds.has(exercise.id)
+                const otherDayLetters = otherDaysMap.get(exercise.id)
                 return (
                   <div
                     key={exercise.id}
@@ -671,7 +723,7 @@ export function ExerciseLibrary() {
 
                     {/* Exercise Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-semibold text-white truncate">{exercise.nameHe}</h3>
                         {/* Flexible exercise tag */}
                         {exercise.assistanceTypes && exercise.assistanceTypes.length > 0 && (
@@ -685,6 +737,15 @@ export function ExerciseLibrary() {
                         ) : wasInLastMonth ? (
                           <span className="badge-last-month flex-shrink-0">חודש אחרון</span>
                         ) : null}
+                        {/* Program: tags for other days that already include this exercise */}
+                        {otherDayLetters && otherDayLetters.map((letter) => (
+                          <span
+                            key={letter}
+                            className="px-1.5 py-0.5 bg-accent-purple/20 text-accent-purple text-[10px] rounded-full flex-shrink-0 font-bold"
+                          >
+                            יום {letter}
+                          </span>
+                        ))}
                       </div>
                       <p className="text-xs text-text-muted truncate">
                         {getMuscleNameHe(exercise.primaryMuscle, dynamicMuscleNames)} • {getEquipmentHe(exercise.equipment)}
@@ -724,6 +785,23 @@ export function ExerciseLibrary() {
         }}
       >
         <div className="max-w-2xl mx-auto">
+          {programMode ? (
+            <div className="flex items-center justify-between">
+              <button
+                onClick={onProgramBack}
+                className="btn-primary flex items-center gap-2"
+              >
+                <Check className="w-5 h-5" />
+                <span>סיום ({effectiveCount} תרגילים)</span>
+              </button>
+              <span className="text-white font-semibold">
+                {effectiveCount > 0
+                  ? `${effectiveCount} תרגילים נבחרו`
+                  : 'בחר תרגילים'
+                }
+              </span>
+            </div>
+          ) : (
           <div className="flex items-center justify-between">
             {/* Start Workout Button - Left side with mode-specific styling */}
             <button
@@ -797,6 +875,7 @@ export function ExerciseLibrary() {
               </span>
             </div>
           </div>
+          )}
         </div>
       </footer>
 

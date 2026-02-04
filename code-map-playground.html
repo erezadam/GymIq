@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GymIQ - Code Map Playground</title>
+<style>
+  :root {
+    --bg: #0a0e17;
+    --bg-card: #111827;
+    --bg-hover: #1a2235;
+    --border: #1e293b;
+    --text: #e2e8f0;
+    --text-dim: #64748b;
+    --text-bright: #f8fafc;
+    --accent: #00D4AA;
+    --accent-glow: rgba(0, 212, 170, 0.15);
+    --purple: #8B5CF6;
+    --purple-glow: rgba(139, 92, 246, 0.15);
+    --blue: #3B82F6;
+    --orange: #F59E0B;
+    --pink: #EC4899;
+    --red: #EF4444;
+    --green: #10B981;
+    --cyan: #06B6D4;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  /* Header */
+  .header {
+    background: linear-gradient(180deg, rgba(0, 212, 170, 0.08) 0%, transparent 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(20px);
+  }
+
+  .header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--bg);
+  }
+
+  .logo-text {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-bright);
+  }
+
+  .logo-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+
+  .search-box {
+    flex: 1;
+    max-width: 420px;
+    position: relative;
+  }
+
+  .search-box input {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px 8px 36px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .search-box input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .search-box input::placeholder { color: var(--text-dim); }
+
+  .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+
+  .stats-bar {
+    display: flex;
+    gap: 20px;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Layout */
+  .main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px 32px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .full-width { grid-column: 1 / -1; }
+
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-bright);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--accent-glow);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .card-body {
+    padding: 18px;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    padding: 8px 18px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    font-family: inherit;
+  }
+
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* Tree */
+  .tree {
+    font-size: 13px;
+    max-height: 560px;
+    overflow-y: auto;
+    padding: 4px 0;
+  }
+
+  .tree-node {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .tree-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 12px;
+    border-radius: 4px;
+    transition: background 0.15s;
+  }
+
+  .tree-row:hover { background: var(--bg-hover); }
+
+  .tree-row.highlighted {
+    background: var(--accent-glow);
+    outline: 1px solid rgba(0, 212, 170, 0.3);
+  }
+
+  .tree-indent { display: inline-block; width: 18px; flex-shrink: 0; }
+
+  .tree-toggle {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    font-size: 10px;
+    flex-shrink: 0;
+    transition: transform 0.2s;
+  }
+
+  .tree-toggle.open { transform: rotate(90deg); }
+
+  .tree-icon {
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+    font-size: 12px;
+  }
+
+  .tree-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tree-name.dir { color: var(--cyan); font-weight: 500; }
+  .tree-name.file-tsx { color: var(--blue); }
+  .tree-name.file-ts { color: var(--green); }
+  .tree-name.file-css { color: var(--pink); }
+  .tree-name.file-json { color: var(--orange); }
+  .tree-name.file-md { color: var(--text-dim); }
+
+  .tree-meta {
+    font-size: 10px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+  }
+
+  .tree-children { display: none; }
+  .tree-children.open { display: block; }
+
+  /* Domain Cards */
+  .domain-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  .domain-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .domain-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .domain-card.active {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+  }
+
+  .domain-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+  }
+
+  .domain-card[data-domain="workouts"]::before { background: var(--accent); }
+  .domain-card[data-domain="exercises"]::before { background: var(--blue); }
+  .domain-card[data-domain="admin"]::before { background: var(--purple); }
+  .domain-card[data-domain="authentication"]::before { background: var(--orange); }
+  .domain-card[data-domain="dashboard"]::before { background: var(--pink); }
+
+  .domain-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-bright);
+    margin-bottom: 4px;
+    text-transform: capitalize;
+  }
+
+  .domain-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+  }
+
+  .domain-stats {
+    display: flex;
+    gap: 12px;
+  }
+
+  .domain-stat-val {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .domain-stat-lbl {
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  /* Flow Diagram */
+  .flow-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 20px 0;
+    flex-wrap: wrap;
+  }
+
+  .flow-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 20px;
+    text-align: center;
+    min-width: 140px;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .flow-box:hover {
+    border-color: var(--accent);
+    transform: scale(1.05);
+  }
+
+  .flow-box.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+
+  .flow-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 2px;
+  }
+
+  .flow-sub {
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .flow-arrow {
+    color: var(--text-dim);
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  /* File Type Distribution */
+  .filetype-bar {
+    display: flex;
+    height: 32px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+
+  .filetype-segment {
+    height: 100%;
+    transition: all 0.3s;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .filetype-segment:hover { filter: brightness(1.3); }
+
+  .filetype-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+
+  .legend-item:hover { background: var(--bg-hover); }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* Dependency map */
+  .dep-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .dep-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--bg);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+
+  .dep-row:hover {
+    border-color: var(--accent);
+    background: var(--bg-hover);
+  }
+
+  .dep-from, .dep-to {
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .dep-from { background: rgba(59, 130, 246, 0.15); color: var(--blue); }
+  .dep-to { background: rgba(139, 92, 246, 0.15); color: var(--purple); }
+
+  .dep-arrow {
+    color: var(--text-dim);
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  .dep-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    flex: 1;
+  }
+
+  /* Tech stack */
+  .tech-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px;
+  }
+
+  .tech-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: all 0.15s;
+    cursor: default;
+  }
+
+  .tech-item:hover {
+    border-color: var(--purple);
+    background: var(--bg-hover);
+  }
+
+  .tech-icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+  }
+
+  .tech-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-bright);
+  }
+
+  .tech-ver {
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  /* Detail Panel */
+  .detail-panel {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 12px;
+    display: none;
+  }
+
+  .detail-panel.visible { display: block; }
+
+  .detail-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .detail-files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .detail-file {
+    font-size: 11px;
+    padding: 3px 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .detail-file:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; }
+    .header-inner { flex-wrap: wrap; }
+    .stats-bar { gap: 12px; }
+    .flow-container { flex-direction: column; }
+    .flow-arrow { transform: rotate(90deg); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">G</div>
+      <div>
+        <div class="logo-text">GymIQ <span class="logo-sub">Code Map</span></div>
+      </div>
+    </div>
+    <div class="search-box">
+      <span class="search-icon">&#x1F50D;</span>
+      <input type="text" id="searchInput" placeholder="Search files, domains, components..." oninput="handleSearch(this.value)">
+    </div>
+    <div class="stats-bar">
+      <div class="stat">
+        <div class="stat-value">109</div>
+        <div class="stat-label">Source Files</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">5</div>
+        <div class="stat-label">Domains</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">14</div>
+        <div class="stat-label">Firebase Modules</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">41</div>
+        <div class="stat-label">Components</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Domains Overview -->
+  <div class="card full-width">
+    <div class="card-header">
+      <div class="card-title">Domains <span class="card-badge">DDD Architecture</span></div>
+    </div>
+    <div class="card-body">
+      <div class="domain-grid" id="domainGrid">
+      </div>
+      <div class="detail-panel" id="domainDetail"></div>
+    </div>
+  </div>
+
+  <!-- File Tree -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Project Tree</div>
+      <div style="display:flex;gap:6px;">
+        <button class="tab active" onclick="setTreeView('src', this)">src/</button>
+        <button class="tab" onclick="setTreeView('all', this)">Full</button>
+      </div>
+    </div>
+    <div class="card-body" style="padding: 8px 0;">
+      <div class="tree" id="treeContainer"></div>
+    </div>
+  </div>
+
+  <!-- Data Flow + File Types -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Architecture</div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="setArchTab('flow', this)">Data Flow</button>
+      <button class="tab" onclick="setArchTab('types', this)">File Types</button>
+      <button class="tab" onclick="setArchTab('deps', this)">Dependencies</button>
+    </div>
+    <div class="card-body">
+      <div id="archFlow" class="flow-container">
+      </div>
+      <div id="archTypes" style="display:none;">
+      </div>
+      <div id="archDeps" style="display:none;">
+      </div>
+    </div>
+  </div>
+
+  <!-- Tech Stack -->
+  <div class="card full-width">
+    <div class="card-header">
+      <div class="card-title">Tech Stack</div>
+      <span class="card-badge">React + Firebase + Tailwind</span>
+    </div>
+    <div class="card-body">
+      <div class="tech-grid" id="techGrid"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────
+
+const domains = [
+  {
+    name: 'workouts', files: 36, components: 21,
+    desc: 'Core workout management, sessions, AI trainer',
+    color: '#00D4AA',
+    subdirs: ['components/active-workout', 'components/workout-session', 'components/ai-trainer', 'hooks', 'services', 'store', 'types', 'data'],
+    keyFiles: ['WorkoutHistory.tsx', 'WorkoutSession.tsx', 'WorkoutBuilder.tsx', 'PersonalRecords.tsx', 'useActiveWorkout.ts', 'aiTrainerService.ts', 'ActiveWorkoutScreen.tsx', 'ExerciseCard.tsx', 'SetReportRow.tsx', 'WorkoutSummaryModal.tsx', 'AITrainerModal.tsx']
+  },
+  {
+    name: 'exercises', files: 16, components: 4,
+    desc: 'Exercise library, sets, reporting',
+    color: '#3B82F6',
+    subdirs: ['components', 'services', 'types', 'utils', 'data'],
+    keyFiles: ['ExerciseLibrary.tsx', 'ExerciseCard.tsx', 'ExerciseSetCard.tsx', 'RecommendedSets.tsx', 'exerciseService.ts', 'exercise.types.ts']
+  },
+  {
+    name: 'admin', files: 13, components: 12,
+    desc: 'Admin panel, exercise & data management',
+    color: '#8B5CF6',
+    subdirs: ['components'],
+    keyFiles: ['AdminLayout.tsx', 'ExerciseList.tsx', 'ExerciseForm.tsx', 'ExerciseSetManager.tsx', 'EquipmentManager.tsx', 'MuscleManager.tsx', 'UsersList.tsx']
+  },
+  {
+    name: 'authentication', files: 6, components: 1,
+    desc: 'User auth & authorization (Zustand store)',
+    color: '#F59E0B',
+    subdirs: ['components', 'store', 'types'],
+    keyFiles: ['LoginPage.tsx', 'authStore.ts', 'auth.types.ts']
+  },
+  {
+    name: 'dashboard', files: 2, components: 1,
+    desc: 'User dashboard overview',
+    color: '#EC4899',
+    subdirs: ['components'],
+    keyFiles: ['UserDashboard.tsx']
+  }
+];
+
+const fileTree = {
+  name: 'src', type: 'dir', children: [
+    { name: 'App.tsx', type: 'tsx' },
+    { name: 'main.tsx', type: 'tsx' },
+    { name: 'index.css', type: 'css' },
+    { name: 'domains', type: 'dir', children: [
+      { name: 'workouts', type: 'dir', children: [
+        { name: 'components', type: 'dir', children: [
+          { name: 'active-workout', type: 'dir', children: [
+            { name: 'ActiveWorkoutScreen.tsx', type: 'tsx' },
+            { name: 'ExerciseCard.tsx', type: 'tsx' },
+            { name: 'ExerciseCounter.tsx', type: 'tsx' },
+            { name: 'MuscleGroupSection.tsx', type: 'tsx' },
+            { name: 'SetReportRow.tsx', type: 'tsx' },
+            { name: 'WorkoutHeader.tsx', type: 'tsx' },
+            { name: 'WorkoutSummaryModal.tsx', type: 'tsx' },
+            { name: 'RestTimer.tsx', type: 'tsx' },
+            { name: 'NotesModal.tsx', type: 'tsx' },
+            { name: 'ConfirmationModal.tsx', type: 'tsx' },
+          ]},
+          { name: 'workout-session', type: 'dir', children: [
+            { name: 'WorkoutSessionScreen.tsx', type: 'tsx' },
+            { name: 'ExerciseNavigationHeader.tsx', type: 'tsx' },
+            { name: 'ExerciseMedia.tsx', type: 'tsx' },
+            { name: 'SetRow.tsx', type: 'tsx' },
+            { name: 'RestTimer.tsx', type: 'tsx' },
+          ]},
+          { name: 'ai-trainer', type: 'dir', children: [
+            { name: 'AITrainerModal.tsx', type: 'tsx' },
+            { name: 'AIBundleCard.tsx', type: 'tsx' },
+          ]},
+          { name: 'WorkoutBuilder.tsx', type: 'tsx' },
+          { name: 'WorkoutHistory.tsx', type: 'tsx' },
+          { name: 'WorkoutSession.tsx', type: 'tsx' },
+          { name: 'PersonalRecords.tsx', type: 'tsx' },
+        ]},
+        { name: 'hooks', type: 'dir', children: [
+          { name: 'useActiveWorkout.ts', type: 'ts' },
+          { name: 'useWorkoutSession.ts', type: 'ts' },
+          { name: 'useRestTimerAudio.ts', type: 'ts' },
+        ]},
+        { name: 'services', type: 'dir', children: [
+          { name: 'aiTrainerService.ts', type: 'ts' },
+          { name: 'aiTrainer.types.ts', type: 'ts' },
+        ]},
+        { name: 'store', type: 'dir', children: [
+          { name: 'workoutBuilderStore.ts', type: 'ts' },
+        ]},
+        { name: 'types', type: 'dir', children: [
+          { name: 'workout.types.ts', type: 'ts' },
+          { name: 'active-workout.types.ts', type: 'ts' },
+          { name: 'workout-session.types.ts', type: 'ts' },
+        ]},
+        { name: 'data', type: 'dir', children: [
+          { name: 'mockWorkouts.ts', type: 'ts' },
+        ]},
+      ]},
+      { name: 'exercises', type: 'dir', children: [
+        { name: 'components', type: 'dir', children: [
+          { name: 'ExerciseLibrary.tsx', type: 'tsx' },
+          { name: 'ExerciseCard.tsx', type: 'tsx' },
+          { name: 'ExerciseSetCard.tsx', type: 'tsx' },
+          { name: 'RecommendedSets.tsx', type: 'tsx' },
+        ]},
+        { name: 'services', type: 'dir', children: [
+          { name: 'exerciseService.ts', type: 'ts' },
+        ]},
+        { name: 'types', type: 'dir', children: [
+          { name: 'exercise.types.ts', type: 'ts' },
+          { name: 'exerciseSet.types.ts', type: 'ts' },
+          { name: 'reportTypes.ts', type: 'ts' },
+          { name: 'muscles.ts', type: 'ts' },
+          { name: 'bands.ts', type: 'ts' },
+        ]},
+        { name: 'utils', type: 'dir', children: [
+          { name: 'getExerciseImageUrl.ts', type: 'ts' },
+        ]},
+        { name: 'data', type: 'dir', children: [
+          { name: 'mockExercises.ts', type: 'ts' },
+        ]},
+      ]},
+      { name: 'admin', type: 'dir', children: [
+        { name: 'components', type: 'dir', children: [
+          { name: 'AdminLayout.tsx', type: 'tsx' },
+          { name: 'AdminSettings.tsx', type: 'tsx' },
+          { name: 'ExerciseList.tsx', type: 'tsx' },
+          { name: 'ExerciseForm.tsx', type: 'tsx' },
+          { name: 'ExerciseSetManager.tsx', type: 'tsx' },
+          { name: 'ExerciseSetForm.tsx', type: 'tsx' },
+          { name: 'ExerciseSetExercisePicker.tsx', type: 'tsx' },
+          { name: 'EquipmentManager.tsx', type: 'tsx' },
+          { name: 'MuscleManager.tsx', type: 'tsx' },
+          { name: 'BandTypeManager.tsx', type: 'tsx' },
+          { name: 'ReportTypeManager.tsx', type: 'tsx' },
+          { name: 'UsersList.tsx', type: 'tsx' },
+        ]},
+      ]},
+      { name: 'authentication', type: 'dir', children: [
+        { name: 'components', type: 'dir', children: [
+          { name: 'LoginPage.tsx', type: 'tsx' },
+        ]},
+        { name: 'store', type: 'dir', children: [
+          { name: 'authStore.ts', type: 'ts' },
+        ]},
+        { name: 'types', type: 'dir', children: [
+          { name: 'auth.types.ts', type: 'ts' },
+        ]},
+      ]},
+      { name: 'dashboard', type: 'dir', children: [
+        { name: 'components', type: 'dir', children: [
+          { name: 'UserDashboard.tsx', type: 'tsx' },
+        ]},
+      ]},
+    ]},
+    { name: 'lib', type: 'dir', children: [
+      { name: 'firebase', type: 'dir', children: [
+        { name: 'config.ts', type: 'ts' },
+        { name: 'auth.ts', type: 'ts' },
+        { name: 'exercises.ts', type: 'ts' },
+        { name: 'exerciseSets.ts', type: 'ts' },
+        { name: 'exerciseSetStorage.ts', type: 'ts' },
+        { name: 'workouts.ts', type: 'ts' },
+        { name: 'workoutHistory.ts', type: 'ts' },
+        { name: 'users.ts', type: 'ts' },
+        { name: 'equipment.ts', type: 'ts' },
+        { name: 'muscles.ts', type: 'ts' },
+        { name: 'bandTypes.ts', type: 'ts' },
+        { name: 'reportTypes.ts', type: 'ts' },
+        { name: 'appSettings.ts', type: 'ts' },
+      ]},
+    ]},
+    { name: 'shared', type: 'dir', children: [
+      { name: 'components', type: 'dir', children: [
+        { name: 'LoadingSpinner.tsx', type: 'tsx' },
+        { name: 'MuscleIcon.tsx', type: 'tsx' },
+        { name: 'UpdateBanner.tsx', type: 'tsx' },
+        { name: 'WorkoutCard', type: 'dir', children: [
+          { name: 'WorkoutCard.tsx', type: 'tsx' },
+        ]},
+      ]},
+      { name: 'hooks', type: 'dir', children: [
+        { name: 'useVersionCheck.ts', type: 'ts' },
+      ]},
+    ]},
+    { name: 'app', type: 'dir', children: [
+      { name: 'providers', type: 'dir', children: [
+        { name: 'AuthProvider.tsx', type: 'tsx' },
+      ]},
+      { name: 'router', type: 'dir', children: [
+        { name: 'guards', type: 'dir', children: [
+          { name: 'AuthGuard.tsx', type: 'tsx' },
+        ]},
+      ]},
+    ]},
+    { name: 'design-system', type: 'dir', children: [
+      { name: 'layouts', type: 'dir', children: [
+        { name: 'MainLayout.tsx', type: 'tsx' },
+      ]},
+    ]},
+    { name: 'theme', type: 'dir', children: [
+      { name: 'tokens.ts', type: 'ts' },
+    ]},
+    { name: 'styles', type: 'dir', children: [
+      { name: 'design-tokens.ts', type: 'ts' },
+      { name: 'theme.ts', type: 'ts' },
+    ]},
+    { name: 'utils', type: 'dir', children: [
+      { name: 'muscleTranslations.ts', type: 'ts' },
+    ]},
+  ]
+};
+
+const fullTree = {
+  name: 'GymIQ', type: 'dir', children: [
+    fileTree,
+    { name: 'functions', type: 'dir', children: [
+      { name: 'src', type: 'dir', children: [
+        { name: 'index.ts', type: 'ts' },
+        { name: 'ai-trainer', type: 'dir', children: [
+          { name: 'generateWorkout.ts', type: 'ts' },
+          { name: 'openaiClient.ts', type: 'ts' },
+          { name: 'rateLimiter.ts', type: 'ts' },
+          { name: 'types.ts', type: 'ts' },
+        ]},
+      ]},
+    ]},
+    { name: 'scripts', type: 'dir', children: [
+      { name: 'firebase-config.ts', type: 'ts' },
+      { name: 'analyze-exercises.cjs', type: 'ts' },
+      { name: 'fix-categories.cjs', type: 'ts' },
+      { name: 'update-version.cjs', type: 'ts' },
+    ]},
+    { name: 'tests', type: 'dir', children: [
+      { name: 'critical.spec.ts', type: 'ts' },
+      { name: 'setup.ts', type: 'ts' },
+    ]},
+    { name: 'public', type: 'dir', children: [
+      { name: 'manifest.json', type: 'json' },
+      { name: 'sw.js', type: 'ts' },
+      { name: 'version.json', type: 'json' },
+    ]},
+    { name: 'docs', type: 'dir', children: [
+      { name: 'architecture.md', type: 'md' },
+      { name: 'ai-trainer-spec.md', type: 'md' },
+      { name: 'workout-session-design.md', type: 'md' },
+      { name: 'regressions.md', type: 'md' },
+    ]},
+    { name: 'package.json', type: 'json' },
+    { name: 'tsconfig.json', type: 'json' },
+    { name: 'vite.config.ts', type: 'ts' },
+    { name: 'tailwind.config.js', type: 'ts' },
+    { name: 'firebase.json', type: 'json' },
+    { name: 'firestore.rules', type: 'ts' },
+  ]
+};
+
+const flowSteps = [
+  { label: 'UI Components', sub: 'domains/*/components/', icon: '&#x25A0;' },
+  { label: 'Custom Hooks', sub: 'domains/*/hooks/', icon: '&#x21BA;' },
+  { label: 'Services', sub: 'domains/*/services/', icon: '&#x2699;' },
+  { label: 'Firebase Layer', sub: 'lib/firebase/', icon: '&#x1F525;' },
+  { label: 'Firestore DB', sub: 'Cloud Database', icon: '&#x1F4BE;' },
+];
+
+const dependencies = [
+  { from: 'WorkoutHistory', to: 'useActiveWorkout', desc: 'Starts/continues workouts' },
+  { from: 'WorkoutSession', to: 'useWorkoutSession', desc: 'Session state management' },
+  { from: 'ExerciseLibrary', to: 'exerciseService', desc: 'Loads exercise catalog' },
+  { from: 'useActiveWorkout', to: 'lib/firebase/workouts', desc: 'Saves workout data' },
+  { from: 'AITrainerModal', to: 'aiTrainerService', desc: 'AI workout generation' },
+  { from: 'authStore', to: 'lib/firebase/auth', desc: 'Authentication flow' },
+  { from: 'AdminLayout', to: 'lib/firebase/*', desc: 'CRUD operations' },
+  { from: 'UserDashboard', to: 'workoutHistory', desc: 'Displays workout stats' },
+];
+
+const techStack = [
+  { name: 'React', ver: '18.3.1', icon: '&#x269B;' },
+  { name: 'TypeScript', ver: '5.6.2', icon: 'TS' },
+  { name: 'Vite', ver: '7.3.1', icon: '&#x26A1;' },
+  { name: 'Firebase', ver: '12.8.0', icon: '&#x1F525;' },
+  { name: 'Tailwind CSS', ver: '3.4.15', icon: '&#x1F3A8;' },
+  { name: 'Zustand', ver: '5.0.0', icon: '&#x1F43B;' },
+  { name: 'React Router', ver: '6.28.0', icon: '&#x1F6E4;' },
+  { name: 'Framer Motion', ver: '11.11.0', icon: '&#x1F3AC;' },
+  { name: 'React Hook Form', ver: '7.53.0', icon: '&#x1F4CB;' },
+  { name: 'Zod', ver: '3.23.8', icon: '&#x1F6E1;' },
+  { name: 'Lucide Icons', ver: '0.460.0', icon: '&#x2B50;' },
+  { name: 'Vitest', ver: '4.0.17', icon: '&#x1F9EA;' },
+  { name: 'dnd-kit', ver: 'latest', icon: '&#x1F91A;' },
+  { name: 'OpenAI', ver: 'Cloud', icon: '&#x1F916;' },
+];
+
+// ─── RENDER FUNCTIONS ───────────────────────────────────────────────
+
+function renderDomains() {
+  const grid = document.getElementById('domainGrid');
+  grid.innerHTML = domains.map(d => `
+    <div class="domain-card" data-domain="${d.name}" onclick="selectDomain('${d.name}')">
+      <div class="domain-name">${d.name}</div>
+      <div class="domain-desc">${d.desc}</div>
+      <div class="domain-stats">
+        <div>
+          <div class="domain-stat-val" style="color:${d.color}">${d.files}</div>
+          <div class="domain-stat-lbl">files</div>
+        </div>
+        <div>
+          <div class="domain-stat-val" style="color:${d.color}">${d.components}</div>
+          <div class="domain-stat-lbl">components</div>
+        </div>
+        <div>
+          <div class="domain-stat-val" style="color:${d.color}">${d.subdirs.length}</div>
+          <div class="domain-stat-lbl">modules</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectDomain(name) {
+  const domain = domains.find(d => d.name === name);
+  if (!domain) return;
+
+  document.querySelectorAll('.domain-card').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.domain-card[data-domain="${name}"]`).classList.add('active');
+
+  const detail = document.getElementById('domainDetail');
+  detail.className = 'detail-panel visible';
+  detail.innerHTML = `
+    <div class="detail-title">
+      <span style="color:${domain.color}">&#x25CF;</span>
+      domains/${domain.name}/
+    </div>
+    <div style="margin-bottom:8px;font-size:11px;color:var(--text-dim)">
+      Subdirectories: ${domain.subdirs.map(s => `<code style="color:var(--cyan)">${s}</code>`).join(', ')}
+    </div>
+    <div class="detail-files">
+      ${domain.keyFiles.map(f => {
+        const ext = f.endsWith('.tsx') ? 'tsx' : 'ts';
+        const color = ext === 'tsx' ? 'var(--blue)' : 'var(--green)';
+        return `<span class="detail-file" style="border-color:${color}33;color:${color}">${f}</span>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+function getFileIcon(type) {
+  if (type === 'dir') return '&#x1F4C1;';
+  if (type === 'tsx') return '&#x269B;';
+  if (type === 'ts') return '&#x1F4C4;';
+  if (type === 'css') return '&#x1F3A8;';
+  if (type === 'json') return '&#x1F4CB;';
+  if (type === 'md') return '&#x1F4DD;';
+  return '&#x1F4C4;';
+}
+
+function getFileClass(type) {
+  if (type === 'dir') return 'dir';
+  return 'file-' + type;
+}
+
+function countChildren(node) {
+  if (!node.children) return 1;
+  return node.children.reduce((sum, c) => sum + countChildren(c), 0);
+}
+
+function renderTreeNode(node, depth = 0, searchTerm = '') {
+  const isDir = node.type === 'dir';
+  const count = isDir ? countChildren(node) : null;
+  const id = 'tree_' + Math.random().toString(36).substr(2, 9);
+  const nameMatch = searchTerm && node.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+  let html = `<div class="tree-node">
+    <div class="tree-row ${nameMatch ? 'highlighted' : ''}" onclick="${isDir ? `toggleTree('${id}')` : ''}" style="padding-left:${depth * 18 + 12}px">
+      ${isDir
+        ? `<span class="tree-toggle" id="toggle_${id}">&#x25B6;</span>`
+        : `<span style="width:16px;display:inline-block"></span>`
+      }
+      <span class="tree-icon">${getFileIcon(node.type)}</span>
+      <span class="tree-name ${getFileClass(node.type)}">${node.name}</span>
+      ${count !== null ? `<span class="tree-meta">${count} files</span>` : ''}
+    </div>`;
+
+  if (isDir && node.children) {
+    const shouldOpen = searchTerm && hasMatchingChild(node, searchTerm);
+    html += `<div class="tree-children ${shouldOpen ? 'open' : ''}" id="${id}">`;
+    for (const child of node.children) {
+      html += renderTreeNode(child, depth + 1, searchTerm);
+    }
+    html += `</div>`;
+    if (shouldOpen) {
+      setTimeout(() => {
+        const toggle = document.getElementById('toggle_' + id);
+        if (toggle) toggle.classList.add('open');
+      }, 0);
+    }
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function hasMatchingChild(node, term) {
+  if (node.name.toLowerCase().includes(term.toLowerCase())) return true;
+  if (node.children) return node.children.some(c => hasMatchingChild(c, term));
+  return false;
+}
+
+function toggleTree(id) {
+  const el = document.getElementById(id);
+  const toggle = document.getElementById('toggle_' + id);
+  if (el) {
+    el.classList.toggle('open');
+    toggle?.classList.toggle('open');
+  }
+}
+
+let currentTreeView = 'src';
+
+function setTreeView(view, btn) {
+  currentTreeView = view;
+  document.querySelectorAll('.card-header .tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderTree();
+}
+
+function renderTree(searchTerm = '') {
+  const container = document.getElementById('treeContainer');
+  const root = currentTreeView === 'src' ? fileTree : fullTree;
+  container.innerHTML = renderTreeNode(root, 0, searchTerm);
+}
+
+function renderFlow() {
+  const container = document.getElementById('archFlow');
+  container.innerHTML = flowSteps.map((step, i) => {
+    return (i > 0 ? '<div class="flow-arrow">&#x25B6;</div>' : '') +
+      `<div class="flow-box" onmouseenter="this.classList.add('active')" onmouseleave="this.classList.remove('active')">
+        <div style="font-size:20px;margin-bottom:4px">${step.icon}</div>
+        <div class="flow-label">${step.label}</div>
+        <div class="flow-sub">${step.sub}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderFileTypes() {
+  const types = [
+    { ext: '.tsx', count: 48, pct: 44, color: '#3B82F6', label: 'React TSX' },
+    { ext: '.ts', count: 61, pct: 56, color: '#10B981', label: 'TypeScript' },
+  ];
+
+  document.getElementById('archTypes').innerHTML = `
+    <div class="filetype-bar">
+      ${types.map(t => `<div class="filetype-segment" style="width:${t.pct}%;background:${t.color}" title="${t.label}: ${t.count} files"></div>`).join('')}
+    </div>
+    <div class="filetype-legend">
+      ${types.map(t => `<div class="legend-item"><div class="legend-dot" style="background:${t.color}"></div>${t.label} <strong>${t.count}</strong></div>`).join('')}
+    </div>
+    <div style="margin-top:16px;">
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">By Layer:</div>
+      ${[
+        { name: 'Domains', count: 73, color: '#00D4AA' },
+        { name: 'Firebase Lib', count: 14, color: '#F59E0B' },
+        { name: 'Shared', count: 8, color: '#3B82F6' },
+        { name: 'App Config', count: 4, color: '#8B5CF6' },
+        { name: 'Design System', count: 2, color: '#EC4899' },
+        { name: 'Theme/Styles', count: 4, color: '#06B6D4' },
+        { name: 'Root', count: 4, color: '#64748b' },
+      ].map(l => `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <div style="width:8px;height:8px;border-radius:2px;background:${l.color};flex-shrink:0;"></div>
+          <span style="font-size:12px;width:100px;">${l.name}</span>
+          <div style="flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;">
+            <div style="width:${(l.count/73)*100}%;height:100%;background:${l.color};border-radius:3px;"></div>
+          </div>
+          <span style="font-size:11px;color:var(--text-dim);width:30px;text-align:right;">${l.count}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderDeps() {
+  document.getElementById('archDeps').innerHTML = `
+    <div class="dep-grid">
+      ${dependencies.map(d => `
+        <div class="dep-row">
+          <span class="dep-from">${d.from}</span>
+          <span class="dep-arrow">&#x2192;</span>
+          <span class="dep-to">${d.to}</span>
+          <span class="dep-desc">${d.desc}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function setArchTab(tab, btn) {
+  document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('archFlow').style.display = tab === 'flow' ? 'flex' : 'none';
+  document.getElementById('archTypes').style.display = tab === 'types' ? 'block' : 'none';
+  document.getElementById('archDeps').style.display = tab === 'deps' ? 'block' : 'none';
+}
+
+function renderTechStack() {
+  document.getElementById('techGrid').innerHTML = techStack.map(t => `
+    <div class="tech-item">
+      <span class="tech-icon">${t.icon}</span>
+      <div>
+        <div class="tech-name">${t.name}</div>
+        <div class="tech-ver">${t.ver}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function handleSearch(value) {
+  const term = value.trim();
+  renderTree(term);
+
+  // Highlight matching domains
+  document.querySelectorAll('.domain-card').forEach(card => {
+    const name = card.dataset.domain;
+    const domain = domains.find(d => d.name === name);
+    const matches = !term || name.includes(term.toLowerCase()) ||
+      domain.desc.toLowerCase().includes(term.toLowerCase()) ||
+      domain.keyFiles.some(f => f.toLowerCase().includes(term.toLowerCase()));
+    card.style.opacity = matches || !term ? '1' : '0.3';
+  });
+}
+
+// ─── INIT ───────────────────────────────────────────────────────────
+
+renderDomains();
+renderTree();
+renderFlow();
+renderFileTypes();
+renderDeps();
+renderTechStack();
+</script>
+
+</body>
+</html>

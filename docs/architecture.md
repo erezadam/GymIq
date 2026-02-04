@@ -50,6 +50,19 @@ GymIQ/
 │   │   │   ├── services/        # exerciseService
 │   │   │   ├── types/           # exercise.types, muscles.ts
 │   │   │   └── utils/           # getExerciseImageUrl
+│   │   ├── trainer/
+│   │   │   ├── types/              # trainer.types.ts (TrainingProgram, ProgramDay, etc.)
+│   │   │   ├── services/           # trainerService, traineeAccountService, programService, messageService
+│   │   │   ├── store/              # trainerStore, messageStore (Zustand)
+│   │   │   ├── hooks/              # useTrainerData, useTraineeProgram, useTrainerMessages, useUnreadMessages
+│   │   │   └── components/
+│   │   │       ├── TrainerDashboard, TraineeCard, TraineeDetail, TrainerLayout
+│   │   │       ├── TraineeRegistrationModal, TraineeProfileSection, TraineePerformance
+│   │   │       ├── TrainerDashboardTile
+│   │   │       ├── ProgramBuilder/  # ProgramBuilder, ProgramDayEditor, ProgramExerciseEditor, ProgramReview
+│   │   │       ├── ProgramView/     # TraineeProgramView, TrainerProgramCard, ProgramExerciseCard
+│   │   │       ├── Messages/        # MessageCenter, MessageComposer, MessageList, MessageCard
+│   │   │       └── TraineeInbox/    # TraineeInbox, InboxMessageCard, InboxBadge
 │   │   └── workouts/
 │   │       ├── components/
 │   │       │   ├── WorkoutBuilder.tsx
@@ -92,6 +105,9 @@ GymIQ/
 | `reportTypes` | סוגי דיווח לתרגילים | id, name, nameHe, fields[], isDefault |
 | `bandTypes` | סוגי גומיות התנגדות | id, name, color, resistanceLevel, isActive |
 | `appSettings` | הגדרות אפליקציה | externalComparisonUrl |
+| `trainerRelationships` | קשרי מאמן-מתאמן | trainerId, traineeId, status, trainerName, traineeName |
+| `trainingPrograms` | תוכניות אימון | trainerId, traineeId, name, status, weeklyStructure[], startDate |
+| `trainerMessages` | הודעות מאמן | trainerId, traineeId, type, body, isRead, priority |
 
 ---
 
@@ -119,6 +135,17 @@ GymIQ/
 | `/workout/session` | ActiveWorkoutScreen | אימון פעיל |
 | `/workout/history` | WorkoutHistory | היסטוריית אימונים |
 | `/personal-records` | PersonalRecords | שיאים אישיים |
+| `/inbox` | TraineeInbox | תיבת דואר מתאמן |
+
+### נתיבי מאמן (Trainer/Admin):
+
+| נתיב | קומפוננטה | תיאור |
+|------|-----------|-------|
+| `/trainer` | TrainerDashboard | דשבורד מאמן |
+| `/trainer/trainee/:id` | TraineeDetail | פרטי מתאמן |
+| `/trainer/program/new` | ProgramBuilder | יצירת תוכנית |
+| `/trainer/program/:id/edit` | ProgramBuilder | עריכת תוכנית |
+| `/trainer/messages` | MessageCenter | מרכז הודעות |
 
 ### נתיבי אדמין (Admin only):
 
@@ -154,6 +181,23 @@ GymIQ/
 היסטוריה → כרטיס אימון (in_progress) → "המשך אימון" → אימון פעיל (עם נתונים קיימים)
 ```
 
+### זרימת תוכנית מאמן:
+```
+מאמן: דשבורד מאמן → בחירת מתאמן → "צור תוכנית" → ProgramBuilder (4 שלבים) → הפעלת תוכנית
+מתאמן: תוכניות → TrainerProgramCard → הרחבת יום → "התחל אימון" → loadFromProgram → WorkoutBuilder → אימון פעיל
+```
+
+### זרימת רישום מתאמן:
+```
+מאמן: TrainerDashboard → "+ מתאמן חדש" → TraineeRegistrationModal → [secondary auth] → יצירת user + relationship
+```
+
+### זרימת הודעות:
+```
+מאמן: MessageCenter → MessageComposer → שליחת הודעה
+מתאמן: InboxBadge (polling 60s) → TraineeInbox → קריאת הודעה → סימון כנקרא
+```
+
 ---
 
 ## 7. State Management
@@ -163,7 +207,9 @@ GymIQ/
 | Store | קובץ | שימוש |
 |-------|------|-------|
 | `authStore` | authentication/store/authStore.ts | ניהול משתמש מחובר |
-| `workoutBuilderStore` | workouts/store/workoutBuilderStore.ts | בניית אימון |
+| `workoutBuilderStore` | workouts/store/workoutBuilderStore.ts | בניית אימון + loadFromProgram |
+| `trainerStore` | trainer/store/trainerStore.ts | רשימת מתאמנים, מתאמן נבחר |
+| `messageStore` | trainer/store/messageStore.ts | הודעות שלא נקראו, רשימת הודעות |
 
 ### מבנה workoutBuilderStore:
 ```typescript
@@ -197,6 +243,12 @@ interface WorkoutBuilderStore {
 | **Category Fix** | כפתור לתיקון קטגוריות לא תקינות | ExerciseList.tsx, exercises.ts |
 | **Assistance Exercises** | תמיכה בתרגילי עזרה (גרביטון/גומיות) | ExerciseCard.tsx, SetReportRow.tsx, useActiveWorkout.ts |
 | **Band Types Manager** | ניהול סוגי גומיות התנגדות | BandTypeManager.tsx, bandTypes.ts |
+| **Trainer Module** | מודול מלא לניהול מאמנים-מתאמנים | domains/trainer/* |
+| **Program Builder** | אשף 4 שלבים ליצירת תוכנית אימונים | ProgramBuilder.tsx + sub-components |
+| **Trainee Program** | תצוגת תוכנית מאמן למתאמן (כתום) | TrainerProgramCard.tsx, TraineeProgramView.tsx |
+| **Trainer Monitoring** | ניטור ביצועי מתאמנים | TraineeDetail.tsx, TraineePerformance.tsx |
+| **Messaging** | הודעות מאמן-מתאמן עם polling | MessageCenter.tsx, TraineeInbox.tsx |
+| **Role Hierarchy** | היררכיית תפקידים user < trainer < admin | AuthGuard.tsx |
 
 ---
 
@@ -235,11 +287,20 @@ export interface ActiveWorkoutExercise { ... }
 | `bandTypes.ts` | getBandTypes, getActiveBandTypes, createBandType, updateBandType, deleteBandType |
 | `appSettings.ts` | getAppSettings, updateAppSettings |
 
+### שירותי מאמן (domains/trainer/services):
+
+| קובץ | פונקציות עיקריות |
+|------|------------------|
+| `trainerService.ts` | getTrainerTrainees, createRelationship, endRelationship, getTraineeStats |
+| `traineeAccountService.ts` | createTraineeAccount (secondary Firebase app) |
+| `programService.ts` | createProgram, updateProgram, activateProgram, getTraineeActiveProgram, getTraineePrograms |
+| `messageService.ts` | sendMessage, getTraineeMessages, markAsRead, getUnreadCount, replyToMessage |
+
 ---
 
 ```
 ═══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 26/01/2026
-גרסה: 1.11.0
+עדכון אחרון: 04/02/2026
+גרסה: 1.12.0
 ═══════════════════════════════════════════════════════════════════════════════
 ```

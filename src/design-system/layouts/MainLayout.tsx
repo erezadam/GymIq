@@ -9,7 +9,8 @@ import {
   X,
   Library,
   TrendingUp,
-  Shield
+  Shield,
+  Mail,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '@/domains/authentication/store'
@@ -36,6 +37,7 @@ export default function MainLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const isAdmin = user?.role === 'admin'
+  const isTrainer = user?.role === 'trainer' || isAdmin
 
   // Hide header on workout session screen
   const hideMobileHeader = location.pathname === '/workout/session'
@@ -144,6 +146,27 @@ export default function MainLayout() {
                 <span style={{ fontWeight: typography.fontWeight.medium }}>{item.name}</span>
               </NavLink>
             ))}
+            {/* Trainer Link */}
+            {isTrainer && (
+              <NavLink
+                to="/trainer"
+                onClick={() => setMobileMenuOpen(false)}
+                style={({ isActive }) => ({
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.md,
+                  padding: `${spacing.md}px ${spacing.lg}px`,
+                  borderRadius: borderRadius.lg,
+                  textDecoration: 'none',
+                  background: isActive ? colors.status.info : 'transparent',
+                  color: isActive ? colors.text.inverse : colors.status.info,
+                  border: isActive ? 'none' : `1px solid rgba(59, 130, 246, 0.3)`,
+                })}
+              >
+                <User size={20} />
+                <span>ממשק מאמן</span>
+              </NavLink>
+            )}
             {/* Admin Link */}
             {isAdmin && (
               <NavLink
@@ -163,6 +186,27 @@ export default function MainLayout() {
               >
                 <Shield size={20} />
                 <span>ממשק ניהול</span>
+              </NavLink>
+            )}
+            {/* Inbox Link (for trainees with a trainer) */}
+            {user?.trainerId && (
+              <NavLink
+                to="/inbox"
+                onClick={() => setMobileMenuOpen(false)}
+                style={({ isActive }) => ({
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.md,
+                  padding: `${spacing.md}px ${spacing.lg}px`,
+                  borderRadius: borderRadius.lg,
+                  textDecoration: 'none',
+                  background: isActive ? colors.accent.pink : 'transparent',
+                  color: isActive ? colors.text.inverse : colors.accent.pink,
+                  border: isActive ? 'none' : `1px solid rgba(236, 72, 153, 0.3)`,
+                })}
+              >
+                <Mail size={20} />
+                <span>הודעות</span>
               </NavLink>
             )}
             <button
@@ -256,6 +300,28 @@ export default function MainLayout() {
               <span style={{ fontWeight: typography.fontWeight.medium }}>{item.name}</span>
             </NavLink>
           ))}
+          {/* Trainer Link */}
+          {isTrainer && (
+            <NavLink
+              to="/trainer"
+              style={({ isActive }) => ({
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.md,
+                padding: `${spacing.md}px ${spacing.lg}px`,
+                borderRadius: borderRadius.lg,
+                textDecoration: 'none',
+                transition: '0.2s ease',
+                background: isActive ? colors.status.info : 'transparent',
+                color: isActive ? colors.text.inverse : colors.status.info,
+                border: isActive ? 'none' : `1px solid rgba(59, 130, 246, 0.3)`,
+                fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.normal,
+              })}
+            >
+              <User size={20} />
+              <span>ממשק מאמן</span>
+            </NavLink>
+          )}
           {/* Admin Link */}
           {isAdmin && (
             <NavLink
@@ -276,6 +342,28 @@ export default function MainLayout() {
             >
               <Shield size={20} />
               <span>ממשק ניהול</span>
+            </NavLink>
+          )}
+          {/* Inbox Link (for trainees with a trainer) */}
+          {user?.trainerId && (
+            <NavLink
+              to="/inbox"
+              style={({ isActive }) => ({
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.md,
+                padding: `${spacing.md}px ${spacing.lg}px`,
+                borderRadius: borderRadius.lg,
+                textDecoration: 'none',
+                transition: '0.2s ease',
+                background: isActive ? colors.accent.pink : 'transparent',
+                color: isActive ? colors.text.inverse : colors.accent.pink,
+                border: isActive ? 'none' : `1px solid rgba(236, 72, 153, 0.3)`,
+                fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.normal,
+              })}
+            >
+              <Mail size={20} />
+              <span>הודעות</span>
             </NavLink>
           )}
         </nav>

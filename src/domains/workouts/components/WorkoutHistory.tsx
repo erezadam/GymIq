@@ -11,6 +11,8 @@ import { useWorkoutBuilderStore } from '../store'
 import { exerciseService } from '@/domains/exercises/services'
 import { WorkoutCard } from '@/shared/components/WorkoutCard'
 import { AIBundleCard } from './ai-trainer/AIBundleCard'
+import { TrainerProgramCard } from '@/domains/trainer/components/ProgramView/TrainerProgramCard'
+import { useTraineeProgram } from '@/domains/trainer/hooks/useTraineeProgram'
 import type { WorkoutHistorySummary, WorkoutHistoryEntry, WorkoutCompletionStatus } from '../types'
 
 // Confirmation dialog for continuing workout
@@ -35,6 +37,7 @@ export default function WorkoutHistory() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const { addExercise, clearWorkout } = useWorkoutBuilderStore()
+  const { program: trainerProgram, isLoading: trainerProgramLoading } = useTraineeProgram()
   const [workouts, setWorkouts] = useState<WorkoutHistorySummary[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(null)
@@ -729,6 +732,24 @@ export default function WorkoutHistory() {
 
       {/* Stats summary - REMOVED per request, stats useMemo kept for future use */}
 
+      {/* Trainer Program section */}
+      {!trainerProgramLoading && trainerProgram && (
+        <div>
+          <h2 className="text-lg font-semibold text-accent-orange mb-3 flex items-center gap-2">
+            <Dumbbell className="w-5 h-5" />
+            תוכנית מאמן
+          </h2>
+          <div className="space-y-3">
+            <TrainerProgramCard program={trainerProgram} />
+          </div>
+        </div>
+      )}
+
+      {/* Separator if trainer program and AI sections exist */}
+      {trainerProgram && (aiBundles.length > 0 || singleAIWorkouts.length > 0) && (
+        <div className="border-t border-dark-border" />
+      )}
+
       {/* AI Bundles section */}
       {(aiBundles.length > 0 || singleAIWorkouts.length > 0) && (
         <div>
@@ -851,7 +872,7 @@ export default function WorkoutHistory() {
         </div>
       )}
 
-      {plannedWorkouts.length === 0 && otherWorkouts.length === 0 && (
+      {plannedWorkouts.length === 0 && otherWorkouts.length === 0 && aiBundles.length === 0 && singleAIWorkouts.length === 0 && !trainerProgram && (
         <div className="text-center py-12">
           <Dumbbell className="w-16 h-16 text-text-muted mx-auto mb-4" />
           <h3 className="text-lg font-medium text-text-primary mb-2">עדיין אין אימונים</h3>

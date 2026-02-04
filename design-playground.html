@@ -1,0 +1,1938 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GymIQ Design Playground</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Background */
+    --bg-main: #0B0D12;
+    --bg-card: #141820;
+    --bg-elevated: #1A1F2A;
+    --bg-input: #0D0F14;
+
+    /* Primary - Cyan/Teal */
+    --primary: #00D4AA;
+    --primary-light: #00E5B8;
+    --primary-dark: #00B894;
+
+    /* Secondary */
+    --secondary: #1E2330;
+    --secondary-light: #252B3A;
+    --secondary-dark: #14181F;
+
+    /* Accent */
+    --accent-orange: #FF6B35;
+    --accent-gold: #C4A052;
+    --accent-purple: #8B5CF6;
+    --accent-pink: #EC4899;
+    --accent-cyan: #00D4AA;
+
+    /* Text */
+    --text-primary: #FFFFFF;
+    --text-secondary: #8B95A5;
+    --text-muted: #5A6478;
+    --text-disabled: #3D4555;
+
+    /* Border */
+    --border: #1E2430;
+    --border-light: #2A3142;
+    --border-focus: #00D4AA;
+
+    /* Status */
+    --status-success: #10B981;
+    --status-warning: #FFB020;
+    --status-error: #EF4444;
+    --status-info: #3B82F6;
+
+    /* Muscles */
+    --muscles-chest: #FF6B35;
+    --muscles-back: #8B5CF6;
+    --muscles-legs: #00D4AA;
+    --muscles-shoulders: #FFB020;
+    --muscles-arms: #3B82F6;
+    --muscles-core: #EC4899;
+
+    /* Neon grays */
+    --gray-50: #FAFAFA;
+    --gray-100: #F4F4F5;
+    --gray-200: #E4E4E7;
+    --gray-300: #D1D5DB;
+    --gray-400: #9CA3AF;
+    --gray-500: #6B7280;
+    --gray-600: #4B5563;
+    --gray-700: #2A3142;
+    --gray-800: #1E2330;
+    --gray-900: #14181F;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg-main);
+    color: var(--text-primary);
+    font-family: 'Heebo', 'Inter', sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ========== NAV ========== */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(11, 13, 18, 0.92);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+  }
+
+  .nav-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .nav-logo-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary), var(--primary-light));
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--bg-main);
+    box-shadow: 0 0 20px rgba(0, 212, 170, 0.3);
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 4px;
+    list-style: none;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .nav-links::-webkit-scrollbar { display: none; }
+
+  .nav-link {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .nav-link:hover, .nav-link.active {
+    color: var(--primary);
+    background: rgba(0, 212, 170, 0.08);
+  }
+
+  /* ========== LAYOUT ========== */
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 24px 120px;
+  }
+
+  .hero {
+    text-align: center;
+    padding: 80px 0 60px;
+  }
+
+  .hero h1 {
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary), var(--primary-light));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+    letter-spacing: -0.03em;
+  }
+
+  .hero p {
+    font-size: 18px;
+    color: var(--text-secondary);
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  section {
+    margin-bottom: 80px;
+    scroll-margin-top: 80px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(0, 212, 170, 0.1);
+    border: 1px solid rgba(0, 212, 170, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--primary);
+    flex-shrink: 0;
+  }
+
+  .section-title {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .section-subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  /* ========== GRIDS ========== */
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+  .grid-6 { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+
+  /* ========== COLOR SWATCHES ========== */
+  .color-group {
+    margin-bottom: 32px;
+  }
+
+  .color-group-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 12px;
+  }
+
+  .swatch {
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    transition: all 0.25s;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .swatch:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+    border-color: var(--border-light);
+  }
+
+  .swatch-color {
+    height: 80px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .swatch-copy {
+    opacity: 0;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 4px 12px;
+    border-radius: 6px;
+    color: white;
+    transition: opacity 0.2s;
+  }
+
+  .swatch:hover .swatch-copy { opacity: 1; }
+
+  .swatch-info {
+    padding: 12px 14px;
+  }
+
+  .swatch-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+  }
+
+  .swatch-value {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+
+  .swatch-token {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    opacity: 0.7;
+  }
+
+  /* ========== TYPOGRAPHY ========== */
+  .type-row {
+    display: flex;
+    align-items: baseline;
+    gap: 24px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .type-meta {
+    width: 120px;
+    flex-shrink: 0;
+    text-align: left;
+  }
+
+  .type-size {
+    font-size: 12px;
+    color: var(--primary);
+    font-weight: 600;
+    font-family: monospace;
+  }
+
+  .type-weight {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .type-sample {
+    flex: 1;
+    color: var(--text-primary);
+  }
+
+  /* ========== SPACING ========== */
+  .spacing-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 12px 0;
+  }
+
+  .spacing-label {
+    width: 80px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-family: monospace;
+    text-align: left;
+  }
+
+  .spacing-bar {
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+    transition: all 0.3s;
+    position: relative;
+    min-width: 4px;
+  }
+
+  .spacing-bar:hover {
+    filter: brightness(1.2);
+    box-shadow: 0 0 16px rgba(0, 212, 170, 0.3);
+  }
+
+  .spacing-px {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: monospace;
+    min-width: 50px;
+  }
+
+  /* ========== RADIUS ========== */
+  .radius-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    text-align: center;
+  }
+
+  .radius-box {
+    width: 72px;
+    height: 72px;
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary-light));
+    transition: all 0.3s;
+  }
+
+  .radius-box:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 24px rgba(0, 212, 170, 0.4);
+  }
+
+  .radius-label {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .radius-value {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: monospace;
+  }
+
+  /* ========== SHADOWS ========== */
+  .shadow-item {
+    padding: 32px 24px;
+    background: var(--bg-card);
+    border-radius: 16px;
+    text-align: center;
+    transition: all 0.3s;
+    cursor: default;
+  }
+
+  .shadow-label {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .shadow-code {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: monospace;
+    word-break: break-all;
+  }
+
+  /* ========== BUTTONS ========== */
+  .btn-showcase {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+
+  .btn-primary-demo {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary), var(--primary-light));
+    color: var(--bg-main);
+    box-shadow: 0 0 20px rgba(0, 212, 170, 0.3), 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .btn-primary-demo:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 30px rgba(0, 212, 170, 0.5), 0 8px 30px rgba(0, 0, 0, 0.3);
+  }
+
+  .btn-primary-demo:active {
+    transform: translateY(0);
+    box-shadow: 0 0 15px rgba(0, 212, 170, 0.3), 0 2px 10px rgba(0, 0, 0, 0.3);
+  }
+
+  .btn-secondary-demo {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--border-light);
+  }
+
+  .btn-secondary-demo:hover {
+    background: var(--secondary-light);
+    border-color: rgba(0, 212, 170, 0.3);
+  }
+
+  .btn-ghost-demo {
+    background: transparent;
+    color: var(--text-secondary);
+    padding: 10px 16px;
+  }
+
+  .btn-ghost-demo:hover {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+  }
+
+  .btn-danger-demo {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+  }
+
+  .btn-danger-demo:hover {
+    background: rgba(239, 68, 68, 0.25);
+  }
+
+  .btn-icon-demo {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 10px;
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    font-size: 18px;
+  }
+
+  .btn-icon-demo:hover {
+    color: var(--primary);
+    border-color: var(--primary);
+    background: rgba(0, 212, 170, 0.08);
+  }
+
+  .btn-sm { padding: 8px 16px; font-size: 12px; border-radius: 8px; }
+  .btn-lg { padding: 16px 32px; font-size: 16px; border-radius: 14px; }
+  .btn-disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+
+  /* ========== CARDS ========== */
+  .card-demo {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    transition: all 0.25s;
+  }
+
+  .card-demo:hover {
+    border-color: var(--border-light);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .card-demo-neon {
+    background: linear-gradient(135deg, var(--bg-card), var(--bg-elevated));
+    border: 2px solid rgba(0, 191, 255, 0.3);
+    border-radius: 16px;
+    padding: 32px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .card-demo-stat {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .card-demo-stat .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+    font-size: 22px;
+  }
+
+  .card-demo-stat .stat-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+
+  .card-demo-stat .stat-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  /* ========== BADGES & PILLS ========== */
+  .badge-demo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .pill-demo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .pill-default-demo {
+    background: var(--secondary);
+    color: var(--text-secondary);
+  }
+
+  .pill-default-demo:hover { background: var(--secondary-light); }
+
+  .pill-active-demo {
+    background: var(--primary);
+    color: var(--bg-main);
+    font-weight: 600;
+  }
+
+  /* ========== INPUTS ========== */
+  .input-demo {
+    width: 100%;
+    padding: 14px 18px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.2s;
+    outline: none;
+  }
+
+  .input-demo::placeholder {
+    color: var(--text-muted);
+  }
+
+  .input-demo:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.15);
+  }
+
+  .input-neon-demo {
+    background: rgba(30, 35, 48, 0.8);
+    border: 2px solid rgba(42, 49, 66, 0.5);
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-size: 15px;
+    backdrop-filter: blur(8px);
+  }
+
+  .input-neon-demo:focus {
+    border-color: #00BFFF;
+    box-shadow: 0 0 20px rgba(0, 212, 170, 0.3), 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .input-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+  }
+
+  .input-group { margin-bottom: 20px; }
+
+  /* ========== EXERCISE CARD MOCK ========== */
+  .exercise-mock {
+    background: var(--gray-900);
+    border: 1px solid var(--gray-700);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+
+  .exercise-mock:hover {
+    transform: scale(1.02);
+    background: var(--secondary-light);
+  }
+
+  .exercise-mock-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .exercise-mock-img {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+  }
+
+  .exercise-mock-info { flex: 1; }
+
+  .exercise-mock-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+
+  .exercise-mock-detail {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .exercise-mock-indicator {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--gray-600);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .exercise-mock-indicator.done {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--bg-main);
+  }
+
+  /* ========== WORKOUT CARD MOCK ========== */
+  .workout-mock {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+  }
+
+  .workout-mock-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .workout-mock-date {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .workout-mock-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+  }
+
+  .workout-mock-stats {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 16px;
+  }
+
+  .workout-mock-stat {
+    text-align: center;
+  }
+
+  .workout-mock-stat-value {
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .workout-mock-stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .workout-mock-thumbs {
+    display: flex;
+    gap: -8px;
+  }
+
+  .workout-mock-thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 2px solid var(--bg-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    margin-right: -8px;
+  }
+
+  /* ========== MUSCLE COLORS ========== */
+  .muscle-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: default;
+    transition: all 0.2s;
+  }
+
+  .muscle-tag:hover { transform: translateY(-2px); }
+
+  .muscle-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  /* ========== STATUS BADGES ========== */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+
+  /* ========== MOBILE PREVIEW ========== */
+  .mobile-frame {
+    width: 375px;
+    max-width: 100%;
+    margin: 0 auto;
+    border-radius: 32px;
+    border: 3px solid var(--border-light);
+    overflow: hidden;
+    background: var(--bg-main);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  }
+
+  .mobile-notch {
+    height: 36px;
+    background: var(--bg-main);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 4px;
+  }
+
+  .mobile-notch-pill {
+    width: 80px;
+    height: 6px;
+    background: var(--border-light);
+    border-radius: 3px;
+  }
+
+  .mobile-content {
+    min-height: 600px;
+    padding-bottom: 20px;
+  }
+
+  .mobile-bottom-nav {
+    display: flex;
+    justify-content: space-around;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: rgba(11, 13, 18, 0.95);
+    backdrop-filter: blur(20px);
+  }
+
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  .mobile-nav-item.active-nav {
+    color: var(--primary);
+  }
+
+  .mobile-nav-icon { font-size: 20px; }
+
+  /* ========== ANIMATION DEMOS ========== */
+  .anim-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .anim-box {
+    width: 80px;
+    height: 80px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--bg-main);
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+    text-align: center;
+    line-height: 1.2;
+    padding: 4px;
+  }
+
+  @keyframes pulseGlow {
+    from { filter: drop-shadow(0 0 20px rgba(0, 212, 170, 0.8)); }
+    to { filter: drop-shadow(0 0 30px rgba(0, 212, 170, 1)); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .anim-pulse { animation: pulseGlow 2s ease-in-out infinite alternate; }
+  .anim-fade { animation: fadeIn 0.6s ease-out infinite alternate; }
+  .anim-slide { animation: slideUp 0.8s ease-out infinite alternate; }
+  .anim-scale { animation: scaleIn 0.6s ease-out infinite alternate; }
+
+  /* ========== CODE BLOCKS ========== */
+  .code-block {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    color: var(--text-secondary);
+    overflow-x: auto;
+    direction: ltr;
+    text-align: left;
+  }
+
+  .code-block .token-class { color: var(--primary); }
+  .code-block .token-string { color: var(--accent-orange); }
+  .code-block .token-comment { color: var(--text-muted); }
+
+  /* ========== GLOW EFFECTS ========== */
+  .glow-box {
+    padding: 32px;
+    border-radius: 16px;
+    text-align: center;
+    font-weight: 600;
+    transition: all 0.3s;
+    cursor: default;
+  }
+
+  .glow-box:hover { transform: scale(1.02); }
+
+  /* ========== COPY TOAST ========== */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--primary);
+    color: var(--bg-main);
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    z-index: 200;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 8px 32px rgba(0, 212, 170, 0.3);
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ========== RESPONSIVE ========== */
+  @media (max-width: 768px) {
+    .container { padding: 24px 16px 80px; }
+    .hero { padding: 48px 0 32px; }
+    .hero h1 { font-size: 32px; }
+    section { margin-bottom: 48px; }
+    .section-title { font-size: 22px; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .type-row { flex-direction: column; gap: 8px; }
+    .type-meta { width: auto; }
+    .mobile-frame { border-radius: 24px; }
+    .nav-links { display: none; }
+  }
+
+  /* ========== WORKOUT STATUS SECTION ========== */
+  .status-card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+  }
+
+  .status-card:hover {
+    border-color: var(--border-light);
+  }
+
+  .status-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .status-card-info { flex: 1; }
+
+  .status-card-name {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .status-card-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* ========== GRADIENT BARS ========== */
+  .gradient-item {
+    border-radius: 16px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.3s;
+    cursor: default;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gradient-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .gradient-label {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 6px 16px;
+    border-radius: 8px;
+    backdrop-filter: blur(4px);
+    color: white;
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-logo">
+      <div class="nav-logo-icon">G</div>
+      <span>GymIQ <span style="font-weight: 400; color: var(--text-muted); font-size: 14px;">Design System</span></span>
+    </div>
+    <ul class="nav-links">
+      <a class="nav-link active" href="#colors" onclick="scrollToSection('colors')">Colors</a>
+      <a class="nav-link" href="#typography" onclick="scrollToSection('typography')">Typography</a>
+      <a class="nav-link" href="#spacing" onclick="scrollToSection('spacing')">Spacing</a>
+      <a class="nav-link" href="#radius" onclick="scrollToSection('radius')">Radius</a>
+      <a class="nav-link" href="#shadows" onclick="scrollToSection('shadows')">Shadows</a>
+      <a class="nav-link" href="#buttons" onclick="scrollToSection('buttons')">Buttons</a>
+      <a class="nav-link" href="#inputs" onclick="scrollToSection('inputs')">Inputs</a>
+      <a class="nav-link" href="#cards" onclick="scrollToSection('cards')">Cards</a>
+      <a class="nav-link" href="#badges" onclick="scrollToSection('badges')">Badges</a>
+      <a class="nav-link" href="#components" onclick="scrollToSection('components')">Components</a>
+      <a class="nav-link" href="#animations" onclick="scrollToSection('animations')">Animations</a>
+      <a class="nav-link" href="#mobile" onclick="scrollToSection('mobile')">Mobile</a>
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- HERO -->
+  <div class="hero">
+    <h1>GymIQ Design System</h1>
+    <p>Interactive playground for colors, typography, components, and tokens. Click any color to copy its value.</p>
+  </div>
+
+  <!-- ========== 1. COLORS ========== -->
+  <section id="colors">
+    <div class="section-header">
+      <div class="section-number">01</div>
+      <div>
+        <div class="section-title">Colors</div>
+        <div class="section-subtitle">Design tokens from tailwind-tokens.js</div>
+      </div>
+    </div>
+
+    <!-- Backgrounds -->
+    <div class="color-group">
+      <div class="color-group-title">Background</div>
+      <div class="grid-4">
+        <div class="swatch" onclick="copyColor('#0B0D12')">
+          <div class="swatch-color" style="background: #0B0D12; border: 1px solid var(--border-light);"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Main</div><div class="swatch-value">#0B0D12</div><div class="swatch-token">bg-background-main</div></div>
+        </div>
+        <div class="swatch" onclick="copyColor('#141820')">
+          <div class="swatch-color" style="background: #141820;"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Card</div><div class="swatch-value">#141820</div><div class="swatch-token">bg-background-card</div></div>
+        </div>
+        <div class="swatch" onclick="copyColor('#1A1F2A')">
+          <div class="swatch-color" style="background: #1A1F2A;"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Elevated</div><div class="swatch-value">#1A1F2A</div><div class="swatch-token">bg-background-elevated</div></div>
+        </div>
+        <div class="swatch" onclick="copyColor('#0D0F14')">
+          <div class="swatch-color" style="background: #0D0F14; border: 1px solid var(--border-light);"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Input</div><div class="swatch-value">#0D0F14</div><div class="swatch-token">bg-background-input</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Primary -->
+    <div class="color-group">
+      <div class="color-group-title">Primary (Cyan/Teal)</div>
+      <div class="grid-4">
+        <div class="swatch" onclick="copyColor('#00B894')">
+          <div class="swatch-color" style="background: #00B894;"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Dark</div><div class="swatch-value">#00B894</div><div class="swatch-token">text-primary-dark</div></div>
+        </div>
+        <div class="swatch" onclick="copyColor('#00D4AA')">
+          <div class="swatch-color" style="background: #00D4AA;"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Main</div><div class="swatch-value">#00D4AA</div><div class="swatch-token">text-primary-main</div></div>
+        </div>
+        <div class="swatch" onclick="copyColor('#00E5B8')">
+          <div class="swatch-color" style="background: #00E5B8;"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Light</div><div class="swatch-value">#00E5B8</div><div class="swatch-token">text-primary-light</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accent -->
+    <div class="color-group">
+      <div class="color-group-title">Accent</div>
+      <div class="grid-6">
+        <div class="swatch" onclick="copyColor('#FF6B35')">
+          <div class="swatch-color" style="background: #FF6B35;"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Orange</div><div class="swatch-value">#FF6B35</div></div>
+        </div>
+        <div class="swatch" onclick="copyColor('#C4A052')">
+          <div class="swatch-color" style="background: #C4A052;"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Gold</div><div class="swatch-value">#C4A052</div></div>
+        </div>
+        <div class="swatch" onclick="copyColor('#8B5CF6')">
+          <div class="swatch-color" style="background: #8B5CF6;"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Purple</div><div class="swatch-value">#8B5CF6</div></div>
+        </div>
+        <div class="swatch" onclick="copyColor('#EC4899')">
+          <div class="swatch-color" style="background: #EC4899;"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Pink</div><div class="swatch-value">#EC4899</div></div>
+        </div>
+        <div class="swatch" onclick="copyColor('#00D4AA')">
+          <div class="swatch-color" style="background: #00D4AA;"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Cyan</div><div class="swatch-value">#00D4AA</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div class="color-group">
+      <div class="color-group-title">Status</div>
+      <div class="grid-4">
+        <div class="swatch" onclick="copyColor('#10B981')">
+          <div class="swatch-color" style="background: #10B981;"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Success</div><div class="swatch-value">#10B981</div><div class="swatch-token">text-status-success</div></div>
+        </div>
+        <div class="swatch" onclick="copyColor('#FFB020')">
+          <div class="swatch-color" style="background: #FFB020;"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Warning</div><div class="swatch-value">#FFB020</div><div class="swatch-token">text-status-warning</div></div>
+        </div>
+        <div class="swatch" onclick="copyColor('#EF4444')">
+          <div class="swatch-color" style="background: #EF4444;"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Error</div><div class="swatch-value">#EF4444</div><div class="swatch-token">text-status-error</div></div>
+        </div>
+        <div class="swatch" onclick="copyColor('#3B82F6')">
+          <div class="swatch-color" style="background: #3B82F6;"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Info</div><div class="swatch-value">#3B82F6</div><div class="swatch-token">text-status-info</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Text -->
+    <div class="color-group">
+      <div class="color-group-title">Text</div>
+      <div class="grid-4">
+        <div class="swatch" onclick="copyColor('#FFFFFF')">
+          <div class="swatch-color" style="background: #FFFFFF;"><span class="swatch-copy" style="color: #333;">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Primary</div><div class="swatch-value">#FFFFFF</div></div>
+        </div>
+        <div class="swatch" onclick="copyColor('#8B95A5')">
+          <div class="swatch-color" style="background: #8B95A5;"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Secondary</div><div class="swatch-value">#8B95A5</div></div>
+        </div>
+        <div class="swatch" onclick="copyColor('#5A6478')">
+          <div class="swatch-color" style="background: #5A6478;"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Muted</div><div class="swatch-value">#5A6478</div></div>
+        </div>
+        <div class="swatch" onclick="copyColor('#3D4555')">
+          <div class="swatch-color" style="background: #3D4555;"><span class="swatch-copy">Click to copy</span></div>
+          <div class="swatch-info"><div class="swatch-name">Disabled</div><div class="swatch-value">#3D4555</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Muscle Groups -->
+    <div class="color-group">
+      <div class="color-group-title">Muscle Groups</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+        <div class="muscle-tag" style="background: rgba(255, 107, 53, 0.15); color: #FF6B35;" onclick="copyColor('#FF6B35')">
+          <div class="muscle-dot" style="background: #FF6B35;"></div> Chest
+        </div>
+        <div class="muscle-tag" style="background: rgba(139, 92, 246, 0.15); color: #8B5CF6;" onclick="copyColor('#8B5CF6')">
+          <div class="muscle-dot" style="background: #8B5CF6;"></div> Back
+        </div>
+        <div class="muscle-tag" style="background: rgba(0, 212, 170, 0.15); color: #00D4AA;" onclick="copyColor('#00D4AA')">
+          <div class="muscle-dot" style="background: #00D4AA;"></div> Legs
+        </div>
+        <div class="muscle-tag" style="background: rgba(255, 176, 32, 0.15); color: #FFB020;" onclick="copyColor('#FFB020')">
+          <div class="muscle-dot" style="background: #FFB020;"></div> Shoulders
+        </div>
+        <div class="muscle-tag" style="background: rgba(59, 130, 246, 0.15); color: #3B82F6;" onclick="copyColor('#3B82F6')">
+          <div class="muscle-dot" style="background: #3B82F6;"></div> Arms
+        </div>
+        <div class="muscle-tag" style="background: rgba(236, 72, 153, 0.15); color: #EC4899;" onclick="copyColor('#EC4899')">
+          <div class="muscle-dot" style="background: #EC4899;"></div> Core
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 2. TYPOGRAPHY ========== -->
+  <section id="typography">
+    <div class="section-header">
+      <div class="section-number">02</div>
+      <div>
+        <div class="section-title">Typography</div>
+        <div class="section-subtitle">Heebo + Inter | Font scale from tokens</div>
+      </div>
+    </div>
+
+    <div class="type-row"><div class="type-meta"><div class="type-size">40px</div><div class="type-weight">Black (900)</div></div><div class="type-sample" style="font-size: 40px; font-weight: 900; letter-spacing: -0.03em;">GymIQ Pro</div></div>
+    <div class="type-row"><div class="type-meta"><div class="type-size">32px</div><div class="type-weight">Bold (800)</div></div><div class="type-sample" style="font-size: 32px; font-weight: 800; letter-spacing: -0.02em;">Workout Summary</div></div>
+    <div class="type-row"><div class="type-meta"><div class="type-size">24px</div><div class="type-weight">Bold (700)</div></div><div class="type-sample" style="font-size: 24px; font-weight: 700;">Exercise Details</div></div>
+    <div class="type-row"><div class="type-meta"><div class="type-size">20px</div><div class="type-weight">SemiBold (600)</div></div><div class="type-sample" style="font-size: 20px; font-weight: 600;">Section Header</div></div>
+    <div class="type-row"><div class="type-meta"><div class="type-size">17px</div><div class="type-weight">Medium (500)</div></div><div class="type-sample" style="font-size: 17px; font-weight: 500;">Body Large Text</div></div>
+    <div class="type-row"><div class="type-meta"><div class="type-size">15px</div><div class="type-weight">Regular (400)</div></div><div class="type-sample" style="font-size: 15px; font-weight: 400; color: var(--text-secondary);">Default body text for descriptions and content paragraphs</div></div>
+    <div class="type-row"><div class="type-meta"><div class="type-size">13px</div><div class="type-weight">Medium (500)</div></div><div class="type-sample" style="font-size: 13px; font-weight: 500; color: var(--text-secondary);">Small labels and secondary information</div></div>
+    <div class="type-row"><div class="type-meta"><div class="type-size">11px</div><div class="type-weight">SemiBold (600)</div></div><div class="type-sample" style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">TINY LABEL / OVERLINE</div></div>
+  </section>
+
+  <!-- ========== 3. SPACING ========== -->
+  <section id="spacing">
+    <div class="section-header">
+      <div class="section-number">03</div>
+      <div>
+        <div class="section-title">Spacing Scale</div>
+        <div class="section-subtitle">Consistent spacing tokens for layout</div>
+      </div>
+    </div>
+
+    <div class="spacing-row"><div class="spacing-label">xs</div><div class="spacing-bar" style="width: 4px;"></div><div class="spacing-px">4px</div></div>
+    <div class="spacing-row"><div class="spacing-label">sm</div><div class="spacing-bar" style="width: 16px;"></div><div class="spacing-px">8px</div></div>
+    <div class="spacing-row"><div class="spacing-label">md</div><div class="spacing-bar" style="width: 36px;"></div><div class="spacing-px">12px</div></div>
+    <div class="spacing-row"><div class="spacing-label">lg</div><div class="spacing-bar" style="width: 64px;"></div><div class="spacing-px">16px</div></div>
+    <div class="spacing-row"><div class="spacing-label">xl</div><div class="spacing-bar" style="width: 100px;"></div><div class="spacing-px">20px</div></div>
+    <div class="spacing-row"><div class="spacing-label">2xl</div><div class="spacing-bar" style="width: 144px;"></div><div class="spacing-px">24px</div></div>
+    <div class="spacing-row"><div class="spacing-label">3xl</div><div class="spacing-bar" style="width: 200px;"></div><div class="spacing-px">32px</div></div>
+    <div class="spacing-row"><div class="spacing-label">4xl</div><div class="spacing-bar" style="width: 280px;"></div><div class="spacing-px">40px</div></div>
+  </section>
+
+  <!-- ========== 4. BORDER RADIUS ========== -->
+  <section id="radius">
+    <div class="section-header">
+      <div class="section-number">04</div>
+      <div>
+        <div class="section-title">Border Radius</div>
+        <div class="section-subtitle">Rounded corners for cards, buttons, and inputs</div>
+      </div>
+    </div>
+
+    <div class="grid-6">
+      <div class="radius-item"><div class="radius-box" style="border-radius: 4px;"></div><div class="radius-label">xs</div><div class="radius-value">4px</div></div>
+      <div class="radius-item"><div class="radius-box" style="border-radius: 8px;"></div><div class="radius-label">sm</div><div class="radius-value">8px</div></div>
+      <div class="radius-item"><div class="radius-box" style="border-radius: 12px;"></div><div class="radius-label">md</div><div class="radius-value">12px</div></div>
+      <div class="radius-item"><div class="radius-box" style="border-radius: 16px;"></div><div class="radius-label">lg</div><div class="radius-value">16px</div></div>
+      <div class="radius-item"><div class="radius-box" style="border-radius: 20px;"></div><div class="radius-label">xl</div><div class="radius-value">20px</div></div>
+      <div class="radius-item"><div class="radius-box" style="border-radius: 24px;"></div><div class="radius-label">2xl</div><div class="radius-value">24px</div></div>
+      <div class="radius-item"><div class="radius-box" style="border-radius: 9999px;"></div><div class="radius-label">full</div><div class="radius-value">9999px</div></div>
+    </div>
+  </section>
+
+  <!-- ========== 5. SHADOWS ========== -->
+  <section id="shadows">
+    <div class="section-header">
+      <div class="section-number">05</div>
+      <div>
+        <div class="section-title">Shadows & Glows</div>
+        <div class="section-subtitle">Elevation and neon glow effects</div>
+      </div>
+    </div>
+
+    <div class="grid-3" style="margin-bottom: 24px;">
+      <div class="shadow-item" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);"><div class="shadow-label">sm</div></div>
+      <div class="shadow-item" style="box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);"><div class="shadow-label">md</div></div>
+      <div class="shadow-item" style="box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);"><div class="shadow-label">lg</div></div>
+      <div class="shadow-item" style="box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);"><div class="shadow-label">xl</div></div>
+      <div class="shadow-item" style="box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);"><div class="shadow-label">card</div></div>
+      <div class="shadow-item" style="box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);"><div class="shadow-label">modal</div></div>
+    </div>
+
+    <div class="color-group-title" style="margin-bottom: 16px;">GLOW EFFECTS</div>
+    <div class="grid-3">
+      <div class="glow-box" style="background: var(--bg-card); box-shadow: 0 0 20px rgba(0, 212, 170, 0.3), 0 4px 20px rgba(0, 0, 0, 0.3); border: 1px solid rgba(0, 212, 170, 0.2);">
+        <div style="color: var(--primary);">Neon Glow</div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">shadow-neon</div>
+      </div>
+      <div class="glow-box" style="background: var(--bg-card); box-shadow: 0 0 12px rgba(255, 107, 53, 0.5), 0 0 24px rgba(255, 107, 53, 0.3); border: 1px solid rgba(255, 107, 53, 0.2);">
+        <div style="color: var(--accent-orange);">Orange Glow</div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">shadow-glow-orange</div>
+      </div>
+      <div class="glow-box" style="background: var(--bg-card); box-shadow: 0 0 12px rgba(0, 212, 170, 0.5), 0 0 24px rgba(0, 212, 170, 0.3); border: 1px solid rgba(0, 212, 170, 0.2);">
+        <div style="color: var(--primary);">Cyan Glow</div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">shadow-glow-cyan</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 6. GRADIENTS ========== -->
+  <section id="gradients">
+    <div class="section-header">
+      <div class="section-number">06</div>
+      <div>
+        <div class="section-title">Gradients</div>
+        <div class="section-subtitle">Background gradients defined in Tailwind config</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="gradient-item" style="background: linear-gradient(135deg, #00B894, #00D4AA 50%, #00E5B8);"><div class="gradient-label">gradient-primary</div></div>
+      <div class="gradient-item" style="background: linear-gradient(180deg, #252B3A, #1E2330);"><div class="gradient-label">gradient-secondary</div></div>
+      <div class="gradient-item" style="background: linear-gradient(135deg, #00B894, #00E5B8);"><div class="gradient-label">gradient-neon</div></div>
+      <div class="gradient-item" style="background: linear-gradient(135deg, #0B0D12, #141820);"><div class="gradient-label">gradient-dark</div></div>
+      <div class="gradient-item" style="background: linear-gradient(135deg, #141820, #1A1F2A);"><div class="gradient-label">gradient-card</div></div>
+      <div class="gradient-item" style="background: linear-gradient(135deg, #00FFFF, #00FF7F);"><div class="gradient-label">bg-neon-gradient (utility)</div></div>
+    </div>
+  </section>
+
+  <!-- ========== 7. BUTTONS ========== -->
+  <section id="buttons">
+    <div class="section-header">
+      <div class="section-number">07</div>
+      <div>
+        <div class="section-title">Buttons</div>
+        <div class="section-subtitle">Interactive button variants with hover states</div>
+      </div>
+    </div>
+
+    <div class="color-group-title">VARIANTS</div>
+    <div class="btn-showcase">
+      <button class="btn btn-primary-demo">btn-primary</button>
+      <button class="btn btn-secondary-demo">btn-secondary</button>
+      <button class="btn btn-ghost-demo">btn-ghost</button>
+      <button class="btn btn-danger-demo">btn-danger</button>
+      <button class="btn btn-icon-demo">+</button>
+      <button class="btn btn-icon-demo">&#9776;</button>
+    </div>
+
+    <div class="color-group-title" style="margin-top: 32px;">SIZES</div>
+    <div class="btn-showcase">
+      <button class="btn btn-primary-demo btn-sm">Small</button>
+      <button class="btn btn-primary-demo">Default</button>
+      <button class="btn btn-primary-demo btn-lg">Large</button>
+    </div>
+
+    <div class="color-group-title" style="margin-top: 32px;">STATES</div>
+    <div class="btn-showcase">
+      <button class="btn btn-primary-demo">Normal</button>
+      <button class="btn btn-primary-demo btn-disabled">Disabled</button>
+    </div>
+
+    <div class="color-group-title" style="margin-top: 32px;">WORKOUT ACTIONS</div>
+    <div class="btn-showcase">
+      <button class="btn" style="background: #22C55E; color: white; padding: 14px 32px; font-size: 16px;">Finish Workout</button>
+      <button class="btn" style="background: rgba(34, 197, 94, 0.15); color: #4ADE80; border: 1px solid rgba(34, 197, 94, 0.3);">Complete Exercise</button>
+      <button class="btn" style="background: var(--secondary); color: var(--text-secondary); border: 2px dashed var(--gray-600);">+ Add Set</button>
+    </div>
+
+    <div class="code-block" style="margin-top: 24px; direction: ltr;">
+      <span class="token-comment">// Usage in JSX</span><br>
+      &lt;button <span class="token-class">className</span>=<span class="token-string">"btn-primary"</span>&gt;Start Workout&lt;/button&gt;<br>
+      &lt;button <span class="token-class">className</span>=<span class="token-string">"btn-secondary"</span>&gt;Cancel&lt;/button&gt;<br>
+      &lt;button <span class="token-class">className</span>=<span class="token-string">"btn-ghost"</span>&gt;Skip&lt;/button&gt;<br>
+      &lt;button <span class="token-class">className</span>=<span class="token-string">"btn-danger"</span>&gt;Delete&lt;/button&gt;
+    </div>
+  </section>
+
+  <!-- ========== 8. INPUTS ========== -->
+  <section id="inputs">
+    <div class="section-header">
+      <div class="section-number">08</div>
+      <div>
+        <div class="section-title">Form Inputs</div>
+        <div class="section-subtitle">Text inputs, selects, and search fields</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <div class="input-group">
+          <label class="input-label">Primary Input</label>
+          <input type="text" class="input-demo" placeholder="Enter exercise name...">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Neon Input</label>
+          <input type="text" class="input-demo input-neon-demo" placeholder="Search exercises...">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Input with Focus</label>
+          <input type="text" class="input-demo" placeholder="Click to see focus ring" style="border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.15);">
+        </div>
+      </div>
+      <div>
+        <div class="input-group">
+          <label class="input-label">Number Input (Sets)</label>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <button class="btn btn-icon-demo" style="flex-shrink: 0;">-</button>
+            <input type="text" class="input-demo" value="12" style="text-align: center; font-size: 24px; font-weight: 700; max-width: 100px;">
+            <button class="btn btn-icon-demo" style="flex-shrink: 0;">+</button>
+          </div>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Disabled State</label>
+          <input type="text" class="input-demo" placeholder="Cannot edit" disabled style="opacity: 0.5; cursor: not-allowed;">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Error State</label>
+          <input type="text" class="input-demo" value="Invalid value" style="border-color: var(--status-error); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);">
+          <div style="font-size: 12px; color: var(--status-error); margin-top: 6px;">This field is required</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 9. CARDS ========== -->
+  <section id="cards">
+    <div class="section-header">
+      <div class="section-number">09</div>
+      <div>
+        <div class="section-title">Cards</div>
+        <div class="section-subtitle">Card variants for different use cases</div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom: 32px;">
+      <div class="card-demo">
+        <div style="font-size: 16px; font-weight: 700; margin-bottom: 8px;">Basic Card</div>
+        <div style="font-size: 14px; color: var(--text-secondary);">Default card with border and background. Used for most content containers.</div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 12px; font-family: monospace;">className="card"</div>
+      </div>
+      <div class="card-demo-neon">
+        <div style="font-size: 16px; font-weight: 700; margin-bottom: 8px;">Neon Card</div>
+        <div style="font-size: 14px; color: var(--text-secondary);">Premium card with gradient background, blur effect, and enhanced shadow.</div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 12px; font-family: monospace;">className="card-neon"</div>
+      </div>
+    </div>
+
+    <div class="color-group-title" style="margin-bottom: 16px;">STAT CARDS</div>
+    <div class="grid-4" style="margin-bottom: 32px;">
+      <div class="card-demo-stat">
+        <div class="stat-icon" style="background: rgba(0, 212, 170, 0.15);">&#128170;</div>
+        <div class="stat-value">147</div>
+        <div class="stat-label">Workouts</div>
+      </div>
+      <div class="card-demo-stat">
+        <div class="stat-icon" style="background: rgba(196, 160, 82, 0.15);">&#128293;</div>
+        <div class="stat-value" style="color: var(--accent-gold);">52,840</div>
+        <div class="stat-label">Calories</div>
+      </div>
+      <div class="card-demo-stat">
+        <div class="stat-icon" style="background: rgba(255, 107, 53, 0.15);">&#9201;</div>
+        <div class="stat-value" style="color: var(--accent-orange);">86h</div>
+        <div class="stat-label">Total Time</div>
+      </div>
+      <div class="card-demo-stat">
+        <div class="stat-icon" style="background: rgba(139, 92, 246, 0.15);">&#127942;</div>
+        <div class="stat-value" style="color: var(--accent-purple);">23</div>
+        <div class="stat-label">PRs</div>
+      </div>
+    </div>
+
+    <div class="color-group-title" style="margin-bottom: 16px;">WORKOUT HISTORY CARD</div>
+    <div class="grid-2">
+      <div class="workout-mock">
+        <div class="workout-mock-top">
+          <div class="status-badge" style="background: rgba(59, 130, 246, 0.15); color: #3B82F6;"><div class="status-dot" style="background: #3B82F6;"></div>Completed</div>
+          <div class="workout-mock-date">01/02/2026</div>
+        </div>
+        <div class="workout-mock-name">Push Day - Chest & Triceps</div>
+        <div class="workout-mock-stats">
+          <div class="workout-mock-stat"><div class="workout-mock-stat-value" style="color: var(--primary);">6</div><div class="workout-mock-stat-label">Exercises</div></div>
+          <div class="workout-mock-stat"><div class="workout-mock-stat-value" style="color: var(--accent-orange);">24</div><div class="workout-mock-stat-label">Sets</div></div>
+          <div class="workout-mock-stat"><div class="workout-mock-stat-value" style="color: var(--accent-gold);">342</div><div class="workout-mock-stat-label">kcal</div></div>
+          <div class="workout-mock-stat"><div class="workout-mock-stat-value" style="color: var(--accent-purple);">52m</div><div class="workout-mock-stat-label">Duration</div></div>
+        </div>
+        <div class="workout-mock-thumbs">
+          <div class="workout-mock-thumb" style="background: rgba(255, 107, 53, 0.2);">&#128170;</div>
+          <div class="workout-mock-thumb" style="background: rgba(59, 130, 246, 0.2);">&#129470;</div>
+          <div class="workout-mock-thumb" style="background: rgba(236, 72, 153, 0.2);">&#127947;</div>
+        </div>
+      </div>
+
+      <div class="workout-mock" style="border-color: rgba(255, 176, 32, 0.3);">
+        <div class="workout-mock-top">
+          <div class="status-badge" style="background: rgba(255, 176, 32, 0.15); color: #FFB020;"><div class="status-dot" style="background: #FFB020;"></div>In Progress</div>
+          <div class="workout-mock-date">Today</div>
+        </div>
+        <div class="workout-mock-name">Pull Day - Back & Biceps</div>
+        <div class="workout-mock-stats">
+          <div class="workout-mock-stat"><div class="workout-mock-stat-value" style="color: var(--primary);">3/5</div><div class="workout-mock-stat-label">Exercises</div></div>
+          <div class="workout-mock-stat"><div class="workout-mock-stat-value" style="color: var(--accent-orange);">14</div><div class="workout-mock-stat-label">Sets</div></div>
+          <div class="workout-mock-stat"><div class="workout-mock-stat-value" style="color: var(--accent-gold);">—</div><div class="workout-mock-stat-label">kcal</div></div>
+          <div class="workout-mock-stat"><div class="workout-mock-stat-value" style="color: var(--accent-purple);">28m</div><div class="workout-mock-stat-label">Duration</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 10. BADGES & PILLS ========== -->
+  <section id="badges">
+    <div class="section-header">
+      <div class="section-number">10</div>
+      <div>
+        <div class="section-title">Badges & Pills</div>
+        <div class="section-subtitle">Status indicators, filter chips, and tags</div>
+      </div>
+    </div>
+
+    <div class="color-group-title">STATUS BADGES</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 32px;">
+      <div class="status-badge" style="background: rgba(59, 130, 246, 0.15); color: #3B82F6;"><div class="status-dot" style="background: #3B82F6;"></div>Completed</div>
+      <div class="status-badge" style="background: rgba(255, 176, 32, 0.15); color: #FFB020;"><div class="status-dot" style="background: #FFB020;"></div>In Progress</div>
+      <div class="status-badge" style="background: rgba(239, 68, 68, 0.15); color: #EF4444;"><div class="status-dot" style="background: #EF4444;"></div>Planned</div>
+      <div class="status-badge" style="background: rgba(16, 185, 129, 0.15); color: #10B981;"><div class="status-dot" style="background: #10B981;"></div>Active</div>
+    </div>
+
+    <div class="color-group-title">BADGES</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 32px;">
+      <div class="badge-demo" style="background: rgba(0, 212, 170, 0.15); color: var(--primary);">Primary Badge</div>
+      <div class="badge-demo" style="background: rgba(255, 107, 53, 0.15); color: var(--accent-orange);">Last Workout</div>
+      <div class="badge-demo" style="background: rgba(139, 92, 246, 0.15); color: var(--accent-purple);">Last Month</div>
+      <div class="badge-demo" style="background: rgba(0, 0, 0, 0.5); color: white; backdrop-filter: blur(8px);">Category</div>
+      <div class="badge-demo" style="background: rgba(236, 72, 153, 0.15); color: #EC4899;">Primary Muscle</div>
+      <div class="badge-demo" style="background: var(--gray-700); color: var(--gray-300);">Secondary Muscle</div>
+    </div>
+
+    <div class="color-group-title">FILTER PILLS</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 32px;">
+      <div class="pill-demo pill-active-demo">All</div>
+      <div class="pill-demo pill-default-demo">Chest</div>
+      <div class="pill-demo pill-default-demo">Back</div>
+      <div class="pill-demo pill-default-demo">Legs</div>
+      <div class="pill-demo pill-default-demo">Shoulders</div>
+      <div class="pill-demo pill-default-demo">Arms</div>
+      <div class="pill-demo pill-default-demo">Core</div>
+    </div>
+
+    <div class="color-group-title">ROLE BADGES</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+      <div class="badge-demo" style="background: rgba(196, 160, 82, 0.1); color: var(--accent-gold);">&#128081; Admin</div>
+      <div class="badge-demo" style="background: rgba(59, 130, 246, 0.1); color: #3B82F6;">&#127891; Trainer</div>
+      <div class="badge-demo" style="background: rgba(16, 185, 129, 0.1); color: #10B981;">&#128100; User</div>
+    </div>
+  </section>
+
+  <!-- ========== 11. COMPONENTS ========== -->
+  <section id="components">
+    <div class="section-header">
+      <div class="section-number">11</div>
+      <div>
+        <div class="section-title">Components</div>
+        <div class="section-subtitle">Composed UI elements from the design system</div>
+      </div>
+    </div>
+
+    <div class="color-group-title">EXERCISE CARDS</div>
+    <div class="grid-2" style="margin-bottom: 32px;">
+      <div class="exercise-mock">
+        <div class="exercise-mock-header">
+          <div class="exercise-mock-img" style="background: rgba(255, 107, 53, 0.15);">&#128170;</div>
+          <div class="exercise-mock-info">
+            <div class="exercise-mock-name">Bench Press</div>
+            <div class="exercise-mock-detail">3 sets &middot; 80kg &middot; chest</div>
+          </div>
+          <div class="exercise-mock-indicator done">&#10003;</div>
+        </div>
+      </div>
+
+      <div class="exercise-mock">
+        <div class="exercise-mock-header">
+          <div class="exercise-mock-img" style="background: rgba(139, 92, 246, 0.15);">&#129470;</div>
+          <div class="exercise-mock-info">
+            <div class="exercise-mock-name">Lat Pulldown</div>
+            <div class="exercise-mock-detail">4 sets &middot; 55kg &middot; back</div>
+          </div>
+          <div class="exercise-mock-indicator"></div>
+        </div>
+      </div>
+
+      <div class="exercise-mock" style="border-color: var(--primary); background: rgba(0, 212, 170, 0.05);">
+        <div class="exercise-mock-header">
+          <div class="exercise-mock-img" style="background: rgba(0, 212, 170, 0.15);">&#127947;</div>
+          <div class="exercise-mock-info">
+            <div class="exercise-mock-name">Squats</div>
+            <div class="exercise-mock-detail">Active &middot; Set 2 of 4 &middot; legs</div>
+          </div>
+          <div style="color: var(--primary); font-size: 18px;">&#9654;</div>
+        </div>
+      </div>
+
+      <div class="exercise-mock" style="opacity: 0.6;">
+        <div class="exercise-mock-header">
+          <div class="exercise-mock-img" style="background: rgba(255, 176, 32, 0.15);">&#129328;</div>
+          <div class="exercise-mock-info">
+            <div class="exercise-mock-name">Shoulder Press</div>
+            <div class="exercise-mock-detail">Upcoming &middot; shoulders</div>
+          </div>
+          <div class="exercise-mock-indicator"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="color-group-title">WORKOUT STATUS CARDS</div>
+    <div class="grid-3" style="margin-bottom: 32px;">
+      <div class="status-card">
+        <div class="status-card-icon" style="background: rgba(59, 130, 246, 0.15);">&#9989;</div>
+        <div class="status-card-info">
+          <div class="status-card-name" style="color: #3B82F6;">Completed</div>
+          <div class="status-card-desc">Workout finished successfully</div>
+        </div>
+      </div>
+      <div class="status-card">
+        <div class="status-card-icon" style="background: rgba(255, 176, 32, 0.15);">&#9203;</div>
+        <div class="status-card-info">
+          <div class="status-card-name" style="color: #FFB020;">In Progress</div>
+          <div class="status-card-desc">Currently active workout</div>
+        </div>
+      </div>
+      <div class="status-card">
+        <div class="status-card-icon" style="background: rgba(239, 68, 68, 0.15);">&#128197;</div>
+        <div class="status-card-info">
+          <div class="status-card-name" style="color: #EF4444;">Planned</div>
+          <div class="status-card-desc">Scheduled for future</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="color-group-title">SET REPORT ROW</div>
+    <div style="max-width: 400px; margin-bottom: 32px;">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 12px; background: var(--secondary); padding: 14px; border-radius: 12px;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: var(--bg-main); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700;">1</div>
+          <div style="flex: 1; display: flex; justify-content: space-around;">
+            <div style="text-align: center;"><div style="font-size: 11px; color: var(--text-muted);">Weight</div><div style="font-size: 18px; font-weight: 700;">80</div></div>
+            <div style="width: 1px; background: var(--gray-600);"></div>
+            <div style="text-align: center;"><div style="font-size: 11px; color: var(--text-muted);">Reps</div><div style="font-size: 18px; font-weight: 700;">12</div></div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; background: var(--secondary); padding: 14px; border-radius: 12px; border: 2px solid var(--primary);">
+          <div style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--primary); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700;">2</div>
+          <div style="flex: 1; display: flex; justify-content: space-around;">
+            <div style="text-align: center;"><div style="font-size: 11px; color: var(--text-muted);">Weight</div><div style="font-size: 18px; font-weight: 700;">85</div></div>
+            <div style="width: 1px; background: var(--gray-600);"></div>
+            <div style="text-align: center;"><div style="font-size: 11px; color: var(--text-muted);">Reps</div><div style="font-size: 18px; font-weight: 700;">10</div></div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; background: var(--secondary); padding: 14px; border-radius: 12px; opacity: 0.5;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--gray-600); color: var(--gray-400); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700;">3</div>
+          <div style="flex: 1; display: flex; justify-content: space-around;">
+            <div style="text-align: center;"><div style="font-size: 11px; color: var(--text-muted);">Weight</div><div style="font-size: 18px; font-weight: 700;">—</div></div>
+            <div style="width: 1px; background: var(--gray-600);"></div>
+            <div style="text-align: center;"><div style="font-size: 11px; color: var(--text-muted);">Reps</div><div style="font-size: 18px; font-weight: 700;">—</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 12. ANIMATIONS ========== -->
+  <section id="animations">
+    <div class="section-header">
+      <div class="section-number">12</div>
+      <div>
+        <div class="section-title">Animations</div>
+        <div class="section-subtitle">Motion tokens defined in Tailwind config</div>
+      </div>
+    </div>
+
+    <div class="anim-row">
+      <div class="anim-box anim-pulse">Pulse Glow</div>
+      <div class="anim-box anim-fade">Fade In</div>
+      <div class="anim-box anim-slide">Slide Up</div>
+      <div class="anim-box anim-scale">Scale In</div>
+    </div>
+
+    <div style="margin-top: 24px;">
+      <div class="color-group-title">TRANSITION DURATIONS</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px;">
+        <div class="badge-demo" style="background: var(--secondary); color: var(--text-secondary);">fast: 0.1s</div>
+        <div class="badge-demo" style="background: var(--secondary); color: var(--text-secondary);">normal: 0.15s</div>
+        <div class="badge-demo" style="background: var(--secondary); color: var(--text-secondary);">slow: 0.3s</div>
+        <div class="badge-demo" style="background: var(--secondary); color: var(--text-secondary);">250ms</div>
+        <div class="badge-demo" style="background: var(--secondary); color: var(--text-secondary);">350ms</div>
+        <div class="badge-demo" style="background: var(--secondary); color: var(--text-secondary);">400ms</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 13. MOBILE PREVIEW ========== -->
+  <section id="mobile">
+    <div class="section-header">
+      <div class="section-number">13</div>
+      <div>
+        <div class="section-title">Mobile Preview</div>
+        <div class="section-subtitle">375px viewport reference (mobile-first)</div>
+      </div>
+    </div>
+
+    <div class="mobile-frame">
+      <div class="mobile-notch"><div class="mobile-notch-pill"></div></div>
+      <div class="mobile-content">
+        <!-- Header -->
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="font-size: 16px;">&#8592;</div>
+            <span style="font-size: 14px; font-weight: 500;">Back</span>
+          </div>
+          <div style="font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+            &#9203; <span style="font-family: monospace;">00:32:15</span>
+          </div>
+        </div>
+
+        <!-- Title -->
+        <div style="text-align: center; padding: 20px 16px;">
+          <div style="font-size: 22px; font-weight: 800;">Push Day</div>
+          <div style="font-size: 14px; color: var(--text-muted);">3 / 6 exercises</div>
+        </div>
+
+        <!-- Exercise Cards -->
+        <div style="padding: 0 16px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="background: rgba(0, 212, 170, 0.05); border: 1px solid var(--primary); border-radius: 14px; padding: 14px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+              <div style="width: 48px; height: 48px; border-radius: 10px; background: rgba(255, 107, 53, 0.15); display: flex; align-items: center; justify-content: center; font-size: 22px;">&#128170;</div>
+              <div style="flex: 1;">
+                <div style="font-size: 14px; font-weight: 600;">Bench Press</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Set 2 of 4</div>
+              </div>
+              <div style="color: var(--primary); font-size: 16px;">&#9660;</div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <div style="flex: 1; background: var(--secondary); border-radius: 10px; padding: 10px; display: flex; align-items: center; gap: 10px;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--primary); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">2</div>
+                <div style="flex: 1; display: flex; justify-content: space-around;">
+                  <div style="text-align: center;"><div style="font-size: 10px; color: var(--text-muted);">kg</div><div style="font-size: 16px; font-weight: 700;">80</div></div>
+                  <div style="width: 1px; background: var(--gray-600);"></div>
+                  <div style="text-align: center;"><div style="font-size: 10px; color: var(--text-muted);">reps</div><div style="font-size: 16px; font-weight: 700;">12</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: var(--gray-900); border: 1px solid var(--gray-700); border-radius: 14px; padding: 14px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 48px; height: 48px; border-radius: 10px; background: rgba(139, 92, 246, 0.15); display: flex; align-items: center; justify-content: center; font-size: 22px;">&#129470;</div>
+              <div style="flex: 1;">
+                <div style="font-size: 14px; font-weight: 600;">Incline DB Press</div>
+                <div style="font-size: 12px; color: var(--text-muted);">3 sets &middot; upcoming</div>
+              </div>
+              <div style="width: 24px; height: 24px; border: 2px solid var(--gray-600); border-radius: 50%;"></div>
+            </div>
+          </div>
+
+          <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 14px; padding: 14px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 48px; height: 48px; border-radius: 10px; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; font-size: 22px;">&#9989;</div>
+              <div style="flex: 1;">
+                <div style="font-size: 14px; font-weight: 600; color: #6EE7B7;">Flat Flyes</div>
+                <div style="font-size: 12px; color: var(--text-muted);">3 sets &middot; done</div>
+              </div>
+              <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--status-success); color: white; display: flex; align-items: center; justify-content: center; font-size: 14px;">&#10003;</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Action -->
+        <div style="padding: 16px; margin-top: 20px; border-top: 1px solid var(--border); background: rgba(11, 13, 18, 0.95);">
+          <button class="btn btn-primary-demo" style="width: 100%; padding: 14px; font-size: 16px; border-radius: 14px;">
+            Finish Workout &#9989;
+          </button>
+        </div>
+      </div>
+      <div class="mobile-bottom-nav">
+        <div class="mobile-nav-item"><div class="mobile-nav-icon">&#127968;</div>Home</div>
+        <div class="mobile-nav-item active-nav"><div class="mobile-nav-icon">&#128170;</div>Workout</div>
+        <div class="mobile-nav-item"><div class="mobile-nav-icon">&#128202;</div>Stats</div>
+        <div class="mobile-nav-item"><div class="mobile-nav-icon">&#128100;</div>Profile</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== TAILWIND CLASS REFERENCE ========== -->
+  <section id="reference">
+    <div class="section-header">
+      <div class="section-number">14</div>
+      <div>
+        <div class="section-title">Quick Reference</div>
+        <div class="section-subtitle">Common Tailwind class mappings from tokens</div>
+      </div>
+    </div>
+
+    <div class="code-block" style="direction: ltr; line-height: 2;">
+<span class="token-comment">/* Background */</span>
+<span class="token-class">bg-background-main</span>     <span class="token-string">#0B0D12</span>
+<span class="token-class">bg-background-card</span>     <span class="token-string">#141820</span>
+<span class="token-class">bg-background-elevated</span> <span class="token-string">#1A1F2A</span>
+
+<span class="token-comment">/* Primary */</span>
+<span class="token-class">text-primary-main</span>      <span class="token-string">#00D4AA</span>
+<span class="token-class">bg-primary-main</span>        <span class="token-string">#00D4AA</span>
+<span class="token-class">border-primary-main</span>    <span class="token-string">#00D4AA</span>
+
+<span class="token-comment">/* Accent */</span>
+<span class="token-class">text-accent-orange</span>     <span class="token-string">#FF6B35</span>
+<span class="token-class">text-accent-purple</span>     <span class="token-string">#8B5CF6</span>
+<span class="token-class">text-accent-gold</span>       <span class="token-string">#C4A052</span>
+<span class="token-class">text-accent-pink</span>       <span class="token-string">#EC4899</span>
+
+<span class="token-comment">/* Status */</span>
+<span class="token-class">text-status-success</span>    <span class="token-string">#10B981</span>
+<span class="token-class">text-status-warning</span>    <span class="token-string">#FFB020</span>
+<span class="token-class">text-status-error</span>      <span class="token-string">#EF4444</span>
+<span class="token-class">text-status-info</span>       <span class="token-string">#3B82F6</span>
+
+<span class="token-comment">/* Text */</span>
+<span class="token-class">text-text-primary</span>      <span class="token-string">#FFFFFF</span>
+<span class="token-class">text-text-secondary</span>    <span class="token-string">#8B95A5</span>
+<span class="token-class">text-text-muted</span>        <span class="token-string">#5A6478</span>
+
+<span class="token-comment">/* Muscle Groups */</span>
+<span class="token-class">text-muscles-chest</span>     <span class="token-string">#FF6B35</span>
+<span class="token-class">text-muscles-back</span>      <span class="token-string">#8B5CF6</span>
+<span class="token-class">text-muscles-legs</span>      <span class="token-string">#00D4AA</span>
+<span class="token-class">text-muscles-shoulders</span> <span class="token-string">#FFB020</span>
+<span class="token-class">text-muscles-arms</span>      <span class="token-string">#3B82F6</span>
+<span class="token-class">text-muscles-core</span>      <span class="token-string">#EC4899</span>
+
+<span class="token-comment">/* Component Classes (from index.css) */</span>
+<span class="token-class">btn-primary</span>   <span class="token-class">btn-secondary</span>   <span class="token-class">btn-ghost</span>   <span class="token-class">btn-danger</span>
+<span class="token-class">card</span>   <span class="token-class">card-neon</span>   <span class="token-class">card-stat</span>   <span class="token-class">card-action</span>
+<span class="token-class">badge</span>   <span class="token-class">badge-primary</span>   <span class="token-class">badge-category</span>
+<span class="token-class">pill</span>   <span class="token-class">pill-default</span>   <span class="token-class">pill-active</span>
+<span class="token-class">input-primary</span>   <span class="token-class">input-neon</span>   <span class="token-class">input-search</span>
+<span class="token-class">page-container</span>   <span class="token-class">page-header</span>   <span class="token-class">page-content</span>
+    </div>
+  </section>
+
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast">Copied!</div>
+
+<script>
+function copyColor(color) {
+  navigator.clipboard.writeText(color).then(() => {
+    const toast = document.getElementById('toast');
+    toast.textContent = `Copied ${color}`;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1500);
+  });
+}
+
+function scrollToSection(id) {
+  document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+  // Update active nav
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+// Highlight active section on scroll
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-link');
+
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(section => {
+    const sectionTop = section.offsetTop;
+    if (scrollY >= sectionTop - 120) {
+      current = section.getAttribute('id');
+    }
+  });
+  navLinks.forEach(link => {
+    link.classList.remove('active');
+    if (link.getAttribute('href') === '#' + current) {
+      link.classList.add('active');
+    }
+  });
+});
+</script>
+</body>
+</html>

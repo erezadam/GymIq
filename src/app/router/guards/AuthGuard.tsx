@@ -15,14 +15,14 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  // Check role if required
-  if (requiredRole && user?.role !== requiredRole) {
-    // Admin trying to access user pages - allow
-    if (user?.role === 'admin') {
-      return <>{children}</>
+  // Check role if required (role hierarchy: user < trainer < admin)
+  if (requiredRole) {
+    const roleHierarchy: Record<string, number> = { user: 0, trainer: 1, admin: 2 }
+    const userLevel = roleHierarchy[user?.role || 'user'] || 0
+    const requiredLevel = roleHierarchy[requiredRole] || 0
+    if (userLevel < requiredLevel) {
+      return <Navigate to="/dashboard" replace />
     }
-    // User trying to access admin - redirect
-    return <Navigate to="/dashboard" replace />
   }
 
   return <>{children}</>

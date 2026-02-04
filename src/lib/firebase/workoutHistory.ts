@@ -46,6 +46,9 @@ function toWorkoutHistory(id: string, data: any): WorkoutHistoryEntry {
     bundleId: data.bundleId,
     aiRecommendations: data.aiRecommendations,
     aiExplanation: data.aiExplanation,
+    // Trainer program fields
+    programId: data.programId,
+    programDayLabel: data.programDayLabel,
   }
 }
 
@@ -73,6 +76,9 @@ function toSummary(entry: WorkoutHistoryEntry): WorkoutHistorySummary {
     source: entry.source,
     aiWorkoutNumber: entry.aiWorkoutNumber,
     bundleId: entry.bundleId,
+    // Trainer program fields
+    programId: entry.programId,
+    programDayLabel: entry.programDayLabel,
   }
 }
 
@@ -152,6 +158,9 @@ export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'
     bundleId: workout.bundleId,
     aiRecommendations: workout.aiRecommendations,
     aiExplanation: workout.aiExplanation,
+    // Trainer program fields
+    programId: workout.programId,
+    programDayLabel: workout.programDayLabel,
   })
 
   // Add notes only if exists
@@ -820,6 +829,10 @@ export async function autoSaveWorkout(
     totalVolume: workout.totalVolume || 0,
     personalRecords: workout.personalRecords || 0,
     lastUpdated: Timestamp.now(),
+    // Source & program fields (same as saveWorkoutHistory)
+    source: workout.source,
+    programId: workout.programId,
+    programDayLabel: workout.programDayLabel,
   })
 
   try {

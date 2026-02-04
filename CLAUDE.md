@@ -257,6 +257,7 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 | **🔐 אבטחה סודות** | לא מכניסים מפתחות לקוד - בסקריפטים להשתמש ב-`scripts/firebase-config.ts` | יש Security check + בדיקת grep | ראה סעיף אבטחה למעלה |
 | **Firebase** | כל שינוי נתונים כולל בדיקת rules ו-migrations במידת הצורך | יש Data change notes | `.claude/firebase-data-SKILL.md` |
 | **פריסה** | לפני פריסה מוודאים env נכון build נקי ו-rollback plan | יש Deploy checklist | `.claude/deployment-SKILL.md` |
+| **🔀 Git** | לא דוחפים ישירות ל-main, עובדים בענף נפרד, PR חובה | עובדים בענף feature/fix/work | ראה סעיף Git למעלה |
 | **סיום** | מסיימים בסיכום מה שונה איך נבדק ומה נשאר פתוח | יש Summary + Next | `.claude/project-control-SKILL.md` |
 
 ---
@@ -276,6 +277,7 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 | **ביצועים ואופטימיזציה** | performance, optimize, slow, fast, cache, memory, bundle | `.claude/project-control-SKILL.md` |
 | **תכנון ותיעוד** | plan, design, document, spec, requirements, architecture | `.claude/documentation-SKILL.md` |
 | **סקריפטים ו-Firebase** | script, migration, import, export, firebase-admin | ראה סעיף אבטחה + `.claude/firebase-data-SKILL.md` |
+| **🔀 Git ו-GitHub** | git, branch, push, merge, pr, deploy to main | ראה סעיף Git למעלה |
 
 ---
 
@@ -315,17 +317,88 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 
 ---
 
+## 🔀 Git ותהליך עבודה עם GitHub (חוק ברזל!)
+
+> **רקע:** ב-03/02/2026 הוגדרו branch protection, CI אוטומטי, ו-PR חובה על main.
+> אי אפשר לדחוף ישירות ל-main. כל שינוי חייב לעבור PR עם build ירוק.
+
+### ❌ אסור בתכלית האיסור:
+- לדחוף (push) ישירות ל-`main`
+- לעבוד על branch `main` מקומית (רק pull ממנו)
+- לעשות commit ל-`main` ישירות
+- למזג PR עם build שנכשל
+
+### ✅ חובה - תהליך עבודה נכון:
+
+**1. לפני תחילת עבודה (טרמינל כללי):**
+```bash
+git checkout main
+git pull
+git checkout -b feature/שם-תיאורי   # או work/YYYY-MM-DD או fix/תיאור-באג
+```
+
+**2. עבודה עם Claude Code (כרגיל):**
+הסוכן עובד על הקבצים המקומיים כרגיל. שום דבר לא משתנה בשלב הזה.
+
+**3. אחרי סיום עבודה (טרמינל כללי):**
+```bash
+git add .
+git commit -m "תיאור: מה השתנה"
+git push origin feature/שם-הענף
+gh pr create --title "תיאור" --body "פירוט מה השתנה"
+```
+
+**4. בדיקת CI:**
+GitHub מריץ `npm run build` אוטומטית. אם נכשל ❌ — לתקן ולדחוף שוב. אם עבר ✅ — ניתן למזג.
+
+**5. מיזוג (אחרי build ירוק):**
+```bash
+gh pr merge --merge
+git checkout main
+git pull
+```
+
+### 📋 מוסכמות שמות ענפים:
+
+| סוג עבודה | תבנית שם | דוגמה |
+|-----------|----------|-------|
+| פיצ'ר חדש | `feature/שם` | `feature/trainer-module` |
+| תיקון באג | `fix/שם` | `fix/rest-timer-sound` |
+| עבודה כללית | `work/תאריך` | `work/2026-02-03` |
+| תשתית/הגדרות | `setup/שם` | `setup/ci-workflow` |
+
+### 🛡️ מה מגן על main:
+
+- **Branch Protection:** חובת PR, אי אפשר push ישיר
+- **GitHub Actions CI:** כל PR מריץ `npm ci` + `npm run build`
+- **Status Check חובה:** בלי build ירוק = אי אפשר למזג
+- **PR Template:** תבנית אוטומטית עם: מה השתנה, איך בדקתי, מה עלול להישבר, איך עושים rollback
+
+### 🔧 כלי עזר:
+
+| פקודה | מה עושה |
+|-------|---------|
+| `gh pr create` | פותח PR מהטרמינל |
+| `gh pr list` | רואה PRs פתוחים |
+| `gh pr merge --merge` | ממזג PR |
+| `gh pr view --web` | פותח PR בדפדפן |
+| `git branch -a` | רואה כל הענפים |
+| `git remote prune origin` | מנקה ענפים מרוחקים שנמחקו |
+
+---
+
 ## 📜 היסטוריית אירועים
 
 | תאריך | אירוע | לקח |
 |-------|-------|-----|
 | 16/01/2026 | GitHub זיהה 19 קבצים עם מפתחות חשופים | נוסף סעיף אבטחה + firebase-config.ts משותף |
 | 29/01/2026 | נמצאו 217 inline styles ב-12 קבצים | נוסף סעיף עיצוב + חוק ברזל No inline styles |
+| 03/02/2026 | הוגדרו branch protection + CI + PR חובה על main | נוסף סעיף Git + תהליך עבודה עם GitHub |
 
 ---
 
 ```
 ══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 29/01/2026 | נוסף חוק ברזל No inline styles + סעיף עיצוב
+עדכון אחרון: 03/02/2026 | נוסף סעיף Git + תהליך עבודה עם GitHub + CI
 ══════════════════════════════════════════════════════════════════════════════
 ```

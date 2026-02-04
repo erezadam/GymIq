@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense, lazy } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/domains/authentication/store'
 import { getUserWorkoutStats } from '@/lib/firebase/workoutHistory'
@@ -6,6 +6,8 @@ import { getExternalComparisonUrl } from '@/lib/firebase/appSettings'
 import { useVersionCheck } from '@/shared/hooks/useVersionCheck'
 import { colors, spacing, borderRadius, typography } from '@/styles/theme'
 import AITrainerModal from '@/domains/workouts/components/ai-trainer/AITrainerModal'
+
+const TrainerDashboardTile = lazy(() => import('@/domains/trainer/components/TrainerDashboardTile').then(m => ({ default: m.TrainerDashboardTile })))
 
 // Initial stats (will be replaced with Firebase data)
 const defaultStats = {
@@ -396,6 +398,16 @@ export default function UserDashboard() {
           </div>
         </button>
       </div>
+
+      {/* Trainer Dashboard Tile - shown for trainers */}
+      {(user?.role === 'trainer' || user?.role === 'admin') && (
+        <div style={{ marginBottom: 12 }}>
+          <Suspense fallback={null}>
+            <TrainerDashboardTile />
+          </Suspense>
+        </div>
+      )}
+
 
       {/* International Comparison Card - Only shown if URL is configured */}
       {externalUrl && (

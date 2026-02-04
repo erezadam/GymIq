@@ -48,7 +48,7 @@ const equipmentNames: Record<string, string> = {
 export function useActiveWorkout() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const { selectedExercises, clearWorkout, removeExercise: removeFromStore } = useWorkoutBuilderStore()
+  const { selectedExercises, clearWorkout, removeExercise: removeFromStore, programId, programDayLabel, workoutName: builderWorkoutName } = useWorkoutBuilderStore()
 
   // State
   const [workout, setWorkout] = useState<ActiveWorkout | null>(null)
@@ -624,7 +624,7 @@ export function useActiveWorkout() {
           const endTime = new Date()
           const savedId = await autoSaveWorkout(existingId, {
             userId: newWorkout.userId,
-            name: `אימון ${newWorkout.startedAt.toLocaleDateString('he-IL')}`,
+            name: builderWorkoutName || `אימון ${newWorkout.startedAt.toLocaleDateString('he-IL')}`,
             date: newWorkout.startedAt,
             startTime: newWorkout.startedAt,
             endTime,
@@ -664,6 +664,8 @@ export function useActiveWorkout() {
             totalSets: newWorkout.stats.totalSets,
             totalVolume: newWorkout.stats.totalVolume,
             personalRecords: 0,
+            // Trainer program fields
+            ...(programId && { source: 'trainer_program' as const, programId, programDayLabel }),
           })
 
           setFirebaseWorkoutId(savedId)
