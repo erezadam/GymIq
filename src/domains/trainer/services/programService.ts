@@ -99,15 +99,20 @@ export const programService = {
     programId: string,
     traineeId: string
   ): Promise<void> {
-    // Deactivate existing active program
+    // Deactivate existing active program first
     const activeProgram = await this.getTraineeActiveProgram(traineeId)
     if (activeProgram && activeProgram.id !== programId) {
-      await updateDoc(doc(db, 'trainingPrograms', activeProgram.id), {
-        status: 'completed',
-        updatedAt: serverTimestamp(),
-      })
+      try {
+        await updateDoc(doc(db, 'trainingPrograms', activeProgram.id), {
+          status: 'completed',
+          updatedAt: serverTimestamp(),
+        })
+      } catch (err) {
+        console.error('Failed to deactivate previous program:', err)
+        throw new Error('שגיאה בביטול תוכנית קודמת. נסה שוב.')
+      }
     }
-    // Activate the new program
+    // Only activate the new program after successful deactivation
     await updateDoc(doc(db, 'trainingPrograms', programId), {
       status: 'active',
       updatedAt: serverTimestamp(),

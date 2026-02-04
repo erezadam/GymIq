@@ -3,37 +3,40 @@ import { useAuthStore } from '@/domains/authentication/store'
 import { programService } from '../services/programService'
 import type { TrainingProgram, ProgramDay } from '../types'
 
-export function useTraineeProgram() {
+export function useTraineeProgram(traineeId?: string) {
   const { user } = useAuthStore()
+  const targetId = traineeId || user?.uid
   const [program, setProgram] = useState<TrainingProgram | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!user?.uid) {
+    if (!targetId) {
       setIsLoading(false)
       return
     }
 
     setIsLoading(true)
     programService
-      .getTraineeActiveProgram(user.uid)
+      .getTraineeActiveProgram(targetId)
       .then((p) => setProgram(p))
       .catch((err) => {
         console.error('Error loading trainee program:', err)
         setError(err.message)
       })
       .finally(() => setIsLoading(false))
-  }, [user?.uid])
+  }, [targetId])
 
   // Get today's training day from weekly structure
   const getTodayDay = (): ProgramDay | null => {
     if (!program || program.weeklyStructure.length === 0) return null
 
     // Calculate which day of the program we're on
-    const startDate = program.startDate instanceof Date
+    // Try to parse startDate even if it's a string/number (e.g. from Firestore)
+    const parsed = program.startDate instanceof Date
       ? program.startDate
-      : new Date()
+      : new Date(program.startDate as unknown as string | number)
+    const startDate = isNaN(parsed.getTime()) ? new Date() : parsed
     const now = new Date()
     const diffDays = Math.floor(
       (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
@@ -56,9 +59,9 @@ export function useTraineeProgram() {
     getTodayDay,
     getTrainingDays,
     refreshProgram: () => {
-      if (!user?.uid) return
+      if (!targetId) return
       programService
-        .getTraineeActiveProgram(user.uid)
+        .getTraineeActiveProgram(targetId)
         .then(setProgram)
         .catch(console.error)
     },

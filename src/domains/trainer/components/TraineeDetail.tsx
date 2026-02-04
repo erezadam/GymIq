@@ -246,9 +246,10 @@ export default function TraineeDetail() {
                   {activeProgram.weeklyStructure
                     .filter((day) => !day.restDay)
                     .map((day, filteredIdx) => {
-                      const originalIdx = activeProgram.weeklyStructure.findIndex(
+                      const foundIdx = activeProgram.weeklyStructure.findIndex(
                         (d) => d.dayLabel === day.dayLabel
                       )
+                      const originalIdx = foundIdx >= 0 ? foundIdx : filteredIdx
                       const isExpanded = expandedDayIndex === originalIdx
                       const dayGradients = [
                         'from-primary-main to-teal-600',

@@ -1,4 +1,5 @@
-import { Moon } from 'lucide-react'
+import { useState } from 'react'
+import { Moon, ChevronDown } from 'lucide-react'
 import type { ProgramDay } from '../../types'
 
 interface ProgramReviewProps {
@@ -30,6 +31,17 @@ export function ProgramReview({
   startDate,
   days,
 }: ProgramReviewProps) {
+  const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set())
+
+  const toggleDay = (index: number) => {
+    setExpandedDays((prev) => {
+      const next = new Set(prev)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
+  }
+
   const totalExercises = days.reduce(
     (sum, d) => sum + (d.restDay ? 0 : d.exercises.length),
     0
@@ -122,12 +134,17 @@ export function ProgramReview({
           const gradient = DAY_LETTER_GRADIENTS[index % DAY_LETTER_GRADIENTS.length]
           const daySets = day.exercises.reduce((sum, e) => sum + e.targetSets, 0)
 
+          const isExpanded = expandedDays.has(index)
+
           return (
             <div
               key={index}
               className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-5"
             >
-              <div className="flex items-center gap-4 mb-3">
+              <div
+                className={`flex items-center gap-4 ${!day.restDay && day.exercises.length > 0 ? 'cursor-pointer' : ''}`}
+                onClick={() => !day.restDay && day.exercises.length > 0 && toggleDay(index)}
+              >
                 {day.restDay ? (
                   <div className="w-12 h-12 rounded-xl bg-status-info/20 flex items-center justify-center flex-shrink-0">
                     <Moon className="w-6 h-6 text-status-info" />
@@ -148,15 +165,20 @@ export function ProgramReview({
                   </p>
                 </div>
                 {!day.restDay && (
-                  <div className="text-left flex-shrink-0">
-                    <div className="text-lg font-bold text-primary-main">{day.exercises.length}</div>
-                    <div className="text-xs text-text-muted">תרגילים</div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="text-left">
+                      <div className="text-lg font-bold text-primary-main">{day.exercises.length}</div>
+                      <div className="text-xs text-text-muted">תרגילים</div>
+                    </div>
+                    {day.exercises.length > 0 && (
+                      <ChevronDown className={`w-5 h-5 text-text-muted transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* Exercise list */}
-              {!day.restDay && day.exercises.length > 0 && (
+              {/* Exercise list (collapsed by default) */}
+              {isExpanded && !day.restDay && day.exercises.length > 0 && (
                 <div className="space-y-2 mt-3 pt-3 border-t border-white/10">
                   {day.exercises.map((ex, i) => {
                     const isSuperset = ex.supersetGroup && day.exercises.some(

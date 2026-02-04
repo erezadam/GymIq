@@ -829,6 +829,10 @@ export async function autoSaveWorkout(
     totalVolume: workout.totalVolume || 0,
     personalRecords: workout.personalRecords || 0,
     lastUpdated: Timestamp.now(),
+    // Source & program fields (same as saveWorkoutHistory)
+    source: workout.source,
+    programId: workout.programId,
+    programDayLabel: workout.programDayLabel,
   })
 
   try {

@@ -48,8 +48,8 @@ export function TraineeRegistrationModal({
       setError('נא למלא שם פרטי ושם משפחה')
       return
     }
-    if (!formData.email.trim()) {
-      setError('נא למלא כתובת אימייל')
+    if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setError('נא למלא כתובת אימייל תקינה')
       return
     }
     if (!formData.password || formData.password.length < 6) {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowRight,
@@ -21,6 +21,7 @@ import { MobileExerciseCard } from './MobileExerciseCard'
 import { TraineeSidePanel } from './TraineeSidePanel'
 import { TraineeHistoryPanel } from './TraineeHistoryPanel'
 import { ExerciseLibrary } from '@/domains/exercises/components/ExerciseLibrary'
+import type { ProgramDayExerciseInfo } from '@/domains/exercises/components/ExerciseLibrary'
 import type { Exercise } from '@/domains/exercises/types'
 
 type Step = 1 | 2 | 3 | 4
@@ -97,6 +98,11 @@ export default function ProgramBuilder() {
   const [selectedMobileDayIndex, setSelectedMobileDayIndex] = useState(0)
   const [showExercisePicker, setShowExercisePicker] = useState(false)
 
+  // Draft auto-save
+  const [draftId, setDraftId] = useState<string | null>(editId || null)
+  const draftSaveInFlight = useRef(false)
+  const [draftError, setDraftError] = useState<string | null>(null)
+
   // Trainee data for side panel
   const [traineeStats, setTraineeStats] = useState<TraineeStats | null>(null)
 
@@ -133,7 +139,9 @@ export default function ProgramBuilder() {
         const date =
           program.startDate instanceof Date
             ? program.startDate
-            : new Date()
+            : (program.startDate as any)?.toDate?.()
+              ? (program.startDate as any).toDate()
+              : new Date()
         setStartDate(date.toISOString().split('T')[0])
         setDays(program.weeklyStructure || [])
       })
@@ -190,6 +198,22 @@ export default function ProgramBuilder() {
     updated[index] = { ...updated[index], name: newName }
     setDays(updated)
   }
+
+  // ============ Other-days exercise map for cross-day indicators ============
+
+  const getOtherDaysExercises = useMemo(() => {
+    return (excludeDayIndex: number): ProgramDayExerciseInfo[] => {
+      const result: ProgramDayExerciseInfo[] = []
+      days.forEach((day, i) => {
+        if (i === excludeDayIndex || day.restDay) return
+        const letter = DAY_LETTERS[i] || String(i + 1)
+        day.exercises.forEach((ex) => {
+          result.push({ exerciseId: ex.exerciseId, dayLetter: letter })
+        })
+      })
+      return result
+    }
+  }, [days])
 
   // ============ Exercise operations for mobile inline editing ============
 
@@ -251,6 +275,9 @@ export default function ProgramBuilder() {
   // ============ Templates ============
 
   const applyTemplate = (template: 'ppl' | 'upper_lower' | 'full_body') => {
+    if (days.length > 0 && days.some(d => d.exercises.length > 0)) {
+      if (!window.confirm('יש ימים קיימים עם תרגילים. להחליף בתבנית?')) return
+    }
     let newDays: ProgramDay[] = []
     switch (template) {
       case 'ppl':
@@ -291,7 +318,10 @@ export default function ProgramBuilder() {
       case 1:
         return name.trim().length > 0 && traineeId.length > 0
       case 2:
-        return days.length > 0
+        return (
+          days.length > 0 &&
+          days.some(d => !d.restDay && d.exercises.length > 0)
+        )
       case 3:
         return days.some((d) => !d.restDay && d.exercises.length > 0)
       case 4:
@@ -301,48 +331,97 @@ export default function ProgramBuilder() {
     }
   }
 
+  // ============ Save helpers ============
+
+  const buildCleanDays = useCallback((currentDays: ProgramDay[]) => {
+    return currentDays.map((day) => {
+      const cleanDay: Record<string, unknown> = {
+        dayLabel: day.dayLabel,
+        name: day.name,
+        restDay: day.restDay,
+        exercises: day.exercises.map((ex) => {
+          const cleanEx: Record<string, unknown> = {
+            exerciseId: ex.exerciseId,
+            exerciseName: ex.exerciseName,
+            exerciseNameHe: ex.exerciseNameHe,
+            order: ex.order,
+            targetSets: ex.targetSets,
+            targetReps: ex.targetReps,
+            restTime: ex.restTime,
+          }
+          if (ex.imageUrl) cleanEx.imageUrl = ex.imageUrl
+          if (ex.category) cleanEx.category = ex.category
+          if (ex.primaryMuscle) cleanEx.primaryMuscle = ex.primaryMuscle
+          if (ex.equipment) cleanEx.equipment = ex.equipment
+          if (ex.targetWeight != null) cleanEx.targetWeight = ex.targetWeight
+          if (ex.notes) cleanEx.notes = ex.notes
+          if (ex.supersetGroup) cleanEx.supersetGroup = ex.supersetGroup
+          if (ex.reportType) cleanEx.reportType = ex.reportType
+          if (ex.assistanceTypes && ex.assistanceTypes.length > 0) cleanEx.assistanceTypes = ex.assistanceTypes
+          return cleanEx
+        }),
+      }
+      if (day.dayOfWeek != null) cleanDay.dayOfWeek = day.dayOfWeek
+      if (day.notes) cleanDay.notes = day.notes
+      if (day.estimatedDuration != null) cleanDay.estimatedDuration = day.estimatedDuration
+      return cleanDay
+    })
+  }, [])
+
+  // ============ Background draft save ============
+
+  const saveDraftInBackground = useCallback(async () => {
+    if (!user?.uid || !traineeId || !name.trim()) return
+    if (draftSaveInFlight.current) return
+    draftSaveInFlight.current = true
+    setDraftError(null)
+
+    try {
+      const programData: Record<string, unknown> = {
+        trainerId: user.uid,
+        originalTrainerId: user.uid,
+        traineeId,
+        name,
+        status: 'draft',
+        isModifiedByTrainee: false,
+        weeklyStructure: buildCleanDays(days),
+        startDate: new Date(startDate),
+        currentWeek: 1,
+      }
+      if (description) programData.description = description
+      if (durationWeeks != null) programData.durationWeeks = durationWeeks
+
+      if (draftId) {
+        await programService.updateProgram(draftId, programData as any)
+      } else {
+        const newId = await programService.createProgram(programData as any)
+        setDraftId(newId)
+      }
+    } catch (err) {
+      console.error('Draft save failed:', err)
+      setDraftError('שמירת טיוטה נכשלה')
+      setTimeout(() => setDraftError(null), 4000)
+    } finally {
+      draftSaveInFlight.current = false
+    }
+  }, [user?.uid, traineeId, name, description, durationWeeks, startDate, days, draftId, buildCleanDays])
+
   // ============ Save ============
 
   const handleSave = async (activate: boolean) => {
     if (!user?.uid) return
+    if (!traineeId.trim()) {
+      setError('יש לבחור מתאמן')
+      return
+    }
+    if (!name.trim()) {
+      setError('יש להזין שם תוכנית')
+      return
+    }
     setIsSaving(true)
     setError(null)
 
     try {
-      // Clean days data: strip undefined values that Firestore rejects
-      const cleanDays = days.map((day) => {
-        const cleanDay: Record<string, unknown> = {
-          dayLabel: day.dayLabel,
-          name: day.name,
-          restDay: day.restDay,
-          exercises: day.exercises.map((ex) => {
-            const cleanEx: Record<string, unknown> = {
-              exerciseId: ex.exerciseId,
-              exerciseName: ex.exerciseName,
-              exerciseNameHe: ex.exerciseNameHe,
-              order: ex.order,
-              targetSets: ex.targetSets,
-              targetReps: ex.targetReps,
-              restTime: ex.restTime,
-            }
-            if (ex.imageUrl) cleanEx.imageUrl = ex.imageUrl
-            if (ex.category) cleanEx.category = ex.category
-            if (ex.primaryMuscle) cleanEx.primaryMuscle = ex.primaryMuscle
-            if (ex.equipment) cleanEx.equipment = ex.equipment
-            if (ex.targetWeight != null) cleanEx.targetWeight = ex.targetWeight
-            if (ex.notes) cleanEx.notes = ex.notes
-            if (ex.supersetGroup) cleanEx.supersetGroup = ex.supersetGroup
-            if (ex.reportType) cleanEx.reportType = ex.reportType
-            if (ex.assistanceTypes && ex.assistanceTypes.length > 0) cleanEx.assistanceTypes = ex.assistanceTypes
-            return cleanEx
-          }),
-        }
-        if (day.dayOfWeek != null) cleanDay.dayOfWeek = day.dayOfWeek
-        if (day.notes) cleanDay.notes = day.notes
-        if (day.estimatedDuration != null) cleanDay.estimatedDuration = day.estimatedDuration
-        return cleanDay
-      })
-
       const programData: Record<string, unknown> = {
         trainerId: user.uid,
         originalTrainerId: user.uid,
@@ -350,17 +429,17 @@ export default function ProgramBuilder() {
         name,
         status: activate ? 'active' : 'draft',
         isModifiedByTrainee: false,
-        weeklyStructure: cleanDays,
+        weeklyStructure: buildCleanDays(days),
         startDate: new Date(startDate),
         currentWeek: 1,
       }
       if (description) programData.description = description
       if (durationWeeks != null) programData.durationWeeks = durationWeeks
 
-      if (isEditMode && editId) {
-        await programService.updateProgram(editId, programData as any)
+      if (draftId) {
+        await programService.updateProgram(draftId, programData as any)
         if (activate) {
-          await programService.activateProgram(editId, traineeId)
+          await programService.activateProgram(draftId, traineeId)
         }
       } else {
         const newId = await programService.createProgram(programData as any)
@@ -379,6 +458,12 @@ export default function ProgramBuilder() {
   }
 
   const handleQuickSave = () => handleSave(false)
+
+  // Step navigation with background draft save
+  const navigateToStep = useCallback((targetStep: Step) => {
+    setStep(targetStep)
+    saveDraftInBackground()
+  }, [saveDraftInBackground])
 
   // ============ Loading state ============
 
@@ -400,7 +485,9 @@ export default function ProgramBuilder() {
           programMode
           programExerciseIds={currentDay?.exercises.map(e => e.exerciseId) || []}
           onProgramExerciseToggle={handleMobileExerciseToggle}
-          onProgramBack={() => setShowExercisePicker(false)}
+          onProgramBack={() => { setShowExercisePicker(false); saveDraftInBackground() }}
+          targetUserId={traineeId}
+          programOtherDaysExercises={getOtherDaysExercises(selectedMobileDayIndex)}
         />
       </div>
     )
@@ -408,13 +495,15 @@ export default function ProgramBuilder() {
 
   // ============ Desktop: ProgramDayEditor (full page) ============
 
-  if (editingDayIndex !== null && step === 3) {
+  if (editingDayIndex !== null && (step === 2 || step === 3)) {
     return (
       <ProgramDayEditor
         day={days[editingDayIndex]}
         dayIndex={editingDayIndex}
         onUpdate={(updated) => updateDay(editingDayIndex, updated)}
-        onBack={() => setEditingDayIndex(null)}
+        onBack={() => { setEditingDayIndex(null); saveDraftInBackground() }}
+        traineeId={traineeId}
+        programOtherDaysExercises={getOtherDaysExercises(editingDayIndex)}
       />
     )
   }
@@ -577,6 +666,13 @@ export default function ProgramBuilder() {
         </div>
       )}
 
+      {/* Draft save error toast */}
+      {draftError && (
+        <div className={`bg-status-warning/10 border border-status-warning/30 text-status-warning rounded-xl p-3 text-sm ${isMobile ? 'mx-4' : ''}`}>
+          {draftError}
+        </div>
+      )}
+
       {/* Step 1: Details */}
       {step === 1 && (
         <div className={`bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl sm:rounded-3xl ${isMobile ? 'm-4 p-4' : 'p-5 sm:p-8'}`}>
@@ -683,7 +779,8 @@ export default function ProgramBuilder() {
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full bg-dark-surface border-2 border-dark-border rounded-xl py-3 px-4 text-text-primary focus:border-primary-main focus:outline-none transition"
+                  onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
+                  className="w-full bg-dark-surface border-2 border-dark-border rounded-xl py-3 px-4 text-text-primary focus:border-primary-main focus:outline-none transition [color-scheme:dark] cursor-pointer"
                 />
               </div>
               <div>
@@ -741,7 +838,6 @@ export default function ProgramBuilder() {
                     setStep(3)
                     setSelectedMobileDayIndex(index)
                   } else {
-                    setStep(3)
                     setEditingDayIndex(index)
                   }
                 }}
@@ -917,7 +1013,7 @@ export default function ProgramBuilder() {
                 <button
                   onClick={() => {
                     if (step === 3) setSelectedMobileDayIndex(0)
-                    setStep((step - 1) as Step)
+                    setStep(step === 4 ? 2 : (step - 1) as Step)
                   }}
                   className="flex-1 py-3 bg-dark-surface rounded-xl font-medium text-text-secondary flex items-center justify-center gap-1"
                 >
@@ -935,11 +1031,12 @@ export default function ProgramBuilder() {
 
               {step < 4 ? (
                 <button
-                  onClick={() => setStep((step + 1) as Step)}
+                  onClick={() => navigateToStep(step === 2 ? 4 : (step + 1) as Step)}
                   disabled={!canProceed(step)}
-                  className="flex-1 py-3 bg-gradient-to-br from-primary-main to-status-info rounded-xl font-bold text-white shadow-glow-cyan disabled:opacity-40 disabled:shadow-none flex items-center justify-center gap-1"
+                  title={step === 2 && !canProceed(2) ? 'הוסף תרגילים ליום אימון אחד לפחות' : undefined}
+                  className="flex-1 py-3 bg-gradient-to-br from-primary-main to-status-info rounded-xl font-bold text-white shadow-glow-cyan disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-1"
                 >
-                  {step === 3 ? 'סיכום' : 'הבא'}
+                  {step === 2 ? 'המשך לסיכום' : step === 3 ? 'סיכום' : 'הבא'}
                   <ArrowLeft className="w-4 h-4" />
                 </button>
               ) : (
@@ -994,7 +1091,7 @@ export default function ProgramBuilder() {
             <div className="flex justify-between pt-4">
               {step > 1 ? (
                 <button
-                  onClick={() => setStep((step - 1) as Step)}
+                  onClick={() => setStep(step === 4 ? 2 : (step - 1) as Step)}
                   className="px-5 sm:px-6 py-3 sm:py-4 bg-dark-surface rounded-xl hover:bg-dark-card transition flex items-center gap-2 text-text-secondary"
                 >
                   <ArrowRight className="w-4 h-4" />
@@ -1012,11 +1109,12 @@ export default function ProgramBuilder() {
 
               {step < 4 ? (
                 <button
-                  onClick={() => setStep((step + 1) as Step)}
+                  onClick={() => navigateToStep(step === 2 ? 4 : (step + 1) as Step)}
                   disabled={!canProceed(step)}
-                  className="px-8 sm:px-10 py-3 sm:py-4 bg-gradient-to-br from-primary-main to-status-info rounded-xl font-bold hover:opacity-90 transition flex items-center gap-2 text-white shadow-glow-cyan disabled:opacity-40 disabled:shadow-none"
+                  title={step === 2 && !canProceed(2) ? 'הוסף תרגילים ליום אימון אחד לפחות' : undefined}
+                  className="px-8 sm:px-10 py-3 sm:py-4 bg-gradient-to-br from-primary-main to-status-info rounded-xl font-bold hover:opacity-90 transition flex items-center gap-2 text-white shadow-glow-cyan disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
                 >
-                  <span>{step === 2 ? 'הוסף תרגילים' : 'המשך'}</span>
+                  <span>{step === 2 ? 'המשך לסיכום' : 'המשך'}</span>
                   <ArrowLeft className="w-4 h-4" />
                 </button>
               ) : (

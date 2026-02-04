@@ -3,6 +3,7 @@ import { Plus, ArrowRight, Moon, Sun } from 'lucide-react'
 import type { ProgramDay, ProgramExercise } from '../../types'
 import { ProgramExerciseEditor } from './ProgramExerciseEditor'
 import { ExerciseLibrary } from '@/domains/exercises/components/ExerciseLibrary'
+import type { ProgramDayExerciseInfo } from '@/domains/exercises/components/ExerciseLibrary'
 import type { Exercise } from '@/domains/exercises/types'
 
 interface ProgramDayEditorProps {
@@ -10,6 +11,8 @@ interface ProgramDayEditorProps {
   dayIndex: number
   onUpdate: (day: ProgramDay) => void
   onBack: () => void
+  traineeId?: string
+  programOtherDaysExercises?: ProgramDayExerciseInfo[]
 }
 
 const DAY_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
@@ -24,7 +27,7 @@ const DAY_LETTER_GRADIENTS = [
   'from-status-success to-green-600',
 ]
 
-export function ProgramDayEditor({ day, dayIndex, onUpdate, onBack }: ProgramDayEditorProps) {
+export function ProgramDayEditor({ day, dayIndex, onUpdate, onBack, traineeId, programOtherDaysExercises }: ProgramDayEditorProps) {
   const [showPicker, setShowPicker] = useState(false)
 
   const letter = DAY_LETTERS[dayIndex] || String(dayIndex + 1)
@@ -117,6 +120,8 @@ export function ProgramDayEditor({ day, dayIndex, onUpdate, onBack }: ProgramDay
           programExerciseIds={day.exercises.map(e => e.exerciseId)}
           onProgramExerciseToggle={handleExerciseToggle}
           onProgramBack={() => setShowPicker(false)}
+          targetUserId={traineeId}
+          programOtherDaysExercises={programOtherDaysExercises}
         />
       </div>
     )

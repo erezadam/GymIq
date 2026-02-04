@@ -131,6 +131,8 @@ caches.keys().then(names => {
 
 | תאריך | בעיה | בדיקה |
 |-------|------|-------|
+| 04/02 | autoSaveWorkout לא שומר שדות תוכנית מאמן | ודא ש-cleanWorkout ב-autoSaveWorkout כולל source, programId, programDayLabel |
+| 04/02 | תוכנית מאמן לא מוצגת | ודא ש-WorkoutHistory.tsx כולל TrainerProgramCard + useTraineeProgram |
 | 30/01 | אימון AI שהושלם לא מוצג בתוכנית אימונים | ודא שאימוני AI completed מופיעים ב"שבועיים אחרונים" ב-WorkoutHistory.tsx |
 | 29/01 | המשך אימון מאבד extended fields (time/intensity/speed/distance/incline) | ודא שכל save/restore points ב-useActiveWorkout.ts ו-workoutHistory.ts כוללים extended fields |
 | 29/01 | המשך אימון ריק/שחזור מ-Firebase לא מעביר category/primaryMuscle | `npm run test` - בדיקת רגרסיה 29/01 + ודא שכל addExercise מעביר details |

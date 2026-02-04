@@ -56,7 +56,11 @@ export function MobileExerciseCard({
             min={1}
             max={10}
             value={exercise.targetSets}
-            onChange={(e) => onUpdate({ targetSets: parseInt(e.target.value) || 1 })}
+            onChange={(e) => {
+              const val = parseInt(e.target.value)
+              if (isNaN(val)) return
+              onUpdate({ targetSets: Math.max(1, Math.min(10, val)) })
+            }}
             className="w-full bg-transparent text-center font-bold text-text-primary focus:outline-none"
           />
         </div>

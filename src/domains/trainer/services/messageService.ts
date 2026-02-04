@@ -3,6 +3,7 @@ import {
   doc,
   addDoc,
   getDocs,
+  getDoc,
   updateDoc,
   query,
   where,
@@ -103,7 +104,7 @@ export const messageService = {
     const docRef = doc(db, 'trainerMessages', messageId)
     await updateDoc(docRef, {
       isRead: true,
-      readAt: Timestamp.now(),
+      readAt: serverTimestamp(),
     })
   },
 
@@ -124,15 +125,10 @@ export const messageService = {
     reply: { senderId: string; senderName: string; senderRole: 'trainer' | 'user'; body: string }
   ): Promise<void> {
     const docRef = doc(db, 'trainerMessages', messageId)
-    // Get current message to append reply
-    const q = query(
-      collection(db, 'trainerMessages'),
-      where('__name__', '==', messageId)
-    )
-    const snapshot = await getDocs(q)
-    if (snapshot.empty) return
+    const snapshot = await getDoc(docRef)
+    if (!snapshot.exists()) return
 
-    const current = snapshot.docs[0].data()
+    const current = snapshot.data()
     const replies = current.replies || []
 
     await updateDoc(docRef, {

@@ -1,12 +1,23 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { UserPlus, Users, RefreshCw } from 'lucide-react'
 import { useTrainerData } from '../hooks/useTrainerData'
+import { useAuthStore } from '@/domains/authentication/store'
+import { messageService } from '../services/messageService'
 import { TraineeCard } from './TraineeCard'
 import { TraineeRegistrationModal } from './TraineeRegistrationModal'
 
 export default function TrainerDashboard() {
   const { trainees, isLoading, error, refreshTrainees } = useTrainerData()
+  const { user } = useAuthStore()
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
+  const [totalMessages, setTotalMessages] = useState(0)
+
+  useEffect(() => {
+    if (!user?.uid) return
+    messageService.getTrainerMessages(user.uid, 100)
+      .then((msgs) => setTotalMessages(msgs.length))
+      .catch(console.error)
+  }, [user?.uid])
 
   const stats = useMemo(() => {
     const activeCount = trainees.length
@@ -49,9 +60,9 @@ export default function TrainerDashboard() {
           <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-2xl">💬</span>
-              <span className="text-2xl font-black text-accent-purple">0</span>
+              <span className="text-2xl font-black text-accent-purple">{totalMessages}</span>
             </div>
-            <p className="text-text-muted text-sm">הודעות חדשות</p>
+            <p className="text-text-muted text-sm">הודעות שנשלחו</p>
           </div>
         </div>
       )}

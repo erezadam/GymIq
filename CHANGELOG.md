@@ -4,6 +4,106 @@
 
 ---
 
+## [1.12.0] - 2026-02-04
+
+### מודול מאמן - Trainer Module (חדש!)
+
+מודול מלא לניהול מאמנים-מתאמנים ב-7 שלבים:
+
+#### שלב 1: תשתית (Foundation)
+- **Types חדשים** - `TrainerRelationship`, `TrainingProgram`, `ProgramDay`, `ProgramExercise`, `TrainerMessage` ב-`trainer.types.ts`
+- **Firestore Rules** - כללי אבטחה ל-`trainingPrograms`, `trainerMessages`, `trainerRelationships`
+- **הרחבת AppUser** - שדות `trainerProfile`, `trainerId`, `trainingGoals`, `injuriesOrLimitations`
+- **הרחבת WorkoutHistoryEntry** - שדות `source: 'trainer_program'`, `programId`, `programDayLabel`
+
+#### שלב 2: קשרי מאמן-מתאמן + רישום
+- **TrainerDashboard** - דשבורד מאמן עם רשימת מתאמנים וסטטיסטיקות
+- **TraineeRegistrationModal** - יצירת חשבון מתאמן חדש (secondary Firebase app instance)
+- **TrainerLayout** - Layout wrapper עם sidebar למאמנים
+- **trainerService** - CRUD לקשרי מאמן-מתאמן
+- **traineeAccountService** - יצירת חשבונות מתאמנים
+- **AuthGuard role hierarchy** - `user < trainer < admin` (לא רק exact match)
+- **MainLayout** - לינק "מאמן" בניווט למאמנים/אדמינים
+
+#### שלב 3: בונה תוכניות אימון (Program Builder)
+- **ProgramBuilder** - אשף 4 שלבים: פרטים → ימים → תרגילים → סקירה
+- **Split-screen desktop** - רשימת ימים בצד + עורך תרגילים
+- **Tabbed mobile** - ניווט טאבים למסכים צרים
+- **ExerciseLibrary selectionMode** - שימוש חוזר בספרייה לבחירת תרגילים לתוכנית
+- **programService** - CRUD לתוכניות + הפעלה/השהיה
+- **TraineeSidePanel** - פאנל צד עם היסטוריית מתאמן
+- **שמירה כטיוטה** - אפשרות לשמור תוכנית בסטטוס draft
+
+#### שלב 4: חוויית מתאמן (Trainee Experience)
+- **TraineeProgramView** - כרטיס תוכנית מאמן עם עיצוב כתום
+- **ProgramExerciseCard** - כרטיס תרגיל בתוכנית
+- **loadFromProgram** - פעולה חדשה ב-workoutBuilderStore לטעינת אימון מתוכנית
+- **useTraineeProgram** - hook לטעינת תוכנית פעילה + חישוב "האימון של היום"
+- **אינטגרציה עם workoutHistory** - שמירת `source`, `programId`, `programDayLabel`
+
+#### שלב 5: דשבורד ניטור מאמן
+- **TraineeDetail** - דף פרטי מתאמן מלא
+- **TraineePerformance** - סטטיסטיקות ביצועים (אימונים, סטריק, נפח)
+- **TraineeRecentWorkouts** - 10 אימונים אחרונים עם הרחבה
+- **TraineeProfileSection** - פרופיל מתאמן (מטרות, פציעות, הערות)
+- **TrainerDashboardTile** - קוביית גישה מהירה בדשבורד
+
+#### שלב 6: מערכת הודעות
+- **MessageCenter** - מרכז הודעות למאמן
+- **MessageComposer** - יצירת הודעה (סוג, נושא, עדיפות)
+- **TraineeInbox** - תיבת דואר נכנס למתאמן
+- **InboxBadge** - תג הודעות שלא נקראו (polling כל 60 שניות)
+- **messageService** - CRUD להודעות + סימון כנקראו
+- **תשובות** - מתאמנים יכולים להשיב להודעות
+
+#### שלב 7: אינטגרציה ופוליש
+- **תוכנית מאמן בדף תוכניות** - `TrainerProgramCard` חדש בדף `/workout/history` עם סימון כתום "מאמן"
+- **הסרה מדשבורד** - תוכנית מאמן נגישה דרך קוביית "תוכניות" בלבד (ללא כפילות)
+- **תוכנית מתרחבת** - לחיצה → ימי אימון → תרגילים → "התחל אימון"
+
+### תיקוני באגים
+- **autoSaveWorkout לא שומר שדות תוכנית** - `source`, `programId`, `programDayLabel` לא נכללו ב-`cleanWorkout`. תוקן
+- **startDate parsing** - תמיכה בערכי string/number מ-Firestore ב-`useTraineeProgram`
+
+### ארכיטקטורה
+
+**דומיין חדש:** `src/domains/trainer/` (~40 קבצים)
+
+```
+src/domains/trainer/
+├── types/          trainer.types.ts, index.ts
+├── services/       trainerService, traineeAccountService, programService, messageService
+├── store/          trainerStore, messageStore (Zustand)
+├── hooks/          useTrainerData, useTraineeProgram, useTrainerMessages, useUnreadMessages
+└── components/
+    ├── TrainerDashboard, TraineeCard, TraineeDetail, TrainerLayout
+    ├── TraineeRegistrationModal, TraineeProfileSection, TraineePerformance, TraineeRecentWorkouts
+    ├── TrainerDashboardTile
+    ├── ProgramBuilder/    ProgramBuilder, ProgramDayEditor, ProgramExerciseEditor, ProgramReview, ...
+    ├── ProgramView/       TraineeProgramView, TrainerProgramCard, ProgramExerciseCard, ProgramDayDetail
+    ├── Messages/          MessageCenter, MessageComposer, MessageList, MessageCard
+    └── TraineeInbox/      TraineeInbox, InboxMessageCard, InboxBadge
+```
+
+**נתיבים חדשים:** `/trainer`, `/trainer/trainee/:id`, `/trainer/program/new`, `/trainer/program/:id/edit`, `/trainer/messages`, `/inbox`
+
+**Firebase Collections חדשים:** `trainingPrograms`, `trainerMessages`
+
+**קבצים ששונו (מחוץ לדומיין):**
+- `firestore.rules` - כללי אבטחה חדשים
+- `src/App.tsx` - נתיבי מאמן + inbox
+- `src/app/router/guards/AuthGuard.tsx` - היררכיית תפקידים
+- `src/design-system/layouts/MainLayout.tsx` - לינקי ניווט למאמן ותיבת דואר
+- `src/domains/dashboard/components/UserDashboard.tsx` - TrainerDashboardTile
+- `src/domains/workouts/store/workoutBuilderStore.ts` - loadFromProgram action
+- `src/domains/workouts/components/WorkoutHistory.tsx` - סקשן תוכנית מאמן
+- `src/lib/firebase/auth.ts` - הרחבת AppUser
+- `src/lib/firebase/workoutHistory.ts` - שדות source/programId/programDayLabel
+- `src/domains/workouts/types/workout.types.ts` - trainer_program source
+- `src/domains/exercises/components/ExerciseLibrary.tsx` - selectionMode prop
+
+---
+
 ## [1.10.179] - 2026-02-02
 
 ### שינויים

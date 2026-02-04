@@ -11,7 +11,7 @@ export function useUnreadMessages() {
   const intervalRef = useRef<number | null>(null)
 
   useEffect(() => {
-    if (!user?.uid || !user.trainerId) return
+    if (!user?.uid) return
 
     const fetchUnread = async () => {
       try {
@@ -33,7 +33,7 @@ export function useUnreadMessages() {
         clearInterval(intervalRef.current)
       }
     }
-  }, [user?.uid, user?.trainerId, setUnreadCount])
+  }, [user?.uid, setUnreadCount])
 
   return { unreadCount }
 }

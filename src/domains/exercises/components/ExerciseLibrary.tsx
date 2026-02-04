@@ -34,11 +34,18 @@ function getEquipmentHe(equipment: string): string {
 }
 
 
+export interface ProgramDayExerciseInfo {
+  exerciseId: string
+  dayLetter: string
+}
+
 export interface ExerciseLibraryProps {
   programMode?: boolean
   programExerciseIds?: string[]
   onProgramExerciseToggle?: (exercise: Exercise, isAdding: boolean) => void
   onProgramBack?: () => void
+  targetUserId?: string // When building program for trainee, pass trainee's uid to show their history tags
+  programOtherDaysExercises?: ProgramDayExerciseInfo[] // Exercises from other days in the same program
 }
 
 export function ExerciseLibrary({
@@ -46,6 +53,8 @@ export function ExerciseLibrary({
   programExerciseIds = [],
   onProgramExerciseToggle,
   onProgramBack,
+  targetUserId,
+  programOtherDaysExercises = [],
 }: ExerciseLibraryProps = {}) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -79,6 +88,21 @@ export function ExerciseLibrary({
   }, [programMode, programExerciseIds, selectedExercises])
 
   const effectiveCount = programMode ? programExerciseIds.length : selectedExercises.length
+
+  // Program mode: lookup for exercises in other days of the program
+  const otherDaysMap = useMemo(() => {
+    if (!programMode || programOtherDaysExercises.length === 0) return new Map<string, string[]>()
+    const map = new Map<string, string[]>()
+    for (const entry of programOtherDaysExercises) {
+      const existing = map.get(entry.exerciseId)
+      if (existing) {
+        if (!existing.includes(entry.dayLetter)) existing.push(entry.dayLetter)
+      } else {
+        map.set(entry.exerciseId, [entry.dayLetter])
+      }
+    }
+    return map
+  }, [programMode, programOtherDaysExercises])
 
   // Helper: Check if today is selected (no date or date equals today)
   const isTodaySelected = useMemo(() => {
@@ -183,12 +207,14 @@ export function ExerciseLibrary({
   }
 
   // Load recently done exercises and last month exercises in background (non-blocking)
+  // When targetUserId is provided (e.g., building program for trainee), use that instead of current user
+  const historyUserId = targetUserId || user?.uid
   useEffect(() => {
-    if (user?.uid && !loading) {
+    if (historyUserId && !loading) {
       // Load both in parallel
       Promise.all([
-        getRecentlyDoneExerciseIds(user.uid),
-        getLastMonthExerciseIds(user.uid)
+        getRecentlyDoneExerciseIds(historyUserId),
+        getLastMonthExerciseIds(historyUserId)
       ])
         .then(([recentIds, monthIds]) => {
           setRecentlyDoneExerciseIds(recentIds)
@@ -196,7 +222,7 @@ export function ExerciseLibrary({
         })
         .catch(err => console.error('Failed to load exercise history:', err))
     }
-  }, [user?.uid, loading])
+  }, [historyUserId, loading])
 
   // Get selected muscle name in Hebrew
   const selectedMuscleName = useMemo(() => {
@@ -675,6 +701,7 @@ export function ExerciseLibrary({
                 const isSelected = effectiveSelectedIds.has(exercise.id)
                 const wasInLastWorkout = recentlyDoneExerciseIds.has(exercise.id)
                 const wasInLastMonth = lastMonthExerciseIds.has(exercise.id)
+                const otherDayLetters = otherDaysMap.get(exercise.id)
                 return (
                   <div
                     key={exercise.id}
@@ -696,7 +723,7 @@ export function ExerciseLibrary({
 
                     {/* Exercise Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-semibold text-white truncate">{exercise.nameHe}</h3>
                         {/* Flexible exercise tag */}
                         {exercise.assistanceTypes && exercise.assistanceTypes.length > 0 && (
@@ -710,6 +737,15 @@ export function ExerciseLibrary({
                         ) : wasInLastMonth ? (
                           <span className="badge-last-month flex-shrink-0">חודש אחרון</span>
                         ) : null}
+                        {/* Program: tags for other days that already include this exercise */}
+                        {otherDayLetters && otherDayLetters.map((letter) => (
+                          <span
+                            key={letter}
+                            className="px-1.5 py-0.5 bg-accent-purple/20 text-accent-purple text-[10px] rounded-full flex-shrink-0 font-bold"
+                          >
+                            יום {letter}
+                          </span>
+                        ))}
                       </div>
                       <p className="text-xs text-text-muted truncate">
                         {getMuscleNameHe(exercise.primaryMuscle, dynamicMuscleNames)} • {getEquipmentHe(exercise.equipment)}

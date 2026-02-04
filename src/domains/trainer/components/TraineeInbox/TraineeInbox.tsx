@@ -32,11 +32,11 @@ export default function TraineeInbox() {
           m.id === messageId ? { ...m, isRead: true, readAt: new Date() } : m
         )
       )
-      // Update unread count
+      // Update unread count (subtract 1 from current since we just marked one as read)
       const newUnread = messages.filter(
-        (m) => !m.isRead && m.id !== messageId
-      ).length
-      setUnreadCount(newUnread)
+        (m) => !m.isRead
+      ).length - 1
+      setUnreadCount(Math.max(0, newUnread))
 
       // Toggle expansion
       setExpandedId(expandedId === messageId ? null : messageId)
