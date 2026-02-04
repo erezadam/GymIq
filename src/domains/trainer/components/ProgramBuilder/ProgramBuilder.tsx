@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowRight,
   ArrowLeft,
@@ -72,11 +72,13 @@ function getAvatarGradient(name: string): string {
 export default function ProgramBuilder() {
   const navigate = useNavigate()
   const { id: editId } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
+  const preSelectedTraineeId = searchParams.get('traineeId')
   const { user } = useAuthStore()
   const isEditMode = !!editId
 
-  // State
-  const [step, setStep] = useState<Step>(1)
+  // State - start at step 2 when trainee is pre-selected (from trainee detail)
+  const [step, setStep] = useState<Step>(preSelectedTraineeId ? 2 : 1)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(isEditMode)
   const [error, setError] = useState<string | null>(null)
@@ -105,6 +107,13 @@ export default function ProgramBuilder() {
 
   // Trainee data for side panel
   const [traineeStats, setTraineeStats] = useState<TraineeStats | null>(null)
+
+  // Pre-select trainee from URL query param (when navigating from trainee detail)
+  useEffect(() => {
+    if (preSelectedTraineeId && !traineeId) {
+      setTraineeId(preSelectedTraineeId)
+    }
+  }, [preSelectedTraineeId])
 
   // Load trainees
   useEffect(() => {
@@ -144,6 +153,7 @@ export default function ProgramBuilder() {
               : new Date()
         setStartDate(date.toISOString().split('T')[0])
         setDays(program.weeklyStructure || [])
+        setStep(2)
       })
       .catch((err) => setError(err.message))
       .finally(() => setIsLoading(false))
@@ -448,7 +458,7 @@ export default function ProgramBuilder() {
         }
       }
 
-      navigate('/trainer')
+      navigate(traineeId ? `/trainer/trainee/${traineeId}` : '/trainer')
     } catch (err: any) {
       console.error('Error saving program:', err)
       setError(err.message || 'שגיאה בשמירת התוכנית')
@@ -1022,7 +1032,7 @@ export default function ProgramBuilder() {
                 </button>
               ) : (
                 <button
-                  onClick={() => navigate('/trainer')}
+                  onClick={() => navigate(traineeId ? `/trainer/trainee/${traineeId}` : '/trainer')}
                   className="flex-1 py-3 bg-dark-surface rounded-xl font-medium text-text-secondary"
                 >
                   ביטול
@@ -1069,7 +1079,7 @@ export default function ProgramBuilder() {
         {/* Desktop Header */}
         <div className="flex items-center justify-between mb-6">
           <button
-            onClick={() => navigate('/trainer')}
+            onClick={() => navigate(traineeId ? `/trainer/trainee/${traineeId}` : '/trainer')}
             className="flex items-center gap-2 text-text-muted hover:text-text-primary transition"
           >
             <ArrowRight className="w-5 h-5" />
@@ -1099,7 +1109,7 @@ export default function ProgramBuilder() {
                 </button>
               ) : (
                 <button
-                  onClick={() => navigate('/trainer')}
+                  onClick={() => navigate(traineeId ? `/trainer/trainee/${traineeId}` : '/trainer')}
                   className="px-5 sm:px-6 py-3 sm:py-4 bg-dark-surface rounded-xl hover:bg-dark-card transition flex items-center gap-2 text-text-secondary"
                 >
                   <ArrowRight className="w-4 h-4" />

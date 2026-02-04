@@ -83,15 +83,20 @@ export const programService = {
     return snapshot.docs.map((d) => toProgram(d.id, d.data()))
   },
 
-  // Get all programs for a trainee
+  // Get all programs for a trainee (no orderBy to avoid composite index requirement)
   async getTraineePrograms(traineeId: string): Promise<TrainingProgram[]> {
     const q = query(
       collection(db, 'trainingPrograms'),
-      where('traineeId', '==', traineeId),
-      orderBy('createdAt', 'desc')
+      where('traineeId', '==', traineeId)
     )
     const snapshot = await getDocs(q)
-    return snapshot.docs.map((d) => toProgram(d.id, d.data()))
+    const programs = snapshot.docs.map((d) => toProgram(d.id, d.data()))
+    // Sort client-side: newest first
+    return programs.sort((a, b) => {
+      const ta = a.createdAt instanceof Date ? a.createdAt.getTime() : (a.createdAt as any)?.toMillis?.() || 0
+      const tb = b.createdAt instanceof Date ? b.createdAt.getTime() : (b.createdAt as any)?.toMillis?.() || 0
+      return tb - ta
+    })
   },
 
   // Activate a program (deactivates any existing active program for the trainee)

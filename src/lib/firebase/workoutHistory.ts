@@ -13,6 +13,7 @@ import {
   where,
   orderBy,
   limit,
+  startAfter,
   Timestamp,
 } from 'firebase/firestore'
 import { db } from './config'
@@ -49,6 +50,9 @@ function toWorkoutHistory(id: string, data: any): WorkoutHistoryEntry {
     // Trainer program fields
     programId: data.programId,
     programDayLabel: data.programDayLabel,
+    // Trainer report fields
+    reportedBy: data.reportedBy,
+    reportedByName: data.reportedByName,
   }
 }
 
@@ -79,6 +83,8 @@ function toSummary(entry: WorkoutHistoryEntry): WorkoutHistorySummary {
     // Trainer program fields
     programId: entry.programId,
     programDayLabel: entry.programDayLabel,
+    // Trainer report fields
+    reportedBy: entry.reportedBy,
   }
 }
 
@@ -161,6 +167,9 @@ export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'
     // Trainer program fields
     programId: workout.programId,
     programDayLabel: workout.programDayLabel,
+    // Trainer report fields
+    reportedBy: workout.reportedBy,
+    reportedByName: workout.reportedByName,
   })
 
   // Add notes only if exists
@@ -216,6 +225,44 @@ export async function getUserWorkoutHistory(
     return results
   } catch (error) {
     console.error('❌ Error fetching workout history:', error)
+    throw error
+  }
+}
+
+// Get user's workout history with pagination support
+export async function getUserWorkoutHistoryPaginated(
+  userId: string,
+  pageSize: number = 20,
+  afterDate?: Date
+): Promise<{ summaries: WorkoutHistorySummary[]; hasMore: boolean }> {
+  const historyRef = collection(db, COLLECTION_NAME)
+
+  const constraints: any[] = [
+    where('userId', '==', userId),
+    orderBy('date', 'desc'),
+  ]
+
+  if (afterDate) {
+    constraints.push(startAfter(Timestamp.fromDate(afterDate)))
+  }
+
+  constraints.push(limit(pageSize + 1))
+
+  const q = query(historyRef, ...constraints)
+
+  try {
+    const snapshot = await getDocs(q)
+    const hasMore = snapshot.docs.length > pageSize
+    const docs = hasMore ? snapshot.docs.slice(0, pageSize) : snapshot.docs
+
+    const summaries = docs.map(doc => {
+      const entry = toWorkoutHistory(doc.id, doc.data())
+      return toSummary(entry)
+    })
+
+    return { summaries, hasMore }
+  } catch (error) {
+    console.error('❌ Error fetching paginated workout history:', error)
     throw error
   }
 }
@@ -833,6 +880,9 @@ export async function autoSaveWorkout(
     source: workout.source,
     programId: workout.programId,
     programDayLabel: workout.programDayLabel,
+    // Trainer report fields
+    reportedBy: workout.reportedBy,
+    reportedByName: workout.reportedByName,
   })
 
   try {

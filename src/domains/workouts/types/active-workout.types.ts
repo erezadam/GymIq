@@ -93,6 +93,10 @@ export interface ActiveWorkout {
   // User
   userId: string
 
+  // Trainer report fields (when trainer reports on behalf of trainee)
+  reportedBy?: string      // Trainer uid
+  reportedByName?: string  // Trainer display name
+
   // Exercises
   exercises: ActiveWorkoutExercise[]
 

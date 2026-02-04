@@ -151,6 +151,12 @@ service cloud.firestore {
 
       // Trainers can read workout history (app filters to own trainees)
       allow read: if isTrainer();
+
+      // Trainers can create/update workouts they report for trainees
+      allow create: if isTrainer() &&
+        request.resource.data.reportedBy == request.auth.uid;
+      allow update: if isTrainer() &&
+        resource.data.reportedBy == request.auth.uid;
     }
 
     // ============ WORKOUT TEMPLATES ============

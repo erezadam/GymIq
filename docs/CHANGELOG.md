@@ -6,6 +6,45 @@
 
 ---
 
+## [v1.13.0] - 2026-02-04
+
+### 🚀 פיצ'רים חדשים
+
+| פיצ'ר | תיאור |
+|-------|-------|
+| **דיווח מאמן על אימון** | מאמן יכול לדווח אימון עבור מתאמן דרך אותו מסך אימון פעיל. שדה `reportedBy` מזהה מי דיווח |
+| **תצוגת אימונים אחרונים משודרגת** | סגול = מאמן דיווח, כחול = מתאמן בעצמו. מספר סידורי לכל אימון. "טען עוד" עם pagination |
+| **סקציה מתקפלת לאימונים** | רשימת אימונים אחרונים מתקפלת כברירת מחדל |
+| **כפתור דיווח ביום אימון** | "דווח אימון עבור מתאמן" מופיע כשמרחיבים יום שטרם בוצע |
+
+### 📝 שינויים
+
+| קובץ | שינוי |
+|------|-------|
+| `workout.types.ts` | הוספת `reportedBy`, `reportedByName` ל-WorkoutHistoryEntry ו-WorkoutHistorySummary |
+| `active-workout.types.ts` | הוספת `reportedBy`, `reportedByName` ל-ActiveWorkout |
+| `workoutBuilderStore.ts` | הוספת `targetUserId`, `reportedBy`, `reportedByName` + `setTrainerReport()` |
+| `useActiveWorkout.ts` | תמיכה ב-targetUserId, localStorage נפרד לכל target, reportedBy בכל save point |
+| `workoutHistory.ts` | `reportedBy`/`reportedByName` בכל converters + save functions + `getUserWorkoutHistoryPaginated()` |
+| `firestore.rules` | מאמנים יכולים ליצור/לעדכן workoutHistory עם `reportedBy == auth.uid` |
+| `TraineeDetail.tsx` | כפתור "דווח אימון", סקציית אימונים מתקפלת, import של workoutBuilderStore |
+| `TraineeRecentWorkouts.tsx` | צבעים סגול/כחול לפי reportedBy, מספר סידורי, "טען עוד" |
+
+### ⚠️ שינוי Firestore Rules
+
+- `workoutHistory`: נוספו שני חוקים חדשים:
+  - `allow create: if isTrainer() && request.resource.data.reportedBy == request.auth.uid`
+  - `allow update: if isTrainer() && resource.data.reportedBy == request.auth.uid`
+
+### 💾 localStorage Keys חדשים
+
+| מפתח | תפקיד |
+|------|-------|
+| `gymiq_active_workout_v2_${traineeId}` | אימון פעיל שמאמן מדווח עבור מתאמן (מבודד מאימון אישי) |
+| `gymiq_firebase_workout_id_${traineeId}` | Firebase ID של אימון מדווח |
+
+---
+
 ## [v1.12.1] - 2026-01-31
 
 ### ✨ שיפור: שדרוג System Prompt של מאמן AI
