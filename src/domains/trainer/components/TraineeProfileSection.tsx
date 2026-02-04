@@ -1,4 +1,4 @@
-import { AlertTriangle, FileText } from 'lucide-react'
+import { AlertTriangle, FileText, Pencil } from 'lucide-react'
 import type { TraineeWithStats } from '../types'
 import { TRAINING_GOAL_LABELS } from '../types'
 
@@ -18,9 +18,10 @@ function getAvatarGradient(name: string): string {
 
 interface TraineeProfileSectionProps {
   trainee: TraineeWithStats
+  onEdit?: () => void
 }
 
-export function TraineeProfileSection({ trainee }: TraineeProfileSectionProps) {
+export function TraineeProfileSection({ trainee, onEdit }: TraineeProfileSectionProps) {
   const profile = trainee.traineeProfile
   const displayName = profile
     ? `${profile.firstName} ${profile.lastName}`
@@ -42,7 +43,15 @@ export function TraineeProfileSection({ trainee }: TraineeProfileSectionProps) {
   return (
     <div className="space-y-4">
       {/* Profile Header - Glass card */}
-      <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-5">
+      <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-5 relative">
+        {onEdit && (
+          <button
+            onClick={onEdit}
+            className="absolute top-4 left-4 z-10 p-2 rounded-lg bg-dark-surface/80 text-text-muted hover:text-primary-main hover:bg-dark-surface transition"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+        )}
         <div className="flex items-center gap-5">
           {/* Large Avatar */}
           <div className="relative flex-shrink-0">
@@ -156,6 +165,33 @@ export function TraineeProfileSection({ trainee }: TraineeProfileSectionProps) {
           </div>
         </div>
       </div>
+
+      {/* Body Metrics */}
+      {profile && (profile.age || profile.height || profile.weight || profile.bodyFatPercentage) && (
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { value: profile.age, label: 'גיל', unit: '' },
+            { value: profile.height, label: 'גובה', unit: 'ס"מ' },
+            { value: profile.weight, label: 'משקל', unit: 'ק"ג' },
+            { value: profile.bodyFatPercentage, label: 'שומן', unit: '%' },
+          ].map((metric) => (
+            <div
+              key={metric.label}
+              className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-xl p-3 text-center"
+            >
+              <div className="text-lg font-bold text-primary-main">
+                {metric.value != null ? metric.value : '—'}
+              </div>
+              <div className="text-xs text-text-muted">
+                {metric.label}
+                {metric.unit && metric.value != null && (
+                  <span className="text-text-muted/60"> {metric.unit}</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Injuries/limitations */}
       {profile?.injuriesOrLimitations && (

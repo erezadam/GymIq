@@ -32,6 +32,11 @@ export interface AppUser {
   trainerId?: string
   trainingGoals?: string[]
   injuriesOrLimitations?: string
+  // Body metrics
+  age?: number
+  height?: number // cm
+  weight?: number // kg
+  bodyFatPercentage?: number
 }
 
 // Convert Firebase user to App user

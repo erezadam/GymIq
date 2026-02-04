@@ -48,7 +48,18 @@ const equipmentNames: Record<string, string> = {
 export function useActiveWorkout() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const { selectedExercises, clearWorkout, removeExercise: removeFromStore, programId, programDayLabel, workoutName: builderWorkoutName } = useWorkoutBuilderStore()
+  const { selectedExercises, clearWorkout, removeExercise: removeFromStore, programId, programDayLabel, workoutName: builderWorkoutName, targetUserId, reportedBy, reportedByName } = useWorkoutBuilderStore()
+
+  // Effective userId: trainee (if trainer reporting) or current user
+  const effectiveUserId = targetUserId || user?.uid || 'anonymous'
+
+  // Separate localStorage keys per target user (prevents trainer's own workout being overwritten)
+  const storageKey = targetUserId
+    ? `gymiq_active_workout_v2_${targetUserId}`
+    : ACTIVE_WORKOUT_STORAGE_KEY
+  const firebaseIdKey = targetUserId
+    ? `gymiq_firebase_workout_id_${targetUserId}`
+    : 'gymiq_firebase_workout_id'
 
   // State
   const [workout, setWorkout] = useState<ActiveWorkout | null>(null)
@@ -96,13 +107,13 @@ export function useActiveWorkout() {
 
   // Save to localStorage - defined early so it can be used in initWorkout
   const saveToStorage = useCallback((workoutToSave: ActiveWorkout) => {
-    localStorage.setItem(ACTIVE_WORKOUT_STORAGE_KEY, JSON.stringify(workoutToSave))
-  }, [])
+    localStorage.setItem(storageKey, JSON.stringify(workoutToSave))
+  }, [storageKey])
 
   // Clear from localStorage
   const clearStorage = useCallback(() => {
-    localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY)
-  }, [])
+    localStorage.removeItem(storageKey)
+  }, [storageKey])
 
   // Auto-save to Firebase (debounced)
   const triggerAutoSave = useCallback((workoutToSave: ActiveWorkout, currentFirebaseId: string | null) => {
@@ -125,6 +136,8 @@ export function useActiveWorkout() {
 
         const savedId = await autoSaveWorkout(currentFirebaseId, {
           userId: workoutToSave.userId,
+          ...(workoutToSave.reportedBy && { reportedBy: workoutToSave.reportedBy }),
+          ...(workoutToSave.reportedByName && { reportedByName: workoutToSave.reportedByName }),
           name: `אימון ${workoutToSave.startedAt.toLocaleDateString('he-IL')}`,
           date: workoutToSave.startedAt,
           startTime: workoutToSave.startedAt,
@@ -171,7 +184,7 @@ export function useActiveWorkout() {
         if (!currentFirebaseId && savedId) {
           setFirebaseWorkoutId(savedId)
           // Also store in localStorage for recovery
-          localStorage.setItem('gymiq_firebase_workout_id', savedId)
+          localStorage.setItem(firebaseIdKey, savedId)
         }
       } catch (error) {
         console.error('❌ Auto-save failed:', error)
@@ -212,8 +225,8 @@ export function useActiveWorkout() {
       setIsLoading(true)
 
       // First, check Firebase for in_progress workout (recovery after app close)
-      // Skip this if continuing from history
-      if (user?.uid && selectedExercises.length === 0 && !isContinuingFromHistory) {
+      // Skip this if continuing from history or if trainer is reporting for a trainee
+      if (user?.uid && selectedExercises.length === 0 && !isContinuingFromHistory && !targetUserId) {
         try {
           const firebaseWorkout = await getInProgressWorkout(user.uid)
           if (firebaseWorkout) {
@@ -291,7 +304,7 @@ export function useActiveWorkout() {
 
             setWorkout(restoredWorkout)
             setFirebaseWorkoutId(firebaseWorkout.id)
-            localStorage.setItem('gymiq_firebase_workout_id', firebaseWorkout.id)
+            localStorage.setItem(firebaseIdKey, firebaseWorkout.id)
             saveToStorage(restoredWorkout)
             hasInitialized.current = true
             setIsLoading(false)
@@ -324,11 +337,11 @@ export function useActiveWorkout() {
           if (existingWorkoutId) {
             console.log('📋 Found existing workout ID:', existingWorkoutId)
             setFirebaseWorkoutId(existingWorkoutId)
-            localStorage.setItem('gymiq_firebase_workout_id', existingWorkoutId)
+            localStorage.setItem(firebaseIdKey, existingWorkoutId)
           } else {
             // Check if we already have a Firebase workout ID (from previous initialization)
             // Don't clear it - it might be needed for continuing the workout
-            const existingFirebaseId = localStorage.getItem('gymiq_firebase_workout_id')
+            const existingFirebaseId = localStorage.getItem(firebaseIdKey)
             if (existingFirebaseId) {
               console.log('📋 Keeping existing Firebase workout ID:', existingFirebaseId)
               setFirebaseWorkoutId(existingFirebaseId)
@@ -350,8 +363,8 @@ export function useActiveWorkout() {
       }
 
       // Try to restore from localStorage (only if not continuing from history)
-      const savedWorkout = localStorage.getItem(ACTIVE_WORKOUT_STORAGE_KEY)
-      const savedFirebaseId = localStorage.getItem('gymiq_firebase_workout_id')
+      const savedWorkout = localStorage.getItem(storageKey)
+      const savedFirebaseId = localStorage.getItem(firebaseIdKey)
       if (savedFirebaseId) {
         setFirebaseWorkoutId(savedFirebaseId)
       }
@@ -494,7 +507,7 @@ export function useActiveWorkout() {
           return
         } catch (e) {
           console.error('Failed to restore workout:', e)
-          localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY)
+          localStorage.removeItem(storageKey)
         }
       }
 
@@ -600,7 +613,9 @@ export function useActiveWorkout() {
         const newWorkout: ActiveWorkout = {
           id: `workout_${Date.now()}`,
           startedAt: new Date(),
-          userId: user?.uid || 'anonymous',
+          userId: effectiveUserId,
+          ...(reportedBy && { reportedBy }),
+          ...(reportedByName && { reportedByName }),
           exercises,
           stats: {
             totalExercises: exercises.length,
@@ -619,11 +634,13 @@ export function useActiveWorkout() {
 
         // Immediately save to Firebase (no debounce for initial save)
         // Use existing ID if continuing workout, or create new
-        const existingId = localStorage.getItem('gymiq_firebase_workout_id')
+        const existingId = localStorage.getItem(firebaseIdKey)
         try {
           const endTime = new Date()
           const savedId = await autoSaveWorkout(existingId, {
             userId: newWorkout.userId,
+            ...(reportedBy && { reportedBy }),
+            ...(reportedByName && { reportedByName }),
             name: builderWorkoutName || `אימון ${newWorkout.startedAt.toLocaleDateString('he-IL')}`,
             date: newWorkout.startedAt,
             startTime: newWorkout.startedAt,
@@ -669,7 +686,7 @@ export function useActiveWorkout() {
           })
 
           setFirebaseWorkoutId(savedId)
-          localStorage.setItem('gymiq_firebase_workout_id', savedId)
+          localStorage.setItem(firebaseIdKey, savedId)
           console.log(existingId ? '✅ Existing workout updated in Firebase:' : '✅ New workout created in Firebase:', savedId)
         } catch (error) {
           console.error('❌ Failed to save new workout to Firebase:', error)
@@ -1117,6 +1134,8 @@ export function useActiveWorkout() {
           } else {
             await saveWorkoutHistory({
               userId: workout.userId,
+              ...(workout.reportedBy && { reportedBy: workout.reportedBy }),
+              ...(workout.reportedByName && { reportedByName: workout.reportedByName }),
               name: `אימון ${new Date().toLocaleDateString('he-IL')}`,
               date: workout.startedAt,
               startTime: workout.startedAt,
@@ -1135,6 +1154,10 @@ export function useActiveWorkout() {
           }
           toast.success('האימון נשמר בהצלחה!')
 
+          // Remember if this was a trainer report before clearing
+          const wasTrainerReport = workout.reportedBy
+          const reportTargetUserId = targetUserId
+
           // Clear everything ONLY after successful save
           clearStorage()
           clearWorkout()
@@ -1143,10 +1166,16 @@ export function useActiveWorkout() {
           setIsSaving(false)
           setShowSummaryModal(false)
           setPendingCalories(undefined)
-          localStorage.removeItem('gymiq_firebase_workout_id')
+          localStorage.removeItem(firebaseIdKey)
           hasInitialized.current = false
           setConfirmModal({ type: null })
-          navigate('/workout/history')
+
+          // Navigate back: trainer report → trainee detail, own workout → history
+          if (wasTrainerReport && reportTargetUserId) {
+            navigate(`/trainer/trainee/${reportTargetUserId}`)
+          } else {
+            navigate('/workout/history')
+          }
         } catch (error: any) {
           console.error('Error saving workout:', error)
           toast.error('שגיאה בשמירת האימון', { duration: 5000 })
@@ -1170,6 +1199,10 @@ export function useActiveWorkout() {
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current)
     }
+
+    // Remember trainer report state before clearing
+    const wasTrainerReport = workout?.reportedBy
+    const reportTargetUserId = targetUserId
 
     if (workout) {
       const endTime = new Date()
@@ -1209,6 +1242,8 @@ export function useActiveWorkout() {
         // Use existing Firebase document if available
         await autoSaveWorkout(firebaseWorkoutId, {
           userId: workout.userId,
+          ...(workout.reportedBy && { reportedBy: workout.reportedBy }),
+          ...(workout.reportedByName && { reportedByName: workout.reportedByName }),
           name: `אימון ${new Date().toLocaleDateString('he-IL')}`,
           date: workout.startedAt,
           startTime: workout.startedAt,
@@ -1242,8 +1277,13 @@ export function useActiveWorkout() {
     hasInitialized.current = false
     setConfirmModal({ type: null })
 
-    navigate('/dashboard')
-  }, [workout, firebaseWorkoutId, clearStorage, clearWorkout, navigate])
+    // Navigate back: trainer report → trainee detail, own workout → dashboard
+    if (wasTrainerReport && reportTargetUserId) {
+      navigate(`/trainer/trainee/${reportTargetUserId}`)
+    } else {
+      navigate('/dashboard')
+    }
+  }, [workout, firebaseWorkoutId, targetUserId, clearStorage, clearWorkout, navigate])
 
   // Finish workout with calories (called from summary modal)
   const finishWorkoutWithCalories = useCallback((calories?: number) => {

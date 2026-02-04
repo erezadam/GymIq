@@ -168,6 +168,10 @@ export interface TraineeWithStats {
     fitnessLevel?: string
     trainingGoals?: TrainingGoal[]
     injuriesOrLimitations?: string
+    age?: number
+    height?: number
+    weight?: number
+    bodyFatPercentage?: number
   }
   lastWorkoutDate?: Date
   thisWeekWorkouts: number
@@ -197,6 +201,10 @@ export interface CreateTraineeData {
   trainingGoals?: TrainingGoal[]
   notes?: string
   injuries?: string
+  age?: number
+  height?: number
+  weight?: number
+  bodyFatPercentage?: number
 }
 
 // ============ HEBREW LABELS ============

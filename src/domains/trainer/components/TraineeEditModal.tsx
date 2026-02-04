@@ -1,13 +1,13 @@
 import { useState } from 'react'
-import { X, UserPlus, Loader2 } from 'lucide-react'
-import { useAuthStore } from '@/domains/authentication/store'
-import { traineeAccountService } from '../services/traineeAccountService'
-import type { CreateTraineeData, TrainingGoal } from '../types'
+import { X, Save, Loader2 } from 'lucide-react'
+import { trainerService } from '../services/trainerService'
+import type { TraineeWithStats, TrainingGoal } from '../types'
 import { TRAINING_GOAL_LABELS } from '../types'
 
-interface TraineeRegistrationModalProps {
+interface TraineeEditModalProps {
+  trainee: TraineeWithStats
   onClose: () => void
-  onSuccess: () => void
+  onSave: () => void
 }
 
 const GOAL_OPTIONS: TrainingGoal[] = [
@@ -21,39 +21,43 @@ const GOAL_OPTIONS: TrainingGoal[] = [
   'sport_specific',
 ]
 
-export function TraineeRegistrationModal({
-  onClose,
-  onSuccess,
-}: TraineeRegistrationModalProps) {
-  const { user } = useAuthStore()
+interface FormData {
+  firstName: string
+  lastName: string
+  phoneNumber: string
+  trainingGoals: TrainingGoal[]
+  injuriesOrLimitations: string
+  notes: string
+  age: string
+  height: string
+  weight: string
+  bodyFatPercentage: string
+}
+
+export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalProps) {
+  const profile = trainee.traineeProfile
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [formData, setFormData] = useState<CreateTraineeData>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    phone: '',
-    trainingGoals: [],
-    injuries: '',
-    notes: '',
+
+  const [formData, setFormData] = useState<FormData>({
+    firstName: profile?.firstName || '',
+    lastName: profile?.lastName || '',
+    phoneNumber: profile?.phoneNumber || '',
+    trainingGoals: (profile?.trainingGoals as TrainingGoal[]) || [],
+    injuriesOrLimitations: profile?.injuriesOrLimitations || '',
+    notes: trainee.relationship.notes || '',
+    age: profile?.age?.toString() || '',
+    height: profile?.height?.toString() || '',
+    weight: profile?.weight?.toString() || '',
+    bodyFatPercentage: profile?.bodyFatPercentage?.toString() || '',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user) return
+    if (!profile?.uid) return
 
-    // Validation
     if (!formData.firstName.trim() || !formData.lastName.trim()) {
       setError('נא למלא שם פרטי ושם משפחה')
-      return
-    }
-    if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setError('נא למלא כתובת אימייל תקינה')
-      return
-    }
-    if (!formData.password || formData.password.length < 6) {
-      setError('סיסמה חייבת להכיל לפחות 6 תווים')
       return
     }
 
@@ -61,20 +65,31 @@ export function TraineeRegistrationModal({
     setError(null)
 
     try {
-      const trainerName = `${user.firstName} ${user.lastName}`
-      await traineeAccountService.createTraineeAccount(
-        formData,
-        user.uid,
-        trainerName
-      )
-      onSuccess()
-    } catch (err: any) {
-      console.error('Error creating trainee:', err)
-      if (err.code === 'auth/email-already-in-use') {
-        setError('כתובת האימייל כבר רשומה במערכת')
-      } else {
-        setError(err.message || 'שגיאה ביצירת חשבון מתאמן')
+      // Update user profile fields
+      await trainerService.updateTraineeProfile(profile.uid, {
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        phoneNumber: formData.phoneNumber.trim() || undefined,
+        trainingGoals: formData.trainingGoals,
+        injuriesOrLimitations: formData.injuriesOrLimitations.trim() || undefined,
+        age: formData.age ? Number(formData.age) : undefined,
+        height: formData.height ? Number(formData.height) : undefined,
+        weight: formData.weight ? Number(formData.weight) : undefined,
+        bodyFatPercentage: formData.bodyFatPercentage ? Number(formData.bodyFatPercentage) : undefined,
+      })
+
+      // Update relationship notes separately
+      if (formData.notes !== (trainee.relationship.notes || '')) {
+        await trainerService.updateRelationshipNotes(
+          trainee.relationship.id,
+          formData.notes.trim()
+        )
       }
+
+      onSave()
+    } catch (err: any) {
+      console.error('Error updating trainee:', err)
+      setError(err.message || 'שגיאה בעדכון פרטי מתאמן')
     } finally {
       setIsSubmitting(false)
     }
@@ -83,16 +98,13 @@ export function TraineeRegistrationModal({
   const toggleGoal = (goal: TrainingGoal) => {
     setFormData((prev) => ({
       ...prev,
-      trainingGoals: prev.trainingGoals?.includes(goal)
+      trainingGoals: prev.trainingGoals.includes(goal)
         ? prev.trainingGoals.filter((g) => g !== goal)
-        : [...(prev.trainingGoals || []), goal],
+        : [...prev.trainingGoals, goal],
     }))
   }
 
-  const updateField = <K extends keyof CreateTraineeData>(
-    key: K,
-    value: CreateTraineeData[K]
-  ) => {
+  const updateField = <K extends keyof FormData>(key: K, value: FormData[K]) => {
     setFormData((prev) => ({ ...prev, [key]: value }))
   }
 
@@ -105,7 +117,7 @@ export function TraineeRegistrationModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-dark-border sticky top-0 bg-dark-surface z-10">
           <h2 className="text-xl font-bold text-text-primary">
-            רישום מתאמן חדש
+            עריכת פרטי מתאמן
           </h2>
           <button onClick={onClose} className="btn-icon">
             <X className="w-5 h-5" />
@@ -132,7 +144,6 @@ export function TraineeRegistrationModal({
                 value={formData.firstName}
                 onChange={(e) => updateField('firstName', e.target.value)}
                 className="input-primary"
-                placeholder="ישראל"
                 required
               />
             </div>
@@ -145,46 +156,9 @@ export function TraineeRegistrationModal({
                 value={formData.lastName}
                 onChange={(e) => updateField('lastName', e.target.value)}
                 className="input-primary"
-                placeholder="ישראלי"
                 required
               />
             </div>
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
-              אימייל *
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => updateField('email', e.target.value)}
-              className="input-primary"
-              placeholder="trainee@email.com"
-              dir="ltr"
-              required
-            />
-          </div>
-
-          {/* Password */}
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
-              סיסמה זמנית *
-            </label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => updateField('password', e.target.value)}
-              className="input-primary"
-              placeholder="לפחות 6 תווים"
-              dir="ltr"
-              minLength={6}
-              required
-            />
-            <p className="text-xs text-text-muted mt-1">
-              המתאמן יקבל אימייל לאיפוס סיסמה
-            </p>
           </div>
 
           {/* Phone */}
@@ -194,8 +168,8 @@ export function TraineeRegistrationModal({
             </label>
             <input
               type="tel"
-              value={formData.phone}
-              onChange={(e) => updateField('phone', e.target.value)}
+              value={formData.phoneNumber}
+              onChange={(e) => updateField('phoneNumber', e.target.value)}
               className="input-primary"
               placeholder="050-1234567"
               dir="ltr"
@@ -214,8 +188,8 @@ export function TraineeRegistrationModal({
                 </label>
                 <input
                   type="number"
-                  value={formData.age ?? ''}
-                  onChange={(e) => updateField('age', e.target.value ? Number(e.target.value) : undefined)}
+                  value={formData.age}
+                  onChange={(e) => updateField('age', e.target.value)}
                   className="input-primary"
                   placeholder="25"
                   dir="ltr"
@@ -229,8 +203,8 @@ export function TraineeRegistrationModal({
                 </label>
                 <input
                   type="number"
-                  value={formData.height ?? ''}
-                  onChange={(e) => updateField('height', e.target.value ? Number(e.target.value) : undefined)}
+                  value={formData.height}
+                  onChange={(e) => updateField('height', e.target.value)}
                   className="input-primary"
                   placeholder="175"
                   dir="ltr"
@@ -244,8 +218,8 @@ export function TraineeRegistrationModal({
                 </label>
                 <input
                   type="number"
-                  value={formData.weight ?? ''}
-                  onChange={(e) => updateField('weight', e.target.value ? Number(e.target.value) : undefined)}
+                  value={formData.weight}
+                  onChange={(e) => updateField('weight', e.target.value)}
                   className="input-primary"
                   placeholder="75"
                   dir="ltr"
@@ -260,8 +234,8 @@ export function TraineeRegistrationModal({
                 </label>
                 <input
                   type="number"
-                  value={formData.bodyFatPercentage ?? ''}
-                  onChange={(e) => updateField('bodyFatPercentage', e.target.value ? Number(e.target.value) : undefined)}
+                  value={formData.bodyFatPercentage}
+                  onChange={(e) => updateField('bodyFatPercentage', e.target.value)}
                   className="input-primary"
                   placeholder="15"
                   dir="ltr"
@@ -285,7 +259,7 @@ export function TraineeRegistrationModal({
                   type="button"
                   onClick={() => toggleGoal(goal)}
                   className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
-                    formData.trainingGoals?.includes(goal)
+                    formData.trainingGoals.includes(goal)
                       ? 'bg-status-info/20 text-status-info border border-status-info/30'
                       : 'bg-dark-card text-text-muted border border-dark-border hover:border-text-muted'
                   }`}
@@ -302,8 +276,8 @@ export function TraineeRegistrationModal({
               פציעות / מגבלות
             </label>
             <textarea
-              value={formData.injuries}
-              onChange={(e) => updateField('injuries', e.target.value)}
+              value={formData.injuriesOrLimitations}
+              onChange={(e) => updateField('injuriesOrLimitations', e.target.value)}
               className="input-primary min-h-[80px] resize-none"
               placeholder="פרט מגבלות פיזיות או פציעות..."
               rows={3}
@@ -333,12 +307,12 @@ export function TraineeRegistrationModal({
             {isSubmitting ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span>יוצר חשבון...</span>
+                <span>שומר...</span>
               </>
             ) : (
               <>
-                <UserPlus className="w-5 h-5" />
-                <span>צור מתאמן</span>
+                <Save className="w-5 h-5" />
+                <span>שמור שינויים</span>
               </>
             )}
           </button>

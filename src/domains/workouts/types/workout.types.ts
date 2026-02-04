@@ -139,6 +139,9 @@ export interface WorkoutHistoryEntry {
   programId?: string // reference to trainingPrograms collection
   programDayLabel?: string // e.g., "יום A"
   programModifications?: import('@/domains/trainer/types').ProgramModification[]
+  // Trainer report fields
+  reportedBy?: string      // Trainer uid who reported this workout
+  reportedByName?: string  // Trainer display name
 }
 
 // Summary for display in lists
@@ -161,4 +164,6 @@ export interface WorkoutHistorySummary {
   // Trainer program fields
   programId?: string
   programDayLabel?: string
+  // Trainer report fields
+  reportedBy?: string
 }

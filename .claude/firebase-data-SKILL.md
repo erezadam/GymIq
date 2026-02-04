@@ -31,7 +31,7 @@ import.meta.env.VITE_FIREBASE_API_KEY
 |------------|---------|------------|
 | `users` | User profiles | uid, name, phone, role |
 | `exercises` | Exercise library | name, nameHe, primaryMuscle, equipment, category, reportType |
-| `workoutHistory` | Completed/In-progress workouts | userId, exercises[], calories, duration, status |
+| `workoutHistory` | Completed/In-progress workouts | userId, exercises[], calories, duration, status, reportedBy?, reportedByName? |
 | `muscles` | Muscle groups | id, nameHe, iconUrl, subMuscles[] |
 | `equipment` | Gym equipment | id, nameHe |
 | `reportTypes` | Exercise report types | id, nameHe, fields[] |
@@ -151,6 +151,10 @@ const getInProgressWorkout = async (userId: string) => {
 | מפתח | סוג | תפקיד |
 |------|-----|-------|
 | `gymiq-exercise-list-filters` | sessionStorage | שמירת מצב סינון בניהול תרגילים |
+| `gymiq_active_workout_v2` | localStorage | אימון פעיל של המשתמש עצמו |
+| `gymiq_active_workout_v2_${traineeId}` | localStorage | אימון שמאמן מדווח עבור מתאמן (מבודד) |
+| `gymiq_firebase_workout_id` | localStorage | Firebase ID של אימון פעיל אישי |
+| `gymiq_firebase_workout_id_${traineeId}` | localStorage | Firebase ID של אימון מדווח עבור מתאמן |
 
 ### דוגמת שימוש:
 ```typescript
@@ -165,7 +169,7 @@ const state = stored ? JSON.parse(stored) : defaultState;
 
 ### מתי להשתמש:
 - **sessionStorage**: מצב זמני שמתאפס בסגירת הדפדפן (פילטרים, העדפות זמניות)
-- **localStorage**: מצב קבוע (לא בשימוש כרגע - הכל ב-Firebase)
+- **localStorage**: אימון פעיל + Firebase workout ID (מפתח נפרד לכל target user)
 - **Firebase**: מקור אמת יחיד לנתונים (אימונים, תרגילים, משתמשים)
 
 ## Error Handling
@@ -223,11 +227,15 @@ await batch.commit();
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can only access their own data
+    // Users can access their own workout data
     match /workoutHistory/{workoutId} {
       allow read, write: if resource.data.userId == request.auth.uid;
+      // Trainers can read all + create/update workouts they report
+      allow read: if isTrainer();
+      allow create: if isTrainer() && request.resource.data.reportedBy == request.auth.uid;
+      allow update: if isTrainer() && resource.data.reportedBy == request.auth.uid;
     }
-    
+
     // Exercises are public read, admin write
     match /exercises/{exerciseId} {
       allow read: if true;

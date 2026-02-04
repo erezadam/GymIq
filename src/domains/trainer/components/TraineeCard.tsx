@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
+import { Flame, CalendarDays, CircleAlert, AlertTriangle, CheckCircle } from 'lucide-react'
 import type { TraineeWithStats } from '../types'
-import { TRAINING_GOAL_LABELS, PROGRAM_STATUS_LABELS } from '../types'
+import { TRAINING_GOAL_LABELS } from '../types'
 
 const AVATAR_GRADIENTS = [
   'from-primary-main to-status-info',
@@ -16,30 +17,8 @@ function getAvatarGradient(name: string): string {
   return AVATAR_GRADIENTS[hash % AVATAR_GRADIENTS.length]
 }
 
-function getProgressWidthClass(percent: number): string {
-  if (percent >= 95) return 'w-full'
-  if (percent >= 85) return 'w-[85%]'
-  if (percent >= 75) return 'w-3/4'
-  if (percent >= 60) return 'w-[60%]'
-  if (percent >= 50) return 'w-1/2'
-  if (percent >= 35) return 'w-[35%]'
-  if (percent >= 25) return 'w-1/4'
-  if (percent >= 15) return 'w-[15%]'
-  if (percent >= 5) return 'w-[5%]'
-  return 'w-0'
-}
-
 function daysSince(date: Date): number {
   return Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24))
-}
-
-function formatRelativeDate(date: Date): string {
-  const days = daysSince(date)
-  if (days === 0) return 'היום'
-  if (days === 1) return 'אתמול'
-  if (days < 7) return `לפני ${days} ימים`
-  if (days < 30) return `לפני ${Math.floor(days / 7)} שבועות`
-  return `לפני ${Math.floor(days / 30)} חודשים`
 }
 
 function getMemberDuration(date: Date | any): string {
@@ -62,7 +41,6 @@ export function TraineeCard({ trainee }: TraineeCardProps) {
     lastWorkoutDate,
     thisWeekWorkouts,
     currentStreak,
-    programCompletionRate,
     activeProgram,
   } = trainee
 
@@ -73,151 +51,96 @@ export function TraineeCard({ trainee }: TraineeCardProps) {
   const initial = traineeProfile?.firstName?.charAt(0) || displayName.charAt(0)
   const avatarGradient = getAvatarGradient(displayName)
 
-  const getActivityStatus = () => {
-    if (thisWeekWorkouts >= 3)
-      return {
-        dotColor: 'bg-status-success',
-        label: 'פעיל',
-        labelColor: 'bg-status-success/20 text-status-success',
-      }
-    if (thisWeekWorkouts >= 1)
-      return {
-        dotColor: 'bg-status-warning',
-        label: `${thisWeekWorkouts}/3`,
-        labelColor: 'bg-status-warning/20 text-status-warning',
-      }
-    if (!lastWorkoutDate || daysSince(lastWorkoutDate) > 5)
-      return {
-        dotColor: 'bg-status-error',
-        label: 'דורש תשומת לב',
-        labelColor: 'bg-status-error/20 text-status-error',
-      }
-    return {
-      dotColor: 'bg-status-info',
-      label: 'חדש',
-      labelColor: 'bg-status-info/20 text-status-info',
-    }
+  const getDotColor = () => {
+    if (thisWeekWorkouts >= 3) return 'bg-status-success'
+    if (thisWeekWorkouts >= 1) return 'bg-status-warning'
+    if (!lastWorkoutDate || daysSince(lastWorkoutDate) > 5) return 'bg-status-error'
+    return 'bg-status-info'
   }
 
-  const status = getActivityStatus()
+  const dotColor = getDotColor()
   const goalLabel = traineeProfile?.trainingGoals?.[0]
     ? TRAINING_GOAL_LABELS[traineeProfile.trainingGoals[0]]
     : undefined
   const memberDuration = getMemberDuration(relationship.createdAt)
-  const completionPercent = Math.min(100, Math.max(0, programCompletionRate))
-  const progressWidthClass = getProgressWidthClass(completionPercent)
-
-  const progressBarColor =
-    completionPercent >= 80
-      ? 'bg-gradient-to-l from-primary-main to-status-info'
-      : completionPercent >= 40
-        ? 'bg-status-warning'
-        : completionPercent > 0
-          ? 'bg-status-error'
-          : 'bg-status-info animate-pulse'
 
   const needsAttention =
     !lastWorkoutDate || (lastWorkoutDate && daysSince(lastWorkoutDate) > 5 && thisWeekWorkouts === 0)
-  const borderClass = needsAttention
-    ? 'border-status-error/30 hover:border-status-error/50'
-    : 'border-primary-main/20 hover:border-primary-main/50'
 
   return (
     <div
       onClick={() => navigate(`/trainer/trainee/${relationship.traineeId}`)}
-      className={`bg-gradient-to-br from-primary-main/10 to-status-info/10 border rounded-2xl p-4 transition cursor-pointer ${borderClass}`}
+      className={`bg-dark-card border rounded-2xl p-4 transition-all cursor-pointer shadow-card hover:shadow-card-hover ${
+        needsAttention ? 'border-accent-orange/20 hover:border-accent-orange/40' : 'border-white/5 hover:border-white/10'
+      }`}
     >
-      <div className="flex items-start gap-4">
-        {/* Avatar */}
+      {/* Needs attention badge */}
+      {needsAttention && (
+        <div className="flex justify-center mb-3">
+          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-accent-orange/40 text-accent-orange text-xs">
+            דורש תשומת לב
+            <CircleAlert className="w-3.5 h-3.5" />
+          </span>
+        </div>
+      )}
+
+      {/* Name + Avatar row */}
+      <div className="flex items-center gap-3 mb-4">
+        {/* Name - first child = start = RIGHT in RTL */}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-bold text-lg text-text-primary truncate">{displayName}</h3>
+          <p className="text-text-muted text-xs truncate">
+            {goalLabel && <>{goalLabel} &middot; </>}
+            {memberDuration}
+          </p>
+        </div>
+
+        {/* Avatar - second child = end = LEFT in RTL */}
         <div className="relative flex-shrink-0">
           <div
-            className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center text-2xl font-bold text-white`}
+            className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center text-xl font-bold text-white shadow-md`}
           >
             {initial}
           </div>
           <div
-            className={`absolute -bottom-1 -right-1 w-5 h-5 ${status.dotColor} rounded-full border-2 border-dark-bg`}
+            className={`absolute -bottom-1 -right-1 w-4 h-4 ${dotColor} rounded-full border-2 border-dark-card`}
           />
         </div>
+      </div>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex justify-between items-start gap-2">
-            <div className="min-w-0">
-              <h3 className="font-bold text-lg text-text-primary truncate">{displayName}</h3>
-              <p className="text-text-muted text-sm truncate">
-                {goalLabel && <>{goalLabel} • </>}
-                {memberDuration}
-              </p>
-            </div>
-            <span
-              className={`px-2 py-1 ${status.labelColor} text-xs rounded-lg whitespace-nowrap flex-shrink-0`}
-            >
-              {status.label}
-            </span>
+      {/* Program status */}
+      <div className="mb-3">
+        {activeProgram ? (
+          <div className="flex items-center gap-1.5">
+            <CheckCircle className="w-3.5 h-3.5 text-status-success" />
+            <span className="text-xs text-status-success">פעיל</span>
+            <span className="text-xs text-text-muted truncate">{activeProgram.name}</span>
           </div>
-
-          {/* Stats row */}
-          <div className="flex items-center gap-3 mt-3 flex-wrap">
-            <div className="flex items-center gap-1">
-              <span className="text-sm">🔥</span>
-              <span className="text-sm font-medium text-text-primary">{currentStreak} ימים</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-sm">📊</span>
-              <span className="text-sm font-medium text-text-primary">
-                {thisWeekWorkouts}/3 השבוע
-              </span>
-            </div>
-            {lastWorkoutDate && (
-              <div className="flex items-center gap-1">
-                <span className="text-sm">📅</span>
-                <span className="text-sm font-medium text-text-secondary">
-                  {formatRelativeDate(lastWorkoutDate)}
-                </span>
-              </div>
-            )}
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 text-status-warning" />
+            <span className="text-xs text-status-warning">אין תוכנית פעילה</span>
           </div>
+        )}
+      </div>
 
-          {/* Program info */}
-          {activeProgram ? (
-            <div className="flex items-center gap-2 mt-3">
-              <span className="text-sm">📋</span>
-              <span className="text-sm font-medium text-text-primary truncate">
-                {activeProgram.name}
-              </span>
-              <span
-                className={`px-2 py-0.5 text-xs rounded-md flex-shrink-0 ${
-                  activeProgram.status === 'active'
-                    ? 'bg-status-success/20 text-status-success'
-                    : activeProgram.status === 'draft'
-                      ? 'bg-status-info/20 text-status-info'
-                      : activeProgram.status === 'paused'
-                        ? 'bg-status-warning/20 text-status-warning'
-                        : 'bg-dark-surface text-text-muted'
-                }`}
-              >
-                {PROGRAM_STATUS_LABELS[activeProgram.status]}
-              </span>
-              {activeProgram.durationWeeks && (
-                <span className="text-xs text-text-muted flex-shrink-0">
-                  שבוע {activeProgram.currentWeek}/{activeProgram.durationWeeks}
-                </span>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 mt-3">
-              <span className="text-sm">⚠️</span>
-              <span className="text-xs text-status-warning">אין תוכנית פעילה</span>
-            </div>
-          )}
-
-          {/* Progress bar */}
-          <div className="mt-3 h-1.5 bg-dark-card rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${progressBarColor} ${progressWidthClass}`}
-            />
+      {/* Stat boxes */}
+      <div className="grid grid-cols-2 gap-2">
+        {/* First grid item = RIGHT column in RTL = השבוע */}
+        <div className="bg-dark-surface border border-white/10 rounded-xl px-3 py-2.5">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-text-muted text-xs">השבוע</span>
+            <CalendarDays className="w-3.5 h-3.5 text-text-muted" />
           </div>
+          <p className="text-lg font-bold text-text-primary">{thisWeekWorkouts}/3</p>
+        </div>
+        {/* Second grid item = LEFT column in RTL = רצף ימים */}
+        <div className="bg-dark-surface border border-white/10 rounded-xl px-3 py-2.5">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-text-muted text-xs">רצף ימים</span>
+            <Flame className="w-3.5 h-3.5 text-accent-orange" />
+          </div>
+          <p className="text-lg font-bold text-text-primary">{currentStreak}</p>
         </div>
       </div>
     </div>

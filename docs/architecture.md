@@ -101,7 +101,7 @@ GymIQ/
 | `muscles` | קטגוריות שרירים | id, nameHe, nameEn, icon (URL), subMuscles[] |
 | `equipment` | ציוד כושר | id, nameHe, nameEn |
 | `workoutSessions` | אימונים פעילים | userId, exercises[], status, createdAt |
-| `workoutHistory` | היסטוריית אימונים | userId, exercises[], calories, duration, totalVolume |
+| `workoutHistory` | היסטוריית אימונים | userId, exercises[], calories, duration, totalVolume, reportedBy?, reportedByName? |
 | `reportTypes` | סוגי דיווח לתרגילים | id, name, nameHe, fields[], isDefault |
 | `bandTypes` | סוגי גומיות התנגדות | id, name, color, resistanceLevel, isActive |
 | `appSettings` | הגדרות אפליקציה | externalComparisonUrl |

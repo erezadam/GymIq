@@ -15,6 +15,7 @@ import { getUserWorkoutStats } from '@/lib/firebase/workoutHistory'
 import { getUserWorkoutHistory } from '@/lib/firebase/workoutHistory'
 import { programService } from './programService'
 import type { AppUser } from '@/lib/firebase/auth'
+import { updateUserProfile } from '@/lib/firebase/auth'
 
 export const trainerService = {
   // Get all active trainees for a trainer
@@ -161,5 +162,33 @@ export const trainerService = {
     )
 
     return traineesWithStats
+  },
+
+  // Update a trainee's profile (body metrics, personal info)
+  async updateTraineeProfile(
+    traineeId: string,
+    data: Partial<Pick<AppUser, 'firstName' | 'lastName' | 'phoneNumber' | 'trainingGoals' | 'injuriesOrLimitations' | 'age' | 'height' | 'weight' | 'bodyFatPercentage'>>
+  ): Promise<void> {
+    // Update displayName if name changed
+    const updateData: Record<string, any> = { ...data }
+    if (data.firstName !== undefined || data.lastName !== undefined) {
+      const profile = await this.getTraineeProfile(traineeId)
+      const firstName = data.firstName ?? profile?.firstName ?? ''
+      const lastName = data.lastName ?? profile?.lastName ?? ''
+      updateData.displayName = `${firstName} ${lastName}`
+    }
+    await updateUserProfile(traineeId, updateData)
+  },
+
+  // Update trainer notes on the relationship
+  async updateRelationshipNotes(
+    relationshipId: string,
+    notes: string
+  ): Promise<void> {
+    const docRef = doc(db, 'trainerRelationships', relationshipId)
+    await updateDoc(docRef, {
+      notes,
+      updatedAt: serverTimestamp(),
+    })
   },
 }

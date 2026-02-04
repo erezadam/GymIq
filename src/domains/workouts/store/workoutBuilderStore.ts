@@ -30,6 +30,10 @@ interface WorkoutBuilderState {
   // Trainer program fields
   programId?: string
   programDayLabel?: string
+  // Trainer report fields (when trainer reports on behalf of trainee)
+  targetUserId?: string
+  reportedBy?: string
+  reportedByName?: string
 }
 
 interface WorkoutBuilderActions {
@@ -44,6 +48,7 @@ interface WorkoutBuilderActions {
   removeSet: (exerciseId: string, setIndex: number) => void
   updateSet: (exerciseId: string, setIndex: number, updates: Partial<WorkoutSet>) => void
   loadFromProgram: (day: ProgramDay, programId: string, programName: string) => void
+  setTrainerReport: (targetUserId: string, reportedBy: string, reportedByName: string) => void
   clearWorkout: () => void
   getWorkoutExercises: () => WorkoutExercise[]
 }
@@ -100,6 +105,9 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
   scheduledDate: null,
   programId: undefined,
   programDayLabel: undefined,
+  targetUserId: undefined,
+  reportedBy: undefined,
+  reportedByName: undefined,
 
   // Actions
   setWorkoutName: (name) => set({ workoutName: name }),
@@ -259,6 +267,10 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
     })
   },
 
+  setTrainerReport: (targetUserId, reportedBy, reportedByName) => {
+    set({ targetUserId, reportedBy, reportedByName })
+  },
+
   clearWorkout: () => {
     set({
       workoutName: '',
@@ -266,6 +278,9 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
       scheduledDate: null,
       programId: undefined,
       programDayLabel: undefined,
+      targetUserId: undefined,
+      reportedBy: undefined,
+      reportedByName: undefined,
     })
   },
 
