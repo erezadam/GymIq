@@ -40,8 +40,12 @@ export const trainerService = {
     data: Omit<TrainerRelationship, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<string> {
     const docRef = doc(collection(db, 'trainerRelationships'))
+    // Filter out undefined values - Firestore doesn't accept them
+    const cleanData = Object.fromEntries(
+      Object.entries(data).filter(([, value]) => value !== undefined)
+    )
     await setDoc(docRef, {
-      ...data,
+      ...cleanData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })
