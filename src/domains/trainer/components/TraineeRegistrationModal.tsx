@@ -1,9 +1,11 @@
-import { useState } from 'react'
-import { X, UserPlus, Loader2 } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { X, UserPlus, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { useAuthStore } from '@/domains/authentication/store'
 import { traineeAccountService } from '../services/traineeAccountService'
+import { trainerService } from '../services/trainerService'
 import type { CreateTraineeData, TrainingGoal } from '../types'
 import { TRAINING_GOAL_LABELS } from '../types'
+import type { AppUser } from '@/lib/firebase/auth'
 
 interface TraineeRegistrationModalProps {
   onClose: () => void
@@ -20,6 +22,14 @@ const GOAL_OPTIONS: TrainingGoal[] = [
   'rehabilitation',
   'sport_specific',
 ]
+
+type EmailCheckStatus =
+  | 'idle'           // No check yet
+  | 'checking'       // Currently checking
+  | 'new_user'       // Email not found - new user
+  | 'available'      // Existing user without trainer - can link
+  | 'has_trainer'    // Existing user with different trainer
+  | 'already_yours'  // Already this trainer's trainee
 
 export function TraineeRegistrationModal({
   onClose,
@@ -39,22 +49,120 @@ export function TraineeRegistrationModal({
     notes: '',
   })
 
+  // Email check state
+  const [emailCheckStatus, setEmailCheckStatus] = useState<EmailCheckStatus>('idle')
+  const [existingUser, setExistingUser] = useState<AppUser | null>(null)
+  const debounceRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Check email when it changes (debounced)
+  const checkEmail = useCallback(async (email: string) => {
+    if (!user) return
+
+    const trimmedEmail = email.trim().toLowerCase()
+    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setEmailCheckStatus('idle')
+      setExistingUser(null)
+      return
+    }
+
+    setEmailCheckStatus('checking')
+    setError(null)
+
+    try {
+      const foundUser = await trainerService.findUserByEmail(trimmedEmail)
+
+      if (!foundUser) {
+        // Scenario 1: Email doesn't exist - new user
+        setEmailCheckStatus('new_user')
+        setExistingUser(null)
+        return
+      }
+
+      // Email exists - check trainer relationships
+      setExistingUser(foundUser)
+
+      // Check if already this trainer's trainee
+      const isAlreadyTrainee = await trainerService.checkTrainerRelationship(
+        user.uid,
+        foundUser.uid
+      )
+
+      if (isAlreadyTrainee) {
+        // Scenario 4: Already this trainer's trainee
+        setEmailCheckStatus('already_yours')
+        return
+      }
+
+      // Check if has different trainer
+      if (foundUser.trainerId && foundUser.trainerId !== user.uid) {
+        // Scenario 3: Has different trainer
+        setEmailCheckStatus('has_trainer')
+        return
+      }
+
+      // Scenario 2: Exists without trainer - can link
+      setEmailCheckStatus('available')
+
+      // Auto-fill form with existing data (readonly)
+      setFormData(prev => ({
+        ...prev,
+        firstName: foundUser.firstName || prev.firstName,
+        lastName: foundUser.lastName || prev.lastName,
+        phone: foundUser.phoneNumber || prev.phone,
+        age: foundUser.age,
+        height: foundUser.height,
+        weight: foundUser.weight,
+        bodyFatPercentage: foundUser.bodyFatPercentage,
+        trainingGoals: (foundUser.trainingGoals as TrainingGoal[]) || prev.trainingGoals,
+        injuries: foundUser.injuriesOrLimitations || prev.injuries,
+      }))
+    } catch (err) {
+      console.error('Error checking email:', err)
+      setEmailCheckStatus('idle')
+      setExistingUser(null)
+    }
+  }, [user])
+
+  // Debounced email check
+  useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+    }
+
+    debounceRef.current = setTimeout(() => {
+      checkEmail(formData.email)
+    }, 500)
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
+      }
+    }
+  }, [formData.email, checkEmail])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) return
 
-    // Validation
-    if (!formData.firstName.trim() || !formData.lastName.trim()) {
-      setError('נא למלא שם פרטי ושם משפחה')
+    // Block submission for invalid statuses
+    if (emailCheckStatus === 'has_trainer' || emailCheckStatus === 'already_yours') {
       return
     }
-    if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setError('נא למלא כתובת אימייל תקינה')
-      return
-    }
-    if (!formData.password || formData.password.length < 6) {
-      setError('סיסמה חייבת להכיל לפחות 6 תווים')
-      return
+
+    // Validation for new users
+    if (emailCheckStatus !== 'available') {
+      if (!formData.firstName.trim() || !formData.lastName.trim()) {
+        setError('נא למלא שם פרטי ושם משפחה')
+        return
+      }
+      if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        setError('נא למלא כתובת אימייל תקינה')
+        return
+      }
+      if (!formData.password || formData.password.length < 6) {
+        setError('סיסמה חייבת להכיל לפחות 6 תווים')
+        return
+      }
     }
 
     setIsSubmitting(true)
@@ -62,14 +170,34 @@ export function TraineeRegistrationModal({
 
     try {
       const trainerName = `${user.firstName} ${user.lastName}`
-      await traineeAccountService.createTraineeAccount(
-        formData,
-        user.uid,
-        trainerName
-      )
+
+      if (emailCheckStatus === 'available' && existingUser) {
+        // Link existing user
+        await traineeAccountService.linkExistingUser(
+          existingUser,
+          user.uid,
+          trainerName,
+          {
+            trainingGoals: formData.trainingGoals,
+            injuries: formData.injuries,
+            notes: formData.notes,
+            age: formData.age,
+            height: formData.height,
+            weight: formData.weight,
+            bodyFatPercentage: formData.bodyFatPercentage,
+          }
+        )
+      } else {
+        // Create new trainee
+        await traineeAccountService.createTraineeAccount(
+          formData,
+          user.uid,
+          trainerName
+        )
+      }
       onSuccess()
     } catch (err: any) {
-      console.error('Error creating trainee:', err)
+      console.error('Error creating/linking trainee:', err)
       if (err.code === 'auth/email-already-in-use') {
         setError('כתובת האימייל כבר רשומה במערכת')
       } else {
@@ -96,6 +224,50 @@ export function TraineeRegistrationModal({
     setFormData((prev) => ({ ...prev, [key]: value }))
   }
 
+  // Determine if form fields should be readonly (existing user)
+  const isExistingUser = emailCheckStatus === 'available'
+  const canSubmit =
+    emailCheckStatus !== 'has_trainer' &&
+    emailCheckStatus !== 'already_yours' &&
+    emailCheckStatus !== 'checking' &&
+    emailCheckStatus !== 'idle'
+
+  // Get status message
+  const getStatusMessage = () => {
+    switch (emailCheckStatus) {
+      case 'checking':
+        return (
+          <div className="flex items-center gap-2 text-text-muted text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>בודק...</span>
+          </div>
+        )
+      case 'available':
+        return (
+          <div className="flex items-center gap-2 text-status-success text-sm">
+            <CheckCircle className="w-4 h-4" />
+            <span>{existingUser?.displayName || existingUser?.firstName} קיים במערכת - ניתן להוסיף</span>
+          </div>
+        )
+      case 'has_trainer':
+        return (
+          <div className="flex items-center gap-2 text-status-error text-sm">
+            <AlertCircle className="w-4 h-4" />
+            <span>משתמש זה כבר משויך למאמן אחר</span>
+          </div>
+        )
+      case 'already_yours':
+        return (
+          <div className="flex items-center gap-2 text-status-error text-sm">
+            <AlertCircle className="w-4 h-4" />
+            <span>משתמש זה כבר ברשימת המתאמנים שלך</span>
+          </div>
+        )
+      default:
+        return null
+    }
+  }
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
@@ -105,7 +277,7 @@ export function TraineeRegistrationModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-dark-border sticky top-0 bg-dark-surface z-10">
           <h2 className="text-xl font-bold text-text-primary">
-            רישום מתאמן חדש
+            {isExistingUser ? 'הוספת מתאמן קיים' : 'רישום מתאמן חדש'}
           </h2>
           <button onClick={onClose} className="btn-icon">
             <X className="w-5 h-5" />
@@ -121,37 +293,7 @@ export function TraineeRegistrationModal({
             </div>
           )}
 
-          {/* Name */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                שם פרטי *
-              </label>
-              <input
-                type="text"
-                value={formData.firstName}
-                onChange={(e) => updateField('firstName', e.target.value)}
-                className="input-primary"
-                placeholder="ישראל"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                שם משפחה *
-              </label>
-              <input
-                type="text"
-                value={formData.lastName}
-                onChange={(e) => updateField('lastName', e.target.value)}
-                className="input-primary"
-                placeholder="ישראלי"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Email */}
+          {/* Email - First field for checking */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1.5">
               אימייל *
@@ -165,27 +307,79 @@ export function TraineeRegistrationModal({
               dir="ltr"
               required
             />
+            <div className="mt-1.5">
+              {getStatusMessage()}
+            </div>
           </div>
 
-          {/* Password */}
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
-              סיסמה זמנית *
-            </label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => updateField('password', e.target.value)}
-              className="input-primary"
-              placeholder="לפחות 6 תווים"
-              dir="ltr"
-              minLength={6}
-              required
-            />
-            <p className="text-xs text-text-muted mt-1">
-              המתאמן יקבל אימייל לאיפוס סיסמה
-            </p>
+          {/* Existing user info banner */}
+          {isExistingUser && existingUser && (
+            <div className="bg-status-success/10 border border-status-success/30 rounded-xl p-4">
+              <p className="text-status-success text-sm font-medium mb-1">
+                משתמש קיים במערכת
+              </p>
+              <p className="text-text-secondary text-sm">
+                {existingUser.displayName || `${existingUser.firstName} ${existingUser.lastName}`} ({existingUser.email})
+              </p>
+              <p className="text-text-muted text-xs mt-2">
+                ניתן לערוך: מדדים גופניים, מטרות אימון, פציעות והערות מאמן.
+              </p>
+            </div>
+          )}
+
+          {/* Name */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                שם פרטי {!isExistingUser && '*'}
+              </label>
+              <input
+                type="text"
+                value={formData.firstName}
+                onChange={(e) => updateField('firstName', e.target.value)}
+                className={`input-primary ${isExistingUser ? 'bg-dark-card/50 text-text-muted' : ''}`}
+                placeholder="ישראל"
+                required={!isExistingUser}
+                disabled={isExistingUser}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                שם משפחה {!isExistingUser && '*'}
+              </label>
+              <input
+                type="text"
+                value={formData.lastName}
+                onChange={(e) => updateField('lastName', e.target.value)}
+                className={`input-primary ${isExistingUser ? 'bg-dark-card/50 text-text-muted' : ''}`}
+                placeholder="ישראלי"
+                required={!isExistingUser}
+                disabled={isExistingUser}
+              />
+            </div>
           </div>
+
+          {/* Password - only for new users */}
+          {!isExistingUser && (
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                סיסמה זמנית *
+              </label>
+              <input
+                type="password"
+                value={formData.password}
+                onChange={(e) => updateField('password', e.target.value)}
+                className="input-primary"
+                placeholder="לפחות 6 תווים"
+                dir="ltr"
+                minLength={6}
+                required
+              />
+              <p className="text-xs text-text-muted mt-1">
+                המתאמן יקבל אימייל לאיפוס סיסמה
+              </p>
+            </div>
+          )}
 
           {/* Phone */}
           <div>
@@ -196,13 +390,14 @@ export function TraineeRegistrationModal({
               type="tel"
               value={formData.phone}
               onChange={(e) => updateField('phone', e.target.value)}
-              className="input-primary"
+              className={`input-primary ${isExistingUser ? 'bg-dark-card/50 text-text-muted' : ''}`}
               placeholder="050-1234567"
               dir="ltr"
+              disabled={isExistingUser}
             />
           </div>
 
-          {/* Body Metrics */}
+          {/* Body Metrics - always editable */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
               מדדים גופניים
@@ -273,7 +468,7 @@ export function TraineeRegistrationModal({
             </div>
           </div>
 
-          {/* Training Goals */}
+          {/* Training Goals - always editable */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
               מטרות אימון
@@ -296,7 +491,7 @@ export function TraineeRegistrationModal({
             </div>
           </div>
 
-          {/* Injuries */}
+          {/* Injuries - always editable */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1.5">
               פציעות / מגבלות
@@ -310,7 +505,7 @@ export function TraineeRegistrationModal({
             />
           </div>
 
-          {/* Notes */}
+          {/* Notes - always editable */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1.5">
               הערות מאמן
@@ -327,18 +522,18 @@ export function TraineeRegistrationModal({
           {/* Submit */}
           <button
             type="submit"
-            disabled={isSubmitting}
-            className="btn-primary w-full flex items-center justify-center gap-2 py-3"
+            disabled={isSubmitting || !canSubmit}
+            className="btn-primary w-full flex items-center justify-center gap-2 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span>יוצר חשבון...</span>
+                <span>{isExistingUser ? 'מוסיף...' : 'יוצר חשבון...'}</span>
               </>
             ) : (
               <>
                 <UserPlus className="w-5 h-5" />
-                <span>צור מתאמן</span>
+                <span>{isExistingUser ? 'הוסף לרשימת המתאמנים שלי' : 'צור מתאמן'}</span>
               </>
             )}
           </button>

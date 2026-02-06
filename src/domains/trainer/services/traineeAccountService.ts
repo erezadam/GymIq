@@ -5,11 +5,12 @@ import {
   updateProfile,
   sendPasswordResetEmail,
 } from 'firebase/auth'
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebase/config'
 import { firebaseConfig } from '@/lib/firebase/config'
-import type { CreateTraineeData } from '../types'
+import type { CreateTraineeData, TrainingGoal } from '../types'
 import { trainerService } from './trainerService'
+import type { AppUser } from '@/lib/firebase/auth'
 
 export const traineeAccountService = {
   /**
@@ -106,5 +107,72 @@ export const traineeAccountService = {
         // Ignore cleanup errors
       }
     }
+  },
+
+  /**
+   * Links an existing user to a trainer.
+   * This is used when the email already exists in the system and the user
+   * doesn't have a trainer assigned yet.
+   *
+   * Flow:
+   * 1. Update user document with trainerId and any new fields
+   * 2. Create trainer-trainee relationship
+   */
+  async linkExistingUser(
+    existingUser: AppUser,
+    trainerId: string,
+    trainerName: string,
+    updates: {
+      trainingGoals?: TrainingGoal[]
+      injuries?: string
+      notes?: string
+      age?: number
+      height?: number
+      weight?: number
+      bodyFatPercentage?: number
+    }
+  ): Promise<{ uid: string; email: string }> {
+    // Step 1: Update user document with trainerId and new fields
+    const userRef = doc(db, 'users', existingUser.uid)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: any = {
+      trainerId,
+      updatedAt: serverTimestamp(),
+    }
+
+    if (updates.trainingGoals && updates.trainingGoals.length > 0) {
+      updateData.trainingGoals = updates.trainingGoals
+    }
+    if (updates.injuries) {
+      updateData.injuriesOrLimitations = updates.injuries
+    }
+    // Body metrics - only update if provided
+    if (updates.age != null) {
+      updateData.age = updates.age
+    }
+    if (updates.height != null) {
+      updateData.height = updates.height
+    }
+    if (updates.weight != null) {
+      updateData.weight = updates.weight
+    }
+    if (updates.bodyFatPercentage != null) {
+      updateData.bodyFatPercentage = updates.bodyFatPercentage
+    }
+
+    await updateDoc(userRef, updateData)
+
+    // Step 2: Create trainer-trainee relationship
+    await trainerService.createRelationship({
+      trainerId,
+      traineeId: existingUser.uid,
+      trainerName,
+      traineeName: existingUser.displayName || `${existingUser.firstName} ${existingUser.lastName}`,
+      traineeEmail: existingUser.email,
+      status: 'active',
+      notes: updates.notes?.trim() || undefined,
+    })
+
+    return { uid: existingUser.uid, email: existingUser.email }
   },
 }

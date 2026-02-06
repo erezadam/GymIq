@@ -8,6 +8,7 @@ import {
   query,
   where,
   serverTimestamp,
+  limit,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase/config'
 import type { TrainerRelationship, TraineeWithStats, TraineeStats } from '../types'
@@ -190,5 +191,38 @@ export const trainerService = {
       notes,
       updatedAt: serverTimestamp(),
     })
+  },
+
+  // Find user by email (for checking if email exists in system)
+  async findUserByEmail(email: string): Promise<AppUser | null> {
+    const q = query(
+      collection(db, 'users'),
+      where('email', '==', email.toLowerCase().trim()),
+      limit(1)
+    )
+    const snapshot = await getDocs(q)
+    if (snapshot.empty) return null
+
+    const data = snapshot.docs[0].data()
+    return {
+      ...data,
+      createdAt: data.createdAt?.toDate?.() || data.createdAt || new Date(),
+      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt || new Date(),
+    } as AppUser
+  },
+
+  // Check if trainer-trainee relationship already exists
+  async checkTrainerRelationship(
+    trainerId: string,
+    traineeId: string
+  ): Promise<boolean> {
+    const q = query(
+      collection(db, 'trainerRelationships'),
+      where('trainerId', '==', trainerId),
+      where('traineeId', '==', traineeId),
+      where('status', '==', 'active')
+    )
+    const snapshot = await getDocs(q)
+    return !snapshot.empty
   },
 }
