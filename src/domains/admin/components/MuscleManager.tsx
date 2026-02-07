@@ -11,10 +11,12 @@ export default function MuscleManager() {
   const [editingMuscle, setEditingMuscle] = useState<string | null>(null)
   const [showAddMuscle, setShowAddMuscle] = useState(false)
   const [showAddSubMuscle, setShowAddSubMuscle] = useState<string | null>(null)
+  const [editingSubMuscle, setEditingSubMuscle] = useState<{ primaryId: string; subId: string } | null>(null)
 
   // Form states
   const [newMuscle, setNewMuscle] = useState({ id: '', nameHe: '', nameEn: '', icon: '' })
   const [newSubMuscle, setNewSubMuscle] = useState({ id: '', nameHe: '', nameEn: '' })
+  const [editSubMuscleForm, setEditSubMuscleForm] = useState({ nameHe: '', nameEn: '' })
   const [editForm, setEditForm] = useState<PrimaryMuscle | null>(null)
 
   useEffect(() => {
@@ -128,6 +130,35 @@ export default function MuscleManager() {
       await loadMuscles()
     } catch (error) {
       console.error('Error adding sub-muscle:', error)
+    }
+  }
+
+  const startEditingSubMuscle = (primaryId: string, sub: { id: string; nameHe: string; nameEn: string }) => {
+    setEditingSubMuscle({ primaryId, subId: sub.id })
+    setEditSubMuscleForm({ nameHe: sub.nameHe, nameEn: sub.nameEn })
+  }
+
+  const handleSaveSubMuscleEdit = async () => {
+    if (!editingSubMuscle || !editSubMuscleForm.nameHe) return
+
+    const muscle = muscles.find(m => m.id === editingSubMuscle.primaryId)
+    if (!muscle) return
+
+    try {
+      const updatedMuscle: PrimaryMuscle = {
+        ...muscle,
+        subMuscles: muscle.subMuscles.map(sm =>
+          sm.id === editingSubMuscle.subId
+            ? { ...sm, nameHe: editSubMuscleForm.nameHe, nameEn: editSubMuscleForm.nameEn || sm.nameEn }
+            : sm
+        ),
+      }
+      await saveMuscle(updatedMuscle)
+      setEditingSubMuscle(null)
+      setEditSubMuscleForm({ nameHe: '', nameEn: '' })
+      await loadMuscles()
+    } catch (error) {
+      console.error('Error editing sub-muscle:', error)
     }
   }
 
@@ -369,19 +400,61 @@ export default function MuscleManager() {
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {muscle.subMuscles.map((sub) => (
-                      <div
-                        key={sub.id}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-dark-surface rounded-lg border border-dark-border"
-                      >
-                        <span className="text-white text-sm">{sub.nameHe}</span>
-                        <span className="text-neon-gray-500 text-xs">({sub.id})</span>
-                        <button
-                          onClick={() => handleDeleteSubMuscle(muscle.id, sub.id)}
-                          className="text-red-400 hover:text-red-300 p-0.5"
+                      editingSubMuscle?.primaryId === muscle.id && editingSubMuscle?.subId === sub.id ? (
+                        <div
+                          key={sub.id}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-dark-surface rounded-lg border border-primary-400/50"
                         >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
+                          <span className="text-neon-gray-500 text-xs">({sub.id})</span>
+                          <input
+                            type="text"
+                            placeholder="שם בעברית"
+                            value={editSubMuscleForm.nameHe}
+                            onChange={(e) => setEditSubMuscleForm({ ...editSubMuscleForm, nameHe: e.target.value })}
+                            className="input-primary text-sm w-28 py-0.5 px-2"
+                            autoFocus
+                          />
+                          <input
+                            type="text"
+                            placeholder="שם באנגלית"
+                            value={editSubMuscleForm.nameEn}
+                            onChange={(e) => setEditSubMuscleForm({ ...editSubMuscleForm, nameEn: e.target.value })}
+                            className="input-primary text-sm w-28 py-0.5 px-2"
+                          />
+                          <button
+                            onClick={handleSaveSubMuscleEdit}
+                            className="text-green-400 hover:text-green-300 p-0.5"
+                          >
+                            <Save className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => { setEditingSubMuscle(null); setEditSubMuscleForm({ nameHe: '', nameEn: '' }) }}
+                            className="text-red-400 hover:text-red-300 p-0.5"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          key={sub.id}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-dark-surface rounded-lg border border-dark-border"
+                        >
+                          <span className="text-white text-sm">{sub.nameHe}</span>
+                          <span className="text-neon-gray-500 text-xs">({sub.id})</span>
+                          <button
+                            onClick={() => startEditingSubMuscle(muscle.id, sub)}
+                            className="text-neon-gray-400 hover:text-primary-400 p-0.5"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSubMuscle(muscle.id, sub.id)}
+                            className="text-red-400 hover:text-red-300 p-0.5"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )
                     ))}
                   </div>
                 )}

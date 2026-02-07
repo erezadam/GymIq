@@ -6,6 +6,28 @@
 
 ---
 
+## [v1.13.1] - 2026-02-07
+
+### 🚀 פיצ'רים חדשים
+
+| פיצ'ר | תיאור |
+|-------|-------|
+| **עריכת תת שריר** | במסך ניהול שרירים (Admin > Muscles), נוסף כפתור עריכה (עיפרון) ליד כל תת שריר. לחיצה פותחת טופס inline לעריכת שם בעברית ובאנגלית. ה-ID (key) לא ניתן לעריכה כדי לשמור על שלמות נתוני תרגילים קיימים |
+
+### 📝 שינויים
+
+| קובץ | שינוי |
+|------|-------|
+| `MuscleManager.tsx` | הוספת state למעקב אחר תת שריר בעריכה (`editingSubMuscle`, `editSubMuscleForm`), פונקציות `startEditingSubMuscle` ו-`handleSaveSubMuscleEdit`, UI inline edit עם כפתורי שמירה/ביטול |
+| `docs/qa_scenarios.md` | הוספת תרחישי בדיקה 8.10-8.17 לעריכת תתי שרירים |
+
+### 📋 החלטות עיצוב
+
+- **ה-ID (key) של תת שריר לא ניתן לעריכה**: ה-`id` משמש כ-`primaryMuscle` בתרגילים קיימים ב-Firestore. שינוי שלו היה מחייב migration על כל התרגילים שמשתמשים בו, עם סיכון לאיבוד נתונים. לכן רק `nameHe` ו-`nameEn` ניתנים לעריכה.
+- **ExerciseForm מקבל שינויים אוטומטית**: הטופס טוען שרירים מ-Firestore דרך `useQuery(['muscles'])`, כך ששינוי שם בעברית משתקף בדרופדאון בפתיחה הבאה של הטופס.
+
+---
+
 ## [v1.13.0] - 2026-02-04
 
 ### 🚀 פיצ'רים חדשים
