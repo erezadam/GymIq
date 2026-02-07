@@ -72,7 +72,7 @@ export function ExerciseLibrary({
   const [selectedPrimaryMuscle, setSelectedPrimaryMuscle] = useState<string>('all')
   const [selectedSubMuscle, setSelectedSubMuscle] = useState<string>('all')
   const [selectedEquipment, setSelectedEquipment] = useState<string>('all')
-  const [imageModal, setImageModal] = useState<{ url: string; name: string } | null>(null)
+  const [imageModal, setImageModal] = useState<{ url: string; name: string; instructionsHe: string[] } | null>(null)
   const [recentlyDoneExerciseIds, setRecentlyDoneExerciseIds] = useState<Set<string>>(new Set())
   const [lastMonthExerciseIds, setLastMonthExerciseIds] = useState<Set<string>>(new Set())
   const [isScheduleForLater, setIsScheduleForLater] = useState(false)
@@ -388,7 +388,7 @@ export function ExerciseLibrary({
   const handleImageClick = (e: React.MouseEvent, exercise: Exercise) => {
     e.stopPropagation()
     if (exercise.imageUrl) {
-      setImageModal({ url: exercise.imageUrl, name: exercise.nameHe })
+      setImageModal({ url: exercise.imageUrl, name: exercise.nameHe, instructionsHe: exercise.instructionsHe || [] })
     }
   }
 
@@ -885,16 +885,26 @@ export function ExerciseLibrary({
       {/* Image Modal */}
       {imageModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 overflow-y-auto"
           onClick={() => setImageModal(null)}
         >
-          <div className="max-w-lg w-full">
+          <div className="max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
             <img
               src={imageModal.url}
               alt={imageModal.name}
               className="w-full rounded-xl"
             />
             <p className="text-white text-center mt-3 font-semibold">{imageModal.name}</p>
+            {imageModal.instructionsHe.length > 0 && (
+              <div className="mt-4 bg-dark-surface/90 rounded-xl p-4 border border-dark-border" dir="rtl">
+                <p className="text-primary-400 text-sm font-semibold mb-3">הוראות ביצוע</p>
+                <ol className="space-y-2 list-decimal list-inside">
+                  {imageModal.instructionsHe.map((instruction, i) => (
+                    <li key={i} className="text-text-secondary text-sm leading-relaxed">{instruction}</li>
+                  ))}
+                </ol>
+              </div>
+            )}
           </div>
         </div>
       )}

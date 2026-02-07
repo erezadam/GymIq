@@ -8,6 +8,7 @@
 ║   1. קרא CLAUDE.md הזה (נעשה אוטומטית)                                        ║
 ║   2. קרא project-control: `.claude/project-control-SKILL.md`                 ║
 ║   3. לפני כל שינוי קוד: `.claude/development-flow-SKILL.md` ⚠️               ║
+║   4. בתחילת שיחה חדשה: `.claude/daily-workflow-SKILL.md` 🔄                  ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -20,6 +21,7 @@
 ❌ **No code deletion** שלא קשור ישירות למשימה  
 ❌ **No hardcoded secrets** - מפתחות רק דרך environment variables  
 ❌ **No inline styles** - כל עיצוב דרך Tailwind classes בלבד, אסור `style={{}}`  
+❌ **No direct push to main** - תמיד עבודה בענף + PR + CI ירוק  
 
 ---
 
@@ -257,7 +259,8 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 | **🔐 אבטחה סודות** | לא מכניסים מפתחות לקוד - בסקריפטים להשתמש ב-`scripts/firebase-config.ts` | יש Security check + בדיקת grep | ראה סעיף אבטחה למעלה |
 | **Firebase** | כל שינוי נתונים כולל בדיקת rules ו-migrations במידת הצורך | יש Data change notes | `.claude/firebase-data-SKILL.md` |
 | **פריסה** | לפני פריסה מוודאים env נכון build נקי ו-rollback plan | יש Deploy checklist | `.claude/deployment-SKILL.md` |
-| **🔀 Git** | לא דוחפים ישירות ל-main, עובדים בענף נפרד, PR חובה | עובדים בענף feature/fix/work | ראה סעיף Git למעלה |
+| **🔀 Git** | לא דוחפים ישירות ל-main, עובדים בענף נפרד, PR חובה | עובדים בענף feature/fix/work | `.claude/daily-workflow-SKILL.md` |
+| **🔄 תהליך יומי** | תחילת שיחה = בדיקת ענף, סגירת יום = עדכון+build+PR+merge+cleanup | הסוכן מדווח על כל שלב | `.claude/daily-workflow-SKILL.md` |
 | **סיום** | מסיימים בסיכום מה שונה איך נבדק ומה נשאר פתוח | יש Summary + Next | `.claude/project-control-SKILL.md` |
 
 ---
@@ -277,19 +280,21 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 | **ביצועים ואופטימיזציה** | performance, optimize, slow, fast, cache, memory, bundle | `.claude/project-control-SKILL.md` |
 | **תכנון ותיעוד** | plan, design, document, spec, requirements, architecture | `.claude/documentation-SKILL.md` |
 | **סקריפטים ו-Firebase** | script, migration, import, export, firebase-admin | ראה סעיף אבטחה + `.claude/firebase-data-SKILL.md` |
-| **🔀 Git ו-GitHub** | git, branch, push, merge, pr, deploy to main | ראה סעיף Git למעלה |
+| **🔀 Git ו-GitHub** | git, branch, push, merge, pr, deploy to main | `.claude/daily-workflow-SKILL.md` |
+| **🔄 תהליך יומי** | בוקר טוב, התחלת עבודה, סגור יום, סיום יום, start day, end of day | `.claude/daily-workflow-SKILL.md` |
 
 ---
 
 ## כלל ביצוע
 
-1. **קרא project_control** תמיד ראשון
-2. **לפני כל קוד - קרא development-flow** ⚠️ (זה מונע תקלות!)
-3. **זהה טריגרים** במשימה ופתח Skills רלוונטיים
-4. **בצע לפי הצ'קליסט** שבתוך ה-Skills
-5. **בדוק אבטחה** - אם יצרת/שינית קבצים, הרץ בדיקת סודות
-6. **בדוק עיצוב** - אם יצרת/שינית קומפוננטות, וודא אין inline styles
-7. **סיים עם סיכום** קצר + מה נבדק
+1. **בתחילת שיחה חדשה - קרא daily-workflow** 🔄 (בדיקת ענף אוטומטית)
+2. **קרא project_control** תמיד ראשון
+3. **לפני כל קוד - קרא development-flow** ⚠️ (זה מונע תקלות!)
+4. **זהה טריגרים** במשימה ופתח Skills רלוונטיים
+5. **בצע לפי הצ'קליסט** שבתוך ה-Skills
+6. **בדוק אבטחה** - אם יצרת/שינית קבצים, הרץ בדיקת סודות
+7. **בדוק עיצוב** - אם יצרת/שינית קומפוננטות, וודא אין inline styles
+8. **סיים עם סיכום** קצר + מה נבדק
 
 ---
 
@@ -330,33 +335,11 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 
 ### ✅ חובה - תהליך עבודה נכון:
 
-**1. לפני תחילת עבודה (טרמינל כללי):**
-```bash
-git checkout main
-git pull
-git checkout -b feature/שם-תיאורי   # או work/YYYY-MM-DD או fix/תיאור-באג
-```
+**ראה `.claude/daily-workflow-SKILL.md` לתהליך המלא!**
 
-**2. עבודה עם Claude Code (כרגיל):**
-הסוכן עובד על הקבצים המקומיים כרגיל. שום דבר לא משתנה בשלב הזה.
+**תחילת יום:** הסוכן בודק אוטומטית את הענף ויוצר ענף עבודה אם צריך.
 
-**3. אחרי סיום עבודה (טרמינל כללי):**
-```bash
-git add .
-git commit -m "תיאור: מה השתנה"
-git push origin feature/שם-הענף
-gh pr create --title "תיאור" --body "פירוט מה השתנה"
-```
-
-**4. בדיקת CI:**
-GitHub מריץ `npm run build` אוטומטית. אם נכשל ❌ — לתקן ולדחוף שוב. אם עבר ✅ — ניתן למזג.
-
-**5. מיזוג (אחרי build ירוק):**
-```bash
-gh pr merge --merge
-git checkout main
-git pull
-```
+**סגירת יום:** אמור "סגור יום" והסוכן יבצע: עדכון מסמכים → build → commit → push → PR → CI → merge → cleanup.
 
 ### 📋 מוסכמות שמות ענפים:
 
@@ -380,9 +363,11 @@ git pull
 |-------|---------|
 | `gh pr create` | פותח PR מהטרמינל |
 | `gh pr list` | רואה PRs פתוחים |
+| `gh pr checks [N]` | בודק סטטוס CI של PR |
 | `gh pr merge --merge` | ממזג PR |
 | `gh pr view --web` | פותח PR בדפדפן |
 | `git branch -a` | רואה כל הענפים |
+| `git branch --show-current` | מציג ענף נוכחי |
 | `git remote prune origin` | מנקה ענפים מרוחקים שנמחקו |
 
 ---
@@ -394,11 +379,12 @@ git pull
 | 16/01/2026 | GitHub זיהה 19 קבצים עם מפתחות חשופים | נוסף סעיף אבטחה + firebase-config.ts משותף |
 | 29/01/2026 | נמצאו 217 inline styles ב-12 קבצים | נוסף סעיף עיצוב + חוק ברזל No inline styles |
 | 03/02/2026 | הוגדרו branch protection + CI + PR חובה על main | נוסף סעיף Git + תהליך עבודה עם GitHub |
+| 07/02/2026 | נוצר skill לתהליך עבודה יומי | הסוכן מנהל תחילת יום וסגירת יום אוטומטית |
 
 ---
 
 ```
 ══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 03/02/2026 | נוסף סעיף Git + תהליך עבודה עם GitHub + CI
+עדכון אחרון: 07/02/2026 | נוסף daily-workflow-SKILL לניהול תחילת/סגירת יום
 ══════════════════════════════════════════════════════════════════════════════
 ```
