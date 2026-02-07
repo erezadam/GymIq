@@ -80,6 +80,7 @@ export interface Exercise {
   tipsHe: string[]
   createdAt?: Date
   updatedAt?: Date
+  lastEditedAt?: Date
 }
 
 // Category metadata

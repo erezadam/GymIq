@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { ArrowRight, Save, Plus, Trash2, Image } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { exerciseService } from '@/domains/exercises/services'
+import { serverTimestamp } from 'firebase/firestore'
 import type { ExerciseCategory, MuscleGroup, EquipmentType, AssistanceType } from '@/domains/exercises/types'
 import { difficultyOptions } from '@/domains/exercises/data/mockExercises'
 import { getEquipment, type Equipment } from '@/lib/firebase/equipment'
@@ -306,6 +307,7 @@ export default function ExerciseForm() {
       instructionsHe: data.instructionsHe.map((i) => i.value).filter(Boolean),
       tips: data.tips.map((t) => t.value).filter(Boolean),
       tipsHe: data.tipsHe.map((t) => t.value).filter(Boolean),
+      lastEditedAt: serverTimestamp(),
     }
 
     console.log('🔥 ExerciseForm: Submitting formatted data:', formattedData)
