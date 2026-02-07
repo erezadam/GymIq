@@ -4,6 +4,36 @@
 
 ---
 
+## [1.12.1] - 2026-02-07
+
+### בדיקות E2E (Playwright)
+
+#### תשתית חדשה
+- **Playwright Setup** - הגדרת סביבת בדיקות E2E עם תמיכה ב-Chromium בלבד (rate limiting של Firebase)
+- **Test Users** - קובץ `e2e/helpers/test-users.ts` עם משתמשים ייעודיים לבדיקות
+- **Serial Mode** - הרצה סדרתית למניעת התנגשויות בנתונים
+
+#### קבצי בדיקה
+- `auth.spec.ts` - בדיקות התחברות והתנתקות
+- `dashboard.spec.ts` - בדיקות דשבורד וניווט
+- `workout-flow.spec.ts` - זרימת אימון מלאה (בחירה → ביצוע → סיום)
+- `workout-history.spec.ts` - היסטוריית אימונים
+- `trainer-dashboard.spec.ts` - דשבורד מאמן והרשאות
+- `trainer-trainee-flows.spec.ts` - זרימות מאמן-מתאמן (הקובץ הראשי)
+
+#### תיקונים קריטיים
+- **Selectors למודל סיום אימון** - תוקנו selectors שגויים:
+  - `button:has-text("אישור")` → `button:has-text("סיים")`
+  - `button:has-text("כן")` → `button:has-text("כן, סיים")`
+  - `button:has-text("שמור")` → `button:has-text("שמור וסיים")`
+  - `text=סיכום אימון` → `text=כל הכבוד!`
+- **IndexedDB Clearing** - ניקוי מלא של Firebase Auth state בהחלפת משתמשים
+
+#### תיעוד
+- **e2e/README.md** - תיעוד מלא בעברית של כל הבדיקות, פקודות הרצה, באגים שתוקנו
+
+---
+
 ## [1.12.0] - 2026-02-04
 
 ### מודול מאמן - Trainer Module (חדש!)

@@ -646,9 +646,12 @@ export function ExerciseLibrary({
                   <button
                     key={subMuscle.id}
                     onClick={() => setSelectedSubMuscle(subMuscle.id)}
-                    className={selectedSubMuscle === subMuscle.id ? 'pill-active' : 'pill-default'}
+                    className={`${selectedSubMuscle === subMuscle.id ? 'pill-active' : 'pill-default'} flex flex-col items-center`}
                   >
-                    {subMuscle.nameHe}
+                    <span>{subMuscle.nameHe}</span>
+                    {subMuscle.nameEn && (
+                      <span className="text-[10px] opacity-60">{subMuscle.nameEn}</span>
+                    )}
                   </button>
                 ))}
               </div>

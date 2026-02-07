@@ -48,17 +48,17 @@ export function useVersionCheck(): UseVersionCheckReturn {
 
       console.log('[Version] Server:', serverVersion.version, 'Stored:', storedVersion)
 
-      setCurrentVersion(storedVersion)
+      // Always show the server version as the current running version
+      setCurrentVersion(serverVersion.version)
       setNewVersion(serverVersion.version)
 
       // First time - just store the version
       if (!storedVersion) {
         localStorage.setItem(VERSION_KEY, serverVersion.version)
-        setCurrentVersion(serverVersion.version)
         return
       }
 
-      // Compare versions
+      // Compare versions - update available if server has newer version than stored
       if (serverVersion.version !== storedVersion) {
         console.log('[Version] Update available!')
         setUpdateAvailable(true)

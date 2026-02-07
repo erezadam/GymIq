@@ -26,6 +26,8 @@ export type RelationshipStatus = 'active' | 'paused' | 'ended'
 
 export type ProgramStatus = 'active' | 'paused' | 'completed' | 'draft'
 
+export type ProgramType = 'program' | 'standalone'
+
 export type MessageType =
   | 'general'
   | 'workout_feedback'
@@ -72,6 +74,7 @@ export interface TrainingProgram {
   originalTrainerId: string // keeps original trainer even if relationship ends
   name: string
   description?: string
+  type?: ProgramType // 'program' (default) or 'standalone' for single workouts
   status: ProgramStatus
   isModifiedByTrainee: boolean // true if trainee made changes
   weeklyStructure: ProgramDay[]

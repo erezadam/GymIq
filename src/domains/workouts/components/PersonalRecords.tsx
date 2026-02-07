@@ -25,9 +25,14 @@ function getImprovementType(record: PersonalRecord): { weight: boolean; reps: bo
 
 type SortMode = 'date' | 'improvement'
 
-export default function PersonalRecords() {
+interface PersonalRecordsProps {
+  userId?: string
+}
+
+export default function PersonalRecords({ userId: propUserId }: PersonalRecordsProps = {}) {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const effectiveUserId = propUserId || user?.uid
   const [records, setRecords] = useState<PersonalRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [sortMode, setSortMode] = useState<SortMode>('date')
@@ -38,16 +43,16 @@ export default function PersonalRecords() {
 
   useEffect(() => {
     loadRecords()
-  }, [user])
+  }, [effectiveUserId])
 
   const loadRecords = async () => {
-    if (!user?.uid) {
+    if (!effectiveUserId) {
       setLoading(false)
       return
     }
 
     try {
-      const data = await getPersonalRecords(user.uid)
+      const data = await getPersonalRecords(effectiveUserId)
       setRecords(data)
     } catch (error) {
       console.error('Failed to load personal records:', error)
@@ -73,8 +78,8 @@ export default function PersonalRecords() {
     loadingExerciseRef.current = exerciseId // Track which exercise we're loading
 
     try {
-      if (user?.uid) {
-        const history = await getExerciseHistory(user.uid, exerciseId)
+      if (effectiveUserId) {
+        const history = await getExerciseHistory(effectiveUserId, exerciseId)
         // Only update if this is still the exercise we're loading (prevent race condition)
         if (loadingExerciseRef.current === exerciseId) {
           setExerciseHistory(history)
@@ -130,7 +135,7 @@ export default function PersonalRecords() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate(-1)}
           className="flex items-center gap-1 text-text-secondary hover:text-white transition-colors"
         >
           <ChevronRight className="w-5 h-5" />
@@ -185,13 +190,15 @@ export default function PersonalRecords() {
         <div className="text-center py-12">
           <Dumbbell className="w-16 h-16 text-text-muted mx-auto mb-4" />
           <h3 className="text-lg font-medium text-text-primary mb-2">עדיין אין שיאים</h3>
-          <p className="text-text-muted mb-6">התחל להתאמן כדי לראות את השיאים שלך!</p>
-          <button
-            onClick={() => navigate('/exercises')}
-            className="btn-neon inline-flex items-center gap-2"
-          >
-            התחל אימון
-          </button>
+          <p className="text-text-muted mb-6">{propUserId ? 'למתאמן זה עדיין אין שיאים' : 'התחל להתאמן כדי לראות את השיאים שלך!'}</p>
+          {!propUserId && (
+            <button
+              onClick={() => navigate('/exercises')}
+              className="btn-neon inline-flex items-center gap-2"
+            >
+              התחל אימון
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">

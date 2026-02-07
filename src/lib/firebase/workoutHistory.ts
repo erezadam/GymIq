@@ -506,23 +506,27 @@ export async function getUserWorkoutStats(userId: string): Promise<{
   const snapshot = await getDocs(q)
   const workouts = snapshot.docs.map(doc => toWorkoutHistory(doc.id, doc.data()))
 
-  // Calculate this week's workouts
+  // Filter only completed workouts for stats calculation
+  // (in_progress, cancelled, planned, partial should not count as "done" workouts)
+  const completedWorkouts = workouts.filter(w => w.status === 'completed')
+
+  // Calculate this week's workouts (completed only)
   const now = new Date()
   const weekStart = new Date(now)
   weekStart.setDate(now.getDate() - now.getDay())
   weekStart.setHours(0, 0, 0, 0)
 
-  const thisWeekWorkouts = workouts.filter(w => w.date >= weekStart).length
+  const thisWeekWorkouts = completedWorkouts.filter(w => w.date >= weekStart).length
 
-  // Calculate this month's workouts (1st of current month to end of month)
+  // Calculate this month's workouts (1st of current month to end of month, completed only)
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   monthStart.setHours(0, 0, 0, 0)
-  const thisMonthWorkouts = workouts.filter(w => w.date >= monthStart).length
+  const thisMonthWorkouts = completedWorkouts.filter(w => w.date >= monthStart).length
 
-  // Calculate total volume
-  const totalVolume = workouts.reduce((sum, w) => sum + w.totalVolume, 0)
+  // Calculate total volume (from completed workouts only)
+  const totalVolume = completedWorkouts.reduce((sum, w) => sum + w.totalVolume, 0)
 
-  // Calculate streak (consecutive days with workouts)
+  // Calculate streak (consecutive days with completed workouts)
   let currentStreak = 0
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -531,7 +535,7 @@ export async function getUserWorkoutStats(userId: string): Promise<{
     const checkDate = new Date(today)
     checkDate.setDate(today.getDate() - i)
 
-    const hasWorkout = workouts.some(w => {
+    const hasWorkout = completedWorkouts.some(w => {
       const workoutDate = new Date(w.date)
       workoutDate.setHours(0, 0, 0, 0)
       return workoutDate.getTime() === checkDate.getTime()
@@ -545,7 +549,7 @@ export async function getUserWorkoutStats(userId: string): Promise<{
   }
 
   return {
-    totalWorkouts: workouts.length,
+    totalWorkouts: completedWorkouts.length,
     thisWeekWorkouts,
     thisMonthWorkouts,
     totalVolume,

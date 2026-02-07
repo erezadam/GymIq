@@ -15,6 +15,7 @@ import {
   ImageOff,
   Wrench,
   AlertTriangle,
+  ArrowUpDown,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { exerciseService } from '@/domains/exercises/services'
@@ -105,6 +106,10 @@ export default function ExerciseList() {
   const [showOnlyNoEquipment, setShowOnlyNoEquipment] = useState(persistedState?.showOnlyNoEquipment || false)
   // Data issues filter: 'none' | 'no_primary' | 'invalid_primary' | 'all_valid'
   const [dataIssueFilter, setDataIssueFilter] = useState<string>(persistedState?.dataIssueFilter || 'none')
+  // Sort mode: 'name' (default A-Z) or 'updatedAt' (newest first)
+  const [sortMode, setSortMode] = useState<'name' | 'updatedAt'>('name')
+  // Filter by updatedAt: 'all' | 'updated' | 'no_update'
+  const [updateFilter, setUpdateFilter] = useState<'all' | 'updated' | 'no_update'>('all')
 
   // Persist filter state whenever it changes
   useEffect(() => {
@@ -217,6 +222,11 @@ export default function ExerciseList() {
     return issues
   }
 
+  // Count exercises without lastEditedAt (never manually edited)
+  const exercisesWithoutUpdate = useMemo(() => {
+    return allExercises.filter(ex => !ex.lastEditedAt)
+  }, [allExercises])
+
   // Display exercises based on active filters
   const exercises = useMemo(() => {
     let result = allExercises
@@ -225,6 +235,11 @@ export default function ExerciseList() {
     }
     if (showOnlyNoEquipment) {
       result = result.filter(ex => !ex.equipment || ex.equipment.trim() === '')
+    }
+    if (updateFilter === 'no_update') {
+      result = result.filter(ex => !ex.lastEditedAt)
+    } else if (updateFilter === 'updated') {
+      result = result.filter(ex => !!ex.lastEditedAt)
     }
     // Data issues filter
     if (dataIssueFilter === 'no_primary') {
@@ -245,8 +260,22 @@ export default function ExerciseList() {
         return issues.length === 0
       })
     }
+    if (sortMode === 'updatedAt') {
+      result.sort((a, b) => {
+        const getTime = (d: unknown): number => {
+          if (!d) return 0
+          const ts = d as { seconds?: number }
+          if (ts?.seconds) return ts.seconds * 1000
+          const date = new Date(d as string | number)
+          return isNaN(date.getTime()) ? 0 : date.getTime()
+        }
+        return getTime(b.lastEditedAt) - getTime(a.lastEditedAt) // newest first
+      })
+    } else {
+      result.sort((a, b) => (a.nameHe || '').trim().localeCompare((b.nameHe || '').trim(), 'he'))
+    }
     return result
-  }, [allExercises, showOnlyMissingImages, showOnlyNoEquipment, dataIssueFilter, musclesList, validPrimaryMuscleIds])
+  }, [allExercises, showOnlyMissingImages, showOnlyNoEquipment, updateFilter, dataIssueFilter, musclesList, validPrimaryMuscleIds, sortMode])
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -483,6 +512,18 @@ export default function ExerciseList() {
               </span>
             )}
           </button>
+          {/* Sort toggle button */}
+          <button
+            onClick={() => setSortMode(sortMode === 'name' ? 'updatedAt' : 'name')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors ${
+              sortMode === 'updatedAt'
+                ? 'bg-primary-400/20 border-primary-400 text-primary-400'
+                : 'bg-dark-card hover:bg-dark-border border-dark-border text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            <ArrowUpDown className="w-4 h-4" />
+            <span className="hidden sm:inline">{sortMode === 'name' ? 'מיון: א-ב' : 'מיון: עדכון'}</span>
+          </button>
           {/* Fix invalid categories button - only show when there are issues */}
           {exercisesWithInvalidCategory.length > 0 && (
             <button
@@ -615,6 +656,17 @@ export default function ExerciseList() {
               ))}
             </select>
 
+            {/* Update Filter */}
+            <select
+              value={updateFilter}
+              onChange={(e) => setUpdateFilter(e.target.value as 'all' | 'updated' | 'no_update')}
+              className={`input-neon min-w-[150px] ${updateFilter !== 'all' ? 'border-yellow-500 bg-yellow-500/10' : ''}`}
+            >
+              <option value="all">עדכון אחרון: הכל</option>
+              <option value="updated">עם עדכון ({allExercises.filter(ex => !!ex.lastEditedAt).length})</option>
+              <option value="no_update">ללא עדכון ({exercisesWithoutUpdate.length})</option>
+            </select>
+
             {/* Data Issues Filter */}
             <select
               value={dataIssueFilter}
@@ -669,6 +721,7 @@ export default function ExerciseList() {
                 <tr>
                   <th className="w-16"></th>
                   <th>שם התרגיל</th>
+                  <th>עדכון אחרון</th>
                   <th>קטגוריה</th>
                   <th>רמת קושי</th>
                   <th>ציוד</th>
@@ -722,6 +775,19 @@ export default function ExerciseList() {
                           <p className="text-sm text-text-muted">{exercise.name}</p>
                         </div>
                       </div>
+                    </td>
+                    <td>
+                      {exercise.lastEditedAt ? (
+                        <span className="text-xs text-text-muted">
+                          {(() => {
+                            const ts = exercise.lastEditedAt as unknown as { seconds?: number }
+                            const date = ts?.seconds ? new Date(ts.seconds * 1000) : new Date(exercise.lastEditedAt)
+                            return isNaN(date.getTime()) ? '—' : date.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' })
+                          })()}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-yellow-500/70">—</span>
+                      )}
                     </td>
                     <td>
                       <span className="px-3 py-1 bg-primary-400/20 text-primary-400 rounded-lg text-sm">

@@ -7,8 +7,10 @@ import { z } from 'zod'
 import { ArrowRight, Save, Plus, Trash2, Image } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { exerciseService } from '@/domains/exercises/services'
+import { serverTimestamp } from 'firebase/firestore'
 import type { ExerciseCategory, MuscleGroup, EquipmentType, AssistanceType } from '@/domains/exercises/types'
-import { equipment, difficultyOptions } from '@/domains/exercises/data/mockExercises'
+import { difficultyOptions } from '@/domains/exercises/data/mockExercises'
+import { getEquipment, type Equipment } from '@/lib/firebase/equipment'
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
 import { getMuscles } from '@/lib/firebase/muscles'
 import { getActiveReportTypes } from '@/lib/firebase/reportTypes'
@@ -81,6 +83,12 @@ export default function ExerciseForm() {
   const { data: bandTypesData = [] } = useQuery<BandType[]>({
     queryKey: ['bandTypes'],
     queryFn: getActiveBandTypes,
+  })
+
+  // Fetch equipment from Firebase
+  const { data: equipmentData = [] } = useQuery<Equipment[]>({
+    queryKey: ['equipment'],
+    queryFn: getEquipment,
   })
 
   // Form setup
@@ -220,7 +228,7 @@ export default function ExerciseForm() {
         equipment: existingExercise.equipment || '',
         difficulty: existingExercise.difficulty || 'beginner',
         reportType: existingExercise.reportType || 'weight_reps',
-        assistanceTypes: existingExercise.assistanceTypes || [],
+        assistanceTypes: (existingExercise.assistanceTypes || []).filter((t: string) => t === 'graviton' || t === 'bands') as ('graviton' | 'bands')[],
         availableBands: existingExercise.availableBands || [],
         instructions: (existingExercise.instructions || []).length > 0
           ? existingExercise.instructions.map((v) => ({ value: v }))
@@ -299,6 +307,7 @@ export default function ExerciseForm() {
       instructionsHe: data.instructionsHe.map((i) => i.value).filter(Boolean),
       tips: data.tips.map((t) => t.value).filter(Boolean),
       tipsHe: data.tipsHe.map((t) => t.value).filter(Boolean),
+      lastEditedAt: serverTimestamp(),
     }
 
     console.log('🔥 ExerciseForm: Submitting formatted data:', formattedData)
@@ -398,8 +407,9 @@ export default function ExerciseForm() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit, (errors) => {
-        console.error('🔥 ExerciseForm: Validation errors:', errors)
-        toast.error('יש שגיאות בטופס - בדוק את השדות')
+        console.error('🔥 ExerciseForm: Validation errors:', JSON.stringify(errors, null, 2))
+        const fieldErrors = Object.entries(errors).map(([key, val]) => `${key}: ${(val as { message?: string })?.message || 'invalid'}`).join(', ')
+        toast.error(`שגיאות בטופס: ${fieldErrors}`)
       })} className="space-y-8">
         {/* Basic Info */}
         <section className="card-neon">
@@ -500,7 +510,7 @@ export default function ExerciseForm() {
                 className={`input-neon w-full ${errors.equipment ? 'border-red-500' : ''}`}
               >
                 <option value="">בחר ציוד</option>
-                {equipment.map((eq) => (
+                {equipmentData.map((eq) => (
                   <option key={eq.id} value={eq.id}>
                     {eq.nameHe}
                   </option>

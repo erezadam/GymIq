@@ -13,6 +13,8 @@ import { TraineeProfileSection } from './TraineeProfileSection'
 import { TraineePerformance } from './TraineePerformance'
 import { TraineeRecentWorkouts } from './TraineeRecentWorkouts'
 import { TraineeEditModal } from './TraineeEditModal'
+import { StandaloneWorkoutEditor } from './StandaloneWorkoutEditor'
+import { MessageComposer } from './Messages/MessageComposer'
 
 export default function TraineeDetail() {
   const { id: traineeId } = useParams<{ id: string }>()
@@ -32,6 +34,8 @@ export default function TraineeDetail() {
   const [loadingWorkout, setLoadingWorkout] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showWorkouts, setShowWorkouts] = useState(false)
+  const [showStandaloneEditor, setShowStandaloneEditor] = useState(false)
+  const [showMessageComposer, setShowMessageComposer] = useState(false)
 
   const { loadFromProgram, setTrainerReport, clearWorkout } = useWorkoutBuilderStore()
 
@@ -223,7 +227,7 @@ export default function TraineeDetail() {
         </button>
         <div className="flex gap-2">
           <button
-            onClick={() => navigate(`/trainer/trainee/${traineeId}/messages`)}
+            onClick={() => setShowMessageComposer(true)}
             className="bg-gradient-to-br from-primary-main to-status-info px-4 py-2 rounded-xl hover:opacity-90 transition flex items-center gap-2 text-sm text-white font-medium"
           >
             <Send className="w-4 h-4" />
@@ -242,7 +246,7 @@ export default function TraineeDetail() {
             <span className="w-1 h-5 bg-gradient-primary rounded-full" />
             ביצועים
           </h3>
-          <TraineePerformance stats={stats} />
+          <TraineePerformance stats={stats} traineeId={traineeId} />
         </div>
       )}
 
@@ -255,14 +259,14 @@ export default function TraineeDetail() {
           </h3>
         </div>
 
-        {/* Two action buttons */}
-        <div className="flex gap-3 mb-3">
+        {/* Three action buttons */}
+        <div className="flex gap-2 mb-3">
           <button
             onClick={() => navigate(`/trainer/program/new?traineeId=${traineeId}`)}
-            className="flex-1 bg-dark-card/80 border border-primary-main/30 rounded-xl p-3 flex items-center justify-center gap-2 hover:border-primary-main/60 transition"
+            className="flex-1 bg-dark-card/80 border border-primary-main/30 rounded-xl p-3 flex flex-col items-center justify-center gap-1 hover:border-primary-main/60 transition"
           >
             <Plus className="w-4 h-4 text-primary-main" />
-            <span className="text-sm font-medium text-primary-main">הוספת תוכנית חדשה</span>
+            <span className="text-xs font-medium text-primary-main">תוכנית חדשה</span>
           </button>
           <button
             onClick={() => {
@@ -272,28 +276,35 @@ export default function TraineeDetail() {
                 setExpandedDayIndex(null)
               }
             }}
-            className={`flex-1 border rounded-xl p-3 flex items-center justify-center gap-2 transition ${
+            className={`flex-1 border rounded-xl p-3 flex flex-col items-center justify-center gap-1 transition ${
               showProgramsList
                 ? 'bg-accent-purple/10 border-accent-purple/30'
                 : 'bg-dark-card/80 border-white/10 hover:border-accent-purple/30'
             }`}
           >
-            <span className="text-sm font-medium text-accent-purple">
-              תוכניות קיימות {allPrograms.length > 0 ? `(${allPrograms.length})` : ''}
+            <span className="text-xs font-medium text-accent-purple">
+              תוכניות {allPrograms.filter(p => p.type !== 'standalone').length > 0 ? `(${allPrograms.filter(p => p.type !== 'standalone').length})` : ''}
             </span>
-            <ChevronDown className={`w-4 h-4 text-accent-purple transition-transform ${showProgramsList ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-3 h-3 text-accent-purple transition-transform ${showProgramsList ? 'rotate-180' : ''}`} />
+          </button>
+          <button
+            onClick={() => setShowStandaloneEditor(true)}
+            className="flex-1 bg-dark-card/80 border border-accent-orange/30 rounded-xl p-3 flex flex-col items-center justify-center gap-1 hover:border-accent-orange/60 transition"
+          >
+            <ClipboardEdit className="w-4 h-4 text-accent-orange" />
+            <span className="text-xs font-medium text-accent-orange">אימון בודד</span>
           </button>
         </div>
 
-        {/* Programs list */}
+        {/* Programs list (excluding standalone) */}
         {showProgramsList && (
           <div className="space-y-2">
-            {allPrograms.length === 0 ? (
+            {allPrograms.filter(p => p.type !== 'standalone').length === 0 ? (
               <div className="bg-dark-card/80 border border-white/10 rounded-xl p-4 text-center">
                 <p className="text-sm text-text-muted">אין תוכניות עדיין</p>
               </div>
             ) : (
-              allPrograms.map((program) => {
+              allPrograms.filter(p => p.type !== 'standalone').map((program) => {
                 const isProgramExpanded = expandedProgramId === program.id
                 const progTrainingDays = program.weeklyStructure?.filter(d => !d.restDay).length || 0
                 const progTotalExercises = program.weeklyStructure?.flatMap(d => d.exercises).length || 0
@@ -363,7 +374,7 @@ export default function TraineeDetail() {
                                 key={day.dayLabel}
                                 className={`rounded-xl overflow-hidden ${
                                   dayCompleted
-                                    ? 'bg-status-error/10 border border-status-error/30'
+                                    ? 'bg-status-success/10 border border-status-success/30'
                                     : 'bg-dark-surface/50'
                                 }`}
                               >
@@ -375,7 +386,7 @@ export default function TraineeDetail() {
                                   <div
                                     className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold text-white flex-shrink-0 ${
                                       dayCompleted
-                                        ? 'bg-gradient-to-br from-status-error to-red-700'
+                                        ? 'bg-gradient-to-br from-status-success to-green-700'
                                         : 'bg-gradient-to-br from-accent-purple to-purple-600'
                                     }`}
                                   >
@@ -383,13 +394,13 @@ export default function TraineeDetail() {
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <div className={`font-bold text-sm truncate ${
-                                      dayCompleted ? 'text-status-error' : 'text-text-primary'
+                                      dayCompleted ? 'text-status-success' : 'text-text-primary'
                                     }`}>
                                       {day.name || `אימון ${dayNumber}`}
                                     </div>
                                     <div className="text-xs text-text-muted">
                                       {dayCompleted ? (
-                                        <span className="text-status-error/80">
+                                        <span className="text-status-success/80">
                                           בוצע {dayCompleted.date.getDate()}.{dayCompleted.date.getMonth() + 1}.{dayCompleted.date.getFullYear()} •{' '}
                                         </span>
                                       ) : null}
@@ -399,11 +410,11 @@ export default function TraineeDetail() {
                                   </div>
                                   {isDayExpanded ? (
                                     <ChevronDown className={`w-4 h-4 flex-shrink-0 ${
-                                      dayCompleted ? 'text-status-error' : 'text-accent-purple'
+                                      dayCompleted ? 'text-status-success' : 'text-accent-purple'
                                     }`} />
                                   ) : (
                                     <ChevronLeft className={`w-4 h-4 flex-shrink-0 ${
-                                      dayCompleted ? 'text-status-error/60' : 'text-text-muted'
+                                      dayCompleted ? 'text-status-success/60' : 'text-text-muted'
                                     }`} />
                                   )}
                                 </button>
@@ -462,7 +473,7 @@ export default function TraineeDetail() {
                                               )}
                                             </div>
                                             <div className={`text-xs flex-shrink-0 ${
-                                              actualSets && actualSets.length > 0 ? 'text-status-error' : 'text-primary-main'
+                                              actualSets && actualSets.length > 0 ? 'text-status-success' : 'text-primary-main'
                                             }`}>
                                               {ex.targetSets}×{ex.targetReps}
                                             </div>
@@ -478,7 +489,7 @@ export default function TraineeDetail() {
                                                     key={setIdx}
                                                     className="flex items-center gap-1.5 text-xs text-text-muted"
                                                   >
-                                                    <span className="text-status-error/50">
+                                                    <span className="text-status-success/50">
                                                       {isLast ? '└─' : '├─'}
                                                     </span>
                                                     <span>סט {setIdx + 1}:</span>
@@ -489,7 +500,7 @@ export default function TraineeDetail() {
                                                       {set.actualReps || 0}
                                                       {(set.actualWeight || 0) === 0 && ' חזרות'}
                                                     </span>
-                                                    <Check className="w-3 h-3 text-status-error" />
+                                                    <Check className="w-3 h-3 text-status-success" />
                                                   </div>
                                                 )
                                               })}
@@ -509,6 +520,74 @@ export default function TraineeDetail() {
                 )
               })
             )}
+          </div>
+        )}
+
+        {/* Standalone Workouts Section */}
+        {allPrograms.filter(p => p.type === 'standalone').length > 0 && (
+          <div className="mt-4">
+            <h4 className="text-sm font-medium text-text-muted mb-2 flex items-center gap-2">
+              <ClipboardEdit className="w-4 h-4 text-accent-orange" />
+              אימונים בודדים ({allPrograms.filter(p => p.type === 'standalone').length})
+            </h4>
+            <div className="space-y-2">
+              {allPrograms
+                .filter(p => p.type === 'standalone')
+                .map((workout) => {
+                  const day = workout.weeklyStructure?.[0]
+                  const exerciseCount = day?.exercises?.length || 0
+                  // Check if this standalone workout has been performed
+                  const performedWorkout = workouts.find(
+                    w => w.programId === workout.id && w.status === 'completed'
+                  )
+
+                  return (
+                    <div
+                      key={workout.id}
+                      className={`rounded-xl overflow-hidden ${
+                        performedWorkout
+                          ? 'bg-status-success/10 border border-status-success/30'
+                          : 'bg-dark-card/80 border border-accent-orange/20'
+                      }`}
+                    >
+                      <div className="p-3 flex items-center gap-3">
+                        <div
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 ${
+                            performedWorkout
+                              ? 'bg-gradient-to-br from-status-success to-green-600'
+                              : 'bg-gradient-to-br from-accent-orange to-orange-600'
+                          }`}
+                        >
+                          {performedWorkout ? <Check className="w-5 h-5 text-white" /> : '🏋️'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className={`font-bold text-sm truncate ${
+                            performedWorkout ? 'text-status-success' : 'text-text-primary'
+                          }`}>
+                            {workout.name}
+                          </h4>
+                          <p className="text-text-muted text-xs">
+                            {exerciseCount} תרגילים
+                            {performedWorkout && (
+                              <span className="text-status-success/80">
+                                {' '}• בוצע {performedWorkout.date.getDate()}.{performedWorkout.date.getMonth() + 1}.{performedWorkout.date.getFullYear()}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        {!performedWorkout && day && (
+                          <button
+                            onClick={() => handleReportWorkout(workout, 0)}
+                            className="px-3 py-1.5 bg-accent-orange/10 border border-accent-orange/30 rounded-lg text-xs text-accent-orange font-medium hover:bg-accent-orange/20 transition"
+                          >
+                            דווח
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+            </div>
           </div>
         )}
       </div>
@@ -540,6 +619,39 @@ export default function TraineeDetail() {
           onClose={() => setShowEditModal(false)}
           onSave={handleEditSave}
         />,
+        document.body
+      )}
+
+      {/* Standalone Workout Editor */}
+      {showStandaloneEditor && traineeId && trainee && createPortal(
+        <StandaloneWorkoutEditor
+          traineeId={traineeId}
+          traineeName={trainee.traineeProfile?.displayName || trainee.relationship.traineeName}
+          onClose={() => setShowStandaloneEditor(false)}
+          onSaved={async () => {
+            // Refresh programs list
+            const programs = await programService.getTraineePrograms(traineeId)
+            setAllPrograms(programs)
+          }}
+        />,
+        document.body
+      )}
+
+      {/* Message Composer Modal */}
+      {showMessageComposer && traineeId && createPortal(
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowMessageComposer(false) }}
+        >
+          <div className="w-full max-w-md">
+            <MessageComposer
+              trainees={[]}
+              preselectedTraineeId={traineeId}
+              onClose={() => setShowMessageComposer(false)}
+              onSent={() => setShowMessageComposer(false)}
+            />
+          </div>
+        </div>,
         document.body
       )}
     </div>
