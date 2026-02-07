@@ -15,6 +15,7 @@ const TrainerDashboard = lazy(() => import('@/domains/trainer/components/Trainer
 const ProgramBuilder = lazy(() => import('@/domains/trainer/components/ProgramBuilder/ProgramBuilder'))
 const TraineeDetail = lazy(() => import('@/domains/trainer/components/TraineeDetail'))
 const MessageCenter = lazy(() => import('@/domains/trainer/components/Messages/MessageCenter'))
+const TraineePersonalRecords = lazy(() => import('@/domains/trainer/components/TraineePersonalRecords'))
 const TraineeInbox = lazy(() => import('@/domains/trainer/components/TraineeInbox/TraineeInbox'))
 
 // Admin
@@ -103,6 +104,7 @@ function App() {
           <Route index element={<TrainerDashboard />} />
           <Route path="trainee/:id" element={<TraineeDetail />} />
           <Route path="trainee/:id/messages" element={<TraineeDetail />} />
+          <Route path="trainee/:id/personal-records" element={<TraineePersonalRecords />} />
           <Route path="program/new" element={<ProgramBuilder />} />
           <Route path="program/:id/edit" element={<ProgramBuilder />} />
           <Route path="messages" element={<MessageCenter />} />

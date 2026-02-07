@@ -245,6 +245,7 @@ export default function ExerciseList() {
         return issues.length === 0
       })
     }
+    result.sort((a, b) => (a.nameHe || '').trim().localeCompare((b.nameHe || '').trim(), 'he'))
     return result
   }, [allExercises, showOnlyMissingImages, showOnlyNoEquipment, dataIssueFilter, musclesList, validPrimaryMuscleIds])
 

@@ -14,6 +14,7 @@ import { TraineePerformance } from './TraineePerformance'
 import { TraineeRecentWorkouts } from './TraineeRecentWorkouts'
 import { TraineeEditModal } from './TraineeEditModal'
 import { StandaloneWorkoutEditor } from './StandaloneWorkoutEditor'
+import { MessageComposer } from './Messages/MessageComposer'
 
 export default function TraineeDetail() {
   const { id: traineeId } = useParams<{ id: string }>()
@@ -34,6 +35,7 @@ export default function TraineeDetail() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showWorkouts, setShowWorkouts] = useState(false)
   const [showStandaloneEditor, setShowStandaloneEditor] = useState(false)
+  const [showMessageComposer, setShowMessageComposer] = useState(false)
 
   const { loadFromProgram, setTrainerReport, clearWorkout } = useWorkoutBuilderStore()
 
@@ -225,7 +227,7 @@ export default function TraineeDetail() {
         </button>
         <div className="flex gap-2">
           <button
-            onClick={() => navigate(`/trainer/trainee/${traineeId}/messages`)}
+            onClick={() => setShowMessageComposer(true)}
             className="bg-gradient-to-br from-primary-main to-status-info px-4 py-2 rounded-xl hover:opacity-90 transition flex items-center gap-2 text-sm text-white font-medium"
           >
             <Send className="w-4 h-4" />
@@ -244,7 +246,7 @@ export default function TraineeDetail() {
             <span className="w-1 h-5 bg-gradient-primary rounded-full" />
             ביצועים
           </h3>
-          <TraineePerformance stats={stats} />
+          <TraineePerformance stats={stats} traineeId={traineeId} />
         </div>
       )}
 
@@ -632,6 +634,24 @@ export default function TraineeDetail() {
             setAllPrograms(programs)
           }}
         />,
+        document.body
+      )}
+
+      {/* Message Composer Modal */}
+      {showMessageComposer && traineeId && createPortal(
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowMessageComposer(false) }}
+        >
+          <div className="w-full max-w-md">
+            <MessageComposer
+              trainees={[]}
+              preselectedTraineeId={traineeId}
+              onClose={() => setShowMessageComposer(false)}
+              onSent={() => setShowMessageComposer(false)}
+            />
+          </div>
+        </div>,
         document.body
       )}
     </div>
