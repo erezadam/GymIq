@@ -1,9 +1,14 @@
 name: Playwright Tests
+
+# DISABLED: Tests require Firebase credentials and test users
+# To enable:
+# 1. Add GitHub secrets: TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD, TEST_TRAINER_EMAIL, etc.
+# 2. Create test users in Firebase Auth
+# 3. Change trigger to: push/pull_request
+
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+  workflow_dispatch:  # Manual trigger only for now
+
 jobs:
   test:
     timeout-minutes: 60
@@ -19,6 +24,11 @@ jobs:
       run: npx playwright install --with-deps
     - name: Run Playwright tests
       run: npx playwright test
+      env:
+        # Add secrets here when configured:
+        # TEST_ADMIN_EMAIL: ${{ secrets.TEST_ADMIN_EMAIL }}
+        # TEST_ADMIN_PASSWORD: ${{ secrets.TEST_ADMIN_PASSWORD }}
+        CI: true
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
