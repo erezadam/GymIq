@@ -1,12 +1,28 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trophy, ChevronRight, ChevronDown, Dumbbell } from 'lucide-react'
+import { Trophy, ChevronRight, ChevronDown, Dumbbell, Flame } from 'lucide-react'
 import { getPersonalRecords, getExerciseHistory, PersonalRecord, ExerciseHistoryEntry } from '@/lib/firebase/workoutHistory'
 import { useAuthStore } from '@/domains/authentication/store'
 import { getExerciseImageUrl } from '@/domains/exercises/utils/getExerciseImageUrl'
 
 // Format date for display - D/M format only
 function formatDate(date: Date): string {
+  return `${date.getDate()}/${date.getMonth() + 1}`
+}
+
+// Format relative date for recent PRs
+function formatRelativeDate(date: Date): string {
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+  if (diffDays === 0) return 'שבר שיא היום!'
+  if (diffDays === 1) return 'שבר שיא אתמול!'
+  if (diffDays < 7) return `לפני ${diffDays} ימים`
+  if (diffDays < 30) {
+    const weeks = Math.floor(diffDays / 7)
+    return weeks === 1 ? 'לפני שבוע' : `לפני ${weeks} שבועות`
+  }
   return `${date.getDate()}/${date.getMonth() + 1}`
 }
 
@@ -105,6 +121,14 @@ export default function PersonalRecords({ userId: propUserId }: PersonalRecordsP
     return `${day}/${month}/${year}`
   }
 
+  // Get recent PRs (improved, sorted by date, max 5)
+  const recentPRs = useMemo(() => {
+    return [...records]
+      .filter(r => r.hasImproved)
+      .sort((a, b) => b.bestDate.getTime() - a.bestDate.getTime())
+      .slice(0, 5)
+  }, [records])
+
   // Sort records based on selected mode
   const sortedRecords = useMemo(() => {
     const sorted = [...records]
@@ -182,6 +206,67 @@ export default function PersonalRecords({ userId: propUserId }: PersonalRecordsP
               שיפור
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Recent PRs Section */}
+      {recentPRs.length > 0 && (
+        <div className="space-y-2.5">
+          {/* Section Header */}
+          <div className="flex items-center gap-2 justify-end">
+            <h2 className="text-base font-bold text-text-primary">שיאים אחרונים</h2>
+            <Flame className="w-5 h-5 text-accent-orange" />
+          </div>
+
+          {/* Recent PR Cards */}
+          {recentPRs.map((record) => {
+            const delta = record.isBodyweight
+              ? (record.previousReps !== undefined ? `+${record.bestReps - record.previousReps} מהשיא הקודם` : '')
+              : (record.previousWeight !== undefined ? `+${record.bestWeight - record.previousWeight} מהשיא הקודם` : '')
+
+            return (
+              <div
+                key={`recent-${record.exerciseId}`}
+                className="flex items-center gap-3 p-3.5 bg-background-card border border-accent-orange/30 rounded-xl bg-gradient-to-l from-accent-orange/10 to-transparent"
+              >
+                {/* Exercise Image */}
+                <div className="w-11 h-11 rounded-xl bg-accent-orange/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <img
+                    src={getExerciseImageUrl({ imageUrl: record.imageUrl })}
+                    alt={record.exerciseNameHe}
+                    className="w-full h-full rounded-xl object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      target.onerror = null
+                      target.src = '/images/exercise-placeholder.png'
+                    }}
+                  />
+                </div>
+
+                {/* Exercise Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-text-primary truncate">
+                    {record.exerciseNameHe || record.exerciseName}
+                  </div>
+                  <div className="text-xs text-text-secondary mt-0.5">
+                    {formatRelativeDate(record.bestDate)}
+                  </div>
+                </div>
+
+                {/* Best Value + Delta */}
+                <div className="text-left flex-shrink-0">
+                  <div className="text-lg font-bold text-accent-orange">
+                    {record.isBodyweight
+                      ? `${record.bestReps} חזרות`
+                      : `${record.bestWeight} ק"ג`}
+                  </div>
+                  {delta && (
+                    <div className="text-xs text-text-muted">{delta}</div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
