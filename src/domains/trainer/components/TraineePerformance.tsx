@@ -29,6 +29,7 @@ export function TraineePerformance({ stats, traineeId, isLoading }: TraineePerfo
       color: 'text-primary-main',
       trend: stats.thisMonthWorkouts > 0 ? `↑ ${stats.thisMonthWorkouts} החודש` : undefined,
       trendColor: 'text-status-success',
+      tab: 'total' as const,
     },
     {
       label: 'רצף ימים',
@@ -36,6 +37,7 @@ export function TraineePerformance({ stats, traineeId, isLoading }: TraineePerfo
       color: 'text-accent-orange',
       trend: stats.currentStreak >= 7 ? '🔥 שיא!' : undefined,
       trendColor: 'text-accent-orange',
+      tab: 'streak' as const,
     },
     {
       label: 'השבוע',
@@ -43,15 +45,17 @@ export function TraineePerformance({ stats, traineeId, isLoading }: TraineePerfo
       color: 'text-accent-purple',
       trend: stats.thisWeekWorkouts >= 3 ? '✓ הושלם!' : undefined,
       trendColor: 'text-status-success',
+      tab: 'weekly' as const,
     },
   ]
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       {statCards.map((card) => (
-        <div
+        <button
           key={card.label}
-          className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-4 text-center"
+          onClick={() => traineeId && navigate(`/trainer/trainee/${traineeId}/analytics?tab=${card.tab}`)}
+          className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-4 text-center cursor-pointer hover:border-primary-main/30 transition-colors"
         >
           <div
             className={`text-3xl font-black ${card.color} mb-1 ${isLoading ? 'opacity-50' : ''}`}
@@ -60,12 +64,12 @@ export function TraineePerformance({ stats, traineeId, isLoading }: TraineePerfo
           </div>
           <p className="text-text-muted text-sm">{card.label}</p>
           {card.trend && <p className={`${card.trendColor} text-xs mt-1`}>{card.trend}</p>}
-        </div>
+        </button>
       ))}
 
-      {/* PR Cube - navigates to trainee's personal records */}
+      {/* PR Cube - navigates to analytics PR tab */}
       <button
-        onClick={() => traineeId && navigate(`/trainer/trainee/${traineeId}/personal-records`)}
+        onClick={() => traineeId && navigate(`/trainer/trainee/${traineeId}/analytics?tab=pr`)}
         className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-4 text-center cursor-pointer hover:border-yellow-400/30 transition-colors"
       >
         <div className={`text-3xl font-black text-yellow-400 mb-1 ${isLoading ? 'opacity-50' : ''}`}>
