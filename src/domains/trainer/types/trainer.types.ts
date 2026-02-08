@@ -85,6 +85,11 @@ export interface TrainingProgram {
   createdAt: Timestamp | Date
   updatedAt: Timestamp | Date
   notes?: string
+  // Soft delete: trainee disconnected from this program
+  disconnectedByTrainee?: {
+    disconnectedAt: Timestamp | Date
+    reason?: string
+  }
 }
 
 export interface ProgramDay {

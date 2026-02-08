@@ -14,20 +14,27 @@ import {
   Moon,
   Clock,
   Play,
+  Trash2,
+  X,
 } from 'lucide-react'
 import { useWorkoutBuilderStore } from '@/domains/workouts/store/workoutBuilderStore'
 import { ProgramExerciseCard } from './ProgramExerciseCard'
+import { programService } from '../../services/programService'
+import toast from 'react-hot-toast'
 import type { TrainingProgram, ProgramDay } from '../../types'
 
 interface TrainerProgramCardProps {
   program: TrainingProgram
+  onDisconnected?: () => void
 }
 
-export function TrainerProgramCard({ program }: TrainerProgramCardProps) {
+export function TrainerProgramCard({ program, onDisconnected }: TrainerProgramCardProps) {
   const navigate = useNavigate()
   const { loadFromProgram } = useWorkoutBuilderStore()
   const [isExpanded, setIsExpanded] = useState(false)
   const [expandedDayIndex, setExpandedDayIndex] = useState<number | null>(null)
+  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
 
   const trainingDays = program.weeklyStructure.filter(d => !d.restDay)
   const totalExercises = trainingDays.reduce(
@@ -85,6 +92,16 @@ export function TrainerProgramCard({ program }: TrainerProgramCardProps) {
               )}
             </div>
           </div>
+          <button
+            onClick={e => {
+              e.stopPropagation()
+              setShowDisconnectDialog(true)
+            }}
+            className="p-2 rounded-lg transition-colors"
+            aria-label="נתק תוכנית"
+          >
+            <Trash2 className="w-4 h-4 text-red-400/60 hover:text-red-400" />
+          </button>
         </div>
       </div>
 
@@ -201,6 +218,66 @@ export function TrainerProgramCard({ program }: TrainerProgramCardProps) {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Disconnect Confirmation Dialog */}
+      {showDisconnectDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fade-in px-4"
+          onClick={() => !disconnecting && setShowDisconnectDialog(false)}
+        >
+          <div
+            className="bg-dark-surface rounded-2xl p-6 max-w-sm w-full animate-scale-in"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-400" />
+              </div>
+              <button
+                onClick={() => setShowDisconnectDialog(false)}
+                className="p-1 text-text-muted"
+                disabled={disconnecting}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <h3 className="text-lg font-bold text-text-primary mb-2">
+              ניתוק תוכנית
+            </h3>
+            <p className="text-text-muted text-sm mb-6">
+              האם לנתק את התוכנית &quot;{program.name}&quot;? התוכנית תיעלם מהתצוגה שלך.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDisconnectDialog(false)}
+                className="flex-1 py-2.5 bg-dark-card text-text-secondary rounded-xl text-sm font-medium"
+                disabled={disconnecting}
+              >
+                ביטול
+              </button>
+              <button
+                onClick={async () => {
+                  setDisconnecting(true)
+                  try {
+                    await programService.disconnectProgram(program.id)
+                    toast.success('התוכנית נותקה בהצלחה')
+                    setShowDisconnectDialog(false)
+                    onDisconnected?.()
+                  } catch {
+                    toast.error('שגיאה בניתוק התוכנית')
+                  } finally {
+                    setDisconnecting(false)
+                  }
+                }}
+                className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-bold disabled:opacity-50"
+                disabled={disconnecting}
+              >
+                {disconnecting ? 'מנתק...' : 'נתק'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

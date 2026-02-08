@@ -7,8 +7,18 @@ export function useTraineeProgram(traineeId?: string) {
   const { user } = useAuthStore()
   const targetId = traineeId || user?.uid
   const [program, setProgram] = useState<TrainingProgram | null>(null)
+  const [standaloneWorkouts, setStandaloneWorkouts] = useState<TrainingProgram[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const loadAll = async (id: string) => {
+    const [p, sw] = await Promise.all([
+      programService.getTraineeActiveProgram(id),
+      programService.getTraineeStandaloneWorkouts(id),
+    ])
+    setProgram(p)
+    setStandaloneWorkouts(sw)
+  }
 
   useEffect(() => {
     if (!targetId) {
@@ -17,9 +27,7 @@ export function useTraineeProgram(traineeId?: string) {
     }
 
     setIsLoading(true)
-    programService
-      .getTraineeActiveProgram(targetId)
-      .then((p) => setProgram(p))
+    loadAll(targetId)
       .catch((err) => {
         console.error('Error loading trainee program:', err)
         setError(err.message)
@@ -54,16 +62,14 @@ export function useTraineeProgram(traineeId?: string) {
 
   return {
     program,
+    standaloneWorkouts,
     isLoading,
     error,
     getTodayDay,
     getTrainingDays,
     refreshProgram: () => {
       if (!targetId) return
-      programService
-        .getTraineeActiveProgram(targetId)
-        .then(setProgram)
-        .catch(console.error)
+      loadAll(targetId).catch(console.error)
     },
   }
 }

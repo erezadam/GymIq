@@ -211,6 +211,9 @@ service cloud.firestore {
          resource.data.traineeId == request.auth.uid ||
          isAdmin());
 
+      // Trainers can read all programs (app filters to own trainees)
+      allow read: if isTrainer();
+
       // Trainers can create programs for their trainees
       allow create: if isTrainer() &&
         request.resource.data.trainerId == request.auth.uid;
@@ -218,6 +221,12 @@ service cloud.firestore {
       // Trainer or admin can update programs
       allow update: if isAuthenticated() &&
         (resource.data.trainerId == request.auth.uid || isAdmin());
+
+      // Trainee can only update disconnectedByTrainee field (soft delete)
+      allow update: if isAuthenticated() &&
+        resource.data.traineeId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['disconnectedByTrainee', 'updatedAt']);
 
       // Trainer or admin can delete programs
       allow delete: if isAuthenticated() &&

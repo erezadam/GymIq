@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowRight, Send, ChevronDown, ChevronLeft, Check, Plus, ClipboardEdit } from 'lucide-react'
+import { ArrowRight, Send, ChevronDown, ChevronLeft, Check, Plus, ClipboardEdit, RefreshCw, Trash2 } from 'lucide-react'
 import { useAuthStore } from '@/domains/authentication/store'
 import { trainerService } from '../services/trainerService'
 import { programService } from '../services/programService'
@@ -15,6 +15,7 @@ import { TraineeRecentWorkouts } from './TraineeRecentWorkouts'
 import { TraineeEditModal } from './TraineeEditModal'
 import { StandaloneWorkoutEditor } from './StandaloneWorkoutEditor'
 import { MessageComposer } from './Messages/MessageComposer'
+import toast from 'react-hot-toast'
 
 export default function TraineeDetail() {
   const { id: traineeId } = useParams<{ id: string }>()
@@ -36,6 +37,8 @@ export default function TraineeDetail() {
   const [showWorkouts, setShowWorkouts] = useState(false)
   const [showStandaloneEditor, setShowStandaloneEditor] = useState(false)
   const [showMessageComposer, setShowMessageComposer] = useState(false)
+  const [deleteStandaloneId, setDeleteStandaloneId] = useState<string | null>(null)
+  const [deletingStandalone, setDeletingStandalone] = useState(false)
 
   const { loadFromProgram, setTrainerReport, clearWorkout } = useWorkoutBuilderStore()
 
@@ -88,11 +91,11 @@ export default function TraineeDetail() {
         const [relationships, traineeStats, recentWorkouts] = await Promise.all([
           trainerService.getTrainerTrainees(user.uid),
           trainerService.getTraineeStats(traineeId),
-          getUserWorkoutHistory(traineeId, 10),
+          getUserWorkoutHistory(traineeId, 10, true),
         ])
 
-        // Load programs separately - don't block page if index is missing
-        programService.getTraineePrograms(traineeId)
+        // Load programs separately (include disconnected for trainer view)
+        programService.getTraineePrograms(traineeId, true)
           .then(programs => setAllPrograms(programs))
           .catch(err => console.warn('Could not load programs:', err))
 
@@ -308,9 +311,12 @@ export default function TraineeDetail() {
                 const isProgramExpanded = expandedProgramId === program.id
                 const progTrainingDays = program.weeklyStructure?.filter(d => !d.restDay).length || 0
                 const progTotalExercises = program.weeklyStructure?.flatMap(d => d.exercises).length || 0
+                const isDisconnected = !!program.disconnectedByTrainee
 
                 return (
-                  <div key={program.id} className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl overflow-hidden">
+                  <div key={program.id} className={`bg-dark-card/80 backdrop-blur-lg border rounded-2xl overflow-hidden ${
+                    isDisconnected ? 'border-red-500/20 opacity-60' : 'border-white/10'
+                  }`}>
                     {/* Program header - clickable */}
                     <button
                       onClick={() => {
@@ -324,17 +330,48 @@ export default function TraineeDetail() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-text-primary truncate">{program.name}</h4>
-                          {program.status === 'active' && (
+                          <h4 className={`font-bold truncate ${isDisconnected ? 'text-text-muted line-through' : 'text-text-primary'}`}>{program.name}</h4>
+                          {isDisconnected ? (
+                            <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded flex-shrink-0">נותק</span>
+                          ) : program.status === 'active' ? (
                             <span className="px-2 py-0.5 bg-primary-main/20 text-primary-main text-xs rounded flex-shrink-0">פעילה</span>
-                          )}
+                          ) : null}
                         </div>
                         <p className="text-text-muted text-xs">
                           {progTrainingDays} ימים • {progTotalExercises} תרגילים
                           {program.durationWeeks ? ` • ${program.durationWeeks} שבועות` : ''}
                         </p>
+                        {isDisconnected && (
+                          <p className="text-red-400/70 text-xs mt-0.5">
+                            נותק ב-{(() => {
+                              const d = program.disconnectedByTrainee?.disconnectedAt instanceof Date
+                                ? program.disconnectedByTrainee.disconnectedAt
+                                : new Date()
+                              return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`
+                            })()}
+                            {program.disconnectedByTrainee?.reason && ` • ${program.disconnectedByTrainee.reason}`}
+                          </p>
+                        )}
                       </div>
-                      {isProgramExpanded ? (
+                      {isDisconnected ? (
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation()
+                            try {
+                              await programService.reconnectProgram(program.id)
+                              toast.success('התוכנית נשלחה מחדש')
+                              const programs = await programService.getTraineePrograms(traineeId!, true)
+                              setAllPrograms(programs)
+                            } catch {
+                              toast.error('שגיאה בשליחה מחדש')
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-primary-main/20 text-primary-main text-xs rounded-lg font-medium hover:bg-primary-main/30 transition flex items-center gap-1 flex-shrink-0"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          שלח שוב
+                        </button>
+                      ) : isProgramExpanded ? (
                         <ChevronDown className="w-4 h-4 text-accent-purple flex-shrink-0" />
                       ) : (
                         <ChevronLeft className="w-4 h-4 text-text-muted flex-shrink-0" />
@@ -342,7 +379,7 @@ export default function TraineeDetail() {
                     </button>
 
                     {/* Expanded: Days list */}
-                    {isProgramExpanded && program.weeklyStructure && (
+                    {isProgramExpanded && program.weeklyStructure && !isDisconnected && (
                       <div className="border-t border-dark-border px-4 pb-4 pt-2 space-y-2">
                         {/* Edit button */}
                         <div className="flex justify-end mb-1">
@@ -536,6 +573,7 @@ export default function TraineeDetail() {
                 .map((workout) => {
                   const day = workout.weeklyStructure?.[0]
                   const exerciseCount = day?.exercises?.length || 0
+                  const isDisconnected = !!workout.disconnectedByTrainee
                   // Check if this standalone workout has been performed
                   const performedWorkout = workouts.find(
                     w => w.programId === workout.id && w.status === 'completed'
@@ -545,9 +583,11 @@ export default function TraineeDetail() {
                     <div
                       key={workout.id}
                       className={`rounded-xl overflow-hidden ${
-                        performedWorkout
-                          ? 'bg-status-success/10 border border-status-success/30'
-                          : 'bg-dark-card/80 border border-accent-orange/20'
+                        isDisconnected
+                          ? 'border border-red-500/20 opacity-60'
+                          : performedWorkout
+                            ? 'bg-status-success/10 border border-status-success/30'
+                            : 'bg-dark-card/80 border border-accent-orange/20'
                       }`}
                     >
                       <div className="p-3 flex items-center gap-3">
@@ -561,28 +601,74 @@ export default function TraineeDetail() {
                           {performedWorkout ? <Check className="w-5 h-5 text-white" /> : '🏋️'}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className={`font-bold text-sm truncate ${
-                            performedWorkout ? 'text-status-success' : 'text-text-primary'
-                          }`}>
-                            {workout.name}
-                          </h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className={`font-bold text-sm truncate ${
+                              isDisconnected ? 'text-text-muted line-through' : performedWorkout ? 'text-status-success' : 'text-text-primary'
+                            }`}>
+                              {workout.name}
+                            </h4>
+                            {isDisconnected && (
+                              <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded flex-shrink-0">נותק</span>
+                            )}
+                          </div>
                           <p className="text-text-muted text-xs">
                             {exerciseCount} תרגילים
-                            {performedWorkout && (
+                            {performedWorkout && !isDisconnected && (
                               <span className="text-status-success/80">
                                 {' '}• בוצע {performedWorkout.date.getDate()}.{performedWorkout.date.getMonth() + 1}.{performedWorkout.date.getFullYear()}
                               </span>
                             )}
                           </p>
+                          {isDisconnected && (
+                            <p className="text-red-400/70 text-xs mt-0.5">
+                              נותק ב-{(() => {
+                                const d = workout.disconnectedByTrainee?.disconnectedAt instanceof Date
+                                  ? workout.disconnectedByTrainee.disconnectedAt
+                                  : new Date()
+                                return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`
+                              })()}
+                              {workout.disconnectedByTrainee?.reason && ` • ${workout.disconnectedByTrainee.reason}`}
+                            </p>
+                          )}
                         </div>
-                        {!performedWorkout && day && (
-                          <button
-                            onClick={() => handleReportWorkout(workout, 0)}
-                            className="px-3 py-1.5 bg-accent-orange/10 border border-accent-orange/30 rounded-lg text-xs text-accent-orange font-medium hover:bg-accent-orange/20 transition"
-                          >
-                            דווח
-                          </button>
-                        )}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {isDisconnected ? (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await programService.reconnectProgram(workout.id)
+                                  toast.success('האימון נשלח מחדש')
+                                  const programs = await programService.getTraineePrograms(traineeId!, true)
+                                  setAllPrograms(programs)
+                                } catch {
+                                  toast.error('שגיאה בשליחה מחדש')
+                                }
+                              }}
+                              className="px-3 py-1.5 bg-primary-main/20 text-primary-main text-xs rounded-lg font-medium hover:bg-primary-main/30 transition flex items-center gap-1"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              שלח שוב
+                            </button>
+                          ) : (
+                            <>
+                              {!performedWorkout && day && (
+                                <button
+                                  onClick={() => handleReportWorkout(workout, 0)}
+                                  className="px-3 py-1.5 bg-accent-orange/10 border border-accent-orange/30 rounded-lg text-xs text-accent-orange font-medium hover:bg-accent-orange/20 transition"
+                                >
+                                  דווח
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setDeleteStandaloneId(workout.id)}
+                                className="p-1.5 rounded-lg transition-colors"
+                                aria-label="מחק אימון בודד"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-400/50 hover:text-red-400" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )
@@ -629,11 +715,53 @@ export default function TraineeDetail() {
           traineeName={trainee.traineeProfile?.displayName || trainee.relationship.traineeName}
           onClose={() => setShowStandaloneEditor(false)}
           onSaved={async () => {
-            // Refresh programs list
-            const programs = await programService.getTraineePrograms(traineeId)
+            // Refresh programs list (include disconnected for trainer view)
+            const programs = await programService.getTraineePrograms(traineeId, true)
             setAllPrograms(programs)
           }}
         />,
+        document.body
+      )}
+
+      {/* Delete Standalone Confirmation Dialog */}
+      {deleteStandaloneId && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-dark-surface border border-white/10 rounded-2xl p-6 w-full max-w-sm animate-scale-in space-y-4 text-center">
+            <div className="w-12 h-12 mx-auto rounded-full bg-red-500/20 flex items-center justify-center">
+              <Trash2 className="w-6 h-6 text-red-400" />
+            </div>
+            <h3 className="text-lg font-bold text-text-primary">מחיקת אימון בודד</h3>
+            <p className="text-sm text-text-muted">האם למחוק את האימון הבודד? פעולה זו לא ניתנת לביטול.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteStandaloneId(null)}
+                className="flex-1 py-2.5 rounded-xl border border-white/10 text-text-secondary text-sm font-medium hover:bg-dark-card/50 transition"
+              >
+                ביטול
+              </button>
+              <button
+                disabled={deletingStandalone}
+                onClick={async () => {
+                  setDeletingStandalone(true)
+                  try {
+                    await programService.deleteProgram(deleteStandaloneId)
+                    toast.success('האימון הבודד נמחק')
+                    const programs = await programService.getTraineePrograms(traineeId!, true)
+                    setAllPrograms(programs)
+                  } catch {
+                    toast.error('שגיאה במחיקה')
+                  } finally {
+                    setDeletingStandalone(false)
+                    setDeleteStandaloneId(null)
+                  }
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition disabled:opacity-50"
+              >
+                {deletingStandalone ? 'מוחק...' : 'מחק'}
+              </button>
+            </div>
+          </div>
+        </div>,
         document.body
       )}
 
