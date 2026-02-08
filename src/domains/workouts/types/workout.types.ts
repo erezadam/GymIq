@@ -1,3 +1,5 @@
+import type { Timestamp } from 'firebase/firestore'
+
 // Workout set types
 export type SetType = 'warmup' | 'working' | 'dropset' | 'superset' | 'amrap'
 
@@ -142,6 +144,11 @@ export interface WorkoutHistoryEntry {
   // Trainer report fields
   reportedBy?: string      // Trainer uid who reported this workout
   reportedByName?: string  // Trainer display name
+  // Soft delete: trainee deleted this workout
+  deletedByTrainee?: {
+    deletedAt: Timestamp | Date
+    reason?: string  // required when reportedBy exists
+  }
 }
 
 // Summary for display in lists
@@ -166,4 +173,9 @@ export interface WorkoutHistorySummary {
   programDayLabel?: string
   // Trainer report fields
   reportedBy?: string
+  // Soft delete: trainee deleted this workout
+  deletedByTrainee?: {
+    deletedAt: Timestamp | Date
+    reason?: string
+  }
 }

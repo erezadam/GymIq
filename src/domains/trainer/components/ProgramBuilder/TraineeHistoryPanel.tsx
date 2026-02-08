@@ -55,7 +55,7 @@ export function TraineeHistoryPanel({ traineeId }: TraineeHistoryPanelProps) {
 
     Promise.all([
       programService.getTraineeActiveProgram(traineeId),
-      getUserWorkoutHistory(traineeId, 30),
+      getUserWorkoutHistory(traineeId, 30, true),
     ])
       .then(([prog, wkts]) => {
         setProgram(prog)

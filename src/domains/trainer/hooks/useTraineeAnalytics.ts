@@ -512,7 +512,7 @@ export function useTraineeAnalytics(traineeId: string | undefined): AnalyticsDat
       setIsLoading(true)
       try {
         const [w, r, p] = await Promise.all([
-          getUserWorkoutHistory(traineeId, 200),
+          getUserWorkoutHistory(traineeId, 200, true),
           getPersonalRecords(traineeId),
           programService.getTraineePrograms(traineeId),
         ])

@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Calendar, Dumbbell, CheckCircle, AlertCircle, XCircle, Play, X, ArrowRight, Trash2 } from 'lucide-react'
+import { Calendar, Dumbbell, CheckCircle, AlertCircle, XCircle, Play, X, ArrowRight, Trash2, ClipboardEdit } from 'lucide-react'
 // Note: Trophy, ChevronDown, ChevronUp, Clock, Zap moved to WorkoutCard
-import { getUserWorkoutHistory, getWorkoutById, updateWorkoutHistory, deleteWorkoutHistory } from '@/lib/firebase/workoutHistory'
+import { getUserWorkoutHistory, getWorkoutById, updateWorkoutHistory, softDeleteWorkout } from '@/lib/firebase/workoutHistory'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { getActiveBandTypes } from '@/lib/firebase/bandTypes'
 import toast from 'react-hot-toast'
@@ -37,7 +37,7 @@ export default function WorkoutHistory() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const { addExercise, clearWorkout } = useWorkoutBuilderStore()
-  const { program: trainerProgram, isLoading: trainerProgramLoading } = useTraineeProgram()
+  const { program: trainerProgram, standaloneWorkouts, isLoading: trainerProgramLoading, refreshProgram } = useTraineeProgram()
   const [workouts, setWorkouts] = useState<WorkoutHistorySummary[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(null)
@@ -55,6 +55,9 @@ export default function WorkoutHistory() {
     isOpen: false,
     workout: null,
   })
+  const [deleteReasonDialog, setDeleteReasonDialog] = useState<{
+    isOpen: boolean; workout: WorkoutHistorySummary | null; selectedReason: string
+  }>({ isOpen: false, workout: null, selectedReason: '' })
   const [dynamicMuscleNames, setDynamicMuscleNames] = useState<Record<string, string>>({})
   const [bandNameMap, setBandNameMap] = useState<Record<string, string>>({})
 
@@ -136,22 +139,43 @@ export default function WorkoutHistory() {
   // Handle delete button click
   const handleDeleteClick = (e: React.MouseEvent, workout: WorkoutHistorySummary) => {
     e.stopPropagation() // Prevent card expansion
-    setDeleteDialog({ isOpen: true, workout })
+    if (workout.reportedBy) {
+      // Trainer-reported workout - must choose reason
+      setDeleteReasonDialog({ isOpen: true, workout, selectedReason: '' })
+    } else {
+      setDeleteDialog({ isOpen: true, workout })
+    }
   }
 
-  // Handle delete confirmation
+  // Handle delete confirmation (regular workout - no reason needed)
   const handleDeleteConfirm = async () => {
     if (!deleteDialog.workout) return
 
     try {
-      await deleteWorkoutHistory(deleteDialog.workout.id)
+      await softDeleteWorkout(deleteDialog.workout.id)
       setWorkouts((prev) => prev.filter((w) => w.id !== deleteDialog.workout!.id))
       toast.success('האימון נמחק בהצלחה')
     } catch (error) {
-      console.error('Failed to delete workout:', error)
+      console.error('Failed to soft-delete workout:', error)
       toast.error('שגיאה במחיקת האימון')
     } finally {
       setDeleteDialog({ isOpen: false, workout: null })
+    }
+  }
+
+  // Handle delete with reason (trainer-reported workout)
+  const handleDeleteWithReason = async () => {
+    if (!deleteReasonDialog.workout || !deleteReasonDialog.selectedReason) return
+
+    try {
+      await softDeleteWorkout(deleteReasonDialog.workout.id, deleteReasonDialog.selectedReason)
+      setWorkouts((prev) => prev.filter((w) => w.id !== deleteReasonDialog.workout!.id))
+      toast.success('האימון נמחק בהצלחה')
+    } catch (error) {
+      console.error('Failed to soft-delete workout:', error)
+      toast.error('שגיאה במחיקת האימון')
+    } finally {
+      setDeleteReasonDialog({ isOpen: false, workout: null, selectedReason: '' })
     }
   }
 
@@ -162,7 +186,7 @@ export default function WorkoutHistory() {
     }
 
     try {
-      await Promise.all(workoutIds.map(id => deleteWorkoutHistory(id)))
+      await Promise.all(workoutIds.map(id => softDeleteWorkout(id)))
       setWorkouts((prev) => prev.filter((w) => !workoutIds.includes(w.id)))
       toast.success('המקבץ נמחק בהצלחה')
     } catch (error) {
@@ -567,7 +591,7 @@ export default function WorkoutHistory() {
     if (!emptyWorkoutDialog.workout) return
 
     try {
-      await deleteWorkoutHistory(emptyWorkoutDialog.workout.id)
+      await softDeleteWorkout(emptyWorkoutDialog.workout.id)
       setWorkouts((prev) => prev.filter((w) => w.id !== emptyWorkoutDialog.workout!.id))
       toast.success('האימון נמחק בהצלחה')
     } catch (error) {
@@ -740,13 +764,28 @@ export default function WorkoutHistory() {
             תוכנית מאמן
           </h2>
           <div className="space-y-3">
-            <TrainerProgramCard program={trainerProgram} />
+            <TrainerProgramCard program={trainerProgram} onDisconnected={refreshProgram} />
+          </div>
+        </div>
+      )}
+
+      {/* Standalone Workouts from trainer */}
+      {!trainerProgramLoading && standaloneWorkouts.length > 0 && (
+        <div>
+          <h2 className="text-sm font-medium text-text-muted mb-2 flex items-center gap-2">
+            <ClipboardEdit className="w-4 h-4 text-accent-orange" />
+            אימונים בודדים מהמאמן ({standaloneWorkouts.length})
+          </h2>
+          <div className="space-y-2">
+            {standaloneWorkouts.map((sw) => (
+              <TrainerProgramCard key={sw.id} program={sw} onDisconnected={refreshProgram} />
+            ))}
           </div>
         </div>
       )}
 
       {/* Separator if trainer program and AI sections exist */}
-      {trainerProgram && (aiBundles.length > 0 || singleAIWorkouts.length > 0) && (
+      {(trainerProgram || standaloneWorkouts.length > 0) && (aiBundles.length > 0 || singleAIWorkouts.length > 0) && (
         <div className="border-t border-dark-border" />
       )}
 
@@ -980,6 +1019,67 @@ export default function WorkoutHistory() {
                 <button
                   onClick={handleDeleteConfirm}
                   className="flex-1 py-3 px-4 bg-red-500 hover:bg-red-600 text-white font-medium rounded-xl transition-colors"
+                >
+                  מחק
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Reason Dialog - for trainer-reported workouts */}
+      {deleteReasonDialog.isOpen && deleteReasonDialog.workout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
+          <div className="bg-dark-surface rounded-2xl max-w-sm w-full shadow-xl animate-scale-in relative">
+            <div className="p-6">
+              <button
+                onClick={() => setDeleteReasonDialog({ isOpen: false, workout: null, selectedReason: '' })}
+                className="absolute top-4 right-4 p-2 text-text-muted hover:text-text-primary"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="text-center mb-4">
+                <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center bg-red-400/20">
+                  <Trash2 className="w-8 h-8 text-red-400" />
+                </div>
+                <h3 className="text-xl font-bold text-text-primary mb-2">מחיקת אימון</h3>
+                <p className="text-text-muted text-sm">אימון זה דווח על ידי המאמן. בחר סיבה למחיקה:</p>
+              </div>
+
+              <div className="space-y-2 mb-6">
+                {[
+                  'האימון לא בוצע בפועל',
+                  'דווח בטעות',
+                  'נתונים שגויים',
+                  'אחר',
+                ].map((reason) => (
+                  <button
+                    key={reason}
+                    onClick={() => setDeleteReasonDialog(prev => ({ ...prev, selectedReason: reason }))}
+                    className={`w-full text-right py-3 px-4 rounded-xl transition-colors ${
+                      deleteReasonDialog.selectedReason === reason
+                        ? 'bg-red-500/20 border border-red-500/50 text-red-400'
+                        : 'bg-dark-card hover:bg-dark-border text-text-primary border border-transparent'
+                    }`}
+                  >
+                    {reason}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteReasonDialog({ isOpen: false, workout: null, selectedReason: '' })}
+                  className="flex-1 py-3 px-4 bg-dark-card hover:bg-dark-border text-text-primary font-medium rounded-xl transition-colors"
+                >
+                  ביטול
+                </button>
+                <button
+                  onClick={handleDeleteWithReason}
+                  disabled={!deleteReasonDialog.selectedReason}
+                  className="flex-1 py-3 px-4 bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors"
                 >
                   מחק
                 </button>

@@ -79,7 +79,7 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
     setLoadingMore(true)
     try {
       const lastDate = workouts[workouts.length - 1].date
-      const result = await getUserWorkoutHistoryPaginated(traineeId, 20, lastDate)
+      const result = await getUserWorkoutHistoryPaginated(traineeId, 20, lastDate, true)
       setAllWorkouts([...workouts, ...result.summaries])
       setHasMore(result.hasMore)
     } catch {
@@ -130,6 +130,7 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
     <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-5">
       <div className="space-y-3">
         {workouts.map((workout, index) => {
+          const isDeleted = !!workout.deletedByTrainee
           const config = statusConfig[workout.status] || statusConfig.planned
           const isExpanded = expandedWorkoutId === workout.id
           const isTrainerReported = !!workout.reportedBy
@@ -137,20 +138,26 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
 
           // Color scheme: purple for trainer-reported, blue (primary) for self-reported
           const accentColor = isTrainerReported ? 'accent-purple' : 'primary-main'
-          const iconBg = isTrainerReported
-            ? 'bg-accent-purple/20'
-            : 'bg-primary-main/20'
-          const numberColor = isTrainerReported
-            ? 'text-accent-purple'
-            : 'text-primary-main'
+          const iconBg = isDeleted
+            ? 'bg-red-500/20'
+            : isTrainerReported
+              ? 'bg-accent-purple/20'
+              : 'bg-primary-main/20'
+          const numberColor = isDeleted
+            ? 'text-red-400'
+            : isTrainerReported
+              ? 'text-accent-purple'
+              : 'text-primary-main'
 
           return (
             <div
               key={workout.id}
               className={`rounded-xl overflow-hidden border ${
-                isTrainerReported
-                  ? 'bg-accent-purple/5 border-accent-purple/20'
-                  : 'bg-dark-surface/50 border-transparent'
+                isDeleted
+                  ? 'bg-red-500/5 border-red-500/20 opacity-60'
+                  : isTrainerReported
+                    ? 'bg-accent-purple/5 border-accent-purple/20'
+                    : 'bg-dark-surface/50 border-transparent'
               }`}
             >
               {/* Workout header - clickable */}
@@ -170,12 +177,18 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
                 {/* Workout Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="font-bold text-text-primary truncate text-sm">{workout.name}</h4>
-                    <span
-                      className={`px-2 py-0.5 ${config.labelBg} ${config.labelText} text-xs rounded flex-shrink-0`}
-                    >
-                      {config.label}
-                    </span>
+                    <h4 className={`font-bold truncate text-sm ${isDeleted ? 'text-text-muted line-through' : 'text-text-primary'}`}>{workout.name}</h4>
+                    {isDeleted ? (
+                      <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded flex-shrink-0">
+                        נמחק
+                      </span>
+                    ) : (
+                      <span
+                        className={`px-2 py-0.5 ${config.labelBg} ${config.labelText} text-xs rounded flex-shrink-0`}
+                      >
+                        {config.label}
+                      </span>
+                    )}
                     {isTrainerReported && (
                       <span className="px-2 py-0.5 bg-accent-purple/20 text-accent-purple text-xs rounded flex-shrink-0">
                         מאמן
@@ -189,6 +202,17 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
                       <> • {workout.muscleGroups.slice(0, 2).join(', ')}</>
                     )}
                   </p>
+                  {isDeleted && (
+                    <p className="text-red-400/70 text-xs mt-0.5">
+                      נמחק ב-{(() => {
+                        const d = workout.deletedByTrainee?.deletedAt instanceof Date
+                          ? workout.deletedByTrainee.deletedAt
+                          : new Date()
+                        return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`
+                      })()}
+                      {workout.deletedByTrainee?.reason && ` • סיבה: ${workout.deletedByTrainee.reason}`}
+                    </p>
+                  )}
                 </div>
 
                 {/* Chevron */}

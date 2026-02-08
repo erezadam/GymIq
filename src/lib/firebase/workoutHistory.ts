@@ -53,6 +53,10 @@ function toWorkoutHistory(id: string, data: any): WorkoutHistoryEntry {
     // Trainer report fields
     reportedBy: data.reportedBy,
     reportedByName: data.reportedByName,
+    // Soft delete
+    deletedByTrainee: data.deletedByTrainee
+      ? { deletedAt: data.deletedByTrainee.deletedAt?.toDate?.() || new Date(), reason: data.deletedByTrainee.reason }
+      : undefined,
   }
 }
 
@@ -85,7 +89,14 @@ function toSummary(entry: WorkoutHistoryEntry): WorkoutHistorySummary {
     programDayLabel: entry.programDayLabel,
     // Trainer report fields
     reportedBy: entry.reportedBy,
+    // Soft delete
+    deletedByTrainee: entry.deletedByTrainee,
   }
+}
+
+// Check if a workout document is NOT soft-deleted
+function isNotSoftDeleted(data: any): boolean {
+  return !data.deletedByTrainee
 }
 
 // Helper to remove undefined values from object
@@ -203,7 +214,8 @@ export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'
 // Get user's workout history
 export async function getUserWorkoutHistory(
   userId: string,
-  limitCount: number = 50
+  limitCount: number = 50,
+  includeDeleted: boolean = false
 ): Promise<WorkoutHistorySummary[]> {
   console.log('📖 getUserWorkoutHistory called for userId:', userId)
   const historyRef = collection(db, COLLECTION_NAME)
@@ -217,8 +229,8 @@ export async function getUserWorkoutHistory(
   try {
     const snapshot = await getDocs(q)
     console.log('📖 Found', snapshot.docs.length, 'workouts')
-    const results = snapshot.docs.map(doc => {
-      console.log('📖 Workout doc:', doc.id, doc.data())
+    const docs = includeDeleted ? snapshot.docs : snapshot.docs.filter(d => isNotSoftDeleted(d.data()))
+    const results = docs.map(doc => {
       const entry = toWorkoutHistory(doc.id, doc.data())
       return toSummary(entry)
     })
@@ -233,7 +245,8 @@ export async function getUserWorkoutHistory(
 export async function getUserWorkoutHistoryPaginated(
   userId: string,
   pageSize: number = 20,
-  afterDate?: Date
+  afterDate?: Date,
+  includeDeleted: boolean = false
 ): Promise<{ summaries: WorkoutHistorySummary[]; hasMore: boolean }> {
   const historyRef = collection(db, COLLECTION_NAME)
 
@@ -255,10 +268,14 @@ export async function getUserWorkoutHistoryPaginated(
     const hasMore = snapshot.docs.length > pageSize
     const docs = hasMore ? snapshot.docs.slice(0, pageSize) : snapshot.docs
 
-    const summaries = docs.map(doc => {
+    let summaries = docs.map(doc => {
       const entry = toWorkoutHistory(doc.id, doc.data())
       return toSummary(entry)
     })
+
+    if (!includeDeleted) {
+      summaries = summaries.filter(s => !s.deletedByTrainee)
+    }
 
     return { summaries, hasMore }
   } catch (error) {
@@ -270,7 +287,8 @@ export async function getUserWorkoutHistoryPaginated(
 // Get full workout history entries (with exercise data) for AI context
 export async function getUserWorkoutHistoryFull(
   userId: string,
-  limitCount: number = 10
+  limitCount: number = 10,
+  includeDeleted: boolean = false
 ): Promise<WorkoutHistoryEntry[]> {
   const historyRef = collection(db, COLLECTION_NAME)
   const q = query(
@@ -282,7 +300,8 @@ export async function getUserWorkoutHistoryFull(
 
   try {
     const snapshot = await getDocs(q)
-    return snapshot.docs.map(doc => toWorkoutHistory(doc.id, doc.data()))
+    const docs = includeDeleted ? snapshot.docs : snapshot.docs.filter(d => isNotSoftDeleted(d.data()))
+    return docs.map(doc => toWorkoutHistory(doc.id, doc.data()))
   } catch (error) {
     console.error('❌ Error fetching full workout history:', error)
     throw error
@@ -318,9 +337,11 @@ export async function getLastWorkoutForExercise(
 
   const snapshot = await getDocs(q)
 
-  // Search through workouts to find the exercise
+  // Search through workouts to find the exercise (skip soft-deleted)
   for (const doc of snapshot.docs) {
     const data = doc.data()
+    if (!isNotSoftDeleted(data)) continue
+
     const exercises = data.exercises || []
 
     const exercise = exercises.find((ex: any) => ex.exerciseId === exerciseId)
@@ -371,6 +392,8 @@ export async function getExerciseNotes(
 
   for (const doc of snapshot.docs) {
     const data = doc.data()
+    if (!isNotSoftDeleted(data)) continue
+
     const exercises = data.exercises || []
 
     const exercise = exercises.find((ex: any) => ex.exerciseId === exerciseId)
@@ -409,6 +432,8 @@ export async function getExerciseNotesForExercises(
 
   for (const doc of snapshot.docs) {
     const data = doc.data()
+    if (!isNotSoftDeleted(data)) continue
+
     const exercises = data.exercises || []
     const workoutDate = data.date?.toDate() || new Date()
 
@@ -445,12 +470,14 @@ export async function getLastWorkoutForExercises(
   const result: Record<string, { weight: number; reps: number; date: Date }> = {}
   const foundExercises = new Set<string>()
 
-  // Search through workouts to find each exercise
+  // Search through workouts to find each exercise (skip soft-deleted)
   for (const doc of snapshot.docs) {
     // Stop if we found all exercises
     if (foundExercises.size === exerciseIds.length) break
 
     const data = doc.data()
+    if (!isNotSoftDeleted(data)) continue
+
     const exercises = data.exercises || []
 
     for (const exerciseId of exerciseIds) {
@@ -504,7 +531,9 @@ export async function getUserWorkoutStats(userId: string): Promise<{
   )
 
   const snapshot = await getDocs(q)
-  const workouts = snapshot.docs.map(doc => toWorkoutHistory(doc.id, doc.data()))
+  const workouts = snapshot.docs
+    .filter(d => isNotSoftDeleted(d.data()))
+    .map(doc => toWorkoutHistory(doc.id, doc.data()))
 
   // Filter only completed workouts for stats calculation
   // (in_progress, cancelled, planned, partial should not count as "done" workouts)
@@ -600,9 +629,12 @@ export async function getPersonalRecords(userId: string): Promise<PersonalRecord
     isBodyweight: boolean // All recorded weights are 0
   }> = new Map()
 
-  // Process all workouts (filter completed client-side)
+  // Process all workouts (filter completed + non-deleted client-side)
   for (const docSnap of snapshot.docs) {
     const data = docSnap.data()
+
+    // Skip soft-deleted workouts
+    if (!isNotSoftDeleted(data)) continue
 
     // Skip non-completed workouts
     if (data.status !== 'completed') {
@@ -787,7 +819,18 @@ export async function updateWorkoutHistory(
   }
 }
 
-// Delete a workout from history
+// Soft-delete a workout (marks as deleted, data stays in Firestore)
+export async function softDeleteWorkout(workoutId: string, reason?: string): Promise<void> {
+  const docRef = doc(db, COLLECTION_NAME, workoutId)
+  await updateDoc(docRef, {
+    deletedByTrainee: {
+      deletedAt: Timestamp.now(),
+      ...(reason && { reason }),
+    },
+  })
+}
+
+// Delete a workout from history (hard delete - kept for admin tools)
 export async function deleteWorkoutHistory(workoutId: string): Promise<void> {
   const docRef = doc(db, COLLECTION_NAME, workoutId)
 
@@ -825,9 +868,16 @@ export async function getInProgressWorkout(userId: string): Promise<WorkoutHisto
       return null
     }
 
-    const doc = snapshot.docs[0]
-    console.log('✅ Found in_progress workout:', doc.id)
-    return toWorkoutHistory(doc.id, doc.data())
+    // Skip soft-deleted workouts
+    const validDocs = snapshot.docs.filter(d => isNotSoftDeleted(d.data()))
+    if (validDocs.length === 0) {
+      console.log('📭 No non-deleted in_progress workout found')
+      return null
+    }
+
+    const activeDoc = validDocs[0]
+    console.log('✅ Found in_progress workout:', activeDoc.id)
+    return toWorkoutHistory(activeDoc.id, activeDoc.data())
   } catch (error: any) {
     console.error('❌ Failed to get in_progress workout:', error)
     return null
@@ -942,6 +992,9 @@ export async function getExerciseHistory(
 
   for (const docSnap of snapshot.docs) {
     const data = docSnap.data()
+
+    // Skip soft-deleted workouts
+    if (!isNotSoftDeleted(data)) continue
 
     // Skip non-completed workouts
     if (data.status !== 'completed') continue
@@ -1072,10 +1125,11 @@ export async function getRecentlyDoneExerciseIds(userId: string): Promise<Set<st
     const snapshot = await getDocs(recentQuery)
     console.log('📋 Found', snapshot.docs.length, 'recent workouts')
 
-    // 1. Find last completed workout
+    // 1. Find last completed workout (skip soft-deleted)
     let foundCompleted = false
     for (const doc of snapshot.docs) {
       const data = doc.data()
+      if (!isNotSoftDeleted(data)) continue
 
       if (!foundCompleted && data.status === 'completed') {
         // First completed workout - add all exercises
@@ -1130,9 +1184,10 @@ export async function getLastMonthExerciseIds(userId: string): Promise<Set<strin
     const snapshot = await getDocs(monthQuery)
     console.log('📅 Found', snapshot.docs.length, 'workouts in last 30 days')
 
-    // Collect all exercises from completed workouts
+    // Collect all exercises from completed workouts (skip soft-deleted)
     for (const doc of snapshot.docs) {
       const data = doc.data()
+      if (!isNotSoftDeleted(data)) continue
 
       // Only include completed workouts
       if (data.status === 'completed') {

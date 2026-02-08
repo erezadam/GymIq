@@ -6,6 +6,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   query,
   where,
   orderBy,
@@ -24,6 +25,13 @@ function toProgram(id: string, data: Record<string, any>): TrainingProgram {
     endDate: data.endDate?.toDate?.() || data.endDate,
     createdAt: data.createdAt?.toDate?.() || data.createdAt || new Date(),
     updatedAt: data.updatedAt?.toDate?.() || data.updatedAt || new Date(),
+    disconnectedByTrainee: data.disconnectedByTrainee
+      ? {
+          disconnectedAt: data.disconnectedByTrainee.disconnectedAt?.toDate?.()
+            || data.disconnectedByTrainee.disconnectedAt,
+          reason: data.disconnectedByTrainee.reason,
+        }
+      : undefined,
   } as TrainingProgram
 }
 
@@ -57,7 +65,7 @@ export const programService = {
     return toProgram(snapshot.id, snapshot.data())
   },
 
-  // Get active program for a trainee
+  // Get active program for a trainee (excludes disconnected and standalone)
   async getTraineeActiveProgram(
     traineeId: string
   ): Promise<TrainingProgram | null> {
@@ -68,8 +76,32 @@ export const programService = {
     )
     const snapshot = await getDocs(q)
     if (snapshot.empty) return null
-    const first = snapshot.docs[0]
+    // Filter out disconnected programs and standalone workouts
+    const activeDocs = snapshot.docs.filter(d => {
+      const data = d.data()
+      return !data.disconnectedByTrainee && data.type !== 'standalone'
+    })
+    if (activeDocs.length === 0) return null
+    const first = activeDocs[0]
     return toProgram(first.id, first.data())
+  },
+
+  // Get active standalone workouts for a trainee
+  async getTraineeStandaloneWorkouts(
+    traineeId: string
+  ): Promise<TrainingProgram[]> {
+    const q = query(
+      collection(db, 'trainingPrograms'),
+      where('traineeId', '==', traineeId),
+      where('status', '==', 'active')
+    )
+    const snapshot = await getDocs(q)
+    return snapshot.docs
+      .filter(d => {
+        const data = d.data()
+        return data.type === 'standalone' && !data.disconnectedByTrainee
+      })
+      .map(d => toProgram(d.id, d.data()))
   },
 
   // Get all programs for a trainer
@@ -84,13 +116,17 @@ export const programService = {
   },
 
   // Get all programs for a trainee (no orderBy to avoid composite index requirement)
-  async getTraineePrograms(traineeId: string): Promise<TrainingProgram[]> {
+  async getTraineePrograms(traineeId: string, includeDisconnected = false): Promise<TrainingProgram[]> {
     const q = query(
       collection(db, 'trainingPrograms'),
       where('traineeId', '==', traineeId)
     )
     const snapshot = await getDocs(q)
-    const programs = snapshot.docs.map((d) => toProgram(d.id, d.data()))
+    let programs = snapshot.docs.map((d) => toProgram(d.id, d.data()))
+    // Filter out disconnected unless explicitly requested (trainer view)
+    if (!includeDisconnected) {
+      programs = programs.filter(p => !p.disconnectedByTrainee)
+    }
     // Sort client-side: newest first
     return programs.sort((a, b) => {
       const ta = a.createdAt instanceof Date ? a.createdAt.getTime() : (a.createdAt as any)?.toMillis?.() || 0
@@ -144,8 +180,29 @@ export const programService = {
     await updateDoc(docRef, updateData)
   },
 
-  // Delete program
+  // Delete program (hard delete - kept for admin tools)
   async deleteProgram(programId: string): Promise<void> {
     await deleteDoc(doc(db, 'trainingPrograms', programId))
+  },
+
+  // Disconnect a program (trainee soft-delete)
+  async disconnectProgram(programId: string, reason?: string): Promise<void> {
+    const docRef = doc(db, 'trainingPrograms', programId)
+    await updateDoc(docRef, {
+      disconnectedByTrainee: {
+        disconnectedAt: serverTimestamp(),
+        ...(reason && { reason }),
+      },
+      updatedAt: serverTimestamp(),
+    })
+  },
+
+  // Reconnect a program (trainer "send again" after trainee disconnected)
+  async reconnectProgram(programId: string): Promise<void> {
+    const docRef = doc(db, 'trainingPrograms', programId)
+    await updateDoc(docRef, {
+      disconnectedByTrainee: deleteField(),
+      updatedAt: serverTimestamp(),
+    })
   },
 }
