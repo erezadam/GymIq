@@ -1093,17 +1093,22 @@ export async function getExerciseHistory(
   // Sort by date descending (most recent first)
   entries.sort((a, b) => b.date.getTime() - a.date.getTime())
 
-  // Mark overall best
-  return entries.map(entry => ({
-    date: entry.date,
-    bestWeight: entry.weight,
-    bestReps: entry.reps,
-    setCount: entry.setCount,
-    bestTime: entry.time,
-    isOverallBest: isBodyweightExercise
+  // Mark overall best - only on the most recent entry that achieved it
+  let bestAlreadyMarked = false
+  return entries.map(entry => {
+    const isBest = !bestAlreadyMarked && (isBodyweightExercise
       ? entry.reps === overallBestReps && overallBestReps > 0
-      : entry.weight === overallBestWeight && overallBestWeight > 0,
-  }))
+      : entry.weight === overallBestWeight && overallBestWeight > 0)
+    if (isBest) bestAlreadyMarked = true
+    return {
+      date: entry.date,
+      bestWeight: entry.weight,
+      bestReps: entry.reps,
+      setCount: entry.setCount,
+      bestTime: entry.time,
+      isOverallBest: isBest,
+    }
+  })
 }
 
 // Get exercise IDs that were done recently:

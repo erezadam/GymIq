@@ -45,6 +45,31 @@ const equipmentNames: Record<string, string> = {
   other: 'אחר',
 }
 
+/**
+ * Compute workout stats from exercises array (single source of truth).
+ * Replaces manual stat tracking to prevent drift between stats and actual data.
+ */
+function computeStats(
+  exercises: ActiveWorkoutExercise[],
+  prevElapsedSeconds = 0
+): ActiveWorkout['stats'] {
+  return {
+    totalExercises: exercises.length,
+    completedExercises: exercises.filter((ex) => ex.isCompleted).length,
+    totalSets: exercises.reduce((sum, ex) => sum + ex.reportedSets.length, 0),
+    completedSets: exercises.reduce(
+      (sum, ex) => sum + ex.reportedSets.filter((s) => s.reps > 0).length,
+      0
+    ),
+    elapsedSeconds: prevElapsedSeconds,
+    totalVolume: exercises.reduce(
+      (sum, ex) =>
+        sum + ex.reportedSets.reduce((s, set) => s + set.weight * set.reps, 0),
+      0
+    ),
+  }
+}
+
 export function useActiveWorkout() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
@@ -255,11 +280,7 @@ export function useActiveWorkout() {
             )
 
             // Convert Firebase workout to ActiveWorkout format
-            const restoredWorkout: ActiveWorkout = {
-              id: firebaseWorkout.id,
-              startedAt: firebaseWorkout.startTime,
-              userId: firebaseWorkout.userId,
-              exercises: firebaseWorkout.exercises.map((ex: any, index: number) => {
+            const restoredExercises: ActiveWorkoutExercise[] = firebaseWorkout.exercises.map((ex: any, index: number) => {
                 const details = exerciseDetailsMap.get(ex.exerciseId)
                 return {
                   id: `workout_ex_${index}_${Date.now()}`,
@@ -291,15 +312,14 @@ export function useActiveWorkout() {
                     assistanceBand: set.assistanceBand,
                   })),
                 }
-              }),
-              stats: {
-                totalExercises: firebaseWorkout.totalExercises,
-                completedExercises: firebaseWorkout.completedExercises,
-                totalSets: firebaseWorkout.totalSets,
-                completedSets: firebaseWorkout.completedSets,
-                elapsedSeconds: 0,
-                totalVolume: firebaseWorkout.totalVolume,
-              },
+              })
+
+            const restoredWorkout: ActiveWorkout = {
+              id: firebaseWorkout.id,
+              startedAt: firebaseWorkout.startTime,
+              userId: firebaseWorkout.userId,
+              exercises: restoredExercises,
+              stats: computeStats(restoredExercises),
             }
 
             setWorkout(restoredWorkout)
@@ -488,11 +508,7 @@ export function useActiveWorkout() {
 
             // Merge new exercises into parsed workout
             parsed.exercises = [...parsed.exercises, ...newExercises]
-            parsed.stats = {
-              ...parsed.stats,
-              totalExercises: parsed.exercises.length,
-              totalSets: parsed.exercises.reduce((sum: number, ex: ActiveWorkoutExercise) => sum + ex.reportedSets.length, 0),
-            }
+            parsed.stats = computeStats(parsed.exercises, parsed.stats.elapsedSeconds)
 
             // Clear the selectedExercises store since we've added them
             clearWorkout()
@@ -603,13 +619,6 @@ export function useActiveWorkout() {
           }
         }
 
-        // Calculate stats based on restored data
-        const completedExercises = exercises.filter(ex => ex.isCompleted).length
-        const completedSets = exercises.reduce((sum, ex) =>
-          sum + ex.reportedSets.filter(set => set.reps > 0).length, 0)
-        const totalVolume = exercises.reduce((sum, ex) =>
-          sum + ex.reportedSets.reduce((setSum, set) => setSum + (set.weight * set.reps), 0), 0)
-
         const newWorkout: ActiveWorkout = {
           id: `workout_${Date.now()}`,
           startedAt: new Date(),
@@ -617,14 +626,7 @@ export function useActiveWorkout() {
           ...(reportedBy && { reportedBy }),
           ...(reportedByName && { reportedByName }),
           exercises,
-          stats: {
-            totalExercises: exercises.length,
-            completedExercises,
-            totalSets: exercises.reduce((sum, ex) => sum + ex.reportedSets.length, 0),
-            completedSets,
-            elapsedSeconds: 0,
-            totalVolume,
-          },
+          stats: computeStats(exercises),
         }
 
         // Set hasInitialized BEFORE setWorkout to prevent re-render from triggering another init
@@ -793,17 +795,16 @@ export function useActiveWorkout() {
           assistanceBand: lastSet?.assistanceBand,
         }
 
-        return {
-          ...prev,
-          exercises: prev.exercises.map((ex) =>
+        const updatedExercises = prev.exercises.map((ex) =>
             ex.id === exerciseId
               ? { ...ex, reportedSets: [...ex.reportedSets, newSet] }
               : ex
-          ),
-          stats: {
-            ...prev.stats,
-            totalSets: prev.stats.totalSets + 1,
-          },
+          )
+
+        return {
+          ...prev,
+          exercises: updatedExercises,
+          stats: computeStats(updatedExercises, prev.stats.elapsedSeconds),
         }
       })
     },
@@ -850,9 +851,7 @@ export function useActiveWorkout() {
         const exercise = prev.exercises.find((ex) => ex.id === exerciseId)
         if (!exercise || exercise.reportedSets.length <= 1) return prev // Keep at least one set
 
-        return {
-          ...prev,
-          exercises: prev.exercises.map((ex) =>
+        const updatedExercises = prev.exercises.map((ex) =>
             ex.id === exerciseId
               ? {
                   ...ex,
@@ -861,11 +860,12 @@ export function useActiveWorkout() {
                     .map((set, index) => ({ ...set, setNumber: index + 1 })),
                 }
               : ex
-          ),
-          stats: {
-            ...prev.stats,
-            totalSets: prev.stats.totalSets - 1,
-          },
+          )
+
+        return {
+          ...prev,
+          exercises: updatedExercises,
+          stats: computeStats(updatedExercises, prev.stats.elapsedSeconds),
         }
       })
     },
@@ -892,44 +892,28 @@ export function useActiveWorkout() {
         const exercise = prev.exercises.find((ex) => ex.id === exerciseId)
         if (!exercise) return prev
 
-        // Calculate volume for this exercise
-        const exerciseVolume = exercise.reportedSets.reduce(
-          (sum, set) => sum + set.weight * set.reps,
-          0
-        )
-
-        // Count completed sets (sets with reps > 0)
-        const completedSetsInExercise = exercise.reportedSets.filter(
-          (set) => set.reps > 0
-        ).length
-
         // Mark sets as completed
         const updatedSets = exercise.reportedSets.map((set) => ({
           ...set,
           completedAt: set.reps > 0 ? new Date() : undefined,
         }))
 
-        const newCompletedCount = prev.stats.completedExercises + 1
+        const updatedExercises = prev.exercises.map((ex) => {
+          if (ex.id === exerciseId) {
+            return {
+              ...ex,
+              isExpanded: false,
+              isCompleted: true,
+              reportedSets: updatedSets,
+            }
+          }
+          return ex
+        })
 
         return {
           ...prev,
-          exercises: prev.exercises.map((ex) => {
-            if (ex.id === exerciseId) {
-              return {
-                ...ex,
-                isExpanded: false,
-                isCompleted: true,
-                reportedSets: updatedSets,
-              }
-            }
-            return ex
-          }),
-          stats: {
-            ...prev.stats,
-            completedExercises: newCompletedCount,
-            completedSets: prev.stats.completedSets + completedSetsInExercise,
-            totalVolume: prev.stats.totalVolume + exerciseVolume,
-          },
+          exercises: updatedExercises,
+          stats: computeStats(updatedExercises, prev.stats.elapsedSeconds),
         }
       })
 
@@ -971,24 +955,12 @@ export function useActiveWorkout() {
         const exercise = prev.exercises.find((ex) => ex.id === exerciseId)
         if (!exercise) return prev
 
-        const wasCompleted = exercise.isCompleted
-        const setsCount = exercise.reportedSets.length
-        const completedSetsCount = exercise.reportedSets.filter((s) => s.reps > 0).length
+        const updatedExercises = prev.exercises.filter((ex) => ex.id !== exerciseId)
 
         return {
           ...prev,
-          exercises: prev.exercises.filter((ex) => ex.id !== exerciseId),
-          stats: {
-            ...prev.stats,
-            totalExercises: prev.stats.totalExercises - 1,
-            completedExercises: wasCompleted
-              ? prev.stats.completedExercises - 1
-              : prev.stats.completedExercises,
-            totalSets: prev.stats.totalSets - setsCount,
-            completedSets: wasCompleted
-              ? prev.stats.completedSets - completedSetsCount
-              : prev.stats.completedSets,
-          },
+          exercises: updatedExercises,
+          stats: computeStats(updatedExercises, prev.stats.elapsedSeconds),
         }
       })
 
