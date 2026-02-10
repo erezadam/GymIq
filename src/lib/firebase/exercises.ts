@@ -7,6 +7,7 @@ import {
   updateDoc,
   deleteDoc,
   query,
+  where,
   orderBy,
   serverTimestamp,
   writeBatch,
@@ -170,7 +171,7 @@ export const deleteAllExercises = async (): Promise<number> => {
 // Valid categories for exercises
 export const VALID_EXERCISE_CATEGORIES = [
   'chest', 'back', 'legs', 'shoulders', 'arms', 'core',
-  'cardio', 'functional', 'stretching', 'warmup', 'glutes'
+  'cardio', 'functional', 'stretching', 'warmup', 'glutes', 'gluteus_maximus'
 ] as const
 
 // Valid primary categories for exercises (main muscle groups only)
@@ -495,4 +496,37 @@ export const fixExerciseCategory = async (
 
   const docRef = doc(db, COLLECTION, exerciseId)
   await updateDoc(docRef, { category: newCategory })
+}
+
+// Batch update equipment for exercises matching a name pattern
+export const batchUpdateEquipment = async (
+  namePattern: string,
+  oldEquipment: string,
+  newEquipment: string
+): Promise<{ updated: string[]; skipped: string[] }> => {
+  const snapshot = await getDocs(
+    query(collection(db, COLLECTION), where('equipment', '==', oldEquipment))
+  )
+
+  const patternLower = namePattern.toLowerCase()
+  const updated: string[] = []
+  const skipped: string[] = []
+  const batch = writeBatch(db)
+
+  snapshot.docs.forEach((docSnapshot) => {
+    const data = docSnapshot.data()
+    const name = (data.name || '').toLowerCase()
+    const nameHe = data.nameHe || ''
+    if (name.includes(patternLower) || nameHe.includes(namePattern)) {
+      batch.update(doc(db, COLLECTION, docSnapshot.id), { equipment: newEquipment })
+      updated.push(nameHe || data.name)
+    } else {
+      skipped.push(nameHe || data.name)
+    }
+  })
+
+  if (updated.length > 0) {
+    await batch.commit()
+  }
+  return { updated, skipped }
 }

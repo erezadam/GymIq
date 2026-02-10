@@ -44,21 +44,34 @@ export function SetReportRow({
   canDelete,
 }: SetReportRowProps) {
   const { minutes, seconds } = secondsToMinutesSeconds(set.time || 0)
+  const minutesInputRef = useRef<HTMLInputElement>(null)
   const secondsInputRef = useRef<HTMLInputElement>(null)
 
-  const handleMinutesChange = (newMinutes: number, inputValue: string) => {
+  // Format as 2-digit string (00)
+  const formatTwoDigits = (val: number): string => val.toString().padStart(2, '0')
+
+  const handleMinutesChange = (inputValue: string) => {
+    // Allow only digits
+    const digits = inputValue.replace(/\D/g, '')
+    const newMinutes = parseInt(digits) || 0
     onUpdate({ time: minutesSecondsToSeconds(newMinutes, seconds) })
-    // Auto-focus seconds input when 2 digits are entered in minutes
-    if (inputValue.length >= 2) {
+    // Auto-focus seconds input when 2 digits are entered
+    if (digits.length >= 2) {
       secondsInputRef.current?.focus()
       secondsInputRef.current?.select()
     }
   }
 
-  const handleSecondsChange = (newSeconds: number) => {
-    // Clamp seconds to 0-59
-    const clampedSeconds = Math.min(59, Math.max(0, newSeconds))
-    onUpdate({ time: minutesSecondsToSeconds(minutes, clampedSeconds) })
+  const handleSecondsChange = (inputValue: string) => {
+    // Allow only digits
+    const digits = inputValue.replace(/\D/g, '')
+    const newSeconds = Math.min(59, parseInt(digits) || 0)
+    onUpdate({ time: minutesSecondsToSeconds(minutes, newSeconds) })
+    // Auto-focus minutes input when 2 digits are entered
+    if (digits.length >= 2) {
+      minutesInputRef.current?.focus()
+      minutesInputRef.current?.select()
+    }
   }
 
   // Render time input (minutes:seconds)
@@ -68,26 +81,28 @@ export function SetReportRow({
       <label className="set-label">זמן</label>
       <div className="time-inputs" dir="ltr">
         <input
-          type="number"
+          ref={minutesInputRef}
+          type="text"
           inputMode="numeric"
+          pattern="[0-9]*"
           className="set-input set-input--time"
-          value={minutes || ''}
-          onChange={(e) => handleMinutesChange(parseInt(e.target.value) || 0, e.target.value)}
-          placeholder="0"
-          min="0"
+          value={minutes ? formatTwoDigits(minutes) : ''}
+          onChange={(e) => handleMinutesChange(e.target.value)}
+          onFocus={(e) => e.target.select()}
+          placeholder="00"
           maxLength={2}
         />
         <span className="time-separator">:</span>
         <input
           ref={secondsInputRef}
-          type="number"
+          type="text"
           inputMode="numeric"
+          pattern="[0-9]*"
           className="set-input set-input--time"
-          value={seconds || ''}
-          onChange={(e) => handleSecondsChange(parseInt(e.target.value) || 0)}
+          value={(seconds || minutes) ? formatTwoDigits(seconds) : ''}
+          onChange={(e) => handleSecondsChange(e.target.value)}
+          onFocus={(e) => e.target.select()}
           placeholder="00"
-          min="0"
-          max="59"
           maxLength={2}
         />
       </div>
