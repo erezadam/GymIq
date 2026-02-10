@@ -498,6 +498,39 @@ export const fixExerciseCategory = async (
   await updateDoc(docRef, { category: newCategory })
 }
 
+// Auto-fix exercises whose name contains a known equipment keyword but have wrong equipment ID
+// Returns IDs of fixed exercises (empty array if nothing to fix)
+export const autoFixEquipmentMismatch = async (
+  exercises: Exercise[]
+): Promise<string[]> => {
+  // Map: keyword in nameHe → correct equipment ID
+  const EQUIPMENT_NAME_RULES: { keyword: string; equipmentId: string }[] = [
+    { keyword: 'סמיט', equipmentId: 'smit_machine' },
+    { keyword: 'סמית', equipmentId: 'smit_machine' },
+  ]
+
+  const toFix: { id: string; newEquipment: string }[] = []
+
+  for (const ex of exercises) {
+    const nameHe = ex.nameHe || ''
+    for (const rule of EQUIPMENT_NAME_RULES) {
+      if (nameHe.includes(rule.keyword) && ex.equipment !== rule.equipmentId) {
+        toFix.push({ id: ex.id, newEquipment: rule.equipmentId })
+        break
+      }
+    }
+  }
+
+  if (toFix.length === 0) return []
+
+  const batch = writeBatch(db)
+  for (const fix of toFix) {
+    batch.update(doc(db, COLLECTION, fix.id), { equipment: fix.newEquipment })
+  }
+  await batch.commit()
+  return toFix.map((f) => f.id)
+}
+
 // Batch update equipment for exercises matching a name pattern
 export const batchUpdateEquipment = async (
   namePattern: string,

@@ -40,6 +40,7 @@ export type EquipmentType =
   | 'cable_machine'
   | 'kettlebell'
   | 'machine'
+  | 'smit_machine'
   | 'bench'
   | 'resistance_band'
 
