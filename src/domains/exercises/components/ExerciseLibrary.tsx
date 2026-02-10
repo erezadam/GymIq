@@ -16,6 +16,7 @@ import { useAuthStore } from '@/domains/authentication/store'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '@/domains/workouts/types/active-workout.types'
 import type { WorkoutHistoryEntry } from '@/domains/workouts/types'
 import { getMuscleNameHe } from '@/utils/muscleTranslations'
+import { autoFixEquipmentMismatch } from '@/lib/firebase/exercises'
 
 // Helper functions
 function getEquipmentHe(equipment: string): string {
@@ -27,6 +28,7 @@ function getEquipmentHe(equipment: string): string {
     cable_machine: 'כבלים',
     kettlebell: 'קטלבל',
     machine: 'מכונה',
+    smit_machine: 'סמיט',
     bench: 'ספסל',
     resistance_band: 'גומייה',
   }
@@ -184,12 +186,21 @@ export function ExerciseLibrary({
   const loadData = async () => {
     setLoading(true)
     try {
-      const [exercisesData, musclesData, muscleNamesMapping, equipmentData] = await Promise.all([
+      let [exercisesData, musclesData, muscleNamesMapping, equipmentData] = await Promise.all([
         exerciseService.getExercises(),
         getMuscles(),
         getMuscleIdToNameHeMap(),
         getEquipment(),
-      ])
+      ] as const)
+      // Auto-fix equipment mismatches (e.g. Smith exercises tagged as 'machine')
+      const fixedIds = await autoFixEquipmentMismatch(exercisesData)
+      if (fixedIds.length > 0) {
+        const fixedSet = new Set(fixedIds)
+        exercisesData = exercisesData.map((ex) =>
+          fixedSet.has(ex.id) ? { ...ex, equipment: 'smit_machine' as const } : ex
+        )
+      }
+
       setExercises(exercisesData)
       setMuscles(musclesData)
       setDynamicMuscleNames(muscleNamesMapping)
