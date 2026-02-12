@@ -4,7 +4,7 @@
  * Fully self-contained - does not touch any existing logic.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface WeightIncreasePopupProps {
   isVisible: boolean
@@ -61,6 +61,8 @@ const burstEmojis = generateBurstEmojis(8)
 
 export function WeightIncreasePopup({ isVisible, oldWeight, newWeight, onDone }: WeightIncreasePopupProps) {
   const [phase, setPhase] = useState<'enter' | 'exit' | 'hidden'>('hidden')
+  const onDoneRef = useRef(onDone)
+  onDoneRef.current = onDone
 
   useEffect(() => {
     if (isVisible) {
@@ -68,14 +70,14 @@ export function WeightIncreasePopup({ isVisible, oldWeight, newWeight, onDone }:
       const exitTimer = setTimeout(() => setPhase('exit'), 2000)
       const hideTimer = setTimeout(() => {
         setPhase('hidden')
-        onDone()
+        onDoneRef.current()
       }, 2500)
       return () => {
         clearTimeout(exitTimer)
         clearTimeout(hideTimer)
       }
     }
-  }, [isVisible, onDone])
+  }, [isVisible])
 
   if (phase === 'hidden') return null
 
@@ -156,7 +158,7 @@ export function WeightIncreasePopup({ isVisible, oldWeight, newWeight, onDone }:
         </div>
 
         {/* Weight badge */}
-        <div className="animate-wip-badge-in mt-4 flex items-center gap-2 py-2 px-5 rounded-full bg-yellow-300/15 border border-yellow-300/40">
+        <div dir="ltr" className="animate-wip-badge-in mt-4 flex items-center gap-2 py-2 px-5 rounded-full bg-yellow-300/15 border border-yellow-300/40">
           <span className="text-lg font-bold text-yellow-200">
             {oldWeight}kg
           </span>
