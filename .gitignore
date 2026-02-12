@@ -48,3 +48,8 @@ coverage
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# Temporary instruction files
+*-instruction.md
+*-instruction*.md
+*-instructions*.md
