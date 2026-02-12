@@ -24,6 +24,23 @@ import.meta.env.VITE_FIREBASE_API_KEY
 
 **לפרטים מלאים ראה סעיף אבטחה ב-CLAUDE.md**
 
+## 🔥 Collection/Subcollection חדש — צ'קליסט חובה!
+
+> **רקע:** ב-11/02/2026 נוצר collection חדש (exerciseRecommendations) בלי לבדוק כתיבה בפועל.
+> Build עבר, Security דווח כ"תקין", אבל הכתיבה ל-Firestore נכשלה. המשתמש גילה את הבעיה.
+
+**כל פעם שנוצר collection או subcollection חדש, חובה לבצע את כל הצעדים:**
+
+| # | צעד | בדיקה |
+|---|------|-------|
+| 1 | עדכון `firestore.rules` עם הרשאות מתאימות | הקובץ מכיל match rule חדש |
+| 2 | ביצוע `firebase deploy --only firestore:rules` | Deploy הצליח בלוג |
+| 3 | בדיקת כתיבה בפועל (לא רק build) | מסמך נוצר ב-Firebase Console |
+| 4 | בדיקת קריאה בפועל | הנתון מוצג באפליקציה |
+| 5 | אישור ב-Firebase Console שהמסמך קיים עם נתונים נכונים | צילום מסך או לוג |
+
+**⚠️ "build עובר" לא אומר שהפיצ'ר עובד! חובה לבדוק כתיבה + קריאה בפועל.**
+
 ## Firebase Collections
 
 ### Core Collections
@@ -35,6 +52,7 @@ import.meta.env.VITE_FIREBASE_API_KEY
 | `muscles` | Muscle groups | id, nameHe, iconUrl, subMuscles[] |
 | `equipment` | Gym equipment | id, nameHe |
 | `reportTypes` | Exercise report types | id, nameHe, fields[] |
+| `exerciseRecommendations` | Weight increase recommendations per user | userId, {exerciseId}: { recommend, updatedAt } |
 | `appSettings` | App configuration | externalComparisonUrl |
 
 ### Collection Relationships

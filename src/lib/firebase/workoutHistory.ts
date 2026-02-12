@@ -7,6 +7,7 @@ import {
   addDoc,
   getDoc,
   getDocs,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -15,6 +16,7 @@ import {
   limit,
   startAfter,
   Timestamp,
+  serverTimestamp,
 } from 'firebase/firestore'
 import { db } from './config'
 import type { WorkoutHistoryEntry, WorkoutHistorySummary } from '@/domains/workouts/types'
@@ -1283,4 +1285,151 @@ export async function completeWorkout(
     console.error('❌ Failed to complete workout:', error)
     throw error
   }
+}
+
+// ============ WEIGHT RECOMMENDATIONS ============
+
+/**
+ * Extract a fingerprint of completed sets for comparison.
+ * Returns an array of { weight, reps } for each completed set, in order.
+ */
+function getCompletedSetsFingerprint(sets: any[]): { weight: number; reps: number }[] {
+  return sets
+    .filter((set: any) => set.completed || set.actualReps > 0)
+    .map((set: any) => ({
+      weight: set.actualWeight || set.targetWeight || 0,
+      reps: set.actualReps || set.targetReps || 0,
+    }))
+}
+
+/**
+ * Check if two sets fingerprints are identical
+ */
+function areFingerprintsIdentical(
+  a: { weight: number; reps: number }[],
+  b: { weight: number; reps: number }[]
+): boolean {
+  if (a.length !== b.length || a.length === 0) return false
+  return a.every((set, i) => set.weight === b[i].weight && set.reps === b[i].reps)
+}
+
+/**
+ * Calculate and save weight increase recommendations.
+ * Checks if each weight-based exercise was performed identically across the last 3 self workouts.
+ * Called fire-and-forget after self workout completion.
+ */
+export async function calculateAndSaveWeightRecommendations(
+  userId: string,
+  currentExercises: {
+    exerciseId: string
+    reportType?: string
+    sets: { weight: number; reps: number }[]
+  }[]
+): Promise<void> {
+  // Filter to weight-based exercises only
+  const weightExercises = currentExercises.filter(
+    (ex) => !ex.reportType || ex.reportType === 'weight_reps'
+  )
+
+  if (weightExercises.length === 0) return
+
+  // Query recent self workouts (no source = self, exclude ai_trainer and trainer_program)
+  const historyRef = collection(db, COLLECTION_NAME)
+  const q = query(
+    historyRef,
+    where('userId', '==', userId),
+    orderBy('date', 'desc'),
+    limit(50)
+  )
+
+  const snapshot = await getDocs(q)
+
+  // Filter to self workouts only (no source or source === 'manual', no reportedBy)
+  const selfWorkouts = snapshot.docs
+    .map((d) => d.data())
+    .filter((data) => {
+      if (!isNotSoftDeleted(data)) return false
+      if (data.reportedBy) return false
+      if (data.source && data.source !== 'manual') return false
+      const status = data.status
+      return status === 'completed' || status === 'partial'
+    })
+
+  // Build recommendations
+  const recommendations: Record<string, { recommend: boolean; updatedAt: any }> = {}
+
+  for (const exercise of weightExercises) {
+    const currentFingerprint = exercise.sets.filter(
+      (s) => s.reps > 0
+    ).map((s) => ({ weight: s.weight, reps: s.reps }))
+
+    if (currentFingerprint.length === 0) {
+      recommendations[exercise.exerciseId] = { recommend: false, updatedAt: serverTimestamp() }
+      continue
+    }
+
+    // Find 2 previous self workouts containing this exercise
+    const previousFingerprints: { weight: number; reps: number }[][] = []
+
+    for (const workoutData of selfWorkouts) {
+      if (previousFingerprints.length >= 2) break
+
+      const exercises = workoutData.exercises || []
+      const matchingExercise = exercises.find(
+        (ex: any) => ex.exerciseId === exercise.exerciseId
+      )
+
+      if (matchingExercise?.sets?.length > 0) {
+        const fingerprint = getCompletedSetsFingerprint(matchingExercise.sets)
+        if (fingerprint.length > 0) {
+          previousFingerprints.push(fingerprint)
+        }
+      }
+    }
+
+    // Need exactly 2 previous workouts (+ current = 3 total)
+    if (previousFingerprints.length < 2) {
+      recommendations[exercise.exerciseId] = { recommend: false, updatedAt: serverTimestamp() }
+      continue
+    }
+
+    // Check if all 3 are identical
+    const allIdentical =
+      areFingerprintsIdentical(currentFingerprint, previousFingerprints[0]) &&
+      areFingerprintsIdentical(currentFingerprint, previousFingerprints[1])
+
+    recommendations[exercise.exerciseId] = { recommend: allIdentical, updatedAt: serverTimestamp() }
+  }
+
+  // Write to Firestore (merge to preserve other exercises' recommendations)
+  if (Object.keys(recommendations).length > 0) {
+    const recDocRef = doc(db, 'exerciseRecommendations', userId)
+    await setDoc(recDocRef, { userId, ...recommendations }, { merge: true })
+    console.log('💡 Weight recommendations saved for', Object.keys(recommendations).length, 'exercises')
+  }
+}
+
+/**
+ * Get weight increase recommendations for a user.
+ * Returns a map of exerciseId → recommend boolean.
+ */
+export async function getWeightRecommendations(
+  userId: string
+): Promise<Record<string, boolean>> {
+  const recDocRef = doc(db, 'exerciseRecommendations', userId)
+  const snapshot = await getDoc(recDocRef)
+
+  if (!snapshot.exists()) return {}
+
+  const data = snapshot.data()
+  const result: Record<string, boolean> = {}
+
+  for (const [exerciseId, value] of Object.entries(data)) {
+    if (exerciseId === 'userId') continue // skip the userId field
+    if (value && typeof value === 'object' && 'recommend' in value) {
+      result[exerciseId] = (value as any).recommend === true
+    }
+  }
+
+  return result
 }
