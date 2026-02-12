@@ -67,15 +67,34 @@ export default function ActiveWorkoutScreen() {
     closeSummaryModal,
   } = useActiveWorkout()
 
-  // Wrap addSet to show rest timer - MUST be before early returns!
+  // Check if exercise weight increased and show celebration popup (read-only)
+  const checkWeightIncrease = useCallback((exerciseId: string) => {
+    if (!workout || shownWeightPopupFor.current.has(exerciseId)) return
+    const exercise = workout.exercises.find((ex) => ex.id === exerciseId)
+    if (!exercise?.lastWorkoutData) return
+    const lastWeight = exercise.lastWorkoutData.weight
+    if (lastWeight <= 0) return
+    const maxSetWeight = Math.max(
+      ...exercise.reportedSets
+        .filter((s) => s.reps > 0)
+        .map((s) => s.weight || 0)
+    )
+    if (maxSetWeight > lastWeight) {
+      shownWeightPopupFor.current.add(exerciseId)
+      setWeightPopup({ visible: true, oldWeight: lastWeight, newWeight: maxSetWeight })
+    }
+  }, [workout])
+
+  // Wrap addSet to show rest timer + check weight increase
   const handleAddSet = useCallback((exerciseId: string) => {
+    checkWeightIncrease(exerciseId)
     addSet(exerciseId)
     // Show rest timer only if enabled
     if (restTimerEnabled) {
       setRestTimerResetKey((prev) => prev + 1)
       setShowRestTimer(true)
     }
-  }, [addSet, restTimerEnabled])
+  }, [addSet, restTimerEnabled, checkWeightIncrease])
 
   // Close rest timer
   const handleCloseRestTimer = useCallback(() => {
@@ -85,26 +104,9 @@ export default function ActiveWorkoutScreen() {
   // Wrap finishExercise to close timer + check for weight increase
   const handleFinishExercise = useCallback((exerciseId: string) => {
     setShowRestTimer(false)
-
-    // Check for weight increase before finishing (read-only check on existing data)
-    if (workout && !shownWeightPopupFor.current.has(exerciseId)) {
-      const exercise = workout.exercises.find((ex) => ex.id === exerciseId)
-      if (exercise?.lastWorkoutData) {
-        const lastWeight = exercise.lastWorkoutData.weight
-        const maxSetWeight = Math.max(
-          ...exercise.reportedSets
-            .filter((s) => s.reps > 0)
-            .map((s) => s.weight || 0)
-        )
-        if (maxSetWeight > lastWeight && lastWeight > 0) {
-          shownWeightPopupFor.current.add(exerciseId)
-          setWeightPopup({ visible: true, oldWeight: lastWeight, newWeight: maxSetWeight })
-        }
-      }
-    }
-
+    checkWeightIncrease(exerciseId)
     finishExercise(exerciseId)
-  }, [finishExercise, workout])
+  }, [finishExercise, checkWeightIncrease])
 
   // Wrap toggleExercise to close timer when collapsing
   const handleToggleExercise = useCallback((exerciseId: string) => {
