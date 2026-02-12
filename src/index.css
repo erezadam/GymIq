@@ -1289,3 +1289,91 @@
     animation: glow-reps 2s ease-in-out infinite;
   }
 }
+
+/* ========================================
+   WEIGHT INCREASE POPUP ANIMATIONS
+   ======================================== */
+
+@keyframes wip-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes wip-pop-in {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes wip-slide-up {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes wip-badge-in {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes wip-confetti-fall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+@keyframes wip-sparkle {
+  0% { opacity: 0; transform: translate(var(--tw-translate-x, 0), var(--tw-translate-y, 0)) scale(0); }
+  50% { opacity: 1; transform: translate(var(--tw-translate-x, 0), var(--tw-translate-y, 0)) scale(1.5); }
+  100% { opacity: 0; transform: translate(var(--tw-translate-x, 0), var(--tw-translate-y, 0)) scale(0); }
+}
+
+@keyframes wip-burst {
+  0% { transform: translate(0, 0) scale(0.5); opacity: 0; }
+  40% { opacity: 1; }
+  100% { transform: translate(var(--burst-x), var(--burst-y)) scale(1); opacity: 0; }
+}
+
+@keyframes wip-clap {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  15% { transform: rotate(-15deg) scale(1.1); }
+  30% { transform: rotate(15deg) scale(1.1); }
+  45% { transform: rotate(-15deg) scale(1.1); }
+  60% { transform: rotate(15deg) scale(1.1); }
+  75% { transform: rotate(-10deg) scale(1.05); }
+  90% { transform: rotate(10deg) scale(1.05); }
+}
+
+.animate-wip-fade-out {
+  animation: wip-fade-out 0.5s ease-out forwards;
+}
+
+.animate-wip-pop-in {
+  animation: wip-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-wip-slide-up {
+  animation: wip-slide-up 0.5s ease-out 0.2s both;
+}
+
+.animate-wip-badge-in {
+  animation: wip-badge-in 0.4s ease-out 0.5s both;
+}
+
+.animate-wip-confetti-fall {
+  animation: wip-confetti-fall 2s ease-in forwards;
+}
+
+.animate-wip-sparkle {
+  animation: wip-sparkle 0.8s ease-out 0.3s both;
+}
+
+.animate-wip-burst {
+  animation: wip-burst 0.7s ease-out both;
+}
+
+.animate-wip-clap {
+  animation: wip-clap 1.2s ease-in-out;
+}
+
+.wip-glow-text {
+  text-shadow: 0 0 20px rgba(252, 211, 77, 0.5), 0 0 40px rgba(252, 211, 77, 0.3);
+}
