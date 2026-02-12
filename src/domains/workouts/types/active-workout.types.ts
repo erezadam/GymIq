@@ -67,6 +67,9 @@ export interface ActiveWorkoutExercise {
 
   // AI recommendation for this exercise (from AI trainer)
   aiRecommendation?: { weight: number; repRange: string; sets: number }
+
+  // Weight increase recommendation (plateau detection across 3 self workouts)
+  weightRecommendation?: boolean
 }
 
 // Exercises grouped by muscle

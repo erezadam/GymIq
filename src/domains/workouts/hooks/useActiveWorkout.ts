@@ -26,6 +26,8 @@ import {
   autoSaveWorkout,
   getInProgressWorkout,
   completeWorkout,
+  calculateAndSaveWeightRecommendations,
+  getWeightRecommendations,
 } from '@/lib/firebase/workoutHistory'
 import { getExerciseById } from '@/lib/firebase/exercises'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
@@ -504,6 +506,21 @@ export function useActiveWorkout() {
               } catch (e) {
                 console.error('Failed to fetch last workout data for new exercises:', e)
               }
+
+              // Weight recommendations - separate try/catch to never affect lastWorkoutData
+              const isSelfWorkout = !parsed.reportedBy && !programId
+              if (isSelfWorkout) {
+                try {
+                  const weightRecs = await getWeightRecommendations(user.uid)
+                  newExercises.forEach((ex) => {
+                    if (weightRecs[ex.exerciseId]) {
+                      ex.weightRecommendation = true
+                    }
+                  })
+                } catch (e) {
+                  console.error('Failed to fetch weight recommendations (non-critical):', e)
+                }
+              }
             }
 
             // Merge new exercises into parsed workout
@@ -616,6 +633,21 @@ export function useActiveWorkout() {
             })
           } catch (e) {
             console.error('Failed to fetch last workout data:', e)
+          }
+
+          // Weight recommendations - separate try/catch to never affect lastWorkoutData
+          const isSelfWorkout = !reportedBy && !programId
+          if (isSelfWorkout) {
+            try {
+              const weightRecs = await getWeightRecommendations(user.uid)
+              exercises.forEach((ex) => {
+                if (weightRecs[ex.exerciseId]) {
+                  ex.weightRecommendation = true
+                }
+              })
+            } catch (e) {
+              console.error('Failed to fetch weight recommendations (non-critical):', e)
+            }
           }
         }
 
@@ -1125,6 +1157,20 @@ export function useActiveWorkout() {
             })
           }
           toast.success('האימון נשמר בהצלחה!')
+
+          // Calculate weight recommendations for self workouts (fire-and-forget)
+          if (!workout.reportedBy && !programId) {
+            const recExercises = workout.exercises.map((ex) => ({
+              exerciseId: ex.exerciseId,
+              reportType: ex.reportType,
+              sets: ex.reportedSets
+                .filter((s) => s.reps > 0)
+                .map((s) => ({ weight: s.weight, reps: s.reps })),
+            }))
+            calculateAndSaveWeightRecommendations(workout.userId, recExercises).catch((err) =>
+              console.error('Failed to calculate weight recommendations:', err)
+            )
+          }
 
           // Remember if this was a trainer report before clearing
           const wasTrainerReport = workout.reportedBy

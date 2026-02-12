@@ -57,6 +57,14 @@ service cloud.firestore {
       allow read: if isTrainer();
     }
 
+    // ============ EXERCISE RECOMMENDATIONS ============
+    match /exerciseRecommendations/{recId} {
+      // Users can read their own recommendations (recId == uid)
+      // Note: read must use recId, not resource.data, because resource.data is null when doc doesn't exist
+      allow read: if isAuthenticated() && recId == request.auth.uid;
+      allow write: if isAuthenticated() && recId == request.auth.uid;
+    }
+
     // ============ MUSCLES ============
     match /muscles/{muscleId} {
       // Anyone can read muscles
