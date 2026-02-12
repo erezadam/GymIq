@@ -3,7 +3,7 @@
  * Main workout screen showing all exercises grouped by muscle
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Timer } from 'lucide-react'
 
@@ -14,6 +14,7 @@ import { MuscleGroupSection } from './MuscleGroupSection'
 import { ConfirmationModal } from './ConfirmationModal'
 import { WorkoutSummaryModal } from './WorkoutSummaryModal'
 import { RestTimer } from './RestTimer'
+import { WeightIncreasePopup } from './WeightIncreasePopup'
 
 export default function ActiveWorkoutScreen() {
   const navigate = useNavigate()
@@ -25,6 +26,14 @@ export default function ActiveWorkoutScreen() {
 
   // Sort mode state
   const [sortBy, setSortBy] = useState<'muscle' | 'equipment'>('muscle')
+
+  // Weight increase popup state
+  const [weightPopup, setWeightPopup] = useState<{ visible: boolean; oldWeight: number; newWeight: number }>({
+    visible: false,
+    oldWeight: 0,
+    newWeight: 0,
+  })
+  const shownWeightPopupFor = useRef<Set<string>>(new Set())
 
   const {
     workout,
@@ -73,11 +82,29 @@ export default function ActiveWorkoutScreen() {
     setShowRestTimer(false)
   }, [])
 
-  // Wrap finishExercise to close timer
+  // Wrap finishExercise to close timer + check for weight increase
   const handleFinishExercise = useCallback((exerciseId: string) => {
     setShowRestTimer(false)
+
+    // Check for weight increase before finishing (read-only check on existing data)
+    if (workout && !shownWeightPopupFor.current.has(exerciseId)) {
+      const exercise = workout.exercises.find((ex) => ex.id === exerciseId)
+      if (exercise?.lastWorkoutData) {
+        const lastWeight = exercise.lastWorkoutData.weight
+        const maxSetWeight = Math.max(
+          ...exercise.reportedSets
+            .filter((s) => s.reps > 0)
+            .map((s) => s.weight || 0)
+        )
+        if (maxSetWeight > lastWeight && lastWeight > 0) {
+          shownWeightPopupFor.current.add(exerciseId)
+          setWeightPopup({ visible: true, oldWeight: lastWeight, newWeight: maxSetWeight })
+        }
+      }
+    }
+
     finishExercise(exerciseId)
-  }, [finishExercise])
+  }, [finishExercise, workout])
 
   // Wrap toggleExercise to close timer when collapsing
   const handleToggleExercise = useCallback((exerciseId: string) => {
@@ -331,6 +358,14 @@ export default function ActiveWorkoutScreen() {
           totalSets: workout.stats.totalSets,
           formattedTime,
         }}
+      />
+
+      {/* Weight Increase Celebration Popup */}
+      <WeightIncreasePopup
+        isVisible={weightPopup.visible}
+        oldWeight={weightPopup.oldWeight}
+        newWeight={weightPopup.newWeight}
+        onDone={() => setWeightPopup({ visible: false, oldWeight: 0, newWeight: 0 })}
       />
     </div>
   )
