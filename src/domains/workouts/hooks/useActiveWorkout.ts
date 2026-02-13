@@ -19,6 +19,7 @@ import type { SetType } from '../types/workout.types'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '../types/active-workout.types'
 import { useWorkoutBuilderStore } from '../store'
 import { useAuthStore } from '@/domains/authentication/store'
+import { auth } from '@/lib/firebase/config'
 import {
   saveWorkoutHistory,
   getLastWorkoutForExercises,
@@ -1091,8 +1092,7 @@ export function useActiveWorkout() {
           ? 'cancelled'
           : 'partial'
 
-        try {
-          const exercises = workout.exercises.map((ex) => ({
+        const exercises = workout.exercises.map((ex) => ({
             exerciseId: ex.exerciseId,
             exerciseName: ex.exerciseName,
             exerciseNameHe: ex.exerciseNameHe,
@@ -1121,6 +1121,7 @@ export function useActiveWorkout() {
             })),
           }))
 
+        try {
           // If we have a Firebase ID, use completeWorkout; otherwise save new
           if (firebaseWorkoutId) {
             await completeWorkout(firebaseWorkoutId, {
@@ -1196,7 +1197,57 @@ export function useActiveWorkout() {
           }
         } catch (error: any) {
           console.error('Error saving workout:', error)
-          toast.error('שגיאה בשמירת האימון', { duration: 5000 })
+          // If permission-denied or unauthenticated, try refreshing auth token and retry once
+          if (error?.code === 'permission-denied' || error?.code === 'unauthenticated') {
+            try {
+              console.log('🔄 Refreshing auth token and retrying save...')
+              await auth.currentUser?.getIdToken(true)
+              if (firebaseWorkoutId) {
+                await completeWorkout(firebaseWorkoutId, {
+                  status, endTime, duration, exercises,
+                  completedExercises: workout.stats.completedExercises,
+                  totalExercises: workout.stats.totalExercises,
+                  completedSets: workout.stats.completedSets,
+                  totalSets: workout.stats.totalSets,
+                  totalVolume: workout.stats.totalVolume,
+                  calories: pendingCalories,
+                })
+              } else {
+                await saveWorkoutHistory({
+                  userId: workout.userId,
+                  ...(workout.reportedBy && { reportedBy: workout.reportedBy }),
+                  ...(workout.reportedByName && { reportedByName: workout.reportedByName }),
+                  name: `אימון ${new Date().toLocaleDateString('he-IL')}`,
+                  date: workout.startedAt, startTime: workout.startedAt,
+                  endTime, duration, status, exercises,
+                  completedExercises: workout.stats.completedExercises,
+                  totalExercises: workout.stats.totalExercises,
+                  completedSets: workout.stats.completedSets,
+                  totalSets: workout.stats.totalSets,
+                  totalVolume: workout.stats.totalVolume,
+                  personalRecords: 0, calories: pendingCalories,
+                })
+              }
+              // Retry succeeded
+              toast.success('האימון נשמר בהצלחה!')
+              clearStorage()
+              clearWorkout()
+              setWorkout(null)
+              setFirebaseWorkoutId(null)
+              setIsSaving(false)
+              setShowSummaryModal(false)
+              setPendingCalories(undefined)
+              localStorage.removeItem(firebaseIdKey)
+              hasInitialized.current = false
+              setConfirmModal({ type: null })
+              navigate('/workout/history')
+              return
+            } catch (retryError: any) {
+              console.error('Retry after token refresh also failed:', retryError)
+            }
+          }
+          const errMsg = error?.code || error?.message || 'unknown'
+          toast.error(`שגיאה בשמירת האימון: ${errMsg}`, { duration: 8000 })
           // DON'T clear workout on error - let user try again
           // Keep modal open so user can retry
           isFinishingRef.current = false
@@ -1228,8 +1279,7 @@ export function useActiveWorkout() {
 
       console.log('💾 Final save as in_progress before exit')
 
-      try {
-        const exercises = workout.exercises.map((ex) => ({
+      const exercises = workout.exercises.map((ex) => ({
           exerciseId: ex.exerciseId,
           exerciseName: ex.exerciseName,
           exerciseNameHe: ex.exerciseNameHe,
@@ -1257,6 +1307,7 @@ export function useActiveWorkout() {
           })),
         }))
 
+      try {
         // Use existing Firebase document if available
         await autoSaveWorkout(firebaseWorkoutId, {
           userId: workout.userId,
@@ -1279,9 +1330,34 @@ export function useActiveWorkout() {
 
         console.log('✅ Workout saved as in_progress')
         toast.success('האימון נשמר - תוכל להמשיך מאוחר יותר')
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to save workout on exit:', error)
-        toast.error('שגיאה בשמירת האימון')
+        // Retry with token refresh for auth errors
+        if (error?.code === 'permission-denied' || error?.code === 'unauthenticated') {
+          try {
+            await auth.currentUser?.getIdToken(true)
+            await autoSaveWorkout(firebaseWorkoutId, {
+              userId: workout.userId,
+              ...(workout.reportedBy && { reportedBy: workout.reportedBy }),
+              ...(workout.reportedByName && { reportedByName: workout.reportedByName }),
+              name: `אימון ${new Date().toLocaleDateString('he-IL')}`,
+              date: workout.startedAt, startTime: workout.startedAt,
+              endTime, duration, status: 'in_progress', exercises,
+              completedExercises: workout.stats.completedExercises,
+              totalExercises: workout.stats.totalExercises,
+              completedSets: workout.stats.completedSets,
+              totalSets: workout.stats.totalSets,
+              totalVolume: workout.stats.totalVolume,
+              personalRecords: 0,
+            })
+            toast.success('האימון נשמר - תוכל להמשיך מאוחר יותר')
+            return
+          } catch (retryErr) {
+            console.error('Retry after token refresh also failed:', retryErr)
+          }
+        }
+        const errMsg = error?.code || error?.message || 'unknown'
+        toast.error(`שגיאה בשמירת האימון: ${errMsg}`, { duration: 8000 })
       }
     }
 
