@@ -32,6 +32,7 @@ import {
 import { getExerciseById } from '@/lib/firebase/exercises'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { muscleGroupNames } from '@/styles/design-tokens'
+import { validateWorkoutId } from '@/utils/workoutValidation'
 
 // Equipment names in Hebrew
 const equipmentNames: Record<string, string> = {
@@ -213,8 +214,69 @@ export function useActiveWorkout() {
           // Also store in localStorage for recovery
           localStorage.setItem(firebaseIdKey, savedId)
         }
-      } catch (error) {
-        console.error('❌ Auto-save failed:', error)
+      } catch (error: any) {
+        // Defense in depth: if auto-save fails with permission-denied,
+        // the firebaseWorkoutId is stale — clear it and retry as new document
+        if (error?.code === 'permission-denied' && currentFirebaseId) {
+          console.warn('⚠️ Auto-save permission-denied, clearing stale ID and retrying as new document')
+          localStorage.removeItem(firebaseIdKey)
+          setFirebaseWorkoutId(null)
+          try {
+            const retryEndTime = new Date()
+            const retryDuration = Math.floor((retryEndTime.getTime() - workoutToSave.startedAt.getTime()) / 60000)
+            const newId = await autoSaveWorkout(null, {
+              userId: workoutToSave.userId,
+              ...(workoutToSave.reportedBy && { reportedBy: workoutToSave.reportedBy }),
+              ...(workoutToSave.reportedByName && { reportedByName: workoutToSave.reportedByName }),
+              name: `אימון ${workoutToSave.startedAt.toLocaleDateString('he-IL')}`,
+              date: workoutToSave.startedAt,
+              startTime: workoutToSave.startedAt,
+              endTime: retryEndTime,
+              duration: retryDuration,
+              status: 'in_progress',
+              exercises: workoutToSave.exercises.map((ex) => ({
+                exerciseId: ex.exerciseId,
+                exerciseName: ex.exerciseName,
+                exerciseNameHe: ex.exerciseNameHe,
+                imageUrl: ex.imageUrl || '',
+                category: ex.category || '',
+                isCompleted: ex.isCompleted,
+                notes: ex.notes,
+                ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
+                sets: ex.reportedSets.map((set) => ({
+                  type: 'working',
+                  targetReps: 0,
+                  targetWeight: 0,
+                  actualReps: set.reps,
+                  actualWeight: set.weight,
+                  completed: set.reps > 0,
+                  ...(set.time !== undefined && set.time > 0 && { time: set.time }),
+                  ...(set.intensity !== undefined && set.intensity > 0 && { intensity: set.intensity }),
+                  ...(set.speed !== undefined && set.speed > 0 && { speed: set.speed }),
+                  ...(set.distance !== undefined && set.distance > 0 && { distance: set.distance }),
+                  ...(set.incline !== undefined && set.incline > 0 && { incline: set.incline }),
+                  ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
+                  ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
+                })),
+              })),
+              completedExercises: workoutToSave.stats.completedExercises,
+              totalExercises: workoutToSave.stats.totalExercises,
+              completedSets: workoutToSave.stats.completedSets,
+              totalSets: workoutToSave.stats.totalSets,
+              totalVolume: workoutToSave.stats.totalVolume,
+              personalRecords: 0,
+            })
+            if (newId) {
+              setFirebaseWorkoutId(newId)
+              localStorage.setItem(firebaseIdKey, newId)
+              console.log('✅ Auto-save recovery: created new document', newId)
+            }
+          } catch (retryError) {
+            console.error('❌ Auto-save recovery also failed:', retryError)
+          }
+        } else {
+          console.error('❌ Auto-save failed:', error)
+        }
       }
     }, 2000) // 2 second debounce
   }, [])
@@ -356,15 +418,35 @@ export function useActiveWorkout() {
 
           // Check for existing workout ID to prevent duplication
           const existingWorkoutId = localStorage.getItem('continueWorkoutId')
-          if (existingWorkoutId) {
-            console.log('📋 Found existing workout ID:', existingWorkoutId)
+          if (existingWorkoutId && user?.uid) {
+            // Validate the workout ID belongs to current user before using it
+            const validation = await validateWorkoutId(existingWorkoutId, user.uid)
+            if (validation.valid) {
+              console.log('📋 Found existing workout ID (validated):', existingWorkoutId)
+              setFirebaseWorkoutId(existingWorkoutId)
+              localStorage.setItem(firebaseIdKey, existingWorkoutId)
+            } else {
+              console.warn('⚠️ Stale continueWorkoutId detected, ignoring:', existingWorkoutId, 'reason:', validation.reason)
+              // Don't use stale ID — a new document will be created on auto-save
+            }
+          } else if (existingWorkoutId) {
+            // No user yet — use as-is (will be validated later)
+            console.log('📋 Found existing workout ID (no user to validate):', existingWorkoutId)
             setFirebaseWorkoutId(existingWorkoutId)
             localStorage.setItem(firebaseIdKey, existingWorkoutId)
           } else {
             // Check if we already have a Firebase workout ID (from previous initialization)
-            // Don't clear it - it might be needed for continuing the workout
             const existingFirebaseId = localStorage.getItem(firebaseIdKey)
-            if (existingFirebaseId) {
+            if (existingFirebaseId && user?.uid) {
+              const validation = await validateWorkoutId(existingFirebaseId, user.uid)
+              if (validation.valid) {
+                console.log('📋 Keeping existing Firebase workout ID (validated):', existingFirebaseId)
+                setFirebaseWorkoutId(existingFirebaseId)
+              } else {
+                console.warn('⚠️ Stale firebaseIdKey detected, removing:', existingFirebaseId, 'reason:', validation.reason)
+                localStorage.removeItem(firebaseIdKey)
+              }
+            } else if (existingFirebaseId) {
               console.log('📋 Keeping existing Firebase workout ID:', existingFirebaseId)
               setFirebaseWorkoutId(existingFirebaseId)
             }
@@ -387,7 +469,21 @@ export function useActiveWorkout() {
       // Try to restore from localStorage (only if not continuing from history)
       const savedWorkout = localStorage.getItem(storageKey)
       const savedFirebaseId = localStorage.getItem(firebaseIdKey)
-      if (savedFirebaseId) {
+      if (savedFirebaseId && user?.uid) {
+        // Validate saved Firebase ID before restoring it
+        const validation = await validateWorkoutId(savedFirebaseId, user.uid)
+        if (validation.valid) {
+          setFirebaseWorkoutId(savedFirebaseId)
+        } else {
+          console.warn('⚠️ Stale savedFirebaseId removed:', savedFirebaseId, 'reason:', validation.reason)
+          localStorage.removeItem(firebaseIdKey)
+          // Also clear the associated workout data if user mismatch
+          if (validation.reason === 'wrong_user' && savedWorkout) {
+            localStorage.removeItem(storageKey)
+            toast('נתוני אימון ישנים נמחקו — מתחיל מחדש', { icon: '🔄' })
+          }
+        }
+      } else if (savedFirebaseId) {
         setFirebaseWorkoutId(savedFirebaseId)
       }
 
@@ -668,7 +764,16 @@ export function useActiveWorkout() {
 
         // Immediately save to Firebase (no debounce for initial save)
         // Use existing ID if continuing workout, or create new
-        const existingId = localStorage.getItem(firebaseIdKey)
+        // Validate the ID before using it — stale IDs cause permission-denied
+        let existingId = localStorage.getItem(firebaseIdKey)
+        if (existingId && user?.uid) {
+          const validation = await validateWorkoutId(existingId, user.uid)
+          if (!validation.valid) {
+            console.warn('⚠️ Stale existingId at init, creating new document:', existingId, 'reason:', validation.reason)
+            localStorage.removeItem(firebaseIdKey)
+            existingId = null
+          }
+        }
         try {
           const endTime = new Date()
           const savedId = await autoSaveWorkout(existingId, {
