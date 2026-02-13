@@ -452,6 +452,34 @@
 8. [ ] תוצאה צפויה: auto-save עובד, אין מסמך כפול ב-Firestore
 ```
 
+### תרחיש R: סיום אימון בזמן Offline
+```
+1. [ ] התחל אימון, דווח סטים
+2. [ ] Chrome DevTools → Network → Offline
+3. [ ] לחץ "סיים אימון"
+4. [ ] תוצאה צפויה: toast "אין חיבור לאינטרנט. נסה שוב כשתהיה רשת."
+5. [ ] האימון נשאר פעיל (לא נמחק, אפשר להמשיך)
+6. [ ] חזור Online → לחץ שוב "סיים אימון"
+7. [ ] תוצאה צפויה: האימון נשמר בהצלחה
+```
+
+### תרחיש S: localStorage restore עם ID פגום
+```
+1. [ ] פתח Console → Application → Local Storage
+2. [ ] הוסף ידנית: gymiq_firebase_workout_id = "fake-id-12345"
+3. [ ] רענן את הדף
+4. [ ] תוצאה צפויה: ID נמחק, אפליקציה עובדת תקין, אין crash
+```
+
+### תרחיש T: Auto-save בזמן רשת איטית
+```
+1. [ ] התחל אימון
+2. [ ] Chrome DevTools → Network → Slow 3G
+3. [ ] דווח סטים (יגרום ל-auto-save)
+4. [ ] בקונסול: אם timeout → "Auto-save network error, will retry next cycle"
+5. [ ] תוצאה צפויה: אין מסמך כפול, auto-save יצליח בניסיון הבא
+```
+
 ---
 
 ## ⚠️ באגים ידועים / נקודות רגישות

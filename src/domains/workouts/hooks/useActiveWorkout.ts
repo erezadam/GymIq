@@ -32,7 +32,7 @@ import {
 import { getExerciseById } from '@/lib/firebase/exercises'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { muscleGroupNames } from '@/styles/design-tokens'
-import { validateWorkoutId } from '@/utils/workoutValidation'
+import { validateWorkoutId, isNetworkError } from '@/utils/workoutValidation'
 
 // Equipment names in Hebrew
 const equipmentNames: Record<string, string> = {
@@ -215,6 +215,12 @@ export function useActiveWorkout() {
           localStorage.setItem(firebaseIdKey, savedId)
         }
       } catch (error: any) {
+        // Network/offline error → silent fail, will retry on next debounce cycle
+        if (isNetworkError(error?.code)) {
+          console.warn('⚠️ Auto-save network error, will retry next cycle:', error?.code)
+          return
+        }
+
         // Defense in depth: if auto-save fails with permission-denied,
         // the firebaseWorkoutId is stale — clear it and retry as new document
         if (error?.code === 'permission-denied' && currentFirebaseId) {
@@ -1301,6 +1307,16 @@ export function useActiveWorkout() {
           }
         } catch (error: any) {
           console.error('Error saving workout:', error)
+
+          // Network/offline error → don't fallback, let user retry when online
+          if (isNetworkError(error?.code)) {
+            toast.error('אין חיבור לאינטרנט. נסה שוב כשתהיה רשת.', { duration: 5000 })
+            isFinishingRef.current = false
+            setIsSaving(false)
+            setShouldFinish(false)
+            return
+          }
+
           // If permission-denied on completeWorkout (update existing doc),
           // the firebaseWorkoutId likely points to a stale/orphaned document.
           // Fall back to creating a brand new document via saveWorkoutHistory.
@@ -1433,6 +1449,13 @@ export function useActiveWorkout() {
         toast.success('האימון נשמר - תוכל להמשיך מאוחר יותר')
       } catch (error: any) {
         console.error('Failed to save workout on exit:', error)
+
+        // Network/offline error → don't fallback, let user retry when online
+        if (isNetworkError(error?.code)) {
+          toast.error('אין חיבור לאינטרנט. נסה שוב כשתהיה רשת.', { duration: 5000 })
+          return
+        }
+
         // If permission-denied, fall back to creating a new document
         if (error?.code === 'permission-denied' && firebaseWorkoutId) {
           try {
