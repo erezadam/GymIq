@@ -4,6 +4,18 @@
 
 ---
 
+## [1.10.290] - 2026-02-13
+
+### תיקון: טיפול מלא בשגיאות רשת
+
+- **isNetworkError** — helper חדש לזיהוי שגיאות רשת/timeout (`unavailable`, `deadline-exceeded`, `resource-exhausted`, `failed-precondition`)
+- **validateWorkoutId** — הוספת `deadline-exceeded` ו-`resource-exhausted` לשגיאות רשת (optimistic)
+- **finishWorkout** — network error מציג toast "אין חיבור לאינטרנט" ומחזיר שליטה למשתמש (לא fallback)
+- **exitWorkout** — אותו טיפול: network error → toast + return
+- **auto-save** — network error → silent retry בסייקל הבא (לא fallback ל-addDoc)
+
+---
+
 ## [1.10.289] - 2026-02-13
 
 ### תיקון: Offline validation

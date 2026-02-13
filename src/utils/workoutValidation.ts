@@ -74,10 +74,10 @@ export async function validateWorkoutId(
       return { valid: false, reason: 'fetch_error' }
     }
 
-    // Network/offline errors → we can't tell if the ID is valid or not.
+    // Network/offline/timeout errors → we can't tell if the ID is valid or not.
     // Optimistic: keep the ID so offline users don't lose their workout.
-    if (code === 'unavailable' || code === 'failed-precondition') {
-      console.warn(`[WorkoutValidation] Network error for ${workoutId}, keeping ID (optimistic)`)
+    if (isNetworkError(code)) {
+      console.warn(`[WorkoutValidation] Network error for ${workoutId}, keeping ID (optimistic), code=${code}`)
       return { valid: true, reason: 'network_error' }
     }
 
@@ -85,6 +85,20 @@ export async function validateWorkoutId(
     console.warn(`[WorkoutValidation] Unknown error for ${workoutId}:`, code || error?.message)
     return { valid: false, reason: 'fetch_error' }
   }
+}
+
+/**
+ * Returns true if the Firestore error code indicates a network/transient issue
+ * (offline, timeout, rate-limit) rather than a definitive auth/data problem.
+ */
+export function isNetworkError(errorCode: string | undefined): boolean {
+  if (!errorCode) return false
+  return (
+    errorCode === 'unavailable' ||
+    errorCode === 'failed-precondition' ||
+    errorCode === 'deadline-exceeded' ||
+    errorCode === 'resource-exhausted'
+  )
 }
 
 /**
