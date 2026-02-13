@@ -4,6 +4,38 @@
 
 ---
 
+## [1.10.289] - 2026-02-13
+
+### תיקון: Offline validation
+
+- **validateWorkoutId** — הבחנה בין סוגי שגיאות ב-catch:
+  - `permission-denied` → ID פגום, נמחק (כמו קודם)
+  - `unavailable` / `failed-precondition` → שגיאת רשת, **שומר את ה-ID** (optimistic)
+  - שגיאה לא מוכרת → מוחק (defensive)
+- **תרחיש שתוקן:** משתמש אופליין לא מאבד אימון פעיל כי IDs לגיטימיים לא נמחקים בגלל network errors
+
+---
+
+## [1.10.287] - 2026-02-13
+
+### תשתית: localStorage/Firestore validation
+
+- **workoutValidation.ts** — מודול חדש עם `validateWorkoutId` ו-`cleanupWorkoutStorage`
+- **useActiveWorkout.ts** — כל 4 נקודות קריאה מ-localStorage מאומתות מול Firestore לפני שימוש
+- **AuthProvider.tsx** — ניקוי IDs פגומים ברקע בעליית האפליקציה
+- **Auto-save defense** — `permission-denied` ב-auto-save גורם ל-fallback למסמך חדש
+
+---
+
+## [1.10.283] - 2026-02-13
+
+### תיקון: שמירת אימון בנייד
+
+- **completeWorkout** — fallback ליצירת מסמך חדש כש-`updateDoc` מקבל `permission-denied`
+- **שורש הבעיה:** Service Worker הגיש קוד ישן → auto-save יצר מסמך עם userId שגוי → localStorage שמר ID פגום → `updateDoc` נדחה
+
+---
+
 ## [1.12.1] - 2026-02-07
 
 ### בדיקות E2E (Playwright)
