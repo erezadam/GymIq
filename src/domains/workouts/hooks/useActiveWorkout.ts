@@ -19,7 +19,6 @@ import type { SetType } from '../types/workout.types'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '../types/active-workout.types'
 import { useWorkoutBuilderStore } from '../store'
 import { useAuthStore } from '@/domains/authentication/store'
-import { auth } from '@/lib/firebase/config'
 import {
   saveWorkoutHistory,
   getLastWorkoutForExercises,
@@ -1197,39 +1196,30 @@ export function useActiveWorkout() {
           }
         } catch (error: any) {
           console.error('Error saving workout:', error)
-          // If permission-denied or unauthenticated, try refreshing auth token and retry once
-          if (error?.code === 'permission-denied' || error?.code === 'unauthenticated') {
+          // If permission-denied on completeWorkout (update existing doc),
+          // the firebaseWorkoutId likely points to a stale/orphaned document.
+          // Fall back to creating a brand new document via saveWorkoutHistory.
+          if (error?.code === 'permission-denied' && firebaseWorkoutId) {
             try {
-              console.log('🔄 Refreshing auth token and retrying save...')
-              await auth.currentUser?.getIdToken(true)
-              if (firebaseWorkoutId) {
-                await completeWorkout(firebaseWorkoutId, {
-                  status, endTime, duration, exercises,
-                  completedExercises: workout.stats.completedExercises,
-                  totalExercises: workout.stats.totalExercises,
-                  completedSets: workout.stats.completedSets,
-                  totalSets: workout.stats.totalSets,
-                  totalVolume: workout.stats.totalVolume,
-                  calories: pendingCalories,
-                })
-              } else {
-                await saveWorkoutHistory({
-                  userId: workout.userId,
-                  ...(workout.reportedBy && { reportedBy: workout.reportedBy }),
-                  ...(workout.reportedByName && { reportedByName: workout.reportedByName }),
-                  name: `אימון ${new Date().toLocaleDateString('he-IL')}`,
-                  date: workout.startedAt, startTime: workout.startedAt,
-                  endTime, duration, status, exercises,
-                  completedExercises: workout.stats.completedExercises,
-                  totalExercises: workout.stats.totalExercises,
-                  completedSets: workout.stats.completedSets,
-                  totalSets: workout.stats.totalSets,
-                  totalVolume: workout.stats.totalVolume,
-                  personalRecords: 0, calories: pendingCalories,
-                })
-              }
-              // Retry succeeded
+              console.log('🔄 completeWorkout permission-denied, falling back to saveWorkoutHistory (new doc)...')
+              await saveWorkoutHistory({
+                userId: workout.userId,
+                ...(workout.reportedBy && { reportedBy: workout.reportedBy }),
+                ...(workout.reportedByName && { reportedByName: workout.reportedByName }),
+                name: `אימון ${new Date().toLocaleDateString('he-IL')}`,
+                date: workout.startedAt,
+                startTime: workout.startedAt,
+                endTime, duration, status, exercises,
+                completedExercises: workout.stats.completedExercises,
+                totalExercises: workout.stats.totalExercises,
+                completedSets: workout.stats.completedSets,
+                totalSets: workout.stats.totalSets,
+                totalVolume: workout.stats.totalVolume,
+                personalRecords: 0,
+                calories: pendingCalories,
+              })
               toast.success('האימון נשמר בהצלחה!')
+              // Clear stale firebase ID so it won't cause issues again
               clearStorage()
               clearWorkout()
               setWorkout(null)
@@ -1240,10 +1230,16 @@ export function useActiveWorkout() {
               localStorage.removeItem(firebaseIdKey)
               hasInitialized.current = false
               setConfirmModal({ type: null })
-              navigate('/workout/history')
+              const wasTrainerReport = workout.reportedBy
+              const reportTargetUserId2 = targetUserId
+              if (wasTrainerReport && reportTargetUserId2) {
+                navigate(`/trainer/trainee/${reportTargetUserId2}`)
+              } else {
+                navigate('/workout/history')
+              }
               return
-            } catch (retryError: any) {
-              console.error('Retry after token refresh also failed:', retryError)
+            } catch (fallbackError: any) {
+              console.error('Fallback saveWorkoutHistory also failed:', fallbackError)
             }
           }
           const errMsg = error?.code || error?.message || 'unknown'
@@ -1332,11 +1328,11 @@ export function useActiveWorkout() {
         toast.success('האימון נשמר - תוכל להמשיך מאוחר יותר')
       } catch (error: any) {
         console.error('Failed to save workout on exit:', error)
-        // Retry with token refresh for auth errors
-        if (error?.code === 'permission-denied' || error?.code === 'unauthenticated') {
+        // If permission-denied, fall back to creating a new document
+        if (error?.code === 'permission-denied' && firebaseWorkoutId) {
           try {
-            await auth.currentUser?.getIdToken(true)
-            await autoSaveWorkout(firebaseWorkoutId, {
+            console.log('🔄 autoSaveWorkout permission-denied, falling back to new doc...')
+            await autoSaveWorkout(null, {
               userId: workout.userId,
               ...(workout.reportedBy && { reportedBy: workout.reportedBy }),
               ...(workout.reportedByName && { reportedByName: workout.reportedByName }),
@@ -1351,9 +1347,10 @@ export function useActiveWorkout() {
               personalRecords: 0,
             })
             toast.success('האימון נשמר - תוכל להמשיך מאוחר יותר')
+            localStorage.removeItem(firebaseIdKey)
             return
-          } catch (retryErr) {
-            console.error('Retry after token refresh also failed:', retryErr)
+          } catch (fallbackErr) {
+            console.error('Fallback save also failed:', fallbackErr)
           }
         }
         const errMsg = error?.code || error?.message || 'unknown'
