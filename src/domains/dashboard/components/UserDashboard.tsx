@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense, lazy } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/domains/authentication/store'
 import { getUserWorkoutStats } from '@/lib/firebase/workoutHistory'
@@ -6,8 +6,7 @@ import { getExternalComparisonUrl } from '@/lib/firebase/appSettings'
 import { useVersionCheck } from '@/shared/hooks/useVersionCheck'
 import { colors, spacing, borderRadius, typography } from '@/styles/theme'
 import AITrainerModal from '@/domains/workouts/components/ai-trainer/AITrainerModal'
-
-const TrainerDashboardTile = lazy(() => import('@/domains/trainer/components/TrainerDashboardTile').then(m => ({ default: m.TrainerDashboardTile })))
+import toast from 'react-hot-toast'
 
 // Initial stats (will be replaced with Firebase data)
 const defaultStats = {
@@ -79,6 +78,20 @@ const actionCardStyles = {
     subtitleColor: colors.text.secondary,
     iconBg: 'rgba(236, 72, 153, 0.2)',
     boxShadow: '0 4px 20px rgba(236, 72, 153, 0.2)',
+  },
+  trainerCube: {
+    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%)',
+    border: '1px solid rgba(59, 130, 246, 0.2)',
+    titleColor: '#3B82F6',
+    subtitleColor: colors.text.secondary,
+    iconBg: 'rgba(59, 130, 246, 0.2)',
+  },
+  recommendations: {
+    background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%)',
+    border: '1px solid rgba(234, 179, 8, 0.2)',
+    titleColor: '#EAB308',
+    subtitleColor: colors.text.secondary,
+    iconBg: 'rgba(234, 179, 8, 0.2)',
   },
 }
 
@@ -347,66 +360,167 @@ export default function UserDashboard() {
         </Link>
       </div>
 
-      {/* AI Trainer Card */}
+      {/* Bottom Row - 3 cubes: AI Trainer, Trainer Interface, Recommendations */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+        {/* AI Trainer Cube */}
         <button
           onClick={() => setShowAITrainerModal(true)}
           style={{
             ...cardBase,
             ...actionCardStyles.aiTrainer,
-            width: '100%',
             cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: spacing.md,
-            padding: '16px 20px',
           }}
         >
           <div
             style={{
-              width: 40,
-              height: 40,
+              width: 36,
+              height: 36,
               borderRadius: borderRadius.sm,
               background: actionCardStyles.aiTrainer.iconBg,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 22,
+              margin: '0 auto 8px',
+              fontSize: 18,
             }}
           >
             🤖
           </div>
-          <div style={{ textAlign: 'right' }}>
+          <div
+            style={{
+              fontSize: typography.fontSize.base,
+              fontWeight: typography.fontWeight.bold,
+              color: actionCardStyles.aiTrainer.titleColor,
+            }}
+          >
+            מאמן AI
+          </div>
+          <div
+            style={{
+              fontSize: typography.fontSize.xs,
+              color: actionCardStyles.aiTrainer.subtitleColor,
+            }}
+          >
+            אימון מותאם
+          </div>
+        </button>
+
+        {/* Trainer Interface Cube */}
+        {(user?.role === 'trainer' || user?.role === 'admin') ? (
+          <Link to="/trainer" style={{ ...cardBase, ...actionCardStyles.trainerCube, textDecoration: 'none' }}>
             <div
               style={{
-                fontSize: typography.fontSize.lg,
-                fontWeight: typography.fontWeight.bold,
-                color: actionCardStyles.aiTrainer.titleColor,
+                width: 36,
+                height: 36,
+                borderRadius: borderRadius.sm,
+                background: actionCardStyles.trainerCube.iconBg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 8px',
+                fontSize: 18,
               }}
             >
-              מאמן AI
+              👥
+            </div>
+            <div
+              style={{
+                fontSize: typography.fontSize.base,
+                fontWeight: typography.fontWeight.bold,
+                color: actionCardStyles.trainerCube.titleColor,
+              }}
+            >
+              ממשק מאמן
             </div>
             <div
               style={{
                 fontSize: typography.fontSize.xs,
-                color: actionCardStyles.aiTrainer.subtitleColor,
+                color: actionCardStyles.trainerCube.subtitleColor,
               }}
             >
-              תן ל-AI לבנות לך אימון מותאם אישית
+              ניהול מתאמנים
             </div>
+          </Link>
+        ) : (
+          <div style={{ ...cardBase, ...actionCardStyles.trainerCube, opacity: 0.4 }}>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: borderRadius.sm,
+                background: actionCardStyles.trainerCube.iconBg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 8px',
+                fontSize: 18,
+              }}
+            >
+              👥
+            </div>
+            <div
+              style={{
+                fontSize: typography.fontSize.base,
+                fontWeight: typography.fontWeight.bold,
+                color: actionCardStyles.trainerCube.titleColor,
+              }}
+            >
+              ממשק מאמן
+            </div>
+            <div
+              style={{
+                fontSize: typography.fontSize.xs,
+                color: actionCardStyles.trainerCube.subtitleColor,
+              }}
+            >
+              למאמנים
+            </div>
+          </div>
+        )}
+
+        {/* Recommendations Cube */}
+        <button
+          onClick={() => toast('המודול בפיתוח', { icon: '⭐' })}
+          style={{
+            ...cardBase,
+            ...actionCardStyles.recommendations,
+            cursor: 'pointer',
+          }}
+        >
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: borderRadius.sm,
+              background: actionCardStyles.recommendations.iconBg,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 8px',
+              fontSize: 18,
+            }}
+          >
+            ⭐
+          </div>
+          <div
+            style={{
+              fontSize: typography.fontSize.base,
+              fontWeight: typography.fontWeight.bold,
+              color: actionCardStyles.recommendations.titleColor,
+            }}
+          >
+            המלצות
+          </div>
+          <div
+            style={{
+              fontSize: typography.fontSize.xs,
+              color: actionCardStyles.recommendations.subtitleColor,
+            }}
+          >
+            תוכניות מומלצות
           </div>
         </button>
       </div>
-
-      {/* Trainer Dashboard Tile - shown for trainers */}
-      {(user?.role === 'trainer' || user?.role === 'admin') && (
-        <div style={{ marginBottom: 12 }}>
-          <Suspense fallback={null}>
-            <TrainerDashboardTile />
-          </Suspense>
-        </div>
-      )}
 
 
       {/* International Comparison Card - Only shown if URL is configured */}
