@@ -22,7 +22,7 @@ const FIREBASE_ID_KEY = 'gymiq_firebase_workout_id'
 
 export interface ValidationResult {
   valid: boolean
-  reason?: 'not_found' | 'wrong_user' | 'wrong_status' | 'fetch_error'
+  reason?: 'not_found' | 'wrong_user' | 'wrong_status' | 'fetch_error' | 'network_error'
   documentUserId?: string
   documentStatus?: string
 }
@@ -66,8 +66,23 @@ export async function validateWorkoutId(
 
     return { valid: true }
   } catch (error: any) {
-    // permission-denied means we can't even read the doc — definitely invalid
-    console.warn(`[WorkoutValidation] Failed to validate ${workoutId}:`, error?.code || error?.message)
+    const code = error?.code || ''
+
+    // permission-denied → definitely stale/wrong user, safe to delete
+    if (code === 'permission-denied') {
+      console.warn(`[WorkoutValidation] Permission denied for ${workoutId} — marking invalid`)
+      return { valid: false, reason: 'fetch_error' }
+    }
+
+    // Network/offline errors → we can't tell if the ID is valid or not.
+    // Optimistic: keep the ID so offline users don't lose their workout.
+    if (code === 'unavailable' || code === 'failed-precondition') {
+      console.warn(`[WorkoutValidation] Network error for ${workoutId}, keeping ID (optimistic)`)
+      return { valid: true, reason: 'network_error' }
+    }
+
+    // Unknown error → defensive, mark invalid
+    console.warn(`[WorkoutValidation] Unknown error for ${workoutId}:`, code || error?.message)
     return { valid: false, reason: 'fetch_error' }
   }
 }
