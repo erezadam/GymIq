@@ -1433,3 +1433,28 @@ export async function getWeightRecommendations(
 
   return result
 }
+
+// Get full workout history for a user within a date range (for admin reports)
+export async function getUserWorkoutHistoryByDateRange(
+  userId: string,
+  fromDate: Date,
+  toDate: Date
+): Promise<WorkoutHistoryEntry[]> {
+  const historyRef = collection(db, COLLECTION_NAME)
+  const q = query(
+    historyRef,
+    where('userId', '==', userId),
+    where('date', '>=', Timestamp.fromDate(fromDate)),
+    where('date', '<=', Timestamp.fromDate(toDate)),
+    orderBy('date', 'desc')
+  )
+
+  try {
+    const snapshot = await getDocs(q)
+    const docs = snapshot.docs.filter(d => isNotSoftDeleted(d.data()))
+    return docs.map(doc => toWorkoutHistory(doc.id, doc.data()))
+  } catch (error) {
+    console.error('Error fetching workout history by date range:', error)
+    throw error
+  }
+}

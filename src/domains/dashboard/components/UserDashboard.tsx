@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/domains/authentication/store'
 import { getUserWorkoutStats } from '@/lib/firebase/workoutHistory'
 import { getExternalComparisonUrl } from '@/lib/firebase/appSettings'
 import { useVersionCheck } from '@/shared/hooks/useVersionCheck'
 import { colors, spacing, borderRadius, typography } from '@/styles/theme'
 import AITrainerModal from '@/domains/workouts/components/ai-trainer/AITrainerModal'
-import toast from 'react-hot-toast'
 
 // Initial stats (will be replaced with Firebase data)
 const defaultStats = {
@@ -108,6 +107,7 @@ function getWeekRange(): string {
 
 export default function UserDashboard() {
   const { user } = useAuthStore()
+  const navigate = useNavigate()
   const weekRange = getWeekRange()
   const [userStats, setUserStats] = useState(defaultStats)
   const [isLoading, setIsLoading] = useState(true)
@@ -478,9 +478,9 @@ export default function UserDashboard() {
           </div>
         )}
 
-        {/* Recommendations Cube */}
+        {/* Analysis Cube */}
         <button
-          onClick={() => toast('המודול בפיתוח', { icon: '⭐' })}
+          onClick={() => navigate('/analysis')}
           style={{
             ...cardBase,
             ...actionCardStyles.recommendations,
@@ -509,7 +509,7 @@ export default function UserDashboard() {
               color: actionCardStyles.recommendations.titleColor,
             }}
           >
-            המלצות
+            ניתוח AI
           </div>
           <div
             style={{
@@ -517,7 +517,7 @@ export default function UserDashboard() {
               color: actionCardStyles.recommendations.subtitleColor,
             }}
           >
-            תוכניות מומלצות
+            תובנות אישיות
           </div>
         </button>
       </div>

@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react'
-import { Users, Dumbbell, User, Trash2, Crown, RefreshCw, X, Mail, Lock, UserPlus } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Users, Dumbbell, User, Trash2, Crown, RefreshCw, X, Mail, Lock, UserPlus, FileDown, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getAllUsers, updateUserRole, deleteUserFromFirestore, getUserStats } from '@/lib/firebase'
 import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase/config'
 import type { AppUser } from '@/lib/firebase/auth'
+import { getUserWorkoutHistoryByDateRange } from '@/lib/firebase/workoutHistory'
 
 export default function UsersList() {
   const [users, setUsers] = useState<AppUser[]>([])
@@ -23,6 +24,62 @@ export default function UsersList() {
     role: 'user' as 'user' | 'trainer' | 'admin',
   })
   const [creating, setCreating] = useState(false)
+
+  // Sorting
+  type SortKey = 'name' | 'email' | 'role' | 'createdAt'
+  const [sortKey, setSortKey] = useState<SortKey>('role')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+
+  const ROLE_ORDER: Record<string, number> = { admin: 0, trainer: 1, user: 2 }
+
+  const sortedUsers = useMemo(() => {
+    return [...users].sort((a, b) => {
+      let cmp = 0
+      switch (sortKey) {
+        case 'role':
+          cmp = (ROLE_ORDER[a.role] ?? 3) - (ROLE_ORDER[b.role] ?? 3)
+          break
+        case 'name': {
+          const nameA = (a.displayName || `${a.firstName} ${a.lastName}`).trim().toLowerCase()
+          const nameB = (b.displayName || `${b.firstName} ${b.lastName}`).trim().toLowerCase()
+          cmp = nameA.localeCompare(nameB, 'he')
+          break
+        }
+        case 'email':
+          cmp = (a.email || '').localeCompare(b.email || '')
+          break
+        case 'createdAt': {
+          const dateA = new Date(a.createdAt).getTime()
+          const dateB = new Date(b.createdAt).getTime()
+          cmp = dateA - dateB
+          break
+        }
+      }
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+  }, [users, sortKey, sortDir])
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
+
+  const SortIcon = ({ column }: { column: SortKey }) => {
+    if (sortKey !== column) return <ArrowUpDown className="w-3 h-3 opacity-40" />
+    return sortDir === 'asc'
+      ? <ArrowUp className="w-3 h-3 text-primary-400" />
+      : <ArrowDown className="w-3 h-3 text-primary-400" />
+  }
+
+  // Report modal
+  const [reportUser, setReportUser] = useState<AppUser | null>(null)
+  const [reportFrom, setReportFrom] = useState('')
+  const [reportTo, setReportTo] = useState('')
+  const [reportLoading, setReportLoading] = useState(false)
 
   const loadData = async () => {
     setLoading(true)
@@ -131,6 +188,100 @@ export default function UsersList() {
       }
     } finally {
       setCreating(false)
+    }
+  }
+
+  const openReportModal = (user: AppUser) => {
+    const today = new Date()
+    const thirtyDaysAgo = new Date(today)
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    setReportFrom(thirtyDaysAgo.toISOString().split('T')[0])
+    setReportTo(today.toISOString().split('T')[0])
+    setReportUser(user)
+  }
+
+  const handleExportReport = async () => {
+    if (!reportUser || !reportFrom || !reportTo) return
+
+    setReportLoading(true)
+    try {
+      const fromDate = new Date(reportFrom)
+      fromDate.setHours(0, 0, 0, 0)
+      const toDate = new Date(reportTo)
+      toDate.setHours(23, 59, 59, 999)
+
+      const workouts = await getUserWorkoutHistoryByDateRange(reportUser.uid, fromDate, toDate)
+
+      const report = {
+        user: {
+          name: reportUser.displayName || `${reportUser.firstName} ${reportUser.lastName}`.trim(),
+          email: reportUser.email,
+          uid: reportUser.uid,
+        },
+        dateRange: { from: reportFrom, to: reportTo },
+        totalWorkouts: workouts.length,
+        workouts: workouts.map((w) => ({
+          id: w.id,
+          date: w.date.toISOString().split('T')[0],
+          name: w.name,
+          status: w.status,
+          duration_minutes: w.duration,
+          totalVolume_kg: w.totalVolume,
+          completedExercises: w.completedExercises,
+          totalExercises: w.totalExercises,
+          completedSets: w.completedSets,
+          totalSets: w.totalSets,
+          personalRecords: w.personalRecords,
+          calories: w.calories ?? null,
+          notes: w.notes ?? null,
+          source: w.source ?? 'manual',
+          reportedBy: w.reportedByName ?? null,
+          exercises: w.exercises.map((ex) => ({
+            name: ex.exerciseName,
+            nameHe: ex.exerciseNameHe,
+            category: ex.category ?? null,
+            completed: ex.isCompleted,
+            notes: ex.notes ?? null,
+            sets: ex.sets.map((s) => {
+              const set: Record<string, unknown> = {
+                type: s.type,
+                targetWeight: s.targetWeight,
+                targetReps: s.targetReps,
+                actualWeight: s.actualWeight ?? null,
+                actualReps: s.actualReps ?? null,
+                completed: s.completed,
+              }
+              if (s.time) set.time_seconds = s.time
+              if (s.intensity) set.intensity = s.intensity
+              if (s.speed) set.speed = s.speed
+              if (s.distance) set.distance_meters = s.distance
+              if (s.incline) set.incline = s.incline
+              if (s.assistanceWeight) set.assistanceWeight = s.assistanceWeight
+              if (s.assistanceBand) set.assistanceBand = s.assistanceBand
+              return set
+            }),
+          })),
+        })),
+      }
+
+      const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      const userName = (reportUser.displayName || reportUser.email || 'user').replace(/\s+/g, '_')
+      a.href = url
+      a.download = `report_${userName}_${reportFrom}_${reportTo}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      toast.success(`הדוח הורד בהצלחה (${workouts.length} אימונים)`)
+      setReportUser(null)
+    } catch (error) {
+      console.error('Error generating report:', error)
+      toast.error('שגיאה בהפקת הדוח')
+    } finally {
+      setReportLoading(false)
     }
   }
 
@@ -253,15 +404,35 @@ export default function UsersList() {
             <table className="table-admin">
               <thead>
                 <tr>
-                  <th>משתמש</th>
-                  <th>אימייל</th>
-                  <th>תפקיד</th>
-                  <th>הצטרף</th>
+                  <th className="cursor-pointer select-none" onClick={() => handleSort('name')}>
+                    <div className="flex items-center gap-1">
+                      משתמש
+                      <SortIcon column="name" />
+                    </div>
+                  </th>
+                  <th className="cursor-pointer select-none" onClick={() => handleSort('email')}>
+                    <div className="flex items-center gap-1">
+                      אימייל
+                      <SortIcon column="email" />
+                    </div>
+                  </th>
+                  <th className="cursor-pointer select-none" onClick={() => handleSort('role')}>
+                    <div className="flex items-center gap-1">
+                      תפקיד
+                      <SortIcon column="role" />
+                    </div>
+                  </th>
+                  <th className="cursor-pointer select-none" onClick={() => handleSort('createdAt')}>
+                    <div className="flex items-center gap-1">
+                      הצטרף
+                      <SortIcon column="createdAt" />
+                    </div>
+                  </th>
                   <th>פעולות</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => (
+                {sortedUsers.map((user) => (
                   <tr key={user.uid}>
                     <td>
                       <div className="flex items-center gap-3">
@@ -299,18 +470,27 @@ export default function UsersList() {
                       {formatDate(user.createdAt)}
                     </td>
                     <td>
-                      <button
-                        onClick={() => handleDelete(user)}
-                        disabled={actionLoading === user.uid}
-                        className="p-2 text-text-muted hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors disabled:opacity-50"
-                        title="מחק משתמש"
-                      >
-                        {actionLoading === user.uid ? (
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openReportModal(user)}
+                          className="p-2 text-text-muted hover:text-primary-400 hover:bg-primary-400/10 rounded-lg transition-colors"
+                          title="הפקת דוח"
+                        >
+                          <FileDown className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(user)}
+                          disabled={actionLoading === user.uid}
+                          className="p-2 text-text-muted hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors disabled:opacity-50"
+                          title="מחק משתמש"
+                        >
+                          {actionLoading === user.uid ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -443,6 +623,77 @@ export default function UsersList() {
                 )}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Report Modal */}
+      {reportUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+          <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-md shadow-xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-dark-border">
+              <h2 className="text-xl font-bold text-text-primary flex items-center gap-2">
+                <FileDown className="w-5 h-5 text-primary-400" />
+                <span className="truncate">
+                  הפקת דוח — {reportUser.displayName || reportUser.email}
+                </span>
+              </h2>
+              <button
+                onClick={() => setReportUser(null)}
+                className="p-2 text-text-muted hover:text-text-primary hover:bg-dark-card rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
+                    מתאריך
+                  </label>
+                  <input
+                    type="date"
+                    value={reportFrom}
+                    onChange={(e) => setReportFrom(e.target.value)}
+                    className="input-neon w-full !py-3"
+                    dir="ltr"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
+                    עד תאריך
+                  </label>
+                  <input
+                    type="date"
+                    value={reportTo}
+                    onChange={(e) => setReportTo(e.target.value)}
+                    className="input-neon w-full !py-3"
+                    dir="ltr"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={handleExportReport}
+                disabled={reportLoading || !reportFrom || !reportTo}
+                className="btn-neon w-full !py-3 flex items-center justify-center gap-2"
+              >
+                {reportLoading ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    מפיק דוח...
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="w-5 h-5" />
+                    הפק דוח JSON
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

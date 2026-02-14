@@ -4,6 +4,33 @@
 
 ---
 
+## [1.11.0] - 2026-02-14
+
+### פיצ'ר: ניתוח אימונים AI
+
+- **generateTrainingAnalysis** — Cloud Function חדשה שמנתחת היסטוריית אימונים באמצעות GPT-4o
+  - ניתוח חוזקות, חולשות, והמלצות מותאמות אישית
+  - Rate limiting: פעם ביום לכל משתמש
+  - תגובה בפורמט JSON מובנה: title, overview, strengths, weaknesses, recommendations, summary
+- **TrainingAnalysis.tsx** — מסך תוצאות עם 3 מצבים: טעינה, שגיאה, תוצאות
+- **analysisService.ts** — שירות קריאה ל-Cloud Function עם טיפול שגיאות מותאם
+- **UserDashboard.tsx** — קוביית "ניתוח AI" מנווטת למסך הניתוח (במקום "המלצות" שהיה בפיתוח)
+- **Route /analysis** — נתיב חדש ב-App.tsx עם lazy loading
+
+### פיצ'ר: ייצוא דוח אימונים למנהלים
+
+- **UsersList.tsx** — כפתור ייצוא דוח JSON ליד כל משתמש בטבלת הניהול
+  - בחירת טווח תאריכים (ברירת מחדל: 30 יום אחרונים)
+  - ייצוא כל נתוני האימון: תרגילים, סטים, הערות, שיאים אישיים
+- **workoutHistory.ts** — פונקציה חדשה `getUserWorkoutHistoryByDateRange` לשליפת אימונים בטווח תאריכים
+
+### תיקונים
+
+- **ExerciseList.tsx** — ייצוא תרגילים מלא עם כל השדות + תוויות עברית נכונות
+- **MuscleManager.tsx** — ביטול cache של React Query אחרי שמירת שרירים
+
+---
+
 ## [1.10.290] - 2026-02-13
 
 ### תיקון: טיפול מלא בשגיאות רשת
