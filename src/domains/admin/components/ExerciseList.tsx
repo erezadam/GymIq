@@ -345,16 +345,44 @@ export default function ExerciseList() {
     }
   }
 
+  // Format Firestore timestamp to ISO string
+  const formatTimestamp = (ts: any): string => {
+    if (!ts) return ''
+    if (ts.toDate) return ts.toDate().toISOString()
+    if (ts instanceof Date) return ts.toISOString()
+    if (typeof ts === 'string') return ts
+    return ''
+  }
+
   // Handle export
   const handleExport = async () => {
     try {
       const data = await exerciseService.exportExercises()
       const enrichedData = data.map(ex => ({
-        ...ex,
-        primaryMuscleHe: dynamicCategoryNames[ex.primaryMuscle] || ex.primaryMuscle,
+        id: ex.id,
+        name: ex.name,
+        nameHe: ex.nameHe,
+        category: ex.category,
         categoryHe: dynamicCategoryNames[ex.category] || ex.category,
+        primaryMuscle: ex.primaryMuscle,
+        primaryMuscleHe: dynamicCategoryNames[ex.primaryMuscle] || ex.primaryMuscle,
+        secondaryMuscles: ex.secondaryMuscles || [],
+        equipment: ex.equipment,
+        difficulty: ex.difficulty,
+        reportType: ex.reportType || 'weight_reps',
+        assistanceTypes: ex.assistanceTypes || [],
+        availableBands: ex.availableBands || [],
+        instructions: ex.instructions || [],
+        instructionsHe: ex.instructionsHe || [],
+        targetMuscles: ex.targetMuscles || [],
+        imageUrl: ex.imageUrl || '',
+        tips: ex.tips || [],
+        tipsHe: ex.tipsHe || [],
+        createdAt: formatTimestamp((ex as any).createdAt),
+        updatedAt: formatTimestamp((ex as any).updatedAt),
+        lastEditedAt: formatTimestamp((ex as any).lastEditedAt),
       }))
-      const blob = new Blob([JSON.stringify({ exercises: enrichedData }, null, 2)], {
+      const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), totalExercises: enrichedData.length, exercises: enrichedData }, null, 2)], {
         type: 'application/json',
       })
       const url = URL.createObjectURL(blob)
@@ -373,13 +401,24 @@ export default function ExerciseList() {
   const handleExportCSV = async () => {
     try {
       const data = await exerciseService.exportExercises()
-      const headers = ['מזהה', 'שם באנגלית', 'שם בעברית', 'קטגוריה', 'קטגוריה בעברית', 'שריר ראשי', 'שריר ראשי בעברית', 'ציוד', 'רמת קושי']
+      const headers = [
+        'מזהה', 'שם באנגלית', 'שם בעברית',
+        'קטגוריה', 'קטגוריה בעברית',
+        'תת שריר', 'תת שריר בעברית',
+        'שרירים משניים', 'ציוד', 'רמת קושי', 'סוג דיווח',
+        'סוגי עזרה', 'גומיות זמינות',
+        'הוראות אנגלית', 'הוראות עברית',
+        'שרירי מטרה', 'כתובת תמונה',
+        'טיפים אנגלית', 'טיפים עברית',
+        'נוצר', 'עודכן', 'נערך לאחרונה',
+      ]
       const escapeCSV = (val: string) => {
         if (val.includes(',') || val.includes('"') || val.includes('\n')) {
           return `"${val.replace(/"/g, '""')}"`
         }
         return val
       }
+      const joinArr = (arr: any[] | undefined) => (arr || []).join('|')
       const rows = data.map(ex => [
         ex.id,
         ex.name,
@@ -388,16 +427,30 @@ export default function ExerciseList() {
         dynamicCategoryNames[ex.category] || ex.category,
         ex.primaryMuscle,
         dynamicCategoryNames[ex.primaryMuscle] || ex.primaryMuscle,
+        joinArr(ex.secondaryMuscles),
         ex.equipment,
         ex.difficulty,
+        ex.reportType || 'weight_reps',
+        joinArr(ex.assistanceTypes),
+        joinArr(ex.availableBands),
+        joinArr(ex.instructions),
+        joinArr(ex.instructionsHe),
+        joinArr(ex.targetMuscles),
+        ex.imageUrl || '',
+        joinArr(ex.tips),
+        joinArr(ex.tipsHe),
+        formatTimestamp((ex as any).createdAt),
+        formatTimestamp((ex as any).updatedAt),
+        formatTimestamp((ex as any).lastEditedAt),
       ].map(v => escapeCSV(String(v || ''))))
 
+      const dateStr = new Date().toISOString().slice(0, 10)
       const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'exercises_export.csv'
+      a.download = `exercises_export_${dateStr}.csv`
       a.click()
       URL.revokeObjectURL(url)
       toast.success('ייצוא CSV הושלם בהצלחה')
