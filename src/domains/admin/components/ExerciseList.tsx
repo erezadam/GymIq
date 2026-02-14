@@ -9,6 +9,7 @@ import {
   Trash2,
   Upload,
   Download,
+  FileSpreadsheet,
   ChevronDown,
   X,
   Dumbbell,
@@ -348,7 +349,12 @@ export default function ExerciseList() {
   const handleExport = async () => {
     try {
       const data = await exerciseService.exportExercises()
-      const blob = new Blob([JSON.stringify({ exercises: data }, null, 2)], {
+      const enrichedData = data.map(ex => ({
+        ...ex,
+        primaryMuscleHe: dynamicCategoryNames[ex.primaryMuscle] || ex.primaryMuscle,
+        categoryHe: dynamicCategoryNames[ex.category] || ex.category,
+      }))
+      const blob = new Blob([JSON.stringify({ exercises: enrichedData }, null, 2)], {
         type: 'application/json',
       })
       const url = URL.createObjectURL(blob)
@@ -360,6 +366,43 @@ export default function ExerciseList() {
       toast.success('הייצוא הושלם בהצלחה')
     } catch {
       toast.error('שגיאה בייצוא')
+    }
+  }
+
+  // Handle CSV export
+  const handleExportCSV = async () => {
+    try {
+      const data = await exerciseService.exportExercises()
+      const headers = ['מזהה', 'שם באנגלית', 'שם בעברית', 'קטגוריה', 'קטגוריה בעברית', 'שריר ראשי', 'שריר ראשי בעברית', 'ציוד', 'רמת קושי']
+      const escapeCSV = (val: string) => {
+        if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+          return `"${val.replace(/"/g, '""')}"`
+        }
+        return val
+      }
+      const rows = data.map(ex => [
+        ex.id,
+        ex.name,
+        ex.nameHe,
+        ex.category,
+        dynamicCategoryNames[ex.category] || ex.category,
+        ex.primaryMuscle,
+        dynamicCategoryNames[ex.primaryMuscle] || ex.primaryMuscle,
+        ex.equipment,
+        ex.difficulty,
+      ].map(v => escapeCSV(String(v || ''))))
+
+      const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'exercises_export.csv'
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('ייצוא CSV הושלם בהצלחה')
+    } catch {
+      toast.error('שגיאה בייצוא CSV')
     }
   }
 
@@ -559,6 +602,13 @@ export default function ExerciseList() {
           >
             <Download className="w-4 h-4" />
             <span className="hidden sm:inline">ייצוא</span>
+          </button>
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 px-4 py-2 bg-dark-card hover:bg-dark-border rounded-xl text-text-secondary hover:text-text-primary transition-colors"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="hidden sm:inline">CSV</span>
           </button>
           <Link
             to="/admin/exercises/new"
