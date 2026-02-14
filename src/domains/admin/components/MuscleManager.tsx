@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Plus, Trash2, Edit2, Save, X, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
 import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
 import { getMuscles, saveMuscle, addPrimaryMuscle, deletePrimaryMuscle, initializeMuscles, syncMissingMuscles, forceUpdateAllMuscles } from '@/lib/firebase/muscles'
 import { MuscleIcon } from '@/shared/components/MuscleIcon'
 
 export default function MuscleManager() {
+  const queryClient = useQueryClient()
   const [muscles, setMuscles] = useState<PrimaryMuscle[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedMuscle, setExpandedMuscle] = useState<string | null>(null)
@@ -28,6 +30,7 @@ export default function MuscleManager() {
     try {
       const data = await getMuscles()
       setMuscles(data)
+      queryClient.invalidateQueries({ queryKey: ['muscles'] })
     } catch (error) {
       console.error('Error loading muscles:', error)
     } finally {
