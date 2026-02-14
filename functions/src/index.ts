@@ -10,3 +10,6 @@ admin.initializeApp()
 
 // Export AI Trainer function
 export { generateAIWorkout } from './ai-trainer/generateWorkout'
+
+// Export AI Training Analysis function
+export { generateTrainingAnalysis } from './ai-analysis/generateAnalysis'
