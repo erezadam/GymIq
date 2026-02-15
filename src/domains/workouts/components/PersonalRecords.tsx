@@ -386,6 +386,14 @@ export default function PersonalRecords({ userId: propUserId }: PersonalRecordsP
                     />
                   </div>
 
+                  {/* Max Volume */}
+                  {record.maxVolume && record.maxVolume > 0 && (
+                    <div className="mt-1.5 text-xs text-text-muted">
+                      שיא נפח: {record.maxVolume.toLocaleString()}kg
+                      {record.maxVolumeDate && ` (${formatDate(record.maxVolumeDate)})`}
+                    </div>
+                  )}
+
                   {/* Date and Comparison */}
                   <div className="mt-3 pt-3 border-t border-border-default flex items-center justify-between text-xs">
                     <span className="text-text-muted">{formatDate(record.bestDate)}</span>

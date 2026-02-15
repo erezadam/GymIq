@@ -70,6 +70,10 @@ export interface ActiveWorkoutExercise {
 
   // Weight increase recommendation (plateau detection across 3 self workouts)
   weightRecommendation?: boolean
+
+  // Exercise volume tracking
+  previousExerciseVolume?: number | null  // null=no previous, 0=previous had no weight, >0=volume
+  volumeRecordCelebratedThisSession?: boolean
 }
 
 // Exercises grouped by muscle

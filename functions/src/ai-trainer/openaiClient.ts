@@ -275,12 +275,13 @@ function buildExerciseHistorySection(exerciseHistory?: ExercisePerformanceData[]
     return `\n**היסטוריית ביצוע לתרגילים:** אין נתונים - זה משתמש חדש, המלץ משקלות שמרניים\n`
   }
 
-  // Format as compact JSON: exerciseId → { weight, reps }
+  // Format as compact JSON: exerciseId → { weight, reps, volume }
   const historyMap = exerciseHistory.map(eh => ({
     id: eh.exerciseId,
     lastWeight: eh.lastWeight,
     lastReps: eh.lastReps,
     date: eh.lastDate,
+    ...(eh.lastVolume && eh.lastVolume > 0 && { lastVolume: eh.lastVolume }),
   }))
 
   return `

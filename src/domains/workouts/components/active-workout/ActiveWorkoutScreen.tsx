@@ -15,6 +15,7 @@ import { ConfirmationModal } from './ConfirmationModal'
 import { WorkoutSummaryModal } from './WorkoutSummaryModal'
 import { RestTimer } from './RestTimer'
 import { WeightIncreasePopup } from './WeightIncreasePopup'
+import { calculateExerciseVolume } from '@/lib/firebase/workoutHistory'
 
 export default function ActiveWorkoutScreen() {
   const navigate = useNavigate()
@@ -27,13 +28,21 @@ export default function ActiveWorkoutScreen() {
   // Sort mode state
   const [sortBy, setSortBy] = useState<'muscle' | 'equipment'>('muscle')
 
-  // Weight increase popup state
-  const [weightPopup, setWeightPopup] = useState<{ visible: boolean; oldWeight: number; newWeight: number }>({
+  // Celebration popup state (weight increase + volume record)
+  const [weightPopup, setWeightPopup] = useState<{
+    visible: boolean
+    oldWeight: number
+    newWeight: number
+    volumeRecord?: boolean
+    oldVolume?: number
+    newVolume?: number
+  }>({
     visible: false,
     oldWeight: 0,
     newWeight: 0,
   })
   const shownWeightPopupFor = useRef<Set<string>>(new Set())
+  const shownVolumePopupFor = useRef<Set<string>>(new Set())
 
   const {
     workout,
@@ -67,34 +76,75 @@ export default function ActiveWorkoutScreen() {
     closeSummaryModal,
   } = useActiveWorkout()
 
-  // Check if exercise weight increased and show celebration popup (read-only)
-  const checkWeightIncrease = useCallback((exerciseId: string) => {
-    if (!workout || shownWeightPopupFor.current.has(exerciseId)) return
+  // Check if exercise weight increased or volume record broken, show celebration popup
+  const checkCelebrations = useCallback((exerciseId: string) => {
+    if (!workout) return
     const exercise = workout.exercises.find((ex) => ex.id === exerciseId)
-    if (!exercise?.lastWorkoutData) return
-    const lastWeight = exercise.lastWorkoutData.weight
-    if (lastWeight <= 0) return
-    const maxSetWeight = Math.max(
-      ...exercise.reportedSets
-        .filter((s) => s.reps > 0)
-        .map((s) => s.weight || 0)
-    )
-    if (maxSetWeight > lastWeight) {
-      shownWeightPopupFor.current.add(exerciseId)
-      setWeightPopup({ visible: true, oldWeight: lastWeight, newWeight: maxSetWeight })
+    if (!exercise) return
+
+    // Check weight increase
+    let weightIncreased = false
+    let popupOldWeight = 0
+    let popupNewWeight = 0
+    if (!shownWeightPopupFor.current.has(exerciseId) && exercise.lastWorkoutData) {
+      const lastWeight = exercise.lastWorkoutData.weight
+      if (lastWeight > 0) {
+        const maxSetWeight = Math.max(
+          ...exercise.reportedSets
+            .filter((s) => s.reps > 0)
+            .map((s) => s.weight || 0)
+        )
+        if (maxSetWeight > lastWeight) {
+          weightIncreased = true
+          popupOldWeight = lastWeight
+          popupNewWeight = maxSetWeight
+          shownWeightPopupFor.current.add(exerciseId)
+        }
+      }
+    }
+
+    // Check volume record
+    let volumeBroken = false
+    let popupOldVolume = 0
+    let popupNewVolume = 0
+    if (
+      !shownVolumePopupFor.current.has(exerciseId) &&
+      exercise.previousExerciseVolume !== null &&
+      exercise.previousExerciseVolume !== undefined &&
+      exercise.previousExerciseVolume > 0
+    ) {
+      const currentVolume = calculateExerciseVolume(exercise.reportedSets, exercise.reportType)
+      if (currentVolume > exercise.previousExerciseVolume) {
+        volumeBroken = true
+        popupOldVolume = exercise.previousExerciseVolume
+        popupNewVolume = currentVolume
+        shownVolumePopupFor.current.add(exerciseId)
+      }
+    }
+
+    // Show popup if either triggered
+    if (weightIncreased || volumeBroken) {
+      setWeightPopup({
+        visible: true,
+        oldWeight: popupOldWeight,
+        newWeight: popupNewWeight,
+        volumeRecord: volumeBroken,
+        oldVolume: popupOldVolume,
+        newVolume: popupNewVolume,
+      })
     }
   }, [workout])
 
   // Wrap addSet to show rest timer + check weight increase
   const handleAddSet = useCallback((exerciseId: string) => {
-    checkWeightIncrease(exerciseId)
+    checkCelebrations(exerciseId)
     addSet(exerciseId)
     // Show rest timer only if enabled
     if (restTimerEnabled) {
       setRestTimerResetKey((prev) => prev + 1)
       setShowRestTimer(true)
     }
-  }, [addSet, restTimerEnabled, checkWeightIncrease])
+  }, [addSet, restTimerEnabled, checkCelebrations])
 
   // Close rest timer
   const handleCloseRestTimer = useCallback(() => {
@@ -104,9 +154,9 @@ export default function ActiveWorkoutScreen() {
   // Wrap finishExercise to close timer + check for weight increase
   const handleFinishExercise = useCallback((exerciseId: string) => {
     setShowRestTimer(false)
-    checkWeightIncrease(exerciseId)
+    checkCelebrations(exerciseId)
     finishExercise(exerciseId)
-  }, [finishExercise, checkWeightIncrease])
+  }, [finishExercise, checkCelebrations])
 
   // Wrap toggleExercise to close timer when collapsing
   const handleToggleExercise = useCallback((exerciseId: string) => {
@@ -362,11 +412,14 @@ export default function ActiveWorkoutScreen() {
         }}
       />
 
-      {/* Weight Increase Celebration Popup */}
+      {/* Weight Increase / Volume Record Celebration Popup */}
       <WeightIncreasePopup
         isVisible={weightPopup.visible}
         oldWeight={weightPopup.oldWeight}
         newWeight={weightPopup.newWeight}
+        volumeRecord={weightPopup.volumeRecord}
+        oldVolume={weightPopup.oldVolume}
+        newVolume={weightPopup.newVolume}
         onDone={() => setWeightPopup({ visible: false, oldWeight: 0, newWeight: 0 })}
       />
     </div>

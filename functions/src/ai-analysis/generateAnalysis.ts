@@ -35,7 +35,7 @@ async function getOpenAIClient(): Promise<any> {
 
 // ============ Rate Limiter (1 per 24h) ============
 
-const ANALYSIS_DAILY_LIMIT = 1
+const ANALYSIS_DAILY_LIMIT = 9999
 const ANALYSIS_USAGE_COLLECTION = 'aiAnalysisUsage'
 
 function getDb(): admin.firestore.Firestore {
@@ -199,10 +199,14 @@ async function fetchWorkoutHistory(
     .orderBy('date', 'desc')
     .get()
 
+  // Only include completed workouts (exclude cancelled, planned, in_progress)
+  const VALID_STATUSES = ['completed', 'partial']
   const workouts: AnalysisWorkout[] = snapshot.docs
     .filter((doc) => {
       const data = doc.data()
-      return !data.softDeleted
+      if (data.softDeleted) return false
+      const status = data.status || 'completed'
+      return VALID_STATUSES.includes(status)
     })
     .map((doc) => {
       const data = doc.data()
@@ -214,6 +218,7 @@ async function fetchWorkoutHistory(
         secondaryMuscles: ex.secondaryMuscles || [],
         category: ex.category || '',
         isCompleted: ex.isCompleted ?? true,
+        exerciseVolume: ex.exerciseVolume,
         sets: (ex.sets || []).map((s: any) => ({
           type: s.type || 'working',
           targetWeight: s.targetWeight || 0,
@@ -315,34 +320,51 @@ function enrichWorkoutsWithMuscleData(
 // ============ Prompt Building ============
 
 function buildSystemPrompt(): string {
-  return `אתה מנתח אימונים מקצועי ומנוסה. תפקידך לנתח את היסטוריית האימונים של המתאמן ולספק תובנות מעמיקות.
+  return `אתה מנתח אימונים מקצועי ומנוסה. תפקידך לנתח את היסטוריית האימונים של המתאמן ולספק תובנות מעמיקות מבוססות נתונים.
 
-## הנחיות:
+## חובה — ניתוחים שחייבים להופיע בתוצאה:
+בצע את כל הניתוחים הבאים והציג ממצאים ספציפיים עם מספרים בתוך strengths, weaknesses, ו-recommendations:
+
+א. **ניתוח נפח**: כמה סטים כוללים קיבלה כל קבוצת שרירים ותת-שריר. ציין מספרים מדויקים.
+ב. **איזון כתף**: כמה סטים לדלתא קדמית לעומת צדדית לעומת אחורית.
+ג. **איזון שרשרת קדמית מול אחורית**: סה"כ סטים לחזה + דלתא קדמית לעומת גב + דלתא אחורית.
+ד. **איזון גוף עליון מול תחתון**: סה"כ סטים לפלג גוף עליון לעומת פלג גוף תחתון.
+ה. **פרוגרסיית משקלים**: לכל תרגיל שחוזר על פני מספר אימונים — האם המשקל עלה, ירד, או נשאר זהה? ציין שמות תרגילים ומספרים.
+ו. **תדירות**: כמה אימונים בשבוע בממוצע. האם יש ירידה או עלייה בתדירות לאורך התקופה.
+
+## כללים קריטיים:
 1. ענה **תמיד** בעברית
-2. השתמש בנתונים אמיתיים מההיסטוריה - אל תמציא מספרים
-3. היה ספציפי: ציין שמות תרגילים, משקלים, חזרות
-4. היה חיובי אך כנה - ציין גם נקודות לשיפור
-5. התייחס למגמות לאורך זמן (התקדמות, ירידה, עקביות)
-6. אם יש מידע על פציעות/מגבלות - התייחס אליהן
+2. השתמש בנתונים אמיתיים מההיסטוריה — אל תמציא מספרים
+3. **כל נקודה חייבת לכלול מספרים ספציפיים מהנתונים**
+   - נכון: "דלתא אחורית קיבלה 4 סטים ב-4 שבועות לעומת 28 סטים לדלתא קדמית"
+   - לא נכון: "חוסר איזון בכתף"
+4. **אל תכתוב עצות כלליות** כמו "לשמור על עקביות" או "לתכנן לוח זמנים"
+5. כל המלצה חייבת לכלול קבוצת שריר/תבנית תנועה + מספר סטים מומלץ. **אל תמליץ על תרגילים ספציפיים** — רק כיוון, קבוצת שריר, ומספרי סטים.
+   - נכון: "להגדיל נפח עבודה לדלתא אחורית מ-4 סטים ל-8-10 סטים בשבוע"
+   - נכון: "להפחית נפח דחיפה אופקית מ-24 ל-16 סטים בשבוע ולהעביר את ההפרש למשיכה אנכית"
+   - לא נכון: "להוסיף face pulls 3 סטים של 15 חזרות"
+   - לא נכון: "לעשות plank 3 פעמים בשבוע"
+6. אם יש מידע על פציעות/מגבלות — התייחס אליהן
+7. **primaryMuscle** מייצג את תת-השריר הספציפי (למשל: front_delt, lats, quads). השתמש בשדה הזה לספירת סטים לפי תת-שריר.
 
 ## פורמט תגובה:
 הפלט חייב להיות JSON בלבד, בדיוק בפורמט הבא (ללא שדות נוספים):
 
 {
   "title": "סיכום מצב מתאמן",
-  "overview": "פסקת פתיחה של 2 עד 3 שורות שמסכמת את המצב הכללי של המתאמן",
-  "strengths": ["נקודת חוזק 1", "נקודת חוזק 2", "נקודת חוזק 3"],
-  "weaknesses": ["נקודת חולשה 1", "נקודת חולשה 2", "נקודת חולשה 3"],
-  "recommendations": ["המלצה מעשית 1", "המלצה מעשית 2", "המלצה מעשית 3"],
+  "overview": "פסקת פתיחה של 3-4 שורות: תדירות שבועית, סה\"כ סטים, איזון עליון/תחתון, איזון קדמי/אחורי — הכל עם מספרים",
+  "strengths": ["נקודת חוזק 1 עם מספרים", "נקודת חוזק 2 עם מספרים", "נקודת חוזק 3 עם מספרים"],
+  "weaknesses": ["חולשה 1 עם מספרים", "חולשה 2 עם מספרים", "חולשה 3 עם מספרים"],
+  "recommendations": ["כיוון + קבוצת שריר + מספר סטים מומלץ (בלי שמות תרגילים)", "המלצה 2", "המלצה 3"],
   "summary": "משפט סיכום אחד שמסכם את כל הניתוח"
 }
 
 ## כללים לכל שדה:
 - title: כותרת קצרה וקולעת (עד 6 מילים)
-- overview: 2-3 שורות שמתארות את המצב הכללי, נפח אימון, עקביות, ומגמות
-- strengths: 3-5 נקודות חוזק, כל אחת משפט אחד ספציפי עם נתונים (שמות תרגילים, משקלים)
-- weaknesses: 3-5 נקודות חולשה, כל אחת משפט אחד ספציפי עם נתונים
-- recommendations: 3-5 המלצות מעשיות, כל אחת משפט אחד ברור שאפשר ליישם
+- overview: 3-4 שורות עם סטטיסטיקות: תדירות, נפח כולל, יחס עליון/תחתון, יחס קדמי/אחורי
+- strengths: 3-5 נקודות, כל אחת עם שם תרגיל/שריר + מספרים (סטים, משקלים, פרוגרסיה)
+- weaknesses: 3-5 נקודות, כל אחת עם מספרים שמראים את הבעיה (למשל: "רק X סטים ל-Y לעומת Z סטים ל-W")
+- recommendations: 3-5 המלצות, כל אחת עם כיוון + קבוצת שריר/תבנית תנועה + מספר סטים מומלץ. ללא שמות תרגילים ספציפיים.
 - summary: משפט סיכום אחד בלבד`
 }
 
@@ -406,7 +428,13 @@ function buildWorkoutSection(workouts: AnalysisWorkout[]): string {
             })
             .join(', ')
 
-          return `  - ${ex.exerciseNameHe} [${ex.primaryMuscle}]: ${setsSummary || 'לא דווח'}`
+          // Calculate volume (use stored or compute from sets)
+          const volume = ex.exerciseVolume ?? completedSets.reduce(
+            (sum, s) => sum + s.actualWeight * s.actualReps, 0
+          )
+          const volumeSuffix = volume > 0 ? ` | נפח: ${volume}kg` : ''
+
+          return `  - ${ex.exerciseNameHe} [${ex.primaryMuscle}]: ${setsSummary || 'לא דווח'}${volumeSuffix}`
         })
         .join('\n')
 
@@ -512,9 +540,24 @@ export const generateTrainingAnalysis = onCall(
       // Enrich workouts with muscle mapping
       const enrichedWorkouts = enrichWorkoutsWithMuscleData(workouts, exerciseMap, muscles)
 
+      // TODO: REMOVE — Debug logging for prompt data inspection
+      functions.logger.info('=== ANALYSIS DEBUG START ===')
+      functions.logger.info(`Workouts sent to prompt: ${enrichedWorkouts.length}`)
+      enrichedWorkouts.forEach((w, i) => {
+        functions.logger.info(`Workout ${i + 1}: date=${w.date}, status=${w.status}, exercises=${w.exercises.length}`)
+        w.exercises.forEach((ex) => {
+          functions.logger.info(`  - ${ex.exerciseNameHe} | primaryMuscle=${ex.primaryMuscle} | secondaryMuscles=${JSON.stringify(ex.secondaryMuscles)} | sets=${ex.sets.length}`)
+        })
+      })
+      // TODO: REMOVE — End debug logging
+
       // Build prompts
       const systemPrompt = buildSystemPrompt()
       const userPrompt = buildUserPrompt(profile, enrichedWorkouts, muscles, weeksAnalyzed)
+
+      // TODO: REMOVE — Log prompt size
+      functions.logger.info(`Prompt size: system=${systemPrompt.length} chars, user=${userPrompt.length} chars, total=${systemPrompt.length + userPrompt.length} chars`)
+      functions.logger.info('=== ANALYSIS DEBUG END ===')
 
       functions.logger.info('Calling OpenAI for analysis', {
         userId,

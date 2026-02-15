@@ -10,6 +10,9 @@ interface WeightIncreasePopupProps {
   isVisible: boolean
   oldWeight: number
   newWeight: number
+  volumeRecord?: boolean
+  oldVolume?: number
+  newVolume?: number
   onDone: () => void
 }
 
@@ -59,7 +62,9 @@ const confettiPieces = generateConfetti(40)
 const sparkles = generateSparkles(12)
 const burstEmojis = generateBurstEmojis(8)
 
-export function WeightIncreasePopup({ isVisible, oldWeight, newWeight, onDone }: WeightIncreasePopupProps) {
+export function WeightIncreasePopup({ isVisible, oldWeight, newWeight, volumeRecord, oldVolume, newVolume, onDone }: WeightIncreasePopupProps) {
+  const hasWeightIncrease = newWeight > oldWeight && oldWeight > 0
+  const hasVolumeRecord = volumeRecord && oldVolume !== undefined && newVolume !== undefined && newVolume > 0
   const [phase, setPhase] = useState<'enter' | 'exit' | 'hidden'>('hidden')
   const onDoneRef = useRef(onDone)
   onDoneRef.current = onDone
@@ -152,21 +157,43 @@ export function WeightIncreasePopup({ isVisible, oldWeight, newWeight, onDone }:
           <div className="text-3xl font-black text-center text-yellow-300 wip-glow-text">
             כל הכבוד!
           </div>
-          <div className="text-lg font-bold text-center mt-1 text-yellow-200">
-            💪 עלית במשקל!
-          </div>
+          {hasWeightIncrease && (
+            <div className="text-lg font-bold text-center mt-1 text-yellow-200">
+              💪 עלית במשקל!
+            </div>
+          )}
+          {hasVolumeRecord && (
+            <div className="text-lg font-bold text-center mt-1 text-yellow-200">
+              📊 שברת את הנפח!
+            </div>
+          )}
         </div>
 
         {/* Weight badge */}
-        <div dir="ltr" className="animate-wip-badge-in mt-4 flex items-center gap-2 py-2 px-5 rounded-full bg-yellow-300/15 border border-yellow-300/40">
-          <span className="text-lg font-bold text-yellow-200">
-            {oldWeight}kg
-          </span>
-          <span className="text-lg text-yellow-300">→</span>
-          <span className="text-xl font-black text-yellow-300">
-            {newWeight}kg
-          </span>
-        </div>
+        {hasWeightIncrease && (
+          <div dir="ltr" className="animate-wip-badge-in mt-4 flex items-center gap-2 py-2 px-5 rounded-full bg-yellow-300/15 border border-yellow-300/40">
+            <span className="text-lg font-bold text-yellow-200">
+              {oldWeight}kg
+            </span>
+            <span className="text-lg text-yellow-300">→</span>
+            <span className="text-xl font-black text-yellow-300">
+              {newWeight}kg
+            </span>
+          </div>
+        )}
+
+        {/* Volume badge */}
+        {hasVolumeRecord && (
+          <div dir="ltr" className={`animate-wip-badge-in ${hasWeightIncrease ? 'mt-2' : 'mt-4'} flex items-center gap-2 py-2 px-5 rounded-full bg-emerald-400/15 border border-emerald-400/40`}>
+            <span className="text-lg font-bold text-emerald-200">
+              {oldVolume?.toLocaleString()}kg
+            </span>
+            <span className="text-lg text-emerald-400">→</span>
+            <span className="text-xl font-black text-emerald-400">
+              {newVolume?.toLocaleString()}kg
+            </span>
+          </div>
+        )}
       </div>
     </div>
   )

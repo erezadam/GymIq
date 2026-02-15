@@ -12,6 +12,7 @@ import { NotesModal } from './NotesModal'
 import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '@/domains/exercises/utils'
 import { workoutLabels } from '@/styles/design-tokens'
 import { getActiveBandTypes } from '@/lib/firebase/bandTypes'
+import { calculateExerciseVolume } from '@/lib/firebase/workoutHistory'
 import type { BandType } from '@/domains/exercises/types/bands'
 
 interface ExerciseCardProps {
@@ -58,6 +59,13 @@ export function ExerciseCard({
     })
     return map
   }, [allBandTypes])
+
+  // Calculate current exercise volume in real-time
+  const currentVolume = useMemo(
+    () => calculateExerciseVolume(exercise.reportedSets, exercise.reportType),
+    [exercise.reportedSets, exercise.reportType]
+  )
+  const previousVolume = exercise.previousExerciseVolume
 
   // Check if there are historical notes
   const hasHistoricalNotes = exercise.historicalNotes && exercise.historicalNotes.length > 0
@@ -308,6 +316,23 @@ export function ExerciseCard({
             <Plus className="w-4 h-4" />
             <span>{workoutLabels.addSet}</span>
           </button>
+
+          {/* Volume row - only show if current volume > 0 */}
+          {currentVolume > 0 && (
+            <div className="flex items-center justify-center gap-3 py-2 px-3 mt-1 mb-1 bg-neon-gray-700/50 rounded-lg text-sm" dir="rtl">
+              <span className={previousVolume !== null && previousVolume !== undefined && previousVolume > 0 && currentVolume > previousVolume ? 'text-status-success font-semibold' : 'text-neon-gray-300'}>
+                נפח נוכחי: {currentVolume.toLocaleString()}kg
+              </span>
+              {previousVolume !== null && previousVolume !== undefined && previousVolume > 0 && (
+                <>
+                  <span className="text-neon-gray-500">|</span>
+                  <span className="text-neon-gray-400">
+                    נפח קודם: {previousVolume.toLocaleString()}kg
+                  </span>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Bottom action buttons row */}
           <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>

@@ -28,6 +28,8 @@ import {
   completeWorkout,
   calculateAndSaveWeightRecommendations,
   getWeightRecommendations,
+  getLastExerciseVolumes,
+  calculateExerciseVolume,
 } from '@/lib/firebase/workoutHistory'
 import { getExerciseById } from '@/lib/firebase/exercises'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
@@ -623,6 +625,17 @@ export function useActiveWorkout() {
                   console.error('Failed to fetch weight recommendations (non-critical):', e)
                 }
               }
+
+              // Exercise volumes - separate try/catch (non-critical)
+              try {
+                const volExerciseIds = newExercises.map((ex) => ex.exerciseId)
+                const volumes = await getLastExerciseVolumes(user.uid, volExerciseIds)
+                newExercises.forEach((ex) => {
+                  ex.previousExerciseVolume = volumes[ex.exerciseId] ?? null
+                })
+              } catch (e) {
+                console.error('Failed to fetch exercise volumes (non-critical):', e)
+              }
             }
 
             // Merge new exercises into parsed workout
@@ -750,6 +763,17 @@ export function useActiveWorkout() {
             } catch (e) {
               console.error('Failed to fetch weight recommendations (non-critical):', e)
             }
+          }
+
+          // Exercise volumes - separate try/catch (non-critical)
+          try {
+            const volExerciseIds = exercises.map((ex) => ex.exerciseId)
+            const volumes = await getLastExerciseVolumes(user.uid, volExerciseIds)
+            exercises.forEach((ex) => {
+              ex.previousExerciseVolume = volumes[ex.exerciseId] ?? null
+            })
+          } catch (e) {
+            console.error('Failed to fetch exercise volumes (non-critical):', e)
           }
         }
 
@@ -1031,6 +1055,10 @@ export function useActiveWorkout() {
   // Finish an exercise (close card and mark as completed)
   const finishExercise = useCallback(
     (exerciseId: string) => {
+      // Capture exercise data before state update for toast
+      let exerciseVolume = 0
+      let previousVolume: number | null = null
+
       updateWorkout((prev) => {
         const exercise = prev.exercises.find((ex) => ex.id === exerciseId)
         if (!exercise) return prev
@@ -1040,6 +1068,10 @@ export function useActiveWorkout() {
           ...set,
           completedAt: set.reps > 0 ? new Date() : undefined,
         }))
+
+        // Calculate volume for toast
+        exerciseVolume = calculateExerciseVolume(updatedSets, exercise.reportType)
+        previousVolume = exercise.previousExerciseVolume ?? null
 
         const updatedExercises = prev.exercises.map((ex) => {
           if (ex.id === exerciseId) {
@@ -1060,7 +1092,19 @@ export function useActiveWorkout() {
         }
       })
 
-      toast.success('התרגיל הושלם!')
+      // Volume-aware toast
+      // Type assertion needed: previousVolume is mutated inside updateWorkout callback above,
+      // but TypeScript doesn't track mutations inside callbacks
+      const prevVol = previousVolume as number | null
+      if (exerciseVolume > 0 && prevVol !== null && prevVol > 0) {
+        const diff = ((exerciseVolume - prevVol) / prevVol) * 100
+        const sign = diff >= 0 ? '+' : ''
+        toast.success(`התרגיל הושלם! נפח: ${exerciseVolume.toLocaleString()}kg (קודם: ${prevVol.toLocaleString()}kg) ${diff >= 0 ? '↑' : '↓'} ${sign}${diff.toFixed(1)}%`)
+      } else if (exerciseVolume > 0) {
+        toast.success(`התרגיל הושלם! נפח: ${exerciseVolume.toLocaleString()}kg`)
+      } else {
+        toast.success('התרגיל הושלם!')
+      }
     },
     [updateWorkout]
   )
@@ -1202,34 +1246,38 @@ export function useActiveWorkout() {
           ? 'cancelled'
           : 'partial'
 
-        const exercises = workout.exercises.map((ex) => ({
-            exerciseId: ex.exerciseId,
-            exerciseName: ex.exerciseName,
-            exerciseNameHe: ex.exerciseNameHe,
-            imageUrl: ex.imageUrl || '',
-            category: ex.category || '',
-            isCompleted: ex.isCompleted,
-            notes: ex.notes,
-            // Assistance configuration
-            ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
-            sets: ex.reportedSets.map((set) => ({
-              type: 'working' as SetType,
-              targetReps: 0,
-              targetWeight: 0,
-              actualReps: set.reps,
-              actualWeight: set.weight,
-              completed: set.reps > 0,
-              // Extended fields (only include if defined - Firebase doesn't accept undefined)
-              ...(set.time !== undefined && set.time > 0 && { time: set.time }),
-              ...(set.intensity !== undefined && set.intensity > 0 && { intensity: set.intensity }),
-              ...(set.speed !== undefined && set.speed > 0 && { speed: set.speed }),
-              ...(set.distance !== undefined && set.distance > 0 && { distance: set.distance }),
-              ...(set.incline !== undefined && set.incline > 0 && { incline: set.incline }),
-              // Assistance fields
-              ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
-              ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
-            })),
-          }))
+        const exercises = workout.exercises.map((ex) => {
+            const volume = calculateExerciseVolume(ex.reportedSets, ex.reportType)
+            return {
+              exerciseId: ex.exerciseId,
+              exerciseName: ex.exerciseName,
+              exerciseNameHe: ex.exerciseNameHe,
+              imageUrl: ex.imageUrl || '',
+              category: ex.category || '',
+              isCompleted: ex.isCompleted,
+              notes: ex.notes,
+              // Assistance configuration
+              ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
+              ...(volume > 0 && { exerciseVolume: volume }),
+              sets: ex.reportedSets.map((set) => ({
+                type: 'working' as SetType,
+                targetReps: 0,
+                targetWeight: 0,
+                actualReps: set.reps,
+                actualWeight: set.weight,
+                completed: set.reps > 0,
+                // Extended fields (only include if defined - Firebase doesn't accept undefined)
+                ...(set.time !== undefined && set.time > 0 && { time: set.time }),
+                ...(set.intensity !== undefined && set.intensity > 0 && { intensity: set.intensity }),
+                ...(set.speed !== undefined && set.speed > 0 && { speed: set.speed }),
+                ...(set.distance !== undefined && set.distance > 0 && { distance: set.distance }),
+                ...(set.incline !== undefined && set.incline > 0 && { incline: set.incline }),
+                // Assistance fields
+                ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
+                ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
+              })),
+            }
+          })
 
         try {
           // If we have a Firebase ID, use completeWorkout; otherwise save new
