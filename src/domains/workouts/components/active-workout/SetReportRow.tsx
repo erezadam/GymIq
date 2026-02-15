@@ -5,7 +5,7 @@
  * Also supports assistance type fields (graviton, bands)
  */
 
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import type { ReportedSet } from '../../types/active-workout.types'
 import { workoutLabels } from '@/styles/design-tokens'
@@ -47,32 +47,41 @@ export function SetReportRow({
   const minutesInputRef = useRef<HTMLInputElement>(null)
   const secondsInputRef = useRef<HTMLInputElement>(null)
 
+  // Raw string state for time inputs — allows free typing without immediate re-format
+  const [minutesRaw, setMinutesRaw] = useState<string | null>(null)
+  const [secondsRaw, setSecondsRaw] = useState<string | null>(null)
+
   // Format as 2-digit string (00)
   const formatTwoDigits = (val: number): string => val.toString().padStart(2, '0')
 
   const handleMinutesChange = (inputValue: string) => {
-    // Allow only digits
-    const digits = inputValue.replace(/\D/g, '')
+    const digits = inputValue.replace(/\D/g, '').slice(0, 2)
+    setMinutesRaw(digits)
     const newMinutes = parseInt(digits) || 0
     onUpdate({ time: minutesSecondsToSeconds(newMinutes, seconds) })
     // Auto-focus seconds input when 2 digits are entered
     if (digits.length >= 2) {
+      setMinutesRaw(null)
       secondsInputRef.current?.focus()
       secondsInputRef.current?.select()
     }
   }
 
   const handleSecondsChange = (inputValue: string) => {
-    // Allow only digits
-    const digits = inputValue.replace(/\D/g, '')
+    const digits = inputValue.replace(/\D/g, '').slice(0, 2)
+    setSecondsRaw(digits)
     const newSeconds = Math.min(59, parseInt(digits) || 0)
     onUpdate({ time: minutesSecondsToSeconds(minutes, newSeconds) })
     // Auto-focus minutes input when 2 digits are entered
     if (digits.length >= 2) {
+      setSecondsRaw(null)
       minutesInputRef.current?.focus()
       minutesInputRef.current?.select()
     }
   }
+
+  const handleMinutesBlur = () => setMinutesRaw(null)
+  const handleSecondsBlur = () => setSecondsRaw(null)
 
   // Render time input (minutes:seconds)
   // Using dir="ltr" to keep time display in standard MM:SS format (left to right)
@@ -86,9 +95,10 @@ export function SetReportRow({
           inputMode="numeric"
           pattern="[0-9]*"
           className="set-input set-input--time"
-          value={minutes ? formatTwoDigits(minutes) : ''}
+          value={minutesRaw !== null ? minutesRaw : (minutes ? formatTwoDigits(minutes) : '')}
           onChange={(e) => handleMinutesChange(e.target.value)}
           onFocus={(e) => e.target.select()}
+          onBlur={handleMinutesBlur}
           placeholder="00"
           maxLength={2}
         />
@@ -99,9 +109,10 @@ export function SetReportRow({
           inputMode="numeric"
           pattern="[0-9]*"
           className="set-input set-input--time"
-          value={(seconds || minutes) ? formatTwoDigits(seconds) : ''}
+          value={secondsRaw !== null ? secondsRaw : ((seconds || minutes) ? formatTwoDigits(seconds) : '')}
           onChange={(e) => handleSecondsChange(e.target.value)}
           onFocus={(e) => e.target.select()}
+          onBlur={handleSecondsBlur}
           placeholder="00"
           maxLength={2}
         />

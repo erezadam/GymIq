@@ -279,6 +279,16 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // ============ AI ANALYSIS USAGE (Rate Limiting + Cached Results) ============
+    match /aiAnalysisUsage/{usageId} {
+      // Users can read their own cached analysis and usage
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+
+      // No direct client writes - only via Cloud Functions
+      allow create, update, delete: if false;
+    }
+
     // ============ APP SETTINGS ============
     match /settings/{settingId} {
       // Any authenticated user can read settings

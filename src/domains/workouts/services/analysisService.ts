@@ -4,7 +4,8 @@
  */
 
 import { getFunctions, httpsCallable } from 'firebase/functions'
-import { app } from '@/lib/firebase/config'
+import { doc, getDoc } from 'firebase/firestore'
+import { app, db } from '@/lib/firebase/config'
 
 // Structured analysis response from GPT
 export interface TrainingAnalysisResult {
@@ -37,6 +38,14 @@ export interface AnalysisError {
   message: string
   resetAt?: string
   workoutCount?: number
+}
+
+// Cached analysis result from Firestore
+export interface CachedAnalysis {
+  result: TrainingAnalysisResult
+  workoutCount: number
+  weeksAnalyzed: number
+  generatedAt: Date
 }
 
 // Initialize Firebase Functions
@@ -120,5 +129,33 @@ export async function getTrainingAnalysis(userId: string): Promise<{
       type: 'general' as AnalysisErrorType,
       message: 'אירעה שגיאה, נסה שוב מאוחר יותר',
     }
+  }
+}
+
+/**
+ * Get cached analysis from Firestore (if exists)
+ * Returns the last saved analysis or null
+ */
+export async function getCachedAnalysis(userId: string): Promise<CachedAnalysis | null> {
+  try {
+    const docRef = doc(db, 'aiAnalysisUsage', `${userId}_latest`)
+    const snapshot = await getDoc(docRef)
+
+    if (!snapshot.exists()) return null
+
+    const data = snapshot.data()
+    if (!data.analysis) return null
+
+    const result: TrainingAnalysisResult = JSON.parse(data.analysis)
+    const generatedAt = data.generatedAt?.toDate?.() || new Date()
+
+    return {
+      result,
+      workoutCount: data.workoutCount || 0,
+      weeksAnalyzed: data.weeksAnalyzed || 0,
+      generatedAt,
+    }
+  } catch {
+    return null
   }
 }

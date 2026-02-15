@@ -119,6 +119,53 @@ async function incrementAnalysisUsage(userId: string): Promise<void> {
   }
 }
 
+async function saveAnalysisResult(
+  userId: string,
+  analysis: string,
+  workoutCount: number,
+  weeksAnalyzed: number
+): Promise<void> {
+  const db = getDb()
+  const docId = `${userId}_latest`
+
+  try {
+    await db.collection(ANALYSIS_USAGE_COLLECTION).doc(docId).set({
+      userId,
+      analysis,
+      workoutCount,
+      weeksAnalyzed,
+      generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    })
+    functions.logger.info('Analysis result saved for caching', { userId })
+  } catch (error: any) {
+    functions.logger.error('Failed to save analysis result', { userId, error: error.message })
+  }
+}
+
+async function getCachedAnalysisResult(
+  userId: string
+): Promise<{ analysis: string; workoutCount: number; weeksAnalyzed: number } | null> {
+  const db = getDb()
+  const docId = `${userId}_latest`
+
+  try {
+    const doc = await db.collection(ANALYSIS_USAGE_COLLECTION).doc(docId).get()
+    if (!doc.exists) return null
+
+    const data = doc.data()
+    if (!data?.analysis) return null
+
+    return {
+      analysis: data.analysis,
+      workoutCount: data.workoutCount || 0,
+      weeksAnalyzed: data.weeksAnalyzed || 0,
+    }
+  } catch (error: any) {
+    functions.logger.error('Failed to get cached analysis', { userId, error: error.message })
+    return null
+  }
+}
+
 // ============ Data Fetching ============
 
 async function fetchUserProfile(userId: string): Promise<UserProfile> {
@@ -400,7 +447,23 @@ export const generateTrainingAnalysis = onCall(
       // Check rate limit
       const rateLimitResult = await checkAnalysisRateLimit(userId)
       if (!rateLimitResult.allowed) {
-        functions.logger.warn('Analysis rate limit exceeded', { userId })
+        // Rate limited — try to return cached analysis instead of error
+        const cached = await getCachedAnalysisResult(userId)
+        if (cached) {
+          functions.logger.info('Returning cached analysis (rate limited)', { userId })
+          return {
+            success: true,
+            analysis: cached.analysis,
+            workoutCount: cached.workoutCount,
+            weeksAnalyzed: cached.weeksAnalyzed,
+            rateLimitInfo: {
+              remaining: 0,
+              resetAt: rateLimitResult.resetAt.toISOString(),
+            },
+          }
+        }
+
+        functions.logger.warn('Analysis rate limit exceeded, no cache available', { userId })
         return {
           success: false,
           error: 'ניתן לבצע ניתוח אחד ביום. נסה שוב מחר.',
@@ -494,8 +557,11 @@ export const generateTrainingAnalysis = onCall(
         summary: parsed.summary,
       })
 
-      // Increment usage
-      await incrementAnalysisUsage(userId)
+      // Increment usage and save result for caching
+      await Promise.all([
+        incrementAnalysisUsage(userId),
+        saveAnalysisResult(userId, analysis, workouts.length, weeksAnalyzed),
+      ])
 
       functions.logger.info('Training analysis completed', {
         userId,

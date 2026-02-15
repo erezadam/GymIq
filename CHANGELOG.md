@@ -4,6 +4,26 @@
 
 ---
 
+## [1.12.0] - 2026-02-15
+
+### פיצ'ר: שמירת ניתוח AI (Cache)
+
+- **generateAnalysis.ts** — Cloud Function שומרת תוצאות ניתוח ב-Firestore (`aiAnalysisUsage/{userId}_latest`)
+  - כשמוגבל ב-rate limit, מחזיר ניתוח שמור במקום שגיאה
+- **analysisService.ts** — `getCachedAnalysis()` טוען ניתוח שמור מ-Firestore בצד הלקוח
+- **TrainingAnalysis.tsx** — טוען ניתוח שמור קודם, מציג "נכון לתאריך...", כפתור "בקש ניתוח חדש"
+- **firestore.rules** — חוקי אבטחה ל-`aiAnalysisUsage` (קריאה עצמית בלבד)
+
+### תיקונים
+
+- **SetReportRow.tsx** — תיקון שדה זמן: הספרה הראשונה לא קופצת יותר בעת הקלדת 2 ספרות
+
+### תהליך
+
+- **daily-workflow-SKILL.md** — הוספת שלב הפצה ל-hosting בתהליך סגירת יום
+
+---
+
 ## [1.11.0] - 2026-02-14
 
 ### פיצ'ר: ניתוח אימונים AI
