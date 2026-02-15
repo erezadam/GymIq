@@ -1,12 +1,18 @@
 /**
  * Training Analysis Screen
  * Displays AI-powered training analysis results
+ * Loads cached analysis first, calls API only for new analysis
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/domains/authentication/store'
-import { getTrainingAnalysis, type TrainingAnalysisResult, type AnalysisError } from '../services/analysisService'
+import {
+  getTrainingAnalysis,
+  getCachedAnalysis,
+  type TrainingAnalysisResult,
+  type AnalysisError,
+} from '../services/analysisService'
 
 type ScreenState = 'loading' | 'error' | 'results'
 
@@ -18,26 +24,53 @@ export default function TrainingAnalysis() {
   const [error, setError] = useState<AnalysisError | null>(null)
   const [workoutCount, setWorkoutCount] = useState(0)
   const [weeksAnalyzed, setWeeksAnalyzed] = useState(0)
+  const [generatedAt, setGeneratedAt] = useState<Date | null>(null)
+  const [isCached, setIsCached] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const fetchNewAnalysis = useCallback(async () => {
+    if (!user?.uid) return
+    try {
+      setRefreshing(true)
+      setState('loading')
+      const response = await getTrainingAnalysis(user.uid)
+      setAnalysis(response.result)
+      setWorkoutCount(response.workoutCount)
+      setWeeksAnalyzed(response.weeksAnalyzed)
+      setGeneratedAt(new Date())
+      setIsCached(false)
+      setState('results')
+    } catch (err: any) {
+      setError(err as AnalysisError)
+      setState('error')
+    } finally {
+      setRefreshing(false)
+    }
+  }, [user?.uid])
 
   useEffect(() => {
     if (!user?.uid) return
 
-    const fetchAnalysis = async () => {
-      try {
-        setState('loading')
-        const response = await getTrainingAnalysis(user.uid)
-        setAnalysis(response.result)
-        setWorkoutCount(response.workoutCount)
-        setWeeksAnalyzed(response.weeksAnalyzed)
+    const loadAnalysis = async () => {
+      // Try to load cached analysis first
+      const cached = await getCachedAnalysis(user.uid)
+
+      if (cached) {
+        setAnalysis(cached.result)
+        setWorkoutCount(cached.workoutCount)
+        setWeeksAnalyzed(cached.weeksAnalyzed)
+        setGeneratedAt(cached.generatedAt)
+        setIsCached(true)
         setState('results')
-      } catch (err: any) {
-        setError(err as AnalysisError)
-        setState('error')
+        return
       }
+
+      // No cache — fetch new
+      await fetchNewAnalysis()
     }
 
-    fetchAnalysis()
-  }, [user?.uid])
+    loadAnalysis()
+  }, [user?.uid, fetchNewAnalysis])
 
   // Loading State
   if (state === 'loading') {
@@ -47,7 +80,7 @@ export default function TrainingAnalysis() {
           <span className="text-[32px]">🧠</span>
         </div>
         <div className="text-lg font-semibold text-text-primary mb-2">
-          מנתח את האימונים שלך...
+          {refreshing ? 'יוצר ניתוח חדש...' : 'מנתח את האימונים שלך...'}
         </div>
         <div className="text-sm text-text-secondary text-center">
           הניתוח יכול לקחת עד 30 שניות
@@ -96,9 +129,14 @@ export default function TrainingAnalysis() {
         {analysis.title}
       </h1>
 
-      {/* Meta info */}
+      {/* Meta info + date */}
       <div className="text-xs text-text-muted text-center mb-5">
         {workoutCount} אימונים · {weeksAnalyzed} שבועות
+        {generatedAt && (
+          <span className="block mt-1">
+            נכון ל-{generatedAt.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' })}
+          </span>
+        )}
       </div>
 
       {/* Overview */}
@@ -140,11 +178,21 @@ export default function TrainingAnalysis() {
       />
 
       {/* Summary */}
-      <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-8">
+      <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-4">
         <div className="text-base font-semibold text-primary leading-relaxed text-center">
           {analysis.summary}
         </div>
       </div>
+
+      {/* Request New Analysis (only shown when viewing cached) */}
+      {isCached && (
+        <button
+          onClick={fetchNewAnalysis}
+          className="w-full py-3 mb-3 rounded-lg bg-primary/10 border border-primary/30 text-primary text-base font-semibold cursor-pointer"
+        >
+          בקש ניתוח חדש
+        </button>
+      )}
 
       {/* Back Button */}
       <button
