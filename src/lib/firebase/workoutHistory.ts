@@ -527,8 +527,8 @@ export function calculateExerciseVolume(
   if (!rt.includes('weight')) return 0
 
   return sets.reduce((total, set) => {
-    // Only count completed sets with weight > 0
-    if (set.completedAt && set.weight > 0 && set.reps > 0) {
+    // Count any set with weight and reps filled in (real-time during workout)
+    if (set.weight > 0 && set.reps > 0) {
       return total + set.weight * set.reps
     }
     return total
