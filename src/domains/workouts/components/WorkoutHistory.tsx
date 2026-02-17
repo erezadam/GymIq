@@ -103,7 +103,35 @@ export default function WorkoutHistory() {
 
     try {
       const history = await getUserWorkoutHistory(user.uid)
-      setWorkouts(history)
+
+      // Duplicate detection: find workouts with same start time (±5 min) and same exercises
+      const FIVE_MINUTES = 5 * 60 * 1000
+      const duplicateIds = new Set<string>()
+
+      for (let i = 0; i < history.length; i++) {
+        if (duplicateIds.has(history[i].id)) continue
+        for (let j = i + 1; j < history.length; j++) {
+          if (duplicateIds.has(history[j].id)) continue
+          const timeDiff = Math.abs(history[i].date.getTime() - history[j].date.getTime())
+          if (
+            timeDiff <= FIVE_MINUTES &&
+            history[i].name === history[j].name &&
+            history[i].totalExercises === history[j].totalExercises
+          ) {
+            // Keep the one with more completed exercises; tie-break: keep newer (earlier index since sorted desc)
+            const keepI = history[i].completedExercises >= history[j].completedExercises
+            const duplicateId = keepI ? history[j].id : history[i].id
+            duplicateIds.add(duplicateId)
+            console.warn('🔍 Duplicate workout detected:', duplicateId, '(keeping', keepI ? history[i].id : history[j].id, ')')
+          }
+        }
+      }
+
+      const filtered = duplicateIds.size > 0
+        ? history.filter(w => !duplicateIds.has(w.id))
+        : history
+
+      setWorkouts(filtered)
     } catch (error) {
       console.error('Failed to load workout history:', error)
     } finally {

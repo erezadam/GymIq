@@ -120,6 +120,9 @@ export function useActiveWorkout() {
   // Track if initWorkout is currently running to prevent concurrent calls
   const isInitializing = useRef(false)
 
+  // Preserve continue workout ID across async operations (survives validation failures)
+  const continueWorkoutIdRef = useRef<string | null>(null)
+
   // Load dynamic muscle names from Firebase on mount
   useEffect(() => {
     const loadMuscleNames = async () => {
@@ -225,7 +228,12 @@ export function useActiveWorkout() {
 
         // Defense in depth: if auto-save fails with permission-denied,
         // the firebaseWorkoutId is stale — clear it and retry as new document
+        // BUT: if we have a continuation ref, this is a continued workout — don't create new
         if (error?.code === 'permission-denied' && currentFirebaseId) {
+          if (continueWorkoutIdRef.current) {
+            console.error('🚨 Auto-save permission-denied during continuation — NOT creating new document to prevent duplicate. Original ID:', currentFirebaseId)
+            return
+          }
           console.warn('⚠️ Auto-save permission-denied, clearing stale ID and retrying as new document')
           localStorage.removeItem(firebaseIdKey)
           setFirebaseWorkoutId(null)
@@ -320,6 +328,21 @@ export function useActiveWorkout() {
       // Set initializing lock
       isInitializing.current = true
       setIsLoading(true)
+
+      // Retry helper for validation — auth timing issues can cause transient failures
+      const validateWithRetry = async (id: string, uid: string, maxAttempts = 3): Promise<{ valid: boolean; reason?: string }> => {
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          const result = await validateWorkoutId(id, uid)
+          if (result.valid) return result
+          if (attempt < maxAttempts) {
+            console.log(`🔄 Validation attempt ${attempt}/${maxAttempts} failed, retrying in 1s...`)
+            await new Promise(resolve => setTimeout(resolve, 1000))
+          } else {
+            return result
+          }
+        }
+        return { valid: false, reason: 'max retries exhausted' }
+      }
 
       // First, check Firebase for in_progress workout (recovery after app close)
       // Skip this if continuing from history or if trainer is reporting for a trainee
@@ -426,16 +449,22 @@ export function useActiveWorkout() {
 
           // Check for existing workout ID to prevent duplication
           const existingWorkoutId = localStorage.getItem('continueWorkoutId')
+          if (existingWorkoutId) {
+            // Always store in ref first — this is our safety net
+            continueWorkoutIdRef.current = existingWorkoutId
+          }
           if (existingWorkoutId && user?.uid) {
-            // Validate the workout ID belongs to current user before using it
-            const validation = await validateWorkoutId(existingWorkoutId, user.uid)
+            // Validate with retry — auth timing issues can cause transient failures
+            const validation = await validateWithRetry(existingWorkoutId, user.uid)
             if (validation.valid) {
               console.log('📋 Found existing workout ID (validated):', existingWorkoutId)
               setFirebaseWorkoutId(existingWorkoutId)
               localStorage.setItem(firebaseIdKey, existingWorkoutId)
             } else {
-              console.warn('⚠️ Stale continueWorkoutId detected, ignoring:', existingWorkoutId, 'reason:', validation.reason)
-              // Don't use stale ID — a new document will be created on auto-save
+              // Validation failed after retries but this is a continuation — still use the ID
+              console.warn('⚠️ continueWorkoutId validation failed after retries, using anyway (continuation):', existingWorkoutId, 'reason:', validation.reason)
+              setFirebaseWorkoutId(existingWorkoutId)
+              localStorage.setItem(firebaseIdKey, existingWorkoutId)
             }
           } else if (existingWorkoutId) {
             // No user yet — use as-is (will be validated later)
@@ -797,14 +826,33 @@ export function useActiveWorkout() {
         // Validate the ID before using it — stale IDs cause permission-denied
         let existingId = localStorage.getItem(firebaseIdKey)
         if (existingId && user?.uid) {
-          const validation = await validateWorkoutId(existingId, user.uid)
+          // Use retry for continuation (auth timing), single attempt otherwise
+          const validation = isContinuingFromHistory
+            ? await validateWithRetry(existingId, user.uid)
+            : await validateWorkoutId(existingId, user.uid)
           if (!validation.valid) {
-            console.warn('⚠️ Stale existingId at init, creating new document:', existingId, 'reason:', validation.reason)
-            localStorage.removeItem(firebaseIdKey)
-            existingId = null
+            if (isContinuingFromHistory) {
+              // During continuation: NEVER null the ID — use it anyway
+              // The ref is our safety net from the first validation block
+              console.warn('⚠️ autoSave validation failed during continuation (after retries), using ID anyway:', existingId, 'reason:', validation.reason)
+            } else {
+              console.warn('⚠️ Stale existingId at init, creating new document:', existingId, 'reason:', validation.reason)
+              localStorage.removeItem(firebaseIdKey)
+              existingId = null
+            }
           }
         }
-        try {
+        // Safety net: if ID is still null but we're continuing, recover from ref
+        if (!existingId && isContinuingFromHistory && continueWorkoutIdRef.current) {
+          console.warn('🔄 Recovering continue workout ID from ref:', continueWorkoutIdRef.current)
+          existingId = continueWorkoutIdRef.current
+          localStorage.setItem(firebaseIdKey, existingId)
+        }
+        // Assertion: during continuation, ID must never be null
+        if (isContinuingFromHistory && !existingId) {
+          console.error('🚨 CRITICAL: continuation without workout ID — aborting autoSave to prevent duplicate. All recovery paths exhausted.')
+          // Don't proceed — creating a new document would duplicate the workout
+        } else try {
           const endTime = new Date()
           const savedId = await autoSaveWorkout(existingId, {
             userId: newWorkout.userId,
@@ -1345,6 +1393,7 @@ export function useActiveWorkout() {
           setPendingCalories(undefined)
           localStorage.removeItem(firebaseIdKey)
           hasInitialized.current = false
+          continueWorkoutIdRef.current = null
           setConfirmModal({ type: null })
 
           // Navigate back: trainer report → trainee detail, own workout → history
@@ -1398,6 +1447,7 @@ export function useActiveWorkout() {
               setPendingCalories(undefined)
               localStorage.removeItem(firebaseIdKey)
               hasInitialized.current = false
+              continueWorkoutIdRef.current = null
               setConfirmModal({ type: null })
               const wasTrainerReport = workout.reportedBy
               const reportTargetUserId2 = targetUserId
@@ -1542,6 +1592,7 @@ export function useActiveWorkout() {
     setFirebaseWorkoutId(null)
     // Keep the firebase ID in localStorage for recovery!
     hasInitialized.current = false
+    continueWorkoutIdRef.current = null
     setConfirmModal({ type: null })
 
     // Navigate back: trainer report → trainee detail, own workout → dashboard
