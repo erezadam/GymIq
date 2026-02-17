@@ -38,8 +38,10 @@
 ❌ **No manual testing claims** - רק בדיקות עם outputs אמיתיים  
 ❌ **No code deletion** שלא קשור ישירות למשימה  
 ❌ **No hardcoded secrets** - מפתחות רק דרך environment variables  
-❌ **No inline styles** - כל עיצוב דרך Tailwind classes בלבד, אסור `style={{}}`  
-❌ **No direct push to main** - תמיד עבודה בענף + PR + CI ירוק  
+❌ **No inline styles** - כל עיצוב דרך Tailwind classes בלבד, אסור `style={{}}`
+❌ **No direct push to main** - תמיד עבודה בענף + PR + CI ירוק
+❌ **No modal without explicit close** - כל modal חייב כפתור X ייעודי (44x44px מינימום) + סגירה בלחיצה על backdrop
+❌ **No silent AI filtering** - כל קריאה ל-AI חיצוני חייבת validation + fallback. אסור לסנן תוצאות בשקט בלי השלמה
 
 ---
 
@@ -256,6 +258,8 @@ grep -r "FunctionOrComponentName" src/ --include="*.tsx" --include="*.ts"
 □ addExercise / workout status / calories
 □ WorkoutHistory / WorkoutSession
 □ category / primaryMuscle
+□ AI trainer exercise filtering / prompt / response parsing
+□ autoSave / validateWorkoutId / continueWorkoutId / continuation flow
 ```
 
 **3. הגדרת גבולות:**
@@ -421,11 +425,14 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 | 03/02/2026 | הוגדרו branch protection + CI + PR חובה על main | נוסף סעיף Git + תהליך עבודה עם GitHub |
 | 07/02/2026 | נוצר skill לתהליך עבודה יומי | הסוכן מנהל תחילת יום וסגירת יום אוטומטית |
 | 08/02/2026 | בדיקת ענף לא רצה אוטומטית | הועברה להוראה ישירה בראש CLAUDE.md (לא הפניה ל-skill) |
+| 17/02/2026 | modal תמונת תרגיל לא ניתן לסגירה - stopPropagation חסם backdrop click | נוסף חוק ברזל: כל modal חייב כפתור X ייעודי + backdrop close |
+| 17/02/2026 | AI Trainer סינן תרגילים בשקט (10→7) בגלל exerciseId לא תקינים מ-GPT | נוסף fallback + חוק ברזל: No silent AI filtering |
+| 17/02/2026 | המשך אימון in_progress יוצר מסמך כפול - validateWorkoutId מנל ID | נוסף continueWorkoutIdRef + retry (3 נסיונות) + הגנה בכל נקודות autoSave + זיהוי כפילויות בהיסטוריה |
 
 ---
 
 ```
 ══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 08/02/2026 | בדיקת ענף הועברה להוראה ישירה בראש הקובץ
+עדכון אחרון: 17/02/2026 | תיקון המשך אימון כפול — retry + ref + duplicate detection
 ══════════════════════════════════════════════════════════════════════════════
 ```

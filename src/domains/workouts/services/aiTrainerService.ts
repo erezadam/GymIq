@@ -122,8 +122,8 @@ async function getNextAIWorkoutNumber(userId: string): Promise<number> {
 
 // Extract per-exercise performance data from recent workout history
 function extractExerciseHistory(recentHistory: WorkoutHistoryEntry[]): ExercisePerformanceData[] {
-  // Map: exerciseId → list of { weight, reps, date } sorted by date (newest first)
-  const exerciseMap = new Map<string, { weight: number; reps: number; date: string }[]>()
+  // Map: exerciseId → list of { weight, reps, date, volume } sorted by date (newest first)
+  const exerciseMap = new Map<string, { weight: number; reps: number; date: string; volume: number }[]>()
 
   // Only look at completed or in_progress workouts (not planned)
   const relevantWorkouts = recentHistory.filter(w =>
@@ -148,10 +148,16 @@ function extractExerciseHistory(recentHistory: WorkoutHistoryEntry[]): ExerciseP
         (s.actualWeight || 0) > (best.actualWeight || 0) ? s : best
       )
 
+      // Calculate exercise volume (use stored value or compute from sets)
+      const volume = exercise.exerciseVolume ?? completedSets.reduce(
+        (sum, s) => sum + (s.actualWeight || 0) * (s.actualReps || 0), 0
+      )
+
       const entry = {
         weight: bestSet.actualWeight || 0,
         reps: bestSet.actualReps || 0,
         date: dateStr,
+        volume,
       }
 
       if (!exerciseMap.has(exercise.exerciseId)) {
@@ -173,6 +179,7 @@ function extractExerciseHistory(recentHistory: WorkoutHistoryEntry[]): ExerciseP
       lastWeight: sessions[0].weight,
       lastReps: sessions[0].reps,
       lastDate: sessions[0].date,
+      lastVolume: sessions[0].volume > 0 ? sessions[0].volume : undefined,
       recentSessions: sessions.slice(0, 5), // Last 5 sessions
     })
   }

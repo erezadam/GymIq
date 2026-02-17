@@ -20,6 +20,7 @@ export interface ExercisePerformanceData {
   lastWeight: number       // Last weight used (kg)
   lastReps: number         // Last reps completed
   lastDate: string         // ISO date of last performance
+  lastVolume?: number      // Total exercise volume (sum of weight × reps) from last workout
   recentSessions?: {       // Last 3-5 sessions (optional)
     weight: number
     reps: number

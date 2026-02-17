@@ -49,13 +49,16 @@ function convertClaudeResponse(
 ): GeneratedWorkout {
   const aiRecommendations: Record<string, AIRecommendation> = {}
 
+  let skippedCount = 0
+
   const exercises: GeneratedExercise[] = claudeWorkout.exercises
     .filter((ce) => {
       const found = exerciseMap.has(ce.exerciseId)
       if (!found) {
+        skippedCount++
         functions.logger.warn('GPT returned unrecognized exerciseId - skipping', {
           exerciseId: ce.exerciseId,
-          availableIds: Array.from(exerciseMap.keys()).slice(0, 5),
+          isWarmup: ce.isWarmup,
         })
       }
       return found
@@ -87,6 +90,75 @@ function convertClaudeResponse(
         sets: [], // AI workouts don't pre-create sets - trainee opens sets themselves
       }
     })
+
+  // Fallback: fill missing exercises if GPT returned invalid IDs
+  const expectedCount = getExerciseCount(duration)
+  const mainExercises = exercises.filter((e) => !e.isWarmup)
+
+  if (skippedCount > 0 && mainExercises.length < expectedCount) {
+    const missing = expectedCount - mainExercises.length
+    functions.logger.warn('Filling missing exercises with fallback', {
+      expected: expectedCount,
+      got: mainExercises.length,
+      filling: missing,
+      skippedCount,
+    })
+
+    // Collect muscle groups from the workout to match fallback exercises
+    const workoutMuscles = new Set(
+      mainExercises.map((e) => e.primaryMuscle).filter(Boolean)
+    )
+
+    // Get used exercise IDs to avoid duplicates
+    const usedIds = new Set(exercises.map((e) => e.exerciseId))
+
+    // Find fallback candidates from exerciseMap matching the workout's muscle groups
+    const candidates = Array.from(exerciseMap.values()).filter(
+      (ex) =>
+        !usedIds.has(ex.id) &&
+        ex.primaryMuscle !== 'cardio' &&
+        ex.category !== 'cardio' &&
+        ex.category !== 'warmup' &&
+        (workoutMuscles.size === 0 || workoutMuscles.has(ex.primaryMuscle))
+    )
+
+    // If not enough matching candidates, widen to all non-cardio exercises
+    const pool =
+      candidates.length >= missing
+        ? candidates
+        : Array.from(exerciseMap.values()).filter(
+            (ex) =>
+              !usedIds.has(ex.id) &&
+              ex.primaryMuscle !== 'cardio' &&
+              ex.category !== 'cardio' &&
+              ex.category !== 'warmup'
+          )
+
+    // Shuffle and pick
+    const shuffled = [...pool].sort(() => Math.random() - 0.5)
+    const fallbackExercises = shuffled.slice(0, missing)
+
+    for (const ex of fallbackExercises) {
+      exercises.push({
+        exerciseId: ex.id,
+        exerciseName: ex.nameHe,
+        exerciseNameHe: ex.nameHe,
+        imageUrl: ex.imageUrl,
+        category: ex.category,
+        primaryMuscle: ex.primaryMuscle,
+        isWarmup: false,
+        targetSets: 3,
+        targetReps: '8-12',
+        sets: [],
+      })
+    }
+
+    functions.logger.info('Fallback exercises added', {
+      added: fallbackExercises.length,
+      totalNow: exercises.length,
+      fallbackIds: fallbackExercises.map((e) => e.id),
+    })
+  }
 
   return {
     name: getAIWorkoutName(workoutNumber),

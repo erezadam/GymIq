@@ -16,6 +16,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { getMuscleNameHe } from '@/utils/muscleTranslations'
+import { calculateExerciseVolumeFromHistory } from '@/lib/firebase/workoutHistory'
 import type { WorkoutHistorySummary, WorkoutHistoryEntry, WorkoutCompletionStatus } from '@/domains/workouts/types'
 
 export interface StatusConfig {
@@ -234,6 +235,16 @@ export function WorkoutCard({
                         )}
                       </>
                     )}
+
+                    {/* Exercise volume (backward compat: calculate from sets if not stored) */}
+                    {(() => {
+                      const vol = exercise.exerciseVolume ?? calculateExerciseVolumeFromHistory(exercise.sets || [])
+                      return vol > 0 ? (
+                        <p className="text-xs text-text-muted mt-1.5">
+                          נפח: {vol.toLocaleString()}kg
+                        </p>
+                      ) : null
+                    })()}
 
                     {exercise.notes && (
                       <p className="text-sm text-text-muted mt-2 italic border-r-2 border-primary-main pr-2">

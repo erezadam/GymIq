@@ -58,6 +58,7 @@ export interface AnalysisExercise {
   secondaryMuscles: string[]
   category: string
   isCompleted: boolean
+  exerciseVolume?: number
   sets: AnalysisSet[]
 }
 

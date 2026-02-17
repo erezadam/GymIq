@@ -28,6 +28,8 @@ import {
   completeWorkout,
   calculateAndSaveWeightRecommendations,
   getWeightRecommendations,
+  getLastExerciseVolumes,
+  calculateExerciseVolume,
 } from '@/lib/firebase/workoutHistory'
 import { getExerciseById } from '@/lib/firebase/exercises'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
@@ -117,6 +119,9 @@ export function useActiveWorkout() {
 
   // Track if initWorkout is currently running to prevent concurrent calls
   const isInitializing = useRef(false)
+
+  // Preserve continue workout ID across async operations (survives validation failures)
+  const continueWorkoutIdRef = useRef<string | null>(null)
 
   // Load dynamic muscle names from Firebase on mount
   useEffect(() => {
@@ -223,7 +228,12 @@ export function useActiveWorkout() {
 
         // Defense in depth: if auto-save fails with permission-denied,
         // the firebaseWorkoutId is stale — clear it and retry as new document
+        // BUT: if we have a continuation ref, this is a continued workout — don't create new
         if (error?.code === 'permission-denied' && currentFirebaseId) {
+          if (continueWorkoutIdRef.current) {
+            console.error('🚨 Auto-save permission-denied during continuation — NOT creating new document to prevent duplicate. Original ID:', currentFirebaseId)
+            return
+          }
           console.warn('⚠️ Auto-save permission-denied, clearing stale ID and retrying as new document')
           localStorage.removeItem(firebaseIdKey)
           setFirebaseWorkoutId(null)
@@ -318,6 +328,21 @@ export function useActiveWorkout() {
       // Set initializing lock
       isInitializing.current = true
       setIsLoading(true)
+
+      // Retry helper for validation — auth timing issues can cause transient failures
+      const validateWithRetry = async (id: string, uid: string, maxAttempts = 3): Promise<{ valid: boolean; reason?: string }> => {
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          const result = await validateWorkoutId(id, uid)
+          if (result.valid) return result
+          if (attempt < maxAttempts) {
+            console.log(`🔄 Validation attempt ${attempt}/${maxAttempts} failed, retrying in 1s...`)
+            await new Promise(resolve => setTimeout(resolve, 1000))
+          } else {
+            return result
+          }
+        }
+        return { valid: false, reason: 'max retries exhausted' }
+      }
 
       // First, check Firebase for in_progress workout (recovery after app close)
       // Skip this if continuing from history or if trainer is reporting for a trainee
@@ -424,16 +449,22 @@ export function useActiveWorkout() {
 
           // Check for existing workout ID to prevent duplication
           const existingWorkoutId = localStorage.getItem('continueWorkoutId')
+          if (existingWorkoutId) {
+            // Always store in ref first — this is our safety net
+            continueWorkoutIdRef.current = existingWorkoutId
+          }
           if (existingWorkoutId && user?.uid) {
-            // Validate the workout ID belongs to current user before using it
-            const validation = await validateWorkoutId(existingWorkoutId, user.uid)
+            // Validate with retry — auth timing issues can cause transient failures
+            const validation = await validateWithRetry(existingWorkoutId, user.uid)
             if (validation.valid) {
               console.log('📋 Found existing workout ID (validated):', existingWorkoutId)
               setFirebaseWorkoutId(existingWorkoutId)
               localStorage.setItem(firebaseIdKey, existingWorkoutId)
             } else {
-              console.warn('⚠️ Stale continueWorkoutId detected, ignoring:', existingWorkoutId, 'reason:', validation.reason)
-              // Don't use stale ID — a new document will be created on auto-save
+              // Validation failed after retries but this is a continuation — still use the ID
+              console.warn('⚠️ continueWorkoutId validation failed after retries, using anyway (continuation):', existingWorkoutId, 'reason:', validation.reason)
+              setFirebaseWorkoutId(existingWorkoutId)
+              localStorage.setItem(firebaseIdKey, existingWorkoutId)
             }
           } else if (existingWorkoutId) {
             // No user yet — use as-is (will be validated later)
@@ -623,6 +654,17 @@ export function useActiveWorkout() {
                   console.error('Failed to fetch weight recommendations (non-critical):', e)
                 }
               }
+
+              // Exercise volumes - separate try/catch (non-critical)
+              try {
+                const volExerciseIds = newExercises.map((ex) => ex.exerciseId)
+                const volumes = await getLastExerciseVolumes(user.uid, volExerciseIds)
+                newExercises.forEach((ex) => {
+                  ex.previousExerciseVolume = volumes[ex.exerciseId] ?? null
+                })
+              } catch (e) {
+                console.error('Failed to fetch exercise volumes (non-critical):', e)
+              }
             }
 
             // Merge new exercises into parsed workout
@@ -751,6 +793,17 @@ export function useActiveWorkout() {
               console.error('Failed to fetch weight recommendations (non-critical):', e)
             }
           }
+
+          // Exercise volumes - separate try/catch (non-critical)
+          try {
+            const volExerciseIds = exercises.map((ex) => ex.exerciseId)
+            const volumes = await getLastExerciseVolumes(user.uid, volExerciseIds)
+            exercises.forEach((ex) => {
+              ex.previousExerciseVolume = volumes[ex.exerciseId] ?? null
+            })
+          } catch (e) {
+            console.error('Failed to fetch exercise volumes (non-critical):', e)
+          }
         }
 
         const newWorkout: ActiveWorkout = {
@@ -773,14 +826,33 @@ export function useActiveWorkout() {
         // Validate the ID before using it — stale IDs cause permission-denied
         let existingId = localStorage.getItem(firebaseIdKey)
         if (existingId && user?.uid) {
-          const validation = await validateWorkoutId(existingId, user.uid)
+          // Use retry for continuation (auth timing), single attempt otherwise
+          const validation = isContinuingFromHistory
+            ? await validateWithRetry(existingId, user.uid)
+            : await validateWorkoutId(existingId, user.uid)
           if (!validation.valid) {
-            console.warn('⚠️ Stale existingId at init, creating new document:', existingId, 'reason:', validation.reason)
-            localStorage.removeItem(firebaseIdKey)
-            existingId = null
+            if (isContinuingFromHistory) {
+              // During continuation: NEVER null the ID — use it anyway
+              // The ref is our safety net from the first validation block
+              console.warn('⚠️ autoSave validation failed during continuation (after retries), using ID anyway:', existingId, 'reason:', validation.reason)
+            } else {
+              console.warn('⚠️ Stale existingId at init, creating new document:', existingId, 'reason:', validation.reason)
+              localStorage.removeItem(firebaseIdKey)
+              existingId = null
+            }
           }
         }
-        try {
+        // Safety net: if ID is still null but we're continuing, recover from ref
+        if (!existingId && isContinuingFromHistory && continueWorkoutIdRef.current) {
+          console.warn('🔄 Recovering continue workout ID from ref:', continueWorkoutIdRef.current)
+          existingId = continueWorkoutIdRef.current
+          localStorage.setItem(firebaseIdKey, existingId)
+        }
+        // Assertion: during continuation, ID must never be null
+        if (isContinuingFromHistory && !existingId) {
+          console.error('🚨 CRITICAL: continuation without workout ID — aborting autoSave to prevent duplicate. All recovery paths exhausted.')
+          // Don't proceed — creating a new document would duplicate the workout
+        } else try {
           const endTime = new Date()
           const savedId = await autoSaveWorkout(existingId, {
             userId: newWorkout.userId,
@@ -1031,6 +1103,10 @@ export function useActiveWorkout() {
   // Finish an exercise (close card and mark as completed)
   const finishExercise = useCallback(
     (exerciseId: string) => {
+      // Capture exercise data before state update for toast
+      let exerciseVolume = 0
+      let previousVolume: number | null = null
+
       updateWorkout((prev) => {
         const exercise = prev.exercises.find((ex) => ex.id === exerciseId)
         if (!exercise) return prev
@@ -1040,6 +1116,10 @@ export function useActiveWorkout() {
           ...set,
           completedAt: set.reps > 0 ? new Date() : undefined,
         }))
+
+        // Calculate volume for toast
+        exerciseVolume = calculateExerciseVolume(updatedSets, exercise.reportType)
+        previousVolume = exercise.previousExerciseVolume ?? null
 
         const updatedExercises = prev.exercises.map((ex) => {
           if (ex.id === exerciseId) {
@@ -1060,7 +1140,19 @@ export function useActiveWorkout() {
         }
       })
 
-      toast.success('התרגיל הושלם!')
+      // Volume-aware toast
+      // Type assertion needed: previousVolume is mutated inside updateWorkout callback above,
+      // but TypeScript doesn't track mutations inside callbacks
+      const prevVol = previousVolume as number | null
+      if (exerciseVolume > 0 && prevVol !== null && prevVol > 0) {
+        const diff = ((exerciseVolume - prevVol) / prevVol) * 100
+        const sign = diff >= 0 ? '+' : ''
+        toast.success(`התרגיל הושלם! נפח: ${exerciseVolume.toLocaleString()}kg (קודם: ${prevVol.toLocaleString()}kg) ${diff >= 0 ? '↑' : '↓'} ${sign}${diff.toFixed(1)}%`)
+      } else if (exerciseVolume > 0) {
+        toast.success(`התרגיל הושלם! נפח: ${exerciseVolume.toLocaleString()}kg`)
+      } else {
+        toast.success('התרגיל הושלם!')
+      }
     },
     [updateWorkout]
   )
@@ -1202,34 +1294,38 @@ export function useActiveWorkout() {
           ? 'cancelled'
           : 'partial'
 
-        const exercises = workout.exercises.map((ex) => ({
-            exerciseId: ex.exerciseId,
-            exerciseName: ex.exerciseName,
-            exerciseNameHe: ex.exerciseNameHe,
-            imageUrl: ex.imageUrl || '',
-            category: ex.category || '',
-            isCompleted: ex.isCompleted,
-            notes: ex.notes,
-            // Assistance configuration
-            ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
-            sets: ex.reportedSets.map((set) => ({
-              type: 'working' as SetType,
-              targetReps: 0,
-              targetWeight: 0,
-              actualReps: set.reps,
-              actualWeight: set.weight,
-              completed: set.reps > 0,
-              // Extended fields (only include if defined - Firebase doesn't accept undefined)
-              ...(set.time !== undefined && set.time > 0 && { time: set.time }),
-              ...(set.intensity !== undefined && set.intensity > 0 && { intensity: set.intensity }),
-              ...(set.speed !== undefined && set.speed > 0 && { speed: set.speed }),
-              ...(set.distance !== undefined && set.distance > 0 && { distance: set.distance }),
-              ...(set.incline !== undefined && set.incline > 0 && { incline: set.incline }),
-              // Assistance fields
-              ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
-              ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
-            })),
-          }))
+        const exercises = workout.exercises.map((ex) => {
+            const volume = calculateExerciseVolume(ex.reportedSets, ex.reportType)
+            return {
+              exerciseId: ex.exerciseId,
+              exerciseName: ex.exerciseName,
+              exerciseNameHe: ex.exerciseNameHe,
+              imageUrl: ex.imageUrl || '',
+              category: ex.category || '',
+              isCompleted: ex.isCompleted,
+              notes: ex.notes,
+              // Assistance configuration
+              ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
+              ...(volume > 0 && { exerciseVolume: volume }),
+              sets: ex.reportedSets.map((set) => ({
+                type: 'working' as SetType,
+                targetReps: 0,
+                targetWeight: 0,
+                actualReps: set.reps,
+                actualWeight: set.weight,
+                completed: set.reps > 0,
+                // Extended fields (only include if defined - Firebase doesn't accept undefined)
+                ...(set.time !== undefined && set.time > 0 && { time: set.time }),
+                ...(set.intensity !== undefined && set.intensity > 0 && { intensity: set.intensity }),
+                ...(set.speed !== undefined && set.speed > 0 && { speed: set.speed }),
+                ...(set.distance !== undefined && set.distance > 0 && { distance: set.distance }),
+                ...(set.incline !== undefined && set.incline > 0 && { incline: set.incline }),
+                // Assistance fields
+                ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
+                ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
+              })),
+            }
+          })
 
         try {
           // If we have a Firebase ID, use completeWorkout; otherwise save new
@@ -1297,6 +1393,7 @@ export function useActiveWorkout() {
           setPendingCalories(undefined)
           localStorage.removeItem(firebaseIdKey)
           hasInitialized.current = false
+          continueWorkoutIdRef.current = null
           setConfirmModal({ type: null })
 
           // Navigate back: trainer report → trainee detail, own workout → history
@@ -1350,6 +1447,7 @@ export function useActiveWorkout() {
               setPendingCalories(undefined)
               localStorage.removeItem(firebaseIdKey)
               hasInitialized.current = false
+              continueWorkoutIdRef.current = null
               setConfirmModal({ type: null })
               const wasTrainerReport = workout.reportedBy
               const reportTargetUserId2 = targetUserId
@@ -1494,6 +1592,7 @@ export function useActiveWorkout() {
     setFirebaseWorkoutId(null)
     // Keep the firebase ID in localStorage for recovery!
     hasInitialized.current = false
+    continueWorkoutIdRef.current = null
     setConfirmModal({ type: null })
 
     // Navigate back: trainer report → trainee detail, own workout → dashboard

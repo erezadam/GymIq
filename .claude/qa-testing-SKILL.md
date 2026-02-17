@@ -137,6 +137,7 @@ caches.keys().then(names => {
 | 29/01 | המשך אימון מאבד extended fields (time/intensity/speed/distance/incline) | ודא שכל save/restore points ב-useActiveWorkout.ts ו-workoutHistory.ts כוללים extended fields |
 | 29/01 | המשך אימון ריק/שחזור מ-Firebase לא מעביר category/primaryMuscle | `npm run test` - בדיקת רגרסיה 29/01 + ודא שכל addExercise מעביר details |
 | 25/01 | תרגיל מופיע בקטגוריה שגויה (category=sub-muscle) | `grep -r "VALID_EXERCISE_CATEGORIES_SET" src/` - ודא שיש validation |
+| 17/02 | המשך אימון in_progress יוצר מסמך כפול בגלל validateWorkoutId | `grep -r "continueWorkoutIdRef\|validateWithRetry\|duplicateIds" src/` - ודא: ref קיים, retry עם 3 נסיונות, זיהוי כפילויות בהיסטוריה |
 | 25/01 | המשך אימון "ללא דיווח" יוצר אימון חדש | `grep -r "case 'cancelled'" src/` - ודא ש-cancelled מטופל עם in_progress |
 | 24/01 | reportType לא מועבר ב-addExercise | `grep -r "addExercise" src/ \| grep -v "removeExercise"` - ודא שכולם מעבירים reportType |
 | 09/01 | קלוריות לא מוצגות בהיסטוריה | `grep -r "workout\.calories" src/` |
@@ -309,9 +310,10 @@ grep -r "estimateCalories" src/              # לא אמור להופיע בקו
 ### בדיקת סטטוסי אימון (P1):
 ```
 □ completed → לחיצה על "המשך" יוצרת אימון חדש
-□ in_progress → לחיצה על "המשך" מעדכנת אימון קיים
+□ in_progress → לחיצה על "המשך" מעדכנת אימון קיים (לא יוצרת מסמך חדש!)
 □ cancelled ("ללא דיווח") → לחיצה על "המשך" מעדכנת אימון קיים
 □ ב-Firebase: ודא שאין אימונים כפולים אחרי המשך
+□ בקונסול: ודא שאין הודעת "🚨 CRITICAL: continuation without workout ID"
 ```
 
 ### בדיקת קטגוריות תרגילים (P1):

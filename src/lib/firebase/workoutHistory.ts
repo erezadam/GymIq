@@ -146,6 +146,7 @@ export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'
       category: ex.category || '',
       isCompleted: ex.isCompleted,
       notes: ex.notes || '',
+      ...(ex.exerciseVolume !== undefined && ex.exerciseVolume > 0 && { exerciseVolume: ex.exerciseVolume }),
       sets: ex.sets.map(set => ({
         type: set.type,
         targetReps: set.targetReps || 0,
@@ -515,6 +516,84 @@ export async function getLastWorkoutForExercises(
   return result
 }
 
+// Calculate exercise volume for active workout sets (reps × weight for completed sets)
+// Only weight-based exercises (reportType includes 'weight' or is default weight_reps)
+export function calculateExerciseVolume(
+  sets: { reps: number; weight: number; completedAt?: Date }[],
+  reportType?: string
+): number {
+  // Only calculate volume for weight-based exercises
+  const rt = (reportType || 'weight_reps').toLowerCase()
+  if (!rt.includes('weight')) return 0
+
+  return sets.reduce((total, set) => {
+    // Count any set with weight and reps filled in (real-time during workout)
+    if (set.weight > 0 && set.reps > 0) {
+      return total + set.weight * set.reps
+    }
+    return total
+  }, 0)
+}
+
+// Calculate exercise volume from Firestore history sets (backward compat)
+export function calculateExerciseVolumeFromHistory(
+  sets: { actualWeight?: number; actualReps?: number; completed?: boolean }[]
+): number {
+  return sets.reduce((total, set) => {
+    const weight = set.actualWeight || 0
+    const reps = set.actualReps || 0
+    if (set.completed && weight > 0 && reps > 0) {
+      return total + weight * reps
+    }
+    return total
+  }, 0)
+}
+
+// Get last exercise volumes for multiple exercises at once
+// Returns { exerciseId: totalVolume } from the most recent workout containing each exercise
+export async function getLastExerciseVolumes(
+  userId: string,
+  exerciseIds: string[]
+): Promise<Record<string, number>> {
+  const historyRef = collection(db, COLLECTION_NAME)
+
+  const q = query(
+    historyRef,
+    where('userId', '==', userId),
+    orderBy('date', 'desc'),
+    limit(50)
+  )
+
+  const snapshot = await getDocs(q)
+  const result: Record<string, number> = {}
+  const foundExercises = new Set<string>()
+
+  for (const docSnap of snapshot.docs) {
+    if (foundExercises.size === exerciseIds.length) break
+
+    const data = docSnap.data()
+    if (!isNotSoftDeleted(data)) continue
+
+    const exercises = data.exercises || []
+
+    for (const exerciseId of exerciseIds) {
+      if (foundExercises.has(exerciseId)) continue
+
+      const exercise = exercises.find((ex: any) => ex.exerciseId === exerciseId)
+
+      if (exercise && exercise.sets && exercise.sets.length > 0) {
+        const volume = calculateExerciseVolumeFromHistory(exercise.sets)
+        if (volume > 0) {
+          result[exerciseId] = volume
+          foundExercises.add(exerciseId)
+        }
+      }
+    }
+  }
+
+  return result
+}
+
 // Get user stats
 export async function getUserWorkoutStats(userId: string): Promise<{
   totalWorkouts: number
@@ -603,6 +682,8 @@ export interface PersonalRecord {
   workoutCount: number // How many times this exercise was performed
   hasImproved: boolean // True if best > previous
   isBodyweight: boolean // True if this is a bodyweight exercise (weight always 0)
+  maxVolume?: number   // Max exercise volume (sum of weight × reps in a single workout)
+  maxVolumeDate?: Date // Date when max volume was achieved
 }
 
 // Get personal records for all exercises
@@ -629,6 +710,8 @@ export async function getPersonalRecords(userId: string): Promise<PersonalRecord
     records: { weight: number; reps: number; date: Date }[]
     workoutCount: number
     isBodyweight: boolean // All recorded weights are 0
+    maxVolume: number
+    maxVolumeDate?: Date
   }> = new Map()
 
   // Process all workouts (filter completed + non-deleted client-side)
@@ -689,6 +772,9 @@ export async function getPersonalRecords(userId: string): Promise<PersonalRecord
 
       if (weight === 0 && reps === 0) continue
 
+      // Calculate exercise volume for this workout (use saved value or calculate from sets)
+      const exerciseVolume = exercise.exerciseVolume ?? calculateExerciseVolumeFromHistory(validSets)
+
       const existing = exerciseMap.get(exercise.exerciseId)
 
       if (existing) {
@@ -696,6 +782,11 @@ export async function getPersonalRecords(userId: string): Promise<PersonalRecord
         existing.workoutCount++
         // Update isBodyweight - stays true only if ALL records have weight 0
         if (weight > 0) existing.isBodyweight = false
+        // Track max volume
+        if (exerciseVolume > existing.maxVolume) {
+          existing.maxVolume = exerciseVolume
+          existing.maxVolumeDate = workoutDate
+        }
       } else {
         exerciseMap.set(exercise.exerciseId, {
           exerciseId: exercise.exerciseId,
@@ -705,6 +796,8 @@ export async function getPersonalRecords(userId: string): Promise<PersonalRecord
           records: [{ weight, reps, date: workoutDate }],
           workoutCount: 1,
           isBodyweight: allWeightsZero, // Start with whether this workout had all 0 weights
+          maxVolume: exerciseVolume,
+          maxVolumeDate: exerciseVolume > 0 ? workoutDate : undefined,
         })
       }
     }
@@ -773,6 +866,8 @@ export async function getPersonalRecords(userId: string): Promise<PersonalRecord
       workoutCount: data.workoutCount,
       hasImproved,
       isBodyweight: data.isBodyweight,
+      maxVolume: data.maxVolume > 0 ? data.maxVolume : undefined,
+      maxVolumeDate: data.maxVolumeDate,
     })
   }
 
@@ -1237,7 +1332,7 @@ export async function completeWorkout(
     status: updates.status,
     endTime: Timestamp.fromDate(updates.endTime),
     duration: updates.duration,
-    exercises: updates.exercises.map(ex => ({
+    exercises: updates.exercises.map((ex: any) => ({
       exerciseId: ex.exerciseId,
       exerciseName: ex.exerciseName,
       exerciseNameHe: ex.exerciseNameHe,
@@ -1245,6 +1340,7 @@ export async function completeWorkout(
       category: ex.category || '',
       isCompleted: ex.isCompleted,
       notes: ex.notes || '',
+      ...(ex.exerciseVolume !== undefined && ex.exerciseVolume > 0 && { exerciseVolume: ex.exerciseVolume }),
       sets: ex.sets.map((set: any) => ({
         type: set.type,
         targetReps: set.targetReps || 0,

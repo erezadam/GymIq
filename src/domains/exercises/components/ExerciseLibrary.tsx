@@ -899,7 +899,15 @@ export function ExerciseLibrary({
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 overflow-y-auto"
           onClick={() => setImageModal(null)}
         >
-          <div className="max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+          <div className="relative max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+            {/* Close button - top left for RTL, min 44x44 touch target */}
+            <button
+              onClick={() => setImageModal(null)}
+              className="absolute top-2 left-2 z-10 w-11 h-11 flex items-center justify-center rounded-full bg-black/60 text-white text-xl"
+              aria-label="סגור תמונה"
+            >
+              ✕
+            </button>
             <img
               src={imageModal.url}
               alt={imageModal.name}
