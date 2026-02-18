@@ -55,6 +55,16 @@ service cloud.firestore {
 
       // Trainers can read user profiles (app filters to own trainees)
       allow read: if isTrainer();
+
+      // ---- AI Data subcollection (written by Cloud Functions only) ----
+      match /aiData/{docId} {
+        // Owner, their trainer, and admins can read
+        allow read: if isAuthenticated() &&
+          (request.auth.uid == userId || isTrainer() || isAdmin());
+
+        // No direct client writes — only via Cloud Functions (Admin SDK)
+        allow write: if false;
+      }
     }
 
     // ============ EXERCISE RECOMMENDATIONS ============
@@ -287,6 +297,12 @@ service cloud.firestore {
 
       // No direct client writes - only via Cloud Functions
       allow create, update, delete: if false;
+    }
+
+    // ============ AI PROGRAM USAGE (Rate Limiting) ============
+    match /aiProgramUsage/{usageId} {
+      // No direct client reads or writes — only via Cloud Functions (Admin SDK)
+      allow read, write: if false;
     }
 
     // ============ APP SETTINGS ============

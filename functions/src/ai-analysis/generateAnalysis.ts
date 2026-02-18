@@ -119,6 +119,40 @@ async function incrementAnalysisUsage(userId: string): Promise<void> {
   }
 }
 
+async function saveAnalysisToUserProfile(
+  userId: string,
+  analysisObj: {
+    title: string
+    overview: string
+    strengths: string[]
+    weaknesses: string[]
+    recommendations: string[]
+    summary: string
+  },
+  workoutCount: number,
+  weeksAnalyzed: number
+): Promise<void> {
+  const db = getDb()
+
+  try {
+    await db
+      .collection('users')
+      .doc(userId)
+      .collection('aiData')
+      .doc('lastAnalysis')
+      .set({
+        analysis: analysisObj,
+        workoutCount,
+        weeksAnalyzed,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        model: 'gpt-4o',
+      })
+    functions.logger.info('Analysis saved to user aiData subcollection', { userId })
+  } catch (error: any) {
+    functions.logger.error('Failed to save analysis to user profile', { userId, error: error.message })
+  }
+}
+
 async function saveAnalysisResult(
   userId: string,
   analysis: string,
@@ -646,10 +680,11 @@ export const generateTrainingAnalysis = onCall(
         summary: parsed.summary,
       })
 
-      // Increment usage and save result for caching
+      // Increment usage, save result for caching, and save to user aiData subcollection
       await Promise.all([
         incrementAnalysisUsage(userId),
         saveAnalysisResult(userId, analysis, workouts.length, weeksAnalyzed),
+        saveAnalysisToUserProfile(userId, parsed, workouts.length, weeksAnalyzed),
       ])
 
       functions.logger.info('Training analysis completed', {

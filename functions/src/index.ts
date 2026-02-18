@@ -13,3 +13,6 @@ export { generateAIWorkout } from './ai-trainer/generateWorkout'
 
 // Export AI Training Analysis function
 export { generateTrainingAnalysis } from './ai-analysis/generateAnalysis'
+
+// Export AI Program Generation function
+export { generateAIProgram } from './ai-program/generateProgram'

@@ -40,6 +40,7 @@
 ❌ **No hardcoded secrets** - מפתחות רק דרך environment variables  
 ❌ **No inline styles** - כל עיצוב דרך Tailwind classes בלבד, אסור `style={{}}`
 ❌ **No direct push to main** - תמיד עבודה בענף + PR + CI ירוק
+❌ **No deploy without tests** - לפני כל `firebase deploy` להריץ `npx playwright test`, לדווח תוצאות, לא לפרוס עם טסט שנכשל, ולא לפרוס בלי אישור מפורש מהמשתמש
 ❌ **No modal without explicit close** - כל modal חייב כפתור X ייעודי (44x44px מינימום) + סגירה בלחיצה על backdrop
 ❌ **No silent AI filtering** - כל קריאה ל-AI חיצוני חייבת validation + fallback. אסור לסנן תוצאות בשקט בלי השלמה
 
@@ -302,7 +303,7 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 | **ביצועים** | לא מוסיפים טעינות כבדות בלי הצדקה | יש Performance notes | `.claude/project-control-SKILL.md` |
 | **🔐 אבטחה סודות** | לא מכניסים מפתחות לקוד - בסקריפטים להשתמש ב-`scripts/firebase-config.ts` | יש Security check + בדיקת grep | ראה סעיף אבטחה למעלה |
 | **Firebase** | כל שינוי נתונים כולל בדיקת rules ו-migrations במידת הצורך | יש Data change notes | `.claude/firebase-data-SKILL.md` |
-| **פריסה** | לפני פריסה מוודאים env נכון build נקי ו-rollback plan | יש Deploy checklist | `.claude/deployment-SKILL.md` |
+| **🚀 פריסה** | לפני כל deploy: `npx playwright test` → דיווח → תיקון כשלונות → אישור מפורש מהמשתמש | טסטים רצו ועברו + אישור מהמשתמש | ראה סעיף פריסה למעלה |
 | **🔀 Git** | לא דוחפים ישירות ל-main, עובדים בענף נפרד, PR חובה | עובדים בענף feature/fix/work | `.claude/daily-workflow-SKILL.md` |
 | **🔄 תהליך יומי** | תחילת שיחה = בדיקת ענף, סגירת יום = עדכון+build+PR+merge+cleanup | הסוכן מדווח על כל שלב | `.claude/daily-workflow-SKILL.md` |
 | **סיום** | מסיימים בסיכום מה שונה איך נבדק ומה נשאר פתוח | יש Summary + Next | `.claude/project-control-SKILL.md` |
@@ -363,6 +364,32 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 - Tested: [איך נבדק]
 - Next: [מה נשאר לעשות]
 ```
+
+---
+
+## 🚀 פריסה — חובה לפני כל deploy (חוק ברזל!)
+
+> **רקע:** ב-17/02/2026 בוצעו פריסות בלי הרצת טסטים, מה שגרם לרגרסיות שהגיעו לפרודקשן.
+
+### ❌ אסור בתכלית האיסור:
+- לפרוס (`firebase deploy` / `firebase deploy --only functions` וכו') בלי להריץ טסטים קודם
+- לפרוס כשיש טסט שנכשל
+- לפרוס בלי אישור מפורש מהמשתמש
+
+### ✅ חובה — צ'קליסט לפני כל פריסה:
+
+```bash
+# שלב 1: הרץ Playwright tests
+npx playwright test
+
+# שלב 2: דווח תוצאות למשתמש (pass/fail + מספר טסטים)
+
+# שלב 3: אם יש טסט שנכשל — עצור! תקן קודם, אל תפרוס.
+
+# שלב 4: בקש אישור מפורש מהמשתמש לפני הפריסה.
+```
+
+**אין קיצורי דרך. אין "רק functions אז לא צריך טסטים". הכלל חל על כל סוג פריסה.**
 
 ---
 
@@ -428,11 +455,12 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 | 17/02/2026 | modal תמונת תרגיל לא ניתן לסגירה - stopPropagation חסם backdrop click | נוסף חוק ברזל: כל modal חייב כפתור X ייעודי + backdrop close |
 | 17/02/2026 | AI Trainer סינן תרגילים בשקט (10→7) בגלל exerciseId לא תקינים מ-GPT | נוסף fallback + חוק ברזל: No silent AI filtering |
 | 17/02/2026 | המשך אימון in_progress יוצר מסמך כפול - validateWorkoutId מנל ID | נוסף continueWorkoutIdRef + retry (3 נסיונות) + הגנה בכל נקודות autoSave + זיהוי כפילויות בהיסטוריה |
+| 17/02/2026 | פריסות בוצעו בלי הרצת טסטים, רגרסיות הגיעו לפרודקשן | נוסף חוק ברזל: `npx playwright test` חובה לפני כל deploy + אישור מפורש מהמשתמש |
 
 ---
 
 ```
 ══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 17/02/2026 | תיקון המשך אימון כפול — retry + ref + duplicate detection
+עדכון אחרון: 17/02/2026 | נוסף חוק ברזל — Playwright tests חובה לפני כל deploy
 ══════════════════════════════════════════════════════════════════════════════
 ```
