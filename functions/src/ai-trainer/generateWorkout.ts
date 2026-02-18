@@ -3,6 +3,7 @@
  * Main entry point for AI-powered workout generation
  */
 
+import * as admin from 'firebase-admin'
 import * as functions from 'firebase-functions'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import { callGPTForMuscleSelection, callGPTForBundle, filterExercisesByMuscles } from './openaiClient'
@@ -16,6 +17,55 @@ import type {
   ExerciseSummary,
   AIRecommendation,
 } from './types'
+
+/**
+ * Fetch the latest AI analysis for a user (if exists and not older than 30 days)
+ */
+async function fetchLastAnalysis(userId: string): Promise<string | null> {
+  try {
+    const doc = await admin
+      .firestore()
+      .collection('users')
+      .doc(userId)
+      .collection('aiData')
+      .doc('lastAnalysis')
+      .get()
+
+    if (!doc.exists) return null
+
+    const data = doc.data()
+    if (!data?.analysis || !data?.createdAt) return null
+
+    // Check if older than 30 days
+    const createdAt = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)
+    const daysSinceAnalysis = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
+    if (daysSinceAnalysis > 30) {
+      functions.logger.info('Last analysis is older than 30 days, skipping', { userId, daysSinceAnalysis })
+      return null
+    }
+
+    const analysis = data.analysis
+    const dateStr = createdAt.toISOString().split('T')[0]
+
+    const parts: string[] = []
+    parts.push(`\n**ניתוח אחרון של המתאמן (מתאריך ${dateStr}):**`)
+    if (analysis.weaknesses?.length) {
+      parts.push(`חולשות: ${analysis.weaknesses.join(' | ')}`)
+    }
+    if (analysis.recommendations?.length) {
+      parts.push(`המלצות: ${analysis.recommendations.join(' | ')}`)
+    }
+    if (analysis.summary) {
+      parts.push(`סיכום: ${analysis.summary}`)
+    }
+    parts.push('קח את הניתוח בחשבון בתכנון האימון. נסה לכלול תרגילים שמטפלים בחולשות שזוהו.\n')
+
+    return parts.join('\n')
+  } catch (error: any) {
+    functions.logger.warn('Failed to fetch last analysis', { userId, error: error.message })
+    return null
+  }
+}
 
 /**
  * Calculate exercise count based on duration
@@ -450,8 +500,11 @@ export const generateAIWorkout = onCall(
         }
       }
 
+      // Fetch last analysis (non-blocking — if fails, we proceed without it)
+      const lastAnalysisSection = await fetchLastAnalysis(userId)
+
       // Call 2: Generate workouts with filtered exercise list
-      const gptResult = await callGPTForBundle(data, filteredExercises, workoutMuscleAssignments)
+      const gptResult = await callGPTForBundle(data, filteredExercises, workoutMuscleAssignments, lastAnalysisSection)
 
       let workouts: GeneratedWorkout[] = []
       let usedFallback = false

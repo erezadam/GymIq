@@ -111,6 +111,7 @@ export function filterExercisesByMuscles(
 
   return exercises.filter(ex =>
     muscleSet.has(ex.primaryMuscle) ||
+    muscleSet.has(ex.category || '') ||
     ex.primaryMuscle === 'cardio' ||
     ex.category === 'cardio' ||
     ex.category === 'warmup'
@@ -124,14 +125,15 @@ export function filterExercisesByMuscles(
 export async function callGPTForBundle(
   data: GenerateWorkoutRequest,
   filteredExercises?: ExerciseSummary[],
-  workoutMuscleAssignments?: string[][]
+  workoutMuscleAssignments?: string[][],
+  lastAnalysisSection?: string | null
 ): Promise<ClaudeFullResponse | null> {
   try {
     const client = await getClient()
 
     const systemPrompt = buildSystemPrompt()
     const exercisesToUse = filteredExercises || data.availableExercises
-    const userPrompt = buildBundlePrompt(data, exercisesToUse, workoutMuscleAssignments)
+    const userPrompt = buildBundlePrompt(data, exercisesToUse, workoutMuscleAssignments, lastAnalysisSection)
 
     functions.logger.info('Call 2: Workout generation', {
       numWorkouts: data.request.numWorkouts,
@@ -301,7 +303,8 @@ ${JSON.stringify(historyMap, null, 0)}
 function buildBundlePrompt(
   data: GenerateWorkoutRequest,
   exercises: ExerciseSummary[],
-  workoutMuscleAssignments?: string[][]
+  workoutMuscleAssignments?: string[][],
+  lastAnalysisSection?: string | null
 ): string {
   const { request, muscles, recentWorkouts, yesterdayExerciseIds, exerciseHistory } = data
 
@@ -359,7 +362,7 @@ ${JSON.stringify(yesterdayExerciseIds)}
 
 **היסטוריית אימונים (5 אחרונים):**
 ${JSON.stringify(recentWorkouts.slice(0, 5))}
-${buildExerciseHistorySection(exerciseHistory)}
+${buildExerciseHistorySection(exerciseHistory)}${lastAnalysisSection || ''}
 חשוב:
 - לכל תרגיל הוסף recommendation עם המלצת משקל, טווח חזרות, סטים ו-reasoning
 - המלצת המשקל חייבת להתבסס על היסטוריית הביצוע של המשתמש (אם קיימת)
