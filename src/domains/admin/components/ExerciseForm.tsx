@@ -325,6 +325,7 @@ export default function ExerciseForm() {
   const selectedCategory = watch('category')
   const selectedAssistanceTypes = watch('assistanceTypes')
   const selectedBands = watch('availableBands')
+  const selectedSecondaryMuscles = watch('secondaryMuscles')
 
   // Handle band checkbox toggle
   const handleBandToggle = (bandId: string) => {
@@ -357,6 +358,15 @@ export default function ExerciseForm() {
     }
   }
 
+  // Handle secondary muscle checkbox toggle
+  const handleSecondaryMuscleToggle = (muscleId: string) => {
+    const current = selectedSecondaryMuscles || []
+    const updated = current.includes(muscleId)
+      ? current.filter(id => id !== muscleId)
+      : [...current, muscleId]
+    setValue('secondaryMuscles', updated)
+  }
+
   // Get selected primary muscle and its sub-muscles
   const selectedPrimaryMuscle = musclesData.find((m) => m.id === selectedCategory)
   const subMuscles = selectedPrimaryMuscle?.subMuscles || []
@@ -376,6 +386,11 @@ export default function ExerciseForm() {
     console.log('🔥 ExerciseForm: handleCategoryChange called:', { newCategory, wasTriggeredByUser: true })
     setValue('category', newCategory)
     setValue('primaryMuscle', '') // Reset sub-muscle selection
+    // Remove the new category from secondaryMuscles if it was selected there
+    const currentSecondary = selectedSecondaryMuscles || []
+    if (currentSecondary.includes(newCategory)) {
+      setValue('secondaryMuscles', currentSecondary.filter(id => id !== newCategory))
+    }
   }
 
   if (isEditing && isLoadingExercise) {
@@ -550,6 +565,37 @@ export default function ExerciseForm() {
                   ⚠️ הערך הנוכחי לא תקני. מומלץ לבחור תת-שריר מהרשימה.
                 </p>
               )}
+            </div>
+
+            {/* Secondary Muscles - spans full width */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-text-secondary mb-2">שרירים משניים</label>
+              <p className="text-text-muted text-xs mb-3">
+                בחר שרירים נוספים שהתרגיל מפעיל. התרגיל יופיע בסינון גם לפי שרירים אלו.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {musclesData
+                  .filter(muscle => VALID_EXERCISE_CATEGORIES_SET.has(muscle.id))
+                  .filter(muscle => muscle.id !== selectedCategory) // Exclude current primary
+                  .map((muscle) => (
+                    <label
+                      key={muscle.id}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
+                        selectedSecondaryMuscles?.includes(muscle.id)
+                          ? 'bg-primary-500/20 border-primary-500 text-primary-400'
+                          : 'bg-dark-card border-dark-border text-text-secondary hover:border-primary-500/50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSecondaryMuscles?.includes(muscle.id) || false}
+                        onChange={() => handleSecondaryMuscleToggle(muscle.id)}
+                        className="w-4 h-4 text-primary-500 border-dark-border bg-dark-card focus:ring-primary-500 rounded"
+                      />
+                      <span className="text-sm">{muscle.nameHe}</span>
+                    </label>
+                  ))}
+              </div>
             </div>
           </div>
         </section>
