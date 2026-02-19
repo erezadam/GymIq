@@ -259,10 +259,12 @@ export function ExerciseLibrary({
   const filteredExercises = useMemo(() => {
     return exercises
       .filter((ex) => {
-        // Primary muscle filter
+        // Primary muscle filter — also match if selectedPrimaryMuscle is in secondaryMuscles
         if (selectedPrimaryMuscle !== 'all') {
           const exercisePrimaryMuscle = ex.primaryMuscle || ex.category
-          if (exercisePrimaryMuscle !== selectedPrimaryMuscle && ex.category !== selectedPrimaryMuscle) {
+          const matchesPrimary = exercisePrimaryMuscle === selectedPrimaryMuscle || ex.category === selectedPrimaryMuscle
+          const matchesSecondary = ex.secondaryMuscles?.includes(selectedPrimaryMuscle as MuscleGroup)
+          if (!matchesPrimary && !matchesSecondary) {
             return false
           }
         }
