@@ -37,6 +37,8 @@ export interface AppUser {
   height?: number // cm
   weight?: number // kg
   bodyFatPercentage?: number
+  // Profile photo
+  photoURL?: string
 }
 
 // Convert Firebase user to App user

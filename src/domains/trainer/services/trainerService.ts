@@ -143,6 +143,7 @@ export const trainerService = {
                   phoneNumber: profile.phoneNumber,
                   trainingGoals: profile.trainingGoals as any,
                   injuriesOrLimitations: profile.injuriesOrLimitations,
+                  photoURL: profile.photoURL,
                 }
               : undefined,
             lastWorkoutDate:
@@ -172,7 +173,7 @@ export const trainerService = {
   // Update a trainee's profile (body metrics, personal info)
   async updateTraineeProfile(
     traineeId: string,
-    data: Partial<Pick<AppUser, 'firstName' | 'lastName' | 'phoneNumber' | 'trainingGoals' | 'injuriesOrLimitations' | 'age' | 'height' | 'weight' | 'bodyFatPercentage'>>
+    data: Partial<Pick<AppUser, 'firstName' | 'lastName' | 'phoneNumber' | 'trainingGoals' | 'injuriesOrLimitations' | 'age' | 'height' | 'weight' | 'bodyFatPercentage' | 'photoURL'>>
   ): Promise<void> {
     // Update displayName if name changed
     const updateData: Record<string, any> = { ...data }

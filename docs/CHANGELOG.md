@@ -6,6 +6,30 @@
 
 ---
 
+## [v1.14.0] - 2026-02-20
+
+### 🚀 פיצ'רים חדשים
+
+| פיצ'ר | תיאור |
+|-------|-------|
+| **תמונת פרופיל למתאמנים** | המאמן יכול ללחוץ על אווטאר של מתאמן, לצלם או לבחור תמונה, והתמונה מוצגת במקום האות הראשונה. עובד בכרטיס מתאמן ובדף פרופיל. תמונות נדחסות אוטומטית (~400x400px) לפני העלאה |
+
+### 📝 שינויים
+
+| קובץ | שינוי |
+|------|-------|
+| `src/lib/firebase/auth.ts` | הוספת `photoURL?: string` ל-`AppUser` |
+| `src/domains/trainer/types/trainer.types.ts` | הוספת `photoURL` ל-`traineeProfile` ב-`TraineeWithStats` |
+| `src/lib/firebase/traineePhotoStorage.ts` | **חדש** — שירות העלאת תמונות עם דחיסה (Canvas), validation, ומחיקה |
+| `src/domains/trainer/components/TraineeAvatar.tsx` | **חדש** — קומפוננטת אווטאר עם צילום/העלאה, spinner, fallback לאות ראשונה |
+| `src/domains/trainer/components/TraineeCard.tsx` | שילוב `TraineeAvatar` במקום אווטאר סטטי |
+| `src/domains/trainer/components/TraineeProfileSection.tsx` | שילוב `TraineeAvatar` גדול במקום אווטאר סטטי |
+| `src/domains/trainer/services/trainerService.ts` | העברת `photoURL` מפרופיל + הוספה לרשימת שדות מותרים לעדכון |
+| `storage.rules` | **חדש** — הרשאות Firebase Storage עבור `trainee-photos/` ו-`exercise-sets/` |
+| `firebase.json` | הוספת הפניה ל-`storage.rules` |
+
+---
+
 ## [v1.13.1] - 2026-02-07
 
 ### 🚀 פיצ'רים חדשים

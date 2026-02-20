@@ -180,6 +180,7 @@ export interface TraineeWithStats {
     height?: number
     weight?: number
     bodyFatPercentage?: number
+    photoURL?: string
   }
   lastWorkoutDate?: Date
   thisWeekWorkouts: number
