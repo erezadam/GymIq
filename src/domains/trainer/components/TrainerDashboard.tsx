@@ -43,7 +43,7 @@ export default function TrainerDashboard() {
                 <Users className="w-5 h-5 text-accent-orange" />
               </div>
             </div>
-            <p className="text-text-muted text-xs">מתאמנים פעילים</p>
+            <p className="text-text-secondary text-xs">מתאמנים פעילים</p>
           </div>
           <div className="bg-dark-card border border-white/5 rounded-2xl p-4 shadow-card">
             <div className="flex items-center justify-between mb-3">
@@ -52,7 +52,7 @@ export default function TrainerDashboard() {
                 <Dumbbell className="w-5 h-5 text-primary-main" />
               </div>
             </div>
-            <p className="text-text-muted text-xs">אימונים השבוע</p>
+            <p className="text-text-secondary text-xs">אימונים השבוע</p>
           </div>
           <div className="bg-dark-card border border-white/5 rounded-2xl p-4 shadow-card">
             <div className="flex items-center justify-between mb-3">
@@ -61,7 +61,7 @@ export default function TrainerDashboard() {
                 <TrendingUp className="w-5 h-5 text-accent-purple" />
               </div>
             </div>
-            <p className="text-text-muted text-xs">אחוז ביצוע</p>
+            <p className="text-text-secondary text-xs">אחוז ביצוע</p>
           </div>
           <div className="bg-dark-card border border-white/5 rounded-2xl p-4 shadow-card">
             <div className="flex items-center justify-between mb-3">
@@ -70,7 +70,7 @@ export default function TrainerDashboard() {
                 <MessageSquare className="w-5 h-5 text-status-info" />
               </div>
             </div>
-            <p className="text-text-muted text-xs">הודעות שנשלחו</p>
+            <p className="text-text-secondary text-xs">הודעות שנשלחו</p>
           </div>
         </div>
       )}
