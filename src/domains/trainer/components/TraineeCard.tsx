@@ -2,20 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { Flame, CalendarDays, CircleAlert, AlertTriangle, CheckCircle } from 'lucide-react'
 import type { TraineeWithStats } from '../types'
 import { TRAINING_GOAL_LABELS } from '../types'
-
-const AVATAR_GRADIENTS = [
-  'from-primary-main to-status-info',
-  'from-accent-purple to-accent-pink',
-  'from-status-error to-accent-orange',
-  'from-status-info to-primary-main',
-  'from-accent-gold to-accent-orange',
-  'from-status-success to-primary-main',
-]
-
-function getAvatarGradient(name: string): string {
-  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  return AVATAR_GRADIENTS[hash % AVATAR_GRADIENTS.length]
-}
+import { TraineeAvatar } from './TraineeAvatar'
 
 function daysSince(date: Date): number {
   return Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24))
@@ -47,9 +34,6 @@ export function TraineeCard({ trainee }: TraineeCardProps) {
   const displayName = traineeProfile
     ? `${traineeProfile.firstName} ${traineeProfile.lastName}`
     : relationship.traineeName
-
-  const initial = traineeProfile?.firstName?.charAt(0) || displayName.charAt(0)
-  const avatarGradient = getAvatarGradient(displayName)
 
   const getDotColor = () => {
     if (thisWeekWorkouts >= 3) return 'bg-status-success'
@@ -97,13 +81,16 @@ export function TraineeCard({ trainee }: TraineeCardProps) {
 
         {/* Avatar - second child = end = LEFT in RTL */}
         <div className="relative flex-shrink-0">
+          <TraineeAvatar
+            traineeId={relationship.traineeId}
+            displayName={displayName}
+            photoURL={traineeProfile?.photoURL}
+            sizeClass="w-14 h-14"
+            roundedClass="rounded-2xl"
+            textSizeClass="text-xl"
+          />
           <div
-            className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center text-xl font-bold text-white shadow-md`}
-          >
-            {initial}
-          </div>
-          <div
-            className={`absolute -bottom-1 -right-1 w-4 h-4 ${dotColor} rounded-full border-2 border-dark-card`}
+            className={`absolute -bottom-1 -right-1 w-4 h-4 ${dotColor} rounded-full border-2 border-dark-card z-10`}
           />
         </div>
       </div>

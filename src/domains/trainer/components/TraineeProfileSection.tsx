@@ -1,20 +1,7 @@
 import { AlertTriangle, FileText, Pencil } from 'lucide-react'
 import type { TraineeWithStats } from '../types'
 import { TRAINING_GOAL_LABELS } from '../types'
-
-const AVATAR_GRADIENTS = [
-  'from-primary-main to-status-info',
-  'from-accent-purple to-accent-pink',
-  'from-status-error to-accent-orange',
-  'from-status-info to-primary-main',
-  'from-accent-gold to-accent-orange',
-  'from-status-success to-primary-main',
-]
-
-function getAvatarGradient(name: string): string {
-  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  return AVATAR_GRADIENTS[hash % AVATAR_GRADIENTS.length]
-}
+import { TraineeAvatar } from './TraineeAvatar'
 
 interface TraineeProfileSectionProps {
   trainee: TraineeWithStats
@@ -26,8 +13,6 @@ export function TraineeProfileSection({ trainee, onEdit }: TraineeProfileSection
   const displayName = profile
     ? `${profile.firstName} ${profile.lastName}`
     : trainee.relationship.traineeName
-  const initial = profile?.firstName?.charAt(0) || displayName.charAt(0)
-  const avatarGradient = getAvatarGradient(displayName)
 
   const completionPercent = Math.min(100, Math.max(0, trainee.programCompletionRate))
   const circumference = 283
@@ -55,13 +40,16 @@ export function TraineeProfileSection({ trainee, onEdit }: TraineeProfileSection
         <div className="flex items-center gap-5">
           {/* Large Avatar */}
           <div className="relative flex-shrink-0">
+            <TraineeAvatar
+              traineeId={trainee.relationship.traineeId}
+              displayName={displayName}
+              photoURL={profile?.photoURL}
+              sizeClass="w-20 h-20 sm:w-24 sm:h-24"
+              roundedClass="rounded-3xl"
+              textSizeClass="text-3xl sm:text-4xl"
+            />
             <div
-              className={`w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center text-3xl sm:text-4xl font-bold text-white`}
-            >
-              {initial}
-            </div>
-            <div
-              className={`absolute -bottom-2 -right-2 w-7 h-7 ${statusColor} rounded-full border-4 border-dark-bg flex items-center justify-center`}
+              className={`absolute -bottom-2 -right-2 w-7 h-7 ${statusColor} rounded-full border-4 border-dark-bg flex items-center justify-center z-10`}
             >
               <span className="text-xs text-white">✓</span>
             </div>
