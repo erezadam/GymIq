@@ -73,7 +73,7 @@ export function TraineeCard({ trainee }: TraineeCardProps) {
         {/* Name - first child = start = RIGHT in RTL */}
         <div className="flex-1 min-w-0">
           <h3 className="font-bold text-lg text-text-primary truncate">{displayName}</h3>
-          <p className="text-text-muted text-xs truncate">
+          <p className="text-text-secondary text-xs truncate">
             {goalLabel && <>{goalLabel} &middot; </>}
             {memberDuration}
           </p>
@@ -101,7 +101,7 @@ export function TraineeCard({ trainee }: TraineeCardProps) {
           <div className="flex items-center gap-1.5">
             <CheckCircle className="w-3.5 h-3.5 text-status-success" />
             <span className="text-xs text-status-success">פעיל</span>
-            <span className="text-xs text-text-muted truncate">{activeProgram.name}</span>
+            <span className="text-xs text-text-secondary truncate">{activeProgram.name}</span>
           </div>
         ) : (
           <div className="flex items-center gap-1.5">
@@ -116,15 +116,15 @@ export function TraineeCard({ trainee }: TraineeCardProps) {
         {/* First grid item = RIGHT column in RTL = השבוע */}
         <div className="bg-dark-surface border border-white/10 rounded-xl px-3 py-2.5">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-text-muted text-xs">השבוע</span>
-            <CalendarDays className="w-3.5 h-3.5 text-text-muted" />
+            <span className="text-text-secondary text-xs">השבוע</span>
+            <CalendarDays className="w-3.5 h-3.5 text-text-secondary" />
           </div>
           <p className="text-lg font-bold text-text-primary">{thisWeekWorkouts}/3</p>
         </div>
         {/* Second grid item = LEFT column in RTL = רצף ימים */}
         <div className="bg-dark-surface border border-white/10 rounded-xl px-3 py-2.5">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-text-muted text-xs">רצף ימים</span>
+            <span className="text-text-secondary text-xs">רצף ימים</span>
             <Flame className="w-3.5 h-3.5 text-accent-orange" />
           </div>
           <p className="text-lg font-bold text-text-primary">{currentStreak}</p>

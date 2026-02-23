@@ -18,7 +18,7 @@ function getAvatarGradient(name: string): string {
 }
 
 interface TraineeAvatarProps {
-  traineeId: string
+  traineeId?: string
   displayName: string
   photoURL?: string
   /** Tailwind size classes for the avatar container, e.g. "w-14 h-14" */
@@ -29,6 +29,9 @@ interface TraineeAvatarProps {
   textSizeClass?: string
   /** Called after a photo is successfully uploaded with the new URL */
   onPhotoUpdated?: (newPhotoURL: string) => void
+  /** Capture-only mode: called with the selected File instead of uploading.
+   *  When provided, the component shows a local preview and skips Firebase upload. */
+  onFileSelected?: (file: File) => void
 }
 
 export function TraineeAvatar({
@@ -39,14 +42,22 @@ export function TraineeAvatar({
   roundedClass = 'rounded-2xl',
   textSizeClass = 'text-xl',
   onPhotoUpdated,
+  onFileSelected,
 }: TraineeAvatarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [currentPhoto, setCurrentPhoto] = useState(photoURL)
+  const [localPreview, setLocalPreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const initial = displayName.charAt(0)
   const avatarGradient = getAvatarGradient(displayName)
+
+  // Capture-only mode: onFileSelected is provided
+  const isCaptureOnly = !!onFileSelected
+
+  // Display photo: local preview (capture-only) or uploaded photo
+  const displayPhoto = localPreview || currentPhoto
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -61,6 +72,17 @@ export function TraineeAvatar({
 
     // Reset input so the same file can be selected again
     e.target.value = ''
+
+    if (isCaptureOnly) {
+      // Capture-only mode: show local preview and pass file to parent
+      const previewUrl = URL.createObjectURL(file)
+      setLocalPreview(previewUrl)
+      onFileSelected(file)
+      return
+    }
+
+    // Upload mode: requires traineeId
+    if (!traineeId) return
 
     setUploading(true)
     setError(null)
@@ -98,9 +120,9 @@ export function TraineeAvatar({
         aria-label="שנה תמונת פרופיל"
       >
         {/* Photo or Initial */}
-        {currentPhoto ? (
+        {displayPhoto ? (
           <img
-            src={currentPhoto}
+            src={displayPhoto}
             alt={displayName}
             className="w-full h-full object-cover"
           />

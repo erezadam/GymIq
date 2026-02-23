@@ -125,7 +125,7 @@ export default function TrainerLayout() {
           >
             <Menu className="w-6 h-6" />
           </button>
-          <h1 className="text-lg font-semibold text-text-primary mr-4">ממשק מאמן</h1>
+          <h1 className="text-xl font-bold text-white mr-4">ממשק מאמן</h1>
         </header>
 
         <main className="flex-1 p-6 overflow-y-auto overflow-x-hidden">

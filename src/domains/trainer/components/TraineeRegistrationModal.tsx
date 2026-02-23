@@ -3,9 +3,11 @@ import { X, UserPlus, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { useAuthStore } from '@/domains/authentication/store'
 import { traineeAccountService } from '../services/traineeAccountService'
 import { trainerService } from '../services/trainerService'
+import { uploadTraineePhoto } from '@/lib/firebase/traineePhotoStorage'
 import type { CreateTraineeData, TrainingGoal } from '../types'
 import { TRAINING_GOAL_LABELS } from '../types'
 import type { AppUser } from '@/lib/firebase/auth'
+import { TraineeAvatar } from './TraineeAvatar'
 
 interface TraineeRegistrationModalProps {
   onClose: () => void
@@ -38,6 +40,7 @@ export function TraineeRegistrationModal({
   const { user } = useAuthStore()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [capturedPhoto, setCapturedPhoto] = useState<File | null>(null)
   const [formData, setFormData] = useState<CreateTraineeData>({
     firstName: '',
     lastName: '',
@@ -170,10 +173,11 @@ export function TraineeRegistrationModal({
 
     try {
       const trainerName = `${user.firstName} ${user.lastName}`
+      let traineeUid: string
 
       if (emailCheckStatus === 'available' && existingUser) {
         // Link existing user
-        await traineeAccountService.linkExistingUser(
+        const result = await traineeAccountService.linkExistingUser(
           existingUser,
           user.uid,
           trainerName,
@@ -187,14 +191,28 @@ export function TraineeRegistrationModal({
             bodyFatPercentage: formData.bodyFatPercentage,
           }
         )
+        traineeUid = result.uid
       } else {
         // Create new trainee
-        await traineeAccountService.createTraineeAccount(
+        const result = await traineeAccountService.createTraineeAccount(
           formData,
           user.uid,
           trainerName
         )
+        traineeUid = result.uid
       }
+
+      // Upload photo if captured during registration
+      if (capturedPhoto && traineeUid) {
+        try {
+          const photoURL = await uploadTraineePhoto(capturedPhoto, traineeUid)
+          await trainerService.updateTraineeProfile(traineeUid, { photoURL })
+        } catch (photoErr) {
+          console.error('Error uploading photo during registration:', photoErr)
+          // Don't fail the whole registration if photo upload fails
+        }
+      }
+
       onSuccess()
     } catch (err: any) {
       console.error('Error creating/linking trainee:', err)
@@ -292,6 +310,18 @@ export function TraineeRegistrationModal({
               {error}
             </div>
           )}
+
+          {/* Photo capture */}
+          <div className="flex flex-col items-center gap-2">
+            <TraineeAvatar
+              displayName={formData.firstName || formData.lastName || 'מ'}
+              sizeClass="w-20 h-20"
+              roundedClass="rounded-full"
+              textSizeClass="text-2xl"
+              onFileSelected={(file) => setCapturedPhoto(file)}
+            />
+            <p className="text-text-secondary text-xs">לחץ לצילום תמונה</p>
+          </div>
 
           {/* Email - First field for checking */}
           <div>
