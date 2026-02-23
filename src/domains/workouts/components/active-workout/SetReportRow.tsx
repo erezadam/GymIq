@@ -92,8 +92,6 @@ export function SetReportRow({
         <input
           ref={minutesInputRef}
           type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
           className="set-input set-input--time"
           value={minutesRaw !== null ? minutesRaw : (minutes ? formatTwoDigits(minutes) : '')}
           onChange={(e) => handleMinutesChange(e.target.value)}
@@ -106,8 +104,6 @@ export function SetReportRow({
         <input
           ref={secondsInputRef}
           type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
           className="set-input set-input--time"
           value={secondsRaw !== null ? secondsRaw : ((seconds || minutes) ? formatTwoDigits(seconds) : '')}
           onChange={(e) => handleSecondsChange(e.target.value)}
@@ -125,8 +121,7 @@ export function SetReportRow({
     <div className="set-input-group">
       <label className="set-label">{workoutLabels.weight}</label>
       <input
-        type="number"
-        inputMode="decimal"
+        type="text"
         className="set-input"
         value={set.weight || ''}
         onChange={(e) =>
@@ -142,8 +137,7 @@ export function SetReportRow({
     <div className="set-input-group">
       <label className="set-label">{workoutLabels.reps}</label>
       <input
-        type="number"
-        inputMode="numeric"
+        type="text"
         className="set-input"
         value={set.reps || ''}
         onChange={(e) => onUpdate({ reps: parseInt(e.target.value) || 0 })}
@@ -157,8 +151,7 @@ export function SetReportRow({
     <div className="set-input-group">
       <label className="set-label">עצימות</label>
       <input
-        type="number"
-        inputMode="numeric"
+        type="text"
         className="set-input"
         value={set.intensity || ''}
         onChange={(e) => {
@@ -168,8 +161,6 @@ export function SetReportRow({
           onUpdate({ intensity: clamped })
         }}
         placeholder="1-100"
-        min="1"
-        max="100"
       />
     </div>
   )
@@ -179,8 +170,7 @@ export function SetReportRow({
     <div className="set-input-group">
       <label className="set-label">שיפוע</label>
       <input
-        type="number"
-        inputMode="numeric"
+        type="text"
         className="set-input"
         value={set.incline || ''}
         onChange={(e) => {
@@ -190,8 +180,6 @@ export function SetReportRow({
           onUpdate({ incline: clamped })
         }}
         placeholder="1-20"
-        min="1"
-        max="20"
       />
     </div>
   )
@@ -201,14 +189,11 @@ export function SetReportRow({
     <div className="set-input-group">
       <label className="set-label">מהירות</label>
       <input
-        type="number"
-        inputMode="decimal"
+        type="text"
         className="set-input"
         value={set.speed || ''}
         onChange={(e) => onUpdate({ speed: parseFloat(e.target.value) || 0 })}
         placeholder="קמ״ש"
-        step="0.1"
-        min="0"
       />
     </div>
   )
@@ -218,14 +203,11 @@ export function SetReportRow({
     <div className="set-input-group">
       <label className="set-label">מרחק</label>
       <input
-        type="number"
-        inputMode="decimal"
+        type="text"
         className="set-input"
         value={set.distance || ''}
         onChange={(e) => onUpdate({ distance: parseFloat(e.target.value) || 0 })}
         placeholder="ק״מ"
-        step="0.1"
-        min="0"
       />
     </div>
   )
@@ -235,14 +217,11 @@ export function SetReportRow({
     <div className="set-input-group">
       <label className="set-label">עזרה (ק״ג)</label>
       <input
-        type="number"
-        inputMode="decimal"
+        type="text"
         className="set-input"
         value={set.assistanceWeight || ''}
         onChange={(e) => onUpdate({ assistanceWeight: parseFloat(e.target.value) || 0 })}
         placeholder="0"
-        min="0"
-        step="2.5"
       />
     </div>
   )

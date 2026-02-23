@@ -23,6 +23,9 @@ export default defineConfig({
   /* Run tests in files in parallel */
   fullyParallel: true,
 
+  /* Global timeout per test (60 seconds) */
+  timeout: 60 * 1000,
+
   /* Fail the build on CI if you accidentally left test.only in the source code */
   forbidOnly: !!process.env.CI,
 
@@ -30,7 +33,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 1,
 
   /* Limit workers to avoid Firebase rate limiting on login */
-  workers: process.env.CI ? 1 : 2,
+  workers: 1,
 
   /* Reporter to use */
   reporter: [

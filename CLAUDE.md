@@ -303,7 +303,7 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 | **ביצועים** | לא מוסיפים טעינות כבדות בלי הצדקה | יש Performance notes | `.claude/project-control-SKILL.md` |
 | **🔐 אבטחה סודות** | לא מכניסים מפתחות לקוד - בסקריפטים להשתמש ב-`scripts/firebase-config.ts` | יש Security check + בדיקת grep | ראה סעיף אבטחה למעלה |
 | **Firebase** | כל שינוי נתונים כולל בדיקת rules ו-migrations במידת הצורך | יש Data change notes | `.claude/firebase-data-SKILL.md` |
-| **🚀 פריסה** | לפני כל deploy: `npx playwright test` → דיווח → תיקון כשלונות → אישור מפורש מהמשתמש | טסטים רצו ועברו + אישור מהמשתמש | ראה סעיף פריסה למעלה |
+| **🚀 פריסה** | 3 רמות בדיקה: שינוי קטן=Build בלבד, שינוי לוגיקה=Spec רלוונטי, לפני deploy=Suite מלא | הרמה הנכונה נבחרה + אישור מהמשתמש לפני deploy | ראה סעיף פריסה למעלה |
 | **🔀 Git** | לא דוחפים ישירות ל-main, עובדים בענף נפרד, PR חובה | עובדים בענף feature/fix/work | `.claude/daily-workflow-SKILL.md` |
 | **🔄 תהליך יומי** | תחילת שיחה = בדיקת ענף, סגירת יום = עדכון+build+PR+merge+cleanup | הסוכן מדווח על כל שלב | `.claude/daily-workflow-SKILL.md` |
 | **סיום** | מסיימים בסיכום מה שונה איך נבדק ומה נשאר פתוח | יש Summary + Next | `.claude/project-control-SKILL.md` |
@@ -375,21 +375,94 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 - לפרוס (`firebase deploy` / `firebase deploy --only functions` וכו') בלי להריץ טסטים קודם
 - לפרוס כשיש טסט שנכשל
 - לפרוס בלי אישור מפורש מהמשתמש
+- להריץ `npx playwright test` (Suite מלא) אחרי שינוי קטן/ממוקד — **בזבוז זמן מיותר!**
 
-### ✅ חובה — צ'קליסט לפני כל פריסה:
+---
+
+## 🧪 רמות בדיקה — בחר לפי גודל השינוי
+
+> **כלל אצבע:** התאם את עומק הבדיקה להיקף השינוי. בדיקה יתרה = בזבוז זמן. בדיקה חסרה = רגרסיות.
+
+### 🟢 רמה 1 — שינוי קטן/ממוקד (עד 3 קבצים, UI בלבד, ללא לוגיקת ליבה)
+
+**מתי:** שינוי עיצוב, טקסט, תצוגה, props קטנים — ללא נגיעה ב-hooks, stores, Firebase, auth, workout flow.
+
+**דוגמאות:** תיקון פדינג, שינוי צבע כפתור, הסרת `type="number"` משדה קלט, עדכון תווית.
 
 ```bash
-# שלב 1: הרץ Playwright tests
-npx playwright test
+# בדיקה מינימלית — Build בלבד:
+npm run build 2>&1 | tail -5
 
-# שלב 2: דווח תוצאות למשתמש (pass/fail + מספר טסטים)
-
-# שלב 3: אם יש טסט שנכשל — עצור! תקן קודם, אל תפרוס.
-
-# שלב 4: בקש אישור מפורש מהמשתמש לפני הפריסה.
+# + grep ידני על הקובץ שנגע:
+grep -n "שם_הפונקציה_או_הקומפוננטה" src/path/to/changed/file.tsx
 ```
 
-**אין קיצורי דרך. אין "רק functions אז לא צריך טסטים". הכלל חל על כל סוג פריסה.**
+**אם Build עובר + אין שגיאות TypeScript → ✅ מותר לפרוס (עם אישור משתמש)**
+
+---
+
+### 🟡 רמה 2 — שינוי משמעותי (לוגיקה, hooks, services, flows)
+
+**מתי:** שינוי ב-hooks, stores, Firebase services, AI flows, trainer/trainee logic, workout status.
+
+**דוגמאות:** שינוי ב-`useActiveWorkout`, `WorkoutHistory`, `workoutHistory.ts`, `trainerService`, לוגיקת המשך אימון.
+
+```bash
+# שלב 1: Build
+npm run build 2>&1 | tail -5
+
+# שלב 2: Playwright — רק על ה-spec הרלוונטי:
+npx playwright test e2e/workout-flow.spec.ts        # לשינויי workout
+npx playwright test e2e/auth.spec.ts                # לשינויי auth
+npx playwright test e2e/trainer-dashboard.spec.ts   # לשינויי trainer
+npx playwright test e2e/workout-history.spec.ts     # לשינויי history
+
+# שלב 3: דווח תוצאות למשתמש
+```
+
+**מיפוי קבצים → specs:**
+| קובץ שנגע | Spec להריץ |
+|-----------|-----------|
+| `useActiveWorkout`, `ActiveWorkoutScreen`, `SetReportRow` | `workout-flow.spec.ts` |
+| `WorkoutHistory`, `workoutHistory.ts` | `workout-history.spec.ts` |
+| `auth.ts`, `authStore`, `LoginPage`, `AuthGuard` | `auth.spec.ts` + `route-guards.spec.ts` |
+| `trainerService`, `TrainerDashboard`, `TraineeDetail` | `trainer-dashboard.spec.ts` |
+| `programService`, `ProgramBuilder`, `TraineeProgramView` | `trainer-trainee-flows.spec.ts` |
+| `messageService`, `MessageCenter`, `TraineeInbox` | `trainer-dashboard.spec.ts` |
+
+---
+
+### 🔴 רמה 3 — לפני כל deploy לפרודקשן (Suite מלא)
+
+**מתי:** לפני `firebase deploy` (hosting או functions), ללא קשר לגודל השינוי.
+
+```bash
+# Suite מלא — חובה לפני deploy:
+npx playwright test
+
+# דווח תוצאות: X passed, Y failed
+# אם Y > 0 → עצור! תקן קודם.
+# לאחר מכן: בקש אישור מפורש מהמשתמש
+```
+
+**⚠️ כשלונות pre-existing:** אם טסטים נכשלים שאינם קשורים לשינוי שלך, **אל תתעלם!** דווח למשתמש:
+```
+⚠️ נמצאו X כשלונות pre-existing שאינם קשורים לשינוי הנוכחי:
+- [רשימת הכשלונות]
+האם להמשיך לפרוס? (המשתמש מחליט)
+```
+
+---
+
+### 📋 טבלת החלטה מהירה
+
+| שינוי | Build | Spec בודד | Suite מלא |
+|-------|-------|-----------|-----------|
+| עיצוב/טקסט/props קטנים | ✅ | ❌ | ❌ |
+| לוגיקה/hooks/services | ✅ | ✅ | ❌ |
+| לפני firebase deploy | ✅ | ✅ | ✅ |
+
+**אין קיצורי דרך לפני deploy. הרמות 1 ו-2 הן לפיתוח בלבד, לא לפריסה.**
 
 ---
 
@@ -456,11 +529,12 @@ npx playwright test
 | 17/02/2026 | AI Trainer סינן תרגילים בשקט (10→7) בגלל exerciseId לא תקינים מ-GPT | נוסף fallback + חוק ברזל: No silent AI filtering |
 | 17/02/2026 | המשך אימון in_progress יוצר מסמך כפול - validateWorkoutId מנל ID | נוסף continueWorkoutIdRef + retry (3 נסיונות) + הגנה בכל נקודות autoSave + זיהוי כפילויות בהיסטוריה |
 | 17/02/2026 | פריסות בוצעו בלי הרצת טסטים, רגרסיות הגיעו לפרודקשן | נוסף חוק ברזל: `npx playwright test` חובה לפני כל deploy + אישור מפורש מהמשתמש |
+| 23/02/2026 | Suite מלא רץ על כל שינוי כולל קטן — בזבוז זמן מיותר (חצי שעה על שינוי שורה) | נוספה מערכת 3 רמות בדיקה: Build בלבד / Spec רלוונטי / Suite מלא לפי גודל השינוי |
 
 ---
 
 ```
 ══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 17/02/2026 | נוסף חוק ברזל — Playwright tests חובה לפני כל deploy
+עדכון אחרון: 23/02/2026 | נוספה מערכת 3 רמות בדיקה — Build / Spec / Suite לפי גודל השינוי
 ══════════════════════════════════════════════════════════════════════════════
 ```
