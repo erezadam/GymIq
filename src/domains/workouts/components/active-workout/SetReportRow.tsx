@@ -51,6 +51,12 @@ export function SetReportRow({
   const [minutesRaw, setMinutesRaw] = useState<string | null>(null)
   const [secondsRaw, setSecondsRaw] = useState<string | null>(null)
 
+  // Raw string state for decimal inputs — allows typing "75." without losing the dot
+  const [weightRaw, setWeightRaw] = useState<string | null>(null)
+  const [speedRaw, setSpeedRaw] = useState<string | null>(null)
+  const [distanceRaw, setDistanceRaw] = useState<string | null>(null)
+  const [assistanceWeightRaw, setAssistanceWeightRaw] = useState<string | null>(null)
+
   // Format as 2-digit string (00)
   const formatTwoDigits = (val: number): string => val.toString().padStart(2, '0')
 
@@ -123,10 +129,15 @@ export function SetReportRow({
       <input
         type="text"
         className="set-input"
-        value={set.weight || ''}
-        onChange={(e) =>
-          onUpdate({ weight: parseFloat(e.target.value) || 0 })
-        }
+        value={weightRaw !== null ? weightRaw : (set.weight || '')}
+        onChange={(e) => {
+          const val = e.target.value
+          setWeightRaw(val)
+          const parsed = parseFloat(val)
+          if (!isNaN(parsed)) onUpdate({ weight: parsed })
+          else if (val === '') onUpdate({ weight: 0 })
+        }}
+        onBlur={() => setWeightRaw(null)}
         placeholder="0"
       />
     </div>
@@ -191,8 +202,15 @@ export function SetReportRow({
       <input
         type="text"
         className="set-input"
-        value={set.speed || ''}
-        onChange={(e) => onUpdate({ speed: parseFloat(e.target.value) || 0 })}
+        value={speedRaw !== null ? speedRaw : (set.speed || '')}
+        onChange={(e) => {
+          const val = e.target.value
+          setSpeedRaw(val)
+          const parsed = parseFloat(val)
+          if (!isNaN(parsed)) onUpdate({ speed: parsed })
+          else if (val === '') onUpdate({ speed: 0 })
+        }}
+        onBlur={() => setSpeedRaw(null)}
         placeholder="קמ״ש"
       />
     </div>
@@ -205,8 +223,15 @@ export function SetReportRow({
       <input
         type="text"
         className="set-input"
-        value={set.distance || ''}
-        onChange={(e) => onUpdate({ distance: parseFloat(e.target.value) || 0 })}
+        value={distanceRaw !== null ? distanceRaw : (set.distance || '')}
+        onChange={(e) => {
+          const val = e.target.value
+          setDistanceRaw(val)
+          const parsed = parseFloat(val)
+          if (!isNaN(parsed)) onUpdate({ distance: parsed })
+          else if (val === '') onUpdate({ distance: 0 })
+        }}
+        onBlur={() => setDistanceRaw(null)}
         placeholder="ק״מ"
       />
     </div>
@@ -219,8 +244,15 @@ export function SetReportRow({
       <input
         type="text"
         className="set-input"
-        value={set.assistanceWeight || ''}
-        onChange={(e) => onUpdate({ assistanceWeight: parseFloat(e.target.value) || 0 })}
+        value={assistanceWeightRaw !== null ? assistanceWeightRaw : (set.assistanceWeight || '')}
+        onChange={(e) => {
+          const val = e.target.value
+          setAssistanceWeightRaw(val)
+          const parsed = parseFloat(val)
+          if (!isNaN(parsed)) onUpdate({ assistanceWeight: parsed })
+          else if (val === '') onUpdate({ assistanceWeight: 0 })
+        }}
+        onBlur={() => setAssistanceWeightRaw(null)}
         placeholder="0"
       />
     </div>
