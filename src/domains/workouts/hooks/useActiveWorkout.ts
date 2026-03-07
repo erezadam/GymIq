@@ -353,7 +353,7 @@ export function useActiveWorkout() {
             console.log('🔥 Found in_progress workout in Firebase:', firebaseWorkout.id)
 
             // Fetch exercise details (category, primaryMuscle, equipment) from exercise service
-            const exerciseDetailsMap = new Map<string, { primaryMuscle: string; category: string; equipment: string; imageUrl: string; name: string; nameHe: string }>()
+            const exerciseDetailsMap = new Map<string, { primaryMuscle: string; category: string; equipment: string; complexity?: 'compound' | 'simple'; imageUrl: string; name: string; nameHe: string }>()
             await Promise.all(
               firebaseWorkout.exercises.map(async (ex: any) => {
                 try {
@@ -363,6 +363,7 @@ export function useActiveWorkout() {
                       primaryMuscle: details.primaryMuscle || '',
                       category: details.category || '',
                       equipment: details.equipment || '',
+                      complexity: details.complexity,
                       imageUrl: details.imageUrl || '',
                       name: details.name || '',
                       nameHe: details.nameHe || '',
@@ -386,6 +387,7 @@ export function useActiveWorkout() {
                   primaryMuscle: details?.primaryMuscle || 'other',
                   category: details?.category || undefined,
                   equipment: details?.equipment || undefined,
+                  complexity: details?.complexity || undefined,
                   isExpanded: false,
                   isCompleted: ex.isCompleted,
                   // Restore assistance type
@@ -603,6 +605,7 @@ export function useActiveWorkout() {
                 primaryMuscle: ex.primaryMuscle || 'other',
                 category: ex.category,
                 equipment: ex.equipment,
+                complexity: ex.complexity,
                 reportType: ex.reportType,
                 assistanceTypes: ex.assistanceTypes,    // Pass assistance options
                 availableBands: ex.availableBands,      // Pass available bands
@@ -743,6 +746,7 @@ export function useActiveWorkout() {
             primaryMuscle: ex.primaryMuscle || 'other',
             category: ex.category,
             equipment: ex.equipment,
+            complexity: ex.complexity,
             reportType: ex.reportType,
             assistanceTypes: ex.assistanceTypes,    // Pass assistance options
             availableBands: ex.availableBands,      // Pass available bands
@@ -1647,10 +1651,13 @@ export function useActiveWorkout() {
       .map(([muscleGroupHe, exercises]) => ({
         muscleGroup: exercises[0]?.category || exercises[0]?.primaryMuscle || 'other',
         muscleGroupHe,
-        // Sort exercises within group by Hebrew name (A-Z) - trim whitespace
-        exercises: [...exercises].sort((a, b) =>
-          (a.exerciseNameHe || '').trim().localeCompare((b.exerciseNameHe || '').trim(), 'he')
-        ),
+        // Sort exercises within group: compound first, then simple, then alphabetically
+        exercises: [...exercises].sort((a, b) => {
+          const aScore = a.complexity === 'simple' ? 1 : 0
+          const bScore = b.complexity === 'simple' ? 1 : 0
+          if (aScore !== bScore) return aScore - bScore
+          return (a.exerciseNameHe || '').trim().localeCompare((b.exerciseNameHe || '').trim(), 'he')
+        }),
       }))
   }, [workout, dynamicMuscleNames])
 
@@ -1683,6 +1690,82 @@ export function useActiveWorkout() {
       }))
   }, [workout])
 
+  // Group exercises by complexity: warmup/cardio first, then compound, then simple
+  // Within each complexity group, sub-group by muscle
+  const exercisesByComplexity = useMemo((): MuscleGroupExercises[] => {
+    if (!workout) return []
+
+    const warmupCategories = new Set(['cardio', 'warmup', 'stretching'])
+
+    // Split into 3 groups
+    const warmup: ActiveWorkoutExercise[] = []
+    const compound: ActiveWorkoutExercise[] = []
+    const simple: ActiveWorkoutExercise[] = []
+
+    workout.exercises.forEach((ex) => {
+      const cat = ex.category || ''
+      if (warmupCategories.has(cat)) {
+        warmup.push(ex)
+      } else if (ex.complexity === 'simple') {
+        simple.push(ex)
+      } else {
+        compound.push(ex) // undefined = compound (default)
+      }
+    })
+
+    // Helper: sub-group by muscle within a complexity group
+    const subGroupByMuscle = (exercises: ActiveWorkoutExercise[]): MuscleGroupExercises[] => {
+      const groups: Record<string, ActiveWorkoutExercise[]> = {}
+      exercises.forEach((ex) => {
+        const muscle = ex.category || ex.primaryMuscle || 'other'
+        const muscleHe = dynamicMuscleNames[muscle] || muscleGroupNames[muscle] || muscle
+        if (!groups[muscleHe]) groups[muscleHe] = []
+        groups[muscleHe].push(ex)
+      })
+      return Object.entries(groups)
+        .sort(([a], [b]) => a.localeCompare(b, 'he'))
+        .map(([muscleGroupHe, exs]) => ({
+          muscleGroup: exs[0]?.category || exs[0]?.primaryMuscle || 'other',
+          muscleGroupHe,
+          exercises: [...exs].sort((a, b) =>
+            (a.exerciseNameHe || '').trim().localeCompare((b.exerciseNameHe || '').trim(), 'he')
+          ),
+        }))
+    }
+
+    const result: MuscleGroupExercises[] = []
+
+    if (warmup.length > 0) {
+      result.push({
+        muscleGroup: 'warmup',
+        muscleGroupHe: 'חימום / אירובי',
+        exercises: warmup,
+      })
+    }
+
+    if (compound.length > 0) {
+      const compoundGroups = subGroupByMuscle(compound)
+      compoundGroups.forEach((g) => {
+        result.push({
+          ...g,
+          muscleGroupHe: `מורכב — ${g.muscleGroupHe}`,
+        })
+      })
+    }
+
+    if (simple.length > 0) {
+      const simpleGroups = subGroupByMuscle(simple)
+      simpleGroups.forEach((g) => {
+        result.push({
+          ...g,
+          muscleGroupHe: `פשוט — ${g.muscleGroupHe}`,
+        })
+      })
+    }
+
+    return result
+  }, [workout, dynamicMuscleNames])
+
   // Format elapsed time
   const formattedTime = useMemo(() => {
     const mins = Math.floor(elapsedSeconds / 60)
@@ -1699,6 +1782,7 @@ export function useActiveWorkout() {
     formattedTime,
     exercisesByMuscle,
     exercisesByEquipment,
+    exercisesByComplexity,
     showSummaryModal,
     isSaving,
 

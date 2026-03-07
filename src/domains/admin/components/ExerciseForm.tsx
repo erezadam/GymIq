@@ -8,8 +8,8 @@ import { ArrowRight, Save, Plus, Trash2, Image } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { exerciseService } from '@/domains/exercises/services'
 import { serverTimestamp } from 'firebase/firestore'
-import type { ExerciseCategory, MuscleGroup, EquipmentType, AssistanceType } from '@/domains/exercises/types'
-import { difficultyOptions } from '@/domains/exercises/data/mockExercises'
+import type { ExerciseCategory, MuscleGroup, EquipmentType, AssistanceType, ExerciseComplexity } from '@/domains/exercises/types'
+import { difficultyOptions, complexityOptions } from '@/domains/exercises/data/mockExercises'
 import { getEquipment, type Equipment } from '@/lib/firebase/equipment'
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
 import { getMuscles } from '@/lib/firebase/muscles'
@@ -32,6 +32,7 @@ const exerciseSchema = z.object({
   secondaryMuscles: z.array(z.string()),
   equipment: z.string().min(1, 'ציוד נדרש'),
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']),
+  complexity: z.enum(['compound', 'simple']).default('compound'),
   reportType: z.string().min(1, 'סוג דיווח נדרש'), // Dynamic - loaded from Firebase
   assistanceTypes: z.array(assistanceTypeEnum), // Empty = regular exercise
   availableBands: z.array(z.string()),
@@ -110,6 +111,7 @@ export default function ExerciseForm() {
       secondaryMuscles: [],
       equipment: '',
       difficulty: 'beginner',
+      complexity: 'compound',
       reportType: 'weight_reps',
       assistanceTypes: [],
       availableBands: [],
@@ -227,6 +229,7 @@ export default function ExerciseForm() {
         secondaryMuscles: existingExercise.secondaryMuscles || [],
         equipment: existingExercise.equipment || '',
         difficulty: existingExercise.difficulty || 'beginner',
+        complexity: (existingExercise.complexity as 'compound' | 'simple') || 'compound',
         reportType: existingExercise.reportType || 'weight_reps',
         assistanceTypes: (existingExercise.assistanceTypes || []).filter((t: string) => t === 'graviton' || t === 'bands') as ('graviton' | 'bands')[],
         availableBands: existingExercise.availableBands || [],
@@ -298,6 +301,7 @@ export default function ExerciseForm() {
       primaryMuscle: data.primaryMuscle as MuscleGroup,
       secondaryMuscles: data.secondaryMuscles as MuscleGroup[],
       equipment: data.equipment as EquipmentType,
+      complexity: data.complexity as ExerciseComplexity,
       reportType: data.reportType, // Dynamic - stored as string
       assistanceTypes: data.assistanceTypes as AssistanceType[],
       // Only include availableBands if 'bands' is in assistanceTypes
@@ -515,6 +519,24 @@ export default function ExerciseForm() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Complexity */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">מורכבות *</label>
+              <select
+                {...register('complexity')}
+                className="input-neon w-full"
+              >
+                {complexityOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.labelHe}
+                  </option>
+                ))}
+              </select>
+              <p className="text-text-muted text-xs mt-1">
+                מורכב = 2+ מפרקים (סקוואט, לחיצת חזה). פשוט = מפרק 1 (כפיפות יד)
+              </p>
             </div>
 
             {/* Equipment */}

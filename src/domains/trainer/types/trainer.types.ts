@@ -110,6 +110,7 @@ export interface ProgramExercise {
   category?: string
   primaryMuscle?: string
   equipment?: string
+  complexity?: 'compound' | 'simple'
   order: number
   targetSets: number
   targetReps: string // "8-12" range format

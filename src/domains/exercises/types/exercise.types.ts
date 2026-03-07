@@ -1,6 +1,9 @@
 // Exercise difficulty levels
 export type ExerciseDifficulty = 'beginner' | 'intermediate' | 'advanced'
 
+// Exercise complexity - compound (multi-joint) vs simple (single-joint)
+export type ExerciseComplexity = 'compound' | 'simple'
+
 // Exercise categories
 export type ExerciseCategory =
   | 'chest'
@@ -70,6 +73,7 @@ export interface Exercise {
   secondaryMuscles: MuscleGroup[]
   equipment: EquipmentType
   difficulty: ExerciseDifficulty
+  complexity?: ExerciseComplexity  // מורכב (compound) = 2+ מפרקים, פשוט (simple) = מפרק 1
   reportType?: string  // סוג דיווח דינמי - ברירת מחדל: weight_reps
   assistanceTypes?: AssistanceType[]  // אפשרויות עזרה זמינות לתרגיל (מערך)
   availableBands?: string[]  // רשימת IDs של גומיות זמינות (רק אם 'bands' נמצא ב-assistanceTypes)
@@ -117,6 +121,7 @@ export interface CreateExerciseDto {
   secondaryMuscles: MuscleGroup[]
   equipment: EquipmentType
   difficulty: ExerciseDifficulty
+  complexity?: ExerciseComplexity  // מורכב (compound) = 2+ מפרקים, פשוט (simple) = מפרק 1
   reportType?: string  // סוג דיווח דינמי - ברירת מחדל: weight_reps
   assistanceTypes?: AssistanceType[]  // אפשרויות עזרה זמינות לתרגיל (מערך)
   availableBands?: string[]  // רשימת IDs של גומיות זמינות (רק אם 'bands' נמצא ב-assistanceTypes)

@@ -234,21 +234,11 @@ export default function ActiveWorkoutScreen() {
         {/* Rest Timer Toggle */}
         <button
           onClick={() => setRestTimerEnabled(!restTimerEnabled)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 12px',
-            minHeight: '44px',
-            background: restTimerEnabled ? 'rgba(45, 212, 191, 0.15)' : 'transparent',
-            border: `1px solid ${restTimerEnabled ? '#2DD4BF' : '#4B5563'}`,
-            borderRadius: '8px',
-            color: restTimerEnabled ? '#2DD4BF' : '#9CA3AF',
-            fontSize: '14px',
-            fontWeight: 500,
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-          }}
+          className={`flex items-center gap-1.5 px-3 py-2 min-h-[44px] rounded-lg text-sm font-medium cursor-pointer transition-all border ${
+            restTimerEnabled
+              ? 'bg-primary-main/15 border-primary-main text-primary-main'
+              : 'bg-transparent border-border-default text-text-secondary'
+          }`}
         >
           <Timer size={18} />
           <span>שעון עצר</span>
@@ -256,36 +246,24 @@ export default function ActiveWorkoutScreen() {
       </div>
 
       {/* Sort Toggle Buttons */}
-      <div style={{ display: 'flex', gap: '8px', padding: '0 16px', marginBottom: '12px' }}>
+      <div className="flex gap-2 px-4 mb-3">
         <button
           onClick={() => setSortBy('muscle')}
-          style={{
-            padding: '6px 14px',
-            borderRadius: '8px',
-            fontSize: '13px',
-            fontWeight: 500,
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            background: sortBy === 'muscle' ? '#2DD4BF' : 'transparent',
-            border: `1px solid ${sortBy === 'muscle' ? '#2DD4BF' : '#4B5563'}`,
-            color: sortBy === 'muscle' ? '#0B0D12' : '#9CA3AF',
-          }}
+          className={`px-3.5 py-1.5 rounded-lg text-[13px] font-medium cursor-pointer transition-all border ${
+            sortBy === 'muscle'
+              ? 'bg-primary-main border-primary-main text-background-main'
+              : 'bg-transparent border-border-default text-text-secondary'
+          }`}
         >
           לפי שריר
         </button>
         <button
           onClick={() => setSortBy('equipment')}
-          style={{
-            padding: '6px 14px',
-            borderRadius: '8px',
-            fontSize: '13px',
-            fontWeight: 500,
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            background: sortBy === 'equipment' ? '#2DD4BF' : 'transparent',
-            border: `1px solid ${sortBy === 'equipment' ? '#2DD4BF' : '#4B5563'}`,
-            color: sortBy === 'equipment' ? '#0B0D12' : '#9CA3AF',
-          }}
+          className={`px-3.5 py-1.5 rounded-lg text-[13px] font-medium cursor-pointer transition-all border ${
+            sortBy === 'equipment'
+              ? 'bg-primary-main border-primary-main text-background-main'
+              : 'bg-transparent border-border-default text-text-secondary'
+          }`}
         >
           לפי ציוד
         </button>

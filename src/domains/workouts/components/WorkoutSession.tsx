@@ -221,6 +221,7 @@ export default function WorkoutSession() {
       primaryMuscle: exercise.primaryMuscle,
       category: exercise.category,
       equipment: exercise.equipment,
+      complexity: exercise.complexity,
       reportType: exercise.reportType,
     })
     setShowAddExercise(false)
