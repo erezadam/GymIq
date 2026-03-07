@@ -357,7 +357,7 @@ export default function WorkoutHistory() {
       }
 
       // Fetch exercise details to get imageUrl, reportType, and English name for each exercise
-      const exerciseDetailsMap = new Map<string, { imageUrl: string; primaryMuscle: string; category: string; name: string; nameHe: string; equipment: string; reportType?: string }>()
+      const exerciseDetailsMap = new Map<string, { imageUrl: string; primaryMuscle: string; category: string; name: string; nameHe: string; equipment: string; complexity?: 'compound' | 'simple'; reportType?: string }>()
       await Promise.all(
         fullWorkout.exercises.map(async (ex) => {
           try {
@@ -370,6 +370,7 @@ export default function WorkoutHistory() {
                 name: exerciseDetails.name || '',
                 nameHe: exerciseDetails.nameHe || '',
                 equipment: exerciseDetails.equipment || '',
+                complexity: exerciseDetails.complexity,
                 reportType: exerciseDetails.reportType,
               })
             }
@@ -406,6 +407,7 @@ export default function WorkoutHistory() {
               primaryMuscle: details?.primaryMuscle || '',
               category: details?.category || '',
               equipment: details?.equipment || '',
+              complexity: details?.complexity,
               reportType: details?.reportType,
             })
           })
@@ -455,6 +457,7 @@ export default function WorkoutHistory() {
               primaryMuscle: details?.primaryMuscle || '',
               category: details?.category || '',
               equipment: details?.equipment || '',
+              complexity: details?.complexity,
               reportType: details?.reportType,
             })
           })
@@ -507,6 +510,7 @@ export default function WorkoutHistory() {
               primaryMuscle: details?.primaryMuscle || '',
               category: details?.category || '',
               equipment: details?.equipment || '',
+              complexity: details?.complexity,
               reportType: details?.reportType,
             })
           })
@@ -541,7 +545,7 @@ export default function WorkoutHistory() {
       if (!fullWorkout || !fullWorkout.exercises) return
 
       // Fetch full exercise details (category, primaryMuscle, equipment, etc.)
-      const exerciseDetailsMap = new Map<string, { imageUrl: string; primaryMuscle: string; category: string; name: string; nameHe: string; equipment: string; reportType?: string }>()
+      const exerciseDetailsMap = new Map<string, { imageUrl: string; primaryMuscle: string; category: string; name: string; nameHe: string; equipment: string; complexity?: 'compound' | 'simple'; reportType?: string }>()
       await Promise.all(
         fullWorkout.exercises.map(async (ex) => {
           try {
@@ -554,6 +558,7 @@ export default function WorkoutHistory() {
                 name: exerciseDetails.name || '',
                 nameHe: exerciseDetails.nameHe || '',
                 equipment: exerciseDetails.equipment || '',
+                complexity: exerciseDetails.complexity,
                 reportType: exerciseDetails.reportType,
               })
             }
@@ -597,6 +602,7 @@ export default function WorkoutHistory() {
           primaryMuscle: details?.primaryMuscle || '',
           category: details?.category || '',
           equipment: details?.equipment || '',
+          complexity: details?.complexity,
           reportType: details?.reportType,
         })
       })

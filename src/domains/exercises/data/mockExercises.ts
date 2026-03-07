@@ -498,3 +498,8 @@ export const difficultyOptions = [
   { value: 'intermediate', label: 'Intermediate', labelHe: 'בינוני' },
   { value: 'advanced', label: 'Advanced', labelHe: 'מתקדם' },
 ] as const
+
+export const complexityOptions = [
+  { value: 'compound', label: 'Compound', labelHe: 'מורכב' },
+  { value: 'simple', label: 'Simple', labelHe: 'פשוט' },
+] as const

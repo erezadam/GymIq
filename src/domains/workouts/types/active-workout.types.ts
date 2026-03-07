@@ -40,6 +40,7 @@ export interface ActiveWorkoutExercise {
   primaryMuscle: MuscleGroup | string // Primary muscle group
   category?: string                   // Exercise category (for grouping)
   equipment?: string                  // Equipment type (for grouping by equipment)
+  complexity?: 'compound' | 'simple'  // Exercise complexity (for sorting)
   reportType?: string                 // How sets are reported - dynamic (default: weight_reps)
 
   // Assistance options (from exercise definition)

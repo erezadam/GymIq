@@ -15,6 +15,7 @@ export interface SelectedExercise {
   primaryMuscle: string
   category?: string
   equipment?: string
+  complexity?: 'compound' | 'simple'
   reportType?: ExerciseReportType
   assistanceTypes?: AssistanceType[]  // Available assistance options for this exercise
   availableBands?: string[]           // Available band IDs (if 'bands' is in assistanceTypes)
@@ -250,6 +251,7 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
           primaryMuscle: ex.primaryMuscle || '',
           category: ex.category,
           equipment: ex.equipment,
+          complexity: ex.complexity as 'compound' | 'simple' | undefined,
           reportType: ex.reportType as ExerciseReportType | undefined,
           assistanceTypes: ex.assistanceTypes as AssistanceType[] | undefined,
           sets,

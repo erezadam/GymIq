@@ -305,6 +305,7 @@ export function ExerciseLibrary({
         primaryMuscle: exercise.primaryMuscle || exercise.category,
         category: exercise.category,
         equipment: exercise.equipment,
+        complexity: exercise.complexity,
         reportType: exercise.reportType,
         assistanceTypes: exercise.assistanceTypes,   // Pass assistance options
         availableBands: exercise.availableBands,     // Pass available bands
@@ -322,6 +323,7 @@ export function ExerciseLibrary({
       primaryMuscle: exercise.primaryMuscle || exercise.category,
       category: exercise.category,
       equipment: exercise.equipment,
+      complexity: exercise.complexity,
       reportType: exercise.reportType,
       assistanceTypes: exercise.assistanceTypes,
       availableBands: exercise.availableBands,
