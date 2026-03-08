@@ -327,6 +327,7 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 | **סקריפטים ו-Firebase** | script, migration, import, export, firebase-admin | ראה סעיף אבטחה + `.claude/firebase-data-SKILL.md` |
 | **🔀 Git ו-GitHub** | git, branch, push, merge, pr, deploy to main | `.claude/daily-workflow-SKILL.md` |
 | **🔄 תהליך יומי** | בוקר טוב, התחלת עבודה, סגור יום, סיום יום, start day, end of day | `.claude/daily-workflow-SKILL.md` |
+| **🎭 בדיקה ויזואלית** | visual, screenshot, browser, mcp, playwright mcp, check visually | Playwright MCP (אוטומטי דרך `.mcp.json`) |
 
 ---
 
@@ -530,11 +531,40 @@ npx playwright test
 | 17/02/2026 | המשך אימון in_progress יוצר מסמך כפול - validateWorkoutId מנל ID | נוסף continueWorkoutIdRef + retry (3 נסיונות) + הגנה בכל נקודות autoSave + זיהוי כפילויות בהיסטוריה |
 | 17/02/2026 | פריסות בוצעו בלי הרצת טסטים, רגרסיות הגיעו לפרודקשן | נוסף חוק ברזל: `npx playwright test` חובה לפני כל deploy + אישור מפורש מהמשתמש |
 | 23/02/2026 | Suite מלא רץ על כל שינוי כולל קטן — בזבוז זמן מיותר (חצי שעה על שינוי שורה) | נוספה מערכת 3 רמות בדיקה: Build בלבד / Spec רלוונטי / Suite מלא לפי גודל השינוי |
+| 08/03/2026 | נוסף Playwright MCP לשליטה בדפדפן מתוך Claude Code | קובץ `.mcp.json` בשורש הפרויקט, סקריפטי E2E ב-package.json |
+
+---
+
+## 🎭 Playwright MCP — שליטה בדפדפן מתוך Claude Code
+
+> **רקע:** ב-08/03/2026 נוסף Playwright MCP לאפשר לסוכן לשלוט בדפדפן לבדיקה ויזואלית ודיבוג אינטראקטיבי.
+
+### מה זה:
+- שרת MCP שמאפשר ל-Claude Code לפתוח דפדפן, לנווט לדפים, ללחוץ על אלמנטים, לצלם screenshots ועוד
+- מוגדר ב-`.mcp.json` בשורש הפרויקט — Claude Code טוען אותו אוטומטית
+- רץ כ-instance נפרד מה-E2E tests — **לא משפיע על `playwright.config.ts` או על הטסטים הקיימים**
+
+### מתי להשתמש:
+- בדיקה ויזואלית של UI אחרי שינוי עיצובי
+- דיבוג אינטראקטיבי של בעיות שקשה לראות מהקוד
+- אימות RTL/מובייל ויזואלית
+
+### מתי לא להשתמש:
+- **לא מחליף** את מערכת 3 רמות הבדיקה (Build / Spec / Suite)
+- **לא מחליף** את הטסטים האוטומטיים (92 טסטים, 6 spec files)
+- לא לשימוש כ"הוכחה" שפיצ'ר עובד — רק טסטים אוטומטיים נחשבים
+
+### סקריפטי E2E ב-package.json:
+```bash
+npm run test:e2e          # הרצת כל הטסטים
+npm run test:e2e:ui       # ממשק UI אינטראקטיבי
+npm run test:e2e:headed   # הרצה עם דפדפן נראה
+```
 
 ---
 
 ```
 ══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 23/02/2026 | נוספה מערכת 3 רמות בדיקה — Build / Spec / Suite לפי גודל השינוי
+עדכון אחרון: 08/03/2026 | נוסף Playwright MCP לשליטה בדפדפן + סקריפטי E2E
 ══════════════════════════════════════════════════════════════════════════════
 ```

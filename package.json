@@ -13,6 +13,9 @@
     "smart-mobile": "claude chat 'הפעל: mobile-rtl + project-control'",
     "smart-data": "claude chat 'הפעל: firebase-data + project-control'",
     "test": "vitest run",
+    "test:e2e": "npx playwright test",
+    "test:e2e:ui": "npx playwright test --ui",
+    "test:e2e:headed": "npx playwright test --headed",
     "smart-test": "npm test && ./scripts/verify.sh --after",
     "smart-deploy": "claude chat 'הפעל: deployment'"
   },
