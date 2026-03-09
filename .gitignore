@@ -38,12 +38,23 @@ dist-ssr
 # Firebase
 .firebase/
 firebase-debug.log
+firestore-debug.log
+
+# Build artifacts
+functions/lib/
+*.tsbuildinfo
+vite.config.d.ts
+vite.config.d.ts.map
+
+# Dev tools
+*-playground.html
+*.backup
 
 # Testing
 coverage
 
 # Playwright
-/test-results/
+test-results/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
