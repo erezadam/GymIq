@@ -6,13 +6,258 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { X, BarChart3, TrendingUp, TrendingDown } from 'lucide-react'
 import { useAuthStore } from '@/domains/authentication/store'
+import { getUserWorkoutHistoryByDateRange } from '@/lib/firebase/workoutHistory'
+import { getExercises } from '@/lib/firebase/exercises'
+import { defaultMuscleMapping } from '@/domains/exercises/types/muscles'
+import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
 import {
   getTrainingAnalysis,
   getCachedAnalysis,
   type TrainingAnalysisResult,
   type AnalysisError,
 } from '../services/analysisService'
+import type { Exercise } from '@/domains/exercises/types/exercise.types'
+
+const MIN_SETS = 10
+const MIN_AVG_REPS = 5
+
+// Build sub-muscle → category mapping from defaultMuscleMapping (single source of truth)
+const SUB_TO_CATEGORY: Record<string, { categoryId: string; categoryHe: string }> = {}
+const SUB_MUSCLE_HE: Record<string, string> = {}
+
+for (const primary of defaultMuscleMapping) {
+  // Map category itself
+  SUB_TO_CATEGORY[primary.id] = { categoryId: primary.id, categoryHe: primary.nameHe }
+  SUB_MUSCLE_HE[primary.id] = primary.nameHe
+  // Map each sub-muscle
+  for (const sub of primary.subMuscles) {
+    SUB_TO_CATEGORY[sub.id] = { categoryId: primary.id, categoryHe: primary.nameHe }
+    SUB_MUSCLE_HE[sub.id] = sub.nameHe
+  }
+}
+
+interface MuscleRow {
+  category: string
+  categoryHe: string
+  primaryMuscle: string
+  primaryMuscleHe: string
+  totalSets: number
+  avgReps: number
+  isGreen: boolean
+}
+
+function getCurrentWeekRange() {
+  const now = new Date()
+  const day = now.getDay() // 0 = Sunday
+  const sunday = new Date(now)
+  sunday.setDate(now.getDate() - day)
+  sunday.setHours(0, 0, 0, 0)
+
+  const saturday = new Date(sunday)
+  saturday.setDate(sunday.getDate() + 6)
+  saturday.setHours(23, 59, 59, 999)
+
+  const fmt = (d: Date) =>
+    `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+
+  return { start: sunday, end: saturday, startStr: fmt(sunday), endStr: fmt(saturday) }
+}
+
+function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () => void }) {
+  const [loading, setLoading] = useState(true)
+  const [rows, setRows] = useState<MuscleRow[]>([])
+  const [weekRange, setWeekRange] = useState({ startStr: '', endStr: '' })
+
+  useEffect(() => {
+    const analyze = async () => {
+      try {
+        const range = getCurrentWeekRange()
+        setWeekRange({ startStr: range.startStr, endStr: range.endStr })
+
+        const [workouts, exercises] = await Promise.all([
+          getUserWorkoutHistoryByDateRange(userId, range.start, range.end),
+          getExercises(),
+        ])
+
+        // Build exercise lookup
+        const exerciseMap = new Map<string, Exercise>()
+        for (const ex of exercises) {
+          exerciseMap.set(ex.id, ex)
+        }
+
+        // Accumulate sets and reps by primaryMuscle
+        const muscleData = new Map<string, { sets: number; reps: number; repsCount: number }>()
+
+        // Debug: collect per-exercise detail
+        const debugByMuscle: Record<string, { exercises: { name: string; sets: number; reps: number[] }[] }> = {}
+
+        for (const workout of workouts) {
+          if (workout.status !== 'completed') continue
+
+          for (const exercise of workout.exercises) {
+            const exDef = exerciseMap.get(exercise.exerciseId)
+            const primaryMuscle = exDef?.primaryMuscle || exercise.category || 'other'
+            const exName = exDef?.name || exercise.exerciseId
+
+            let exSets = 0
+            const exReps: number[] = []
+
+            for (const set of exercise.sets) {
+              if (!set.completed) continue
+
+              const existing = muscleData.get(primaryMuscle) || { sets: 0, reps: 0, repsCount: 0 }
+              existing.sets++
+              const reps = set.actualReps || set.targetReps || 0
+              if (reps > 0) {
+                existing.reps += reps
+                existing.repsCount++
+              }
+              muscleData.set(primaryMuscle, existing)
+
+              exSets++
+              exReps.push(reps)
+            }
+
+            if (exSets > 0) {
+              if (!debugByMuscle[primaryMuscle]) debugByMuscle[primaryMuscle] = { exercises: [] }
+              debugByMuscle[primaryMuscle].exercises.push({ name: exName, sets: exSets, reps: exReps })
+            }
+          }
+        }
+
+        // Debug log
+        console.log('=== ניתוח שרירים שבועי - דוח מלא ===')
+        console.log('טווח תאריכים:', range.start.toLocaleDateString('he-IL'), '—', range.end.toLocaleDateString('he-IL'))
+        console.log('מספר אימונים שנמצאו:', workouts.filter(w => w.status === 'completed').length)
+        console.log('פירוט לפי תת-שריר:', JSON.stringify(debugByMuscle, null, 2))
+        console.log('=== סוף דוח ===')
+
+        // Convert to rows
+        const result: MuscleRow[] = []
+        for (const [muscle, data] of muscleData) {
+          const mapping = SUB_TO_CATEGORY[muscle]
+          const category = mapping?.categoryId || muscle
+          const categoryHe = mapping?.categoryHe || muscle
+          const primaryMuscleHe = SUB_MUSCLE_HE[muscle] || muscle
+          const avgReps = data.repsCount > 0 ? Math.round((data.reps / data.repsCount) * 10) / 10 : 0
+          const isGreen = data.sets >= MIN_SETS && avgReps >= MIN_AVG_REPS
+
+          result.push({
+            category,
+            categoryHe,
+            primaryMuscle: muscle,
+            primaryMuscleHe,
+            totalSets: data.sets,
+            avgReps,
+            isGreen,
+          })
+        }
+
+        // Sort by category, then totalSets desc
+        result.sort((a, b) => {
+          if (a.category !== b.category) return a.categoryHe.localeCompare(b.categoryHe, 'he')
+          return b.totalSets - a.totalSets
+        })
+
+        setRows(result)
+      } catch (err) {
+        console.error('Error analyzing weekly muscles:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    analyze()
+  }, [userId])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-lg max-h-[85vh] overflow-hidden rounded-2xl bg-dark-card border border-dark-border"
+        dir="rtl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-dark-border">
+          <div>
+            <h2 className="text-base font-bold text-text-primary">ניתוח ביצוע שבועי</h2>
+            <p className="text-xs text-text-secondary mt-0.5">
+              {weekRange.startStr} – {weekRange.endStr}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex items-center justify-center w-11 h-11 rounded-xl bg-dark-card hover:bg-dark-border transition"
+          >
+            <X className="w-5 h-5 text-text-secondary" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="overflow-y-auto max-h-[calc(85vh-80px)] p-4">
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <LoadingSpinner />
+            </div>
+          ) : rows.length === 0 ? (
+            <p className="text-center text-text-secondary py-12">
+              לא נמצאו אימונים בשבוע הנוכחי
+            </p>
+          ) : (
+            <div className="overflow-x-auto -mx-4 px-4">
+              <table className="w-full text-sm min-w-[340px]">
+                <thead>
+                  <tr className="text-text-secondary text-xs border-b border-dark-border">
+                    <th className="text-right py-2 pr-2 font-medium">שריר</th>
+                    <th className="text-right py-2 font-medium">תת-שריר</th>
+                    <th className="text-right py-2 font-medium">סטים / ממוצע</th>
+                    <th className="text-center py-2 pl-2 font-medium">סטטוס</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row, i) => (
+                    <tr key={row.primaryMuscle} className={i % 2 === 0 ? 'bg-dark-card/40' : ''}>
+                      <td className="py-2.5 pr-2 text-text-primary font-medium">{row.categoryHe}</td>
+                      <td className="py-2.5 text-text-secondary">{row.primaryMuscleHe}</td>
+                      <td className="py-2.5">
+                        <div className="text-text-primary">{row.totalSets} סטים</div>
+                        <div className="text-xs text-text-muted">ממוצע {row.avgReps} חזרות</div>
+                      </td>
+                      <td className="py-2.5 pl-2 text-center">
+                        {row.isGreen ? (
+                          <TrendingUp className="w-5 h-5 text-status-success mx-auto" />
+                        ) : (
+                          <TrendingDown className="w-5 h-5 text-status-error mx-auto" />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Legend */}
+              <div className="mt-4 flex items-center gap-4 text-xs text-text-muted">
+                <span className="flex items-center gap-1">
+                  <TrendingUp className="w-3.5 h-3.5 text-status-success" />
+                  ≥{MIN_SETS} סטים + ≥{MIN_AVG_REPS} חזרות
+                </span>
+                <span className="flex items-center gap-1">
+                  <TrendingDown className="w-3.5 h-3.5 text-status-error" />
+                  מתחת לסף
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 type ScreenState = 'loading' | 'error' | 'results'
 
@@ -27,6 +272,7 @@ export default function TrainingAnalysis() {
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null)
   const [isCached, setIsCached] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [showMuscleModal, setShowMuscleModal] = useState(false)
 
   const fetchNewAnalysis = useCallback(async () => {
     if (!user?.uid) return
@@ -139,6 +385,15 @@ export default function TrainingAnalysis() {
         )}
       </div>
 
+      {/* Weekly Muscle Analysis Button */}
+      <button
+        onClick={() => setShowMuscleModal(true)}
+        className="w-full flex items-center justify-center gap-2 py-3 mb-5 rounded-xl bg-accent-purple/10 border border-accent-purple/30 text-accent-purple text-sm font-semibold"
+      >
+        <BarChart3 className="w-4 h-4" />
+        ניתוח שרירים שבועי
+      </button>
+
       {/* Overview */}
       <div className="text-base text-text-secondary leading-relaxed mb-6">
         {analysis.overview}
@@ -201,6 +456,11 @@ export default function TrainingAnalysis() {
       >
         חזרה לדף הבית
       </button>
+
+      {/* Weekly Muscle Modal */}
+      {showMuscleModal && user?.uid && (
+        <WeeklyMuscleModal userId={user.uid} onClose={() => setShowMuscleModal(false)} />
+      )}
     </div>
   )
 }
