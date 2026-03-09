@@ -40,7 +40,8 @@
 ❌ **No hardcoded secrets** - מפתחות רק דרך environment variables  
 ❌ **No inline styles** - כל עיצוב דרך Tailwind classes בלבד, אסור `style={{}}`
 ❌ **No direct push to main** - תמיד עבודה בענף + PR + CI ירוק
-❌ **No deploy without tests** - לפני כל `firebase deploy` להריץ `npx playwright test`, לדווח תוצאות, לא לפרוס עם טסט שנכשל, ולא לפרוס בלי אישור מפורש מהמשתמש
+❌ **No deploy without tests** - לפני כל `firebase deploy` להריץ טסטים, לדווח תוצאות, לא לפרוס עם טסט שנכשל, ולא לפרוס בלי אישור מפורש מהמשתמש
+❌ **No Playwright without approval** - הרצת `npx playwright test` (בכל רמה) דורשת **אישור מפורש מהמשתמש** לפני ההרצה. לעולם לא להריץ טסטי Playwright באופן אוטונומי!
 ❌ **No modal without explicit close** - כל modal חייב כפתור X ייעודי (44x44px מינימום) + סגירה בלחיצה על backdrop
 ❌ **No silent AI filtering** - כל קריאה ל-AI חיצוני חייבת validation + fallback. אסור לסנן תוצאות בשקט בלי השלמה
 
@@ -304,6 +305,7 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 | **🔐 אבטחה סודות** | לא מכניסים מפתחות לקוד - בסקריפטים להשתמש ב-`scripts/firebase-config.ts` | יש Security check + בדיקת grep | ראה סעיף אבטחה למעלה |
 | **Firebase** | כל שינוי נתונים כולל בדיקת rules ו-migrations במידת הצורך | יש Data change notes | `.claude/firebase-data-SKILL.md` |
 | **🚀 פריסה** | 3 רמות בדיקה: שינוי קטן=Build בלבד, שינוי לוגיקה=Spec רלוונטי, לפני deploy=Suite מלא | הרמה הנכונה נבחרה + אישור מהמשתמש לפני deploy | ראה סעיף פריסה למעלה |
+| **🧪 Playwright** | כל הרצת Playwright (spec בודד או suite) דורשת אישור מפורש מהמשתמש | הסוכן שאל ואושר לפני הרצה | ראה סעיף פריסה למעלה |
 | **🔀 Git** | לא דוחפים ישירות ל-main, עובדים בענף נפרד, PR חובה | עובדים בענף feature/fix/work | `.claude/daily-workflow-SKILL.md` |
 | **🔄 תהליך יומי** | תחילת שיחה = בדיקת ענף, סגירת יום = עדכון+build+PR+merge+cleanup | הסוכן מדווח על כל שלב | `.claude/daily-workflow-SKILL.md` |
 | **סיום** | מסיימים בסיכום מה שונה איך נבדק ומה נשאר פתוח | יש Summary + Next | `.claude/project-control-SKILL.md` |
@@ -377,6 +379,7 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 - לפרוס כשיש טסט שנכשל
 - לפרוס בלי אישור מפורש מהמשתמש
 - להריץ `npx playwright test` (Suite מלא) אחרי שינוי קטן/ממוקד — **בזבוז זמן מיותר!**
+- **להריץ טסטי Playwright בלי אישור מפורש מהמשתמש** — תמיד לשאול קודם!
 
 ---
 
@@ -408,11 +411,15 @@ grep -n "שם_הפונקציה_או_הקומפוננטה" src/path/to/changed/fi
 
 **דוגמאות:** שינוי ב-`useActiveWorkout`, `WorkoutHistory`, `workoutHistory.ts`, `trainerService`, לוגיקת המשך אימון.
 
+**⚠️ חוק ברזל: הרצת Playwright דורשת אישור מפורש מהמשתמש!**
+
 ```bash
-# שלב 1: Build
+# שלב 1: Build (אוטומטי — לא צריך אישור)
 npm run build 2>&1 | tail -5
 
-# שלב 2: Playwright — רק על ה-spec הרלוונטי:
+# שלב 2: ⚠️ לשאול את המשתמש לפני הרצת Playwright!
+# "האם להריץ טסט Playwright על [spec name]?"
+# רק אחרי אישור:
 npx playwright test e2e/workout-flow.spec.ts        # לשינויי workout
 npx playwright test e2e/auth.spec.ts                # לשינויי auth
 npx playwright test e2e/trainer-dashboard.spec.ts   # לשינויי trainer
@@ -437,13 +444,16 @@ npx playwright test e2e/workout-history.spec.ts     # לשינויי history
 
 **מתי:** לפני `firebase deploy` (hosting או functions), ללא קשר לגודל השינוי.
 
+**⚠️ חוק ברזל: הרצת Suite מלא דורשת אישור מפורש מהמשתמש!**
+
 ```bash
-# Suite מלא — חובה לפני deploy:
+# ⚠️ לשאול את המשתמש: "האם להריץ Suite מלא של Playwright לפני פריסה?"
+# רק אחרי אישור:
 npx playwright test
 
 # דווח תוצאות: X passed, Y failed
 # אם Y > 0 → עצור! תקן קודם.
-# לאחר מכן: בקש אישור מפורש מהמשתמש
+# לאחר מכן: בקש אישור מפורש מהמשתמש לפריסה
 ```
 
 **⚠️ כשלונות pre-existing:** אם טסטים נכשלים שאינם קשורים לשינוי שלך, **אל תתעלם!** דווח למשתמש:
@@ -457,13 +467,14 @@ npx playwright test
 
 ### 📋 טבלת החלטה מהירה
 
-| שינוי | Build | Spec בודד | Suite מלא |
-|-------|-------|-----------|-----------|
-| עיצוב/טקסט/props קטנים | ✅ | ❌ | ❌ |
-| לוגיקה/hooks/services | ✅ | ✅ | ❌ |
-| לפני firebase deploy | ✅ | ✅ | ✅ |
+| שינוי | Build | Spec בודד | Suite מלא | אישור משתמש ל-Playwright |
+|-------|-------|-----------|-----------|--------------------------|
+| עיצוב/טקסט/props קטנים | ✅ | ❌ | ❌ | — |
+| לוגיקה/hooks/services | ✅ | ✅ | ❌ | **חובה** |
+| לפני firebase deploy | ✅ | ✅ | ✅ | **חובה** |
 
 **אין קיצורי דרך לפני deploy. הרמות 1 ו-2 הן לפיתוח בלבד, לא לפריסה.**
+**⚠️ כל הרצת Playwright (spec בודד או suite מלא) דורשת אישור מפורש מהמשתמש.**
 
 ---
 
@@ -532,6 +543,7 @@ npx playwright test
 | 17/02/2026 | פריסות בוצעו בלי הרצת טסטים, רגרסיות הגיעו לפרודקשן | נוסף חוק ברזל: `npx playwright test` חובה לפני כל deploy + אישור מפורש מהמשתמש |
 | 23/02/2026 | Suite מלא רץ על כל שינוי כולל קטן — בזבוז זמן מיותר (חצי שעה על שינוי שורה) | נוספה מערכת 3 רמות בדיקה: Build בלבד / Spec רלוונטי / Suite מלא לפי גודל השינוי |
 | 08/03/2026 | נוסף Playwright MCP לשליטה בדפדפן מתוך Claude Code | קובץ `.mcp.json` בשורש הפרויקט, סקריפטי E2E ב-package.json |
+| 09/03/2026 | הסוכן הריץ Playwright באופן אוטונומי בלי אישור | נוסף חוק ברזל: כל הרצת Playwright דורשת אישור מפורש מהמשתמש |
 
 ---
 
