@@ -45,24 +45,27 @@ interface MuscleRow {
   primaryMuscleHe: string
   totalSets: number
   avgReps: number
-  isGreen: boolean
+  setsGreen: boolean
+  repsGreen: boolean
 }
 
-function getCurrentWeekRange() {
+function getLastFullWeekRange() {
   const now = new Date()
   const day = now.getDay() // 0 = Sunday
-  const sunday = new Date(now)
-  sunday.setDate(now.getDate() - day)
-  sunday.setHours(0, 0, 0, 0)
+  // Go to last Saturday (end of previous full week)
+  const lastSaturday = new Date(now)
+  lastSaturday.setDate(now.getDate() - day - 1)
+  lastSaturday.setHours(23, 59, 59, 999)
 
-  const saturday = new Date(sunday)
-  saturday.setDate(sunday.getDate() + 6)
-  saturday.setHours(23, 59, 59, 999)
+  // Sunday of that week
+  const lastSunday = new Date(lastSaturday)
+  lastSunday.setDate(lastSaturday.getDate() - 6)
+  lastSunday.setHours(0, 0, 0, 0)
 
   const fmt = (d: Date) =>
     `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
 
-  return { start: sunday, end: saturday, startStr: fmt(sunday), endStr: fmt(saturday) }
+  return { start: lastSunday, end: lastSaturday, startStr: fmt(lastSunday), endStr: fmt(lastSaturday) }
 }
 
 function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () => void }) {
@@ -73,7 +76,7 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
   useEffect(() => {
     const analyze = async () => {
       try {
-        const range = getCurrentWeekRange()
+        const range = getLastFullWeekRange()
         setWeekRange({ startStr: range.startStr, endStr: range.endStr })
 
         const [workouts, exercises] = await Promise.all([
@@ -134,25 +137,27 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
         console.log('פירוט לפי תת-שריר:', JSON.stringify(debugByMuscle, null, 2))
         console.log('=== סוף דוח ===')
 
-        // Convert to rows
+        // Convert to rows — include ALL sub-muscles from defaultMuscleMapping
         const result: MuscleRow[] = []
-        for (const [muscle, data] of muscleData) {
-          const mapping = SUB_TO_CATEGORY[muscle]
-          const category = mapping?.categoryId || muscle
-          const categoryHe = mapping?.categoryHe || muscle
-          const primaryMuscleHe = SUB_MUSCLE_HE[muscle] || muscle
-          const avgReps = data.repsCount > 0 ? Math.round((data.reps / data.repsCount) * 10) / 10 : 0
-          const isGreen = data.sets >= MIN_SETS && avgReps >= MIN_AVG_REPS
+        for (const primary of defaultMuscleMapping) {
+          for (const sub of primary.subMuscles) {
+            const data = muscleData.get(sub.id)
+            const totalSets = data?.sets || 0
+            const avgReps = data && data.repsCount > 0
+              ? Math.round((data.reps / data.repsCount) * 10) / 10
+              : 0
 
-          result.push({
-            category,
-            categoryHe,
-            primaryMuscle: muscle,
-            primaryMuscleHe,
-            totalSets: data.sets,
-            avgReps,
-            isGreen,
-          })
+            result.push({
+              category: primary.id,
+              categoryHe: primary.nameHe,
+              primaryMuscle: sub.id,
+              primaryMuscleHe: sub.nameHe,
+              totalSets,
+              avgReps,
+              setsGreen: totalSets >= MIN_SETS,
+              repsGreen: avgReps >= MIN_AVG_REPS,
+            })
+          }
         }
 
         // Sort by category, then totalSets desc
@@ -204,13 +209,9 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
             <div className="flex justify-center py-12">
               <LoadingSpinner />
             </div>
-          ) : rows.length === 0 ? (
-            <p className="text-center text-text-secondary py-12">
-              לא נמצאו אימונים בשבוע הנוכחי
-            </p>
           ) : (
             <div className="overflow-x-auto -mx-4 px-4">
-              <table className="w-full text-sm min-w-[340px]">
+              <table className="w-full text-sm min-w-[360px]">
                 <thead>
                   <tr className="text-text-secondary text-xs border-b border-dark-border">
                     <th className="text-right py-2 pr-2 font-medium">שריר</th>
@@ -225,15 +226,28 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
                       <td className="py-2.5 pr-2 text-text-primary font-medium">{row.categoryHe}</td>
                       <td className="py-2.5 text-text-secondary">{row.primaryMuscleHe}</td>
                       <td className="py-2.5">
-                        <div className="text-text-primary">{row.totalSets} סטים</div>
-                        <div className="text-xs text-text-muted">ממוצע {row.avgReps} חזרות</div>
-                      </td>
-                      <td className="py-2.5 pl-2 text-center">
-                        {row.isGreen ? (
-                          <TrendingUp className="w-5 h-5 text-status-success mx-auto" />
+                        {row.totalSets > 0 ? (
+                          <>
+                            <div className="text-text-primary">{row.totalSets} סטים</div>
+                            <div className="text-xs text-text-muted">ממוצע {row.avgReps} חזרות</div>
+                          </>
                         ) : (
-                          <TrendingDown className="w-5 h-5 text-status-error mx-auto" />
+                          <div className="text-text-muted">—</div>
                         )}
+                      </td>
+                      <td className="py-2.5 pl-2">
+                        <div className="flex items-center justify-center gap-1">
+                          {row.setsGreen ? (
+                            <TrendingUp className="w-4 h-4 text-status-success" />
+                          ) : (
+                            <TrendingDown className="w-4 h-4 text-status-error" />
+                          )}
+                          {row.repsGreen ? (
+                            <TrendingUp className="w-4 h-4 text-status-success" />
+                          ) : (
+                            <TrendingDown className="w-4 h-4 text-status-error" />
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -241,15 +255,18 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
               </table>
 
               {/* Legend */}
-              <div className="mt-4 flex items-center gap-4 text-xs text-text-muted">
-                <span className="flex items-center gap-1">
-                  <TrendingUp className="w-3.5 h-3.5 text-status-success" />
-                  ≥{MIN_SETS} סטים + ≥{MIN_AVG_REPS} חזרות
-                </span>
-                <span className="flex items-center gap-1">
-                  <TrendingDown className="w-3.5 h-3.5 text-status-error" />
-                  מתחת לסף
-                </span>
+              <div className="mt-4 flex flex-col gap-1 text-xs text-text-muted">
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center gap-1">
+                    <TrendingUp className="w-3.5 h-3.5 text-status-success" />
+                    עומד ביעד
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <TrendingDown className="w-3.5 h-3.5 text-status-error" />
+                    מתחת ליעד
+                  </span>
+                </div>
+                <div>יעד: ≥{MIN_SETS} סטים, ≥{MIN_AVG_REPS} חזרות ממוצע (חץ שמאל=סטים, ימין=חזרות)</div>
               </div>
             </div>
           )}
