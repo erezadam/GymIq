@@ -107,6 +107,8 @@ export default function ExerciseList() {
   const [showOnlyNoEquipment, setShowOnlyNoEquipment] = useState(persistedState?.showOnlyNoEquipment || false)
   // Data issues filter: 'none' | 'no_primary' | 'invalid_primary' | 'all_valid'
   const [dataIssueFilter, setDataIssueFilter] = useState<string>(persistedState?.dataIssueFilter || 'none')
+  // Secondary muscle filter
+  const [secondaryMuscleFilter, setSecondaryMuscleFilter] = useState<string>('')
   // Sort mode: 'name' (default A-Z) or 'updatedAt' (newest first)
   const [sortMode, setSortMode] = useState<'name' | 'updatedAt'>('name')
   // Filter by updatedAt: 'all' | 'updated' | 'no_update'
@@ -183,6 +185,17 @@ export default function ExerciseList() {
     return new Set(musclesList.map(m => m.id))
   }, [musclesList])
 
+  // Flat list of all sub-muscles for secondary muscle filter dropdown
+  const allSubMuscles = useMemo(() => {
+    const result: { id: string; nameHe: string; parentHe: string }[] = []
+    for (const muscle of musclesList) {
+      for (const sub of muscle.subMuscles || []) {
+        result.push({ id: sub.id, nameHe: sub.nameHe, parentHe: muscle.nameHe })
+      }
+    }
+    return result
+  }, [musclesList])
+
   // Exercises with no primaryMuscle
   const exercisesWithNoPrimaryMuscle = useMemo(() => {
     return allExercises.filter(ex => !ex.primaryMuscle || ex.primaryMuscle.trim() === '')
@@ -243,6 +256,12 @@ export default function ExerciseList() {
       result = result.filter(ex => !!ex.lastEditedAt)
     }
     // Data issues filter
+    // Secondary muscle filter
+    if (secondaryMuscleFilter) {
+      result = result.filter(ex =>
+        Array.isArray(ex.secondaryMuscles) && (ex.secondaryMuscles as string[]).includes(secondaryMuscleFilter)
+      )
+    }
     if (dataIssueFilter === 'no_primary') {
       result = result.filter(ex => !ex.primaryMuscle || ex.primaryMuscle.trim() === '')
     } else if (dataIssueFilter === 'invalid_primary') {
@@ -276,7 +295,7 @@ export default function ExerciseList() {
       result.sort((a, b) => (a.nameHe || '').trim().localeCompare((b.nameHe || '').trim(), 'he'))
     }
     return result
-  }, [allExercises, showOnlyMissingImages, showOnlyNoEquipment, updateFilter, dataIssueFilter, musclesList, validPrimaryMuscleIds, sortMode])
+  }, [allExercises, showOnlyMissingImages, showOnlyNoEquipment, updateFilter, secondaryMuscleFilter, dataIssueFilter, musclesList, validPrimaryMuscleIds, sortMode])
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -496,13 +515,14 @@ export default function ExerciseList() {
     setFilters({})
     setShowOnlyMissingImages(false)
     setShowOnlyNoEquipment(false)
+    setSecondaryMuscleFilter('')
     setDataIssueFilter('none')
   }
 
   const hasActiveFilters = useMemo(() => {
     const hasBasicFilters = Object.values(filters).some((v) => v !== undefined && v !== '')
-    return hasBasicFilters || showOnlyMissingImages || showOnlyNoEquipment || dataIssueFilter !== 'none'
-  }, [filters, showOnlyMissingImages, showOnlyNoEquipment, dataIssueFilter])
+    return hasBasicFilters || showOnlyMissingImages || showOnlyNoEquipment || dataIssueFilter !== 'none' || !!secondaryMuscleFilter
+  }, [filters, showOnlyMissingImages, showOnlyNoEquipment, dataIssueFilter, secondaryMuscleFilter])
 
   // Get category label - use categoryTranslations or muscle mapping
   const getCategoryLabel = (categoryId: string) => {
@@ -755,6 +775,20 @@ export default function ExerciseList() {
               {equipmentList.map((eq) => (
                 <option key={eq.id} value={eq.id}>
                   {eq.nameHe}
+                </option>
+              ))}
+            </select>
+
+            {/* Secondary Muscle Filter */}
+            <select
+              value={secondaryMuscleFilter}
+              onChange={(e) => setSecondaryMuscleFilter(e.target.value)}
+              className={`input-neon min-w-[160px] ${secondaryMuscleFilter ? 'border-accent-purple bg-accent-purple/10' : ''}`}
+            >
+              <option value="">שרירים משניים</option>
+              {allSubMuscles.map((sub) => (
+                <option key={sub.id} value={sub.id}>
+                  {sub.nameHe} ({sub.parentHe})
                 </option>
               ))}
             </select>
