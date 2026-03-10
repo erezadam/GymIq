@@ -185,16 +185,21 @@ export default function ExerciseList() {
     return new Set(musclesList.map(m => m.id))
   }, [musclesList])
 
-  // Flat list of all sub-muscles for secondary muscle filter dropdown
-  const allSubMuscles = useMemo(() => {
-    const result: { id: string; nameHe: string; parentHe: string }[] = []
-    for (const muscle of musclesList) {
-      for (const sub of muscle.subMuscles || []) {
-        result.push({ id: sub.id, nameHe: sub.nameHe, parentHe: muscle.nameHe })
+  // Unique secondary muscle values from actual exercise data
+  const secondaryMuscleOptions = useMemo(() => {
+    const unique = new Set<string>()
+    for (const ex of allExercises) {
+      if (Array.isArray(ex.secondaryMuscles)) {
+        for (const m of ex.secondaryMuscles as string[]) {
+          if (m) unique.add(m)
+        }
       }
     }
-    return result
-  }, [musclesList])
+    // Map to Hebrew names using dynamic mapping
+    return Array.from(unique)
+      .map(id => ({ id, nameHe: dynamicCategoryNames[id] || categoryTranslations[id] || id }))
+      .sort((a, b) => a.nameHe.localeCompare(b.nameHe, 'he'))
+  }, [allExercises, dynamicCategoryNames])
 
   // Exercises with no primaryMuscle
   const exercisesWithNoPrimaryMuscle = useMemo(() => {
@@ -786,9 +791,9 @@ export default function ExerciseList() {
               className={`input-neon min-w-[160px] ${secondaryMuscleFilter ? 'border-accent-purple bg-accent-purple/10' : ''}`}
             >
               <option value="">שרירים משניים</option>
-              {allSubMuscles.map((sub) => (
-                <option key={sub.id} value={sub.id}>
-                  {sub.nameHe}
+              {secondaryMuscleOptions.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nameHe}
                 </option>
               ))}
             </select>
