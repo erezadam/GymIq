@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { X, BarChart3, TrendingUp, TrendingDown } from 'lucide-react'
+import { X, BarChart3, TrendingUp, TrendingDown, ArrowRight, Calendar } from 'lucide-react'
 import { useAuthStore } from '@/domains/authentication/store'
 import { getUserWorkoutHistoryByDateRange } from '@/lib/firebase/workoutHistory'
 import { getExercises } from '@/lib/firebase/exercises'
@@ -49,6 +49,9 @@ interface MuscleRow {
   repsGreen: boolean
 }
 
+const fmt = (d: Date) =>
+  `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+
 function getLastFullWeekRange() {
   const now = new Date()
   const day = now.getDay() // 0 = Sunday
@@ -62,21 +65,57 @@ function getLastFullWeekRange() {
   lastSunday.setDate(lastSaturday.getDate() - 6)
   lastSunday.setHours(0, 0, 0, 0)
 
-  const fmt = (d: Date) =>
-    `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
-
   return { start: lastSunday, end: lastSaturday, startStr: fmt(lastSunday), endStr: fmt(lastSaturday) }
 }
+
+function getCurrentWeekRange() {
+  const now = new Date()
+  const day = now.getDay() // 0 = Sunday
+  // Go to this Sunday (start of current week)
+  const thisSunday = new Date(now)
+  thisSunday.setDate(now.getDate() - day)
+  thisSunday.setHours(0, 0, 0, 0)
+
+  // End is now
+  const end = new Date(now)
+  end.setHours(23, 59, 59, 999)
+
+  return { start: thisSunday, end, startStr: fmt(thisSunday), endStr: fmt(end) }
+}
+
+type WeekMode = 'last' | 'current' | 'custom'
 
 function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () => void }) {
   const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState<MuscleRow[]>([])
   const [weekRange, setWeekRange] = useState({ startStr: '', endStr: '' })
+  const [weekMode, setWeekMode] = useState<WeekMode>('last')
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
+
+  const getRangeForMode = useCallback((mode: WeekMode) => {
+    if (mode === 'current') return getCurrentWeekRange()
+    if (mode === 'custom' && customStart && customEnd) {
+      const start = new Date(customStart)
+      start.setHours(0, 0, 0, 0)
+      const end = new Date(customEnd)
+      end.setHours(23, 59, 59, 999)
+      return { start, end, startStr: fmt(start), endStr: fmt(end) }
+    }
+    return getLastFullWeekRange()
+  }, [customStart, customEnd])
 
   useEffect(() => {
+    if (weekMode === 'custom' && (!customStart || !customEnd)) {
+      setLoading(false)
+      setRows([])
+      return
+    }
+
     const analyze = async () => {
       try {
-        const range = getLastFullWeekRange()
+        setLoading(true)
+        const range = getRangeForMode(weekMode)
         setWeekRange({ startStr: range.startStr, endStr: range.endStr })
 
         const [workouts, exercises] = await Promise.all([
@@ -175,7 +214,7 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
     }
 
     analyze()
-  }, [userId])
+  }, [userId, weekMode, getRangeForMode])
 
   return (
     <div
@@ -203,9 +242,75 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
           </button>
         </div>
 
+        {/* Week Selector */}
+        <div className="px-4 pt-3 pb-2 border-b border-dark-border">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setWeekMode('last')}
+              className={`flex-1 py-2 px-2 rounded-lg text-xs font-semibold transition ${
+                weekMode === 'last'
+                  ? 'bg-accent-purple/20 text-accent-purple border border-accent-purple/40'
+                  : 'bg-dark-card text-text-secondary border border-dark-border'
+              }`}
+            >
+              שבוע אחרון
+            </button>
+            <button
+              onClick={() => setWeekMode('current')}
+              className={`flex-1 py-2 px-2 rounded-lg text-xs font-semibold transition ${
+                weekMode === 'current'
+                  ? 'bg-accent-purple/20 text-accent-purple border border-accent-purple/40'
+                  : 'bg-dark-card text-text-secondary border border-dark-border'
+              }`}
+            >
+              שבוע נוכחי
+            </button>
+            <button
+              onClick={() => setWeekMode('custom')}
+              className={`flex-1 py-2 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1 ${
+                weekMode === 'custom'
+                  ? 'bg-accent-purple/20 text-accent-purple border border-accent-purple/40'
+                  : 'bg-dark-card text-text-secondary border border-dark-border'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              בין תאריכים
+            </button>
+          </div>
+
+          {/* Custom Date Range Inputs */}
+          {weekMode === 'custom' && (
+            <div className="flex gap-3 mt-3">
+              <div className="flex-1">
+                <label className="text-xs text-text-muted block mb-1">מתאריך</label>
+                <input
+                  type="date"
+                  value={customStart}
+                  onChange={(e) => setCustomStart(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-dark-card border border-dark-border text-text-primary text-sm"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs text-text-muted block mb-1">עד תאריך</label>
+                <input
+                  type="date"
+                  value={customEnd}
+                  onChange={(e) => setCustomEnd(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-dark-card border border-dark-border text-text-primary text-sm"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Content */}
-        <div className="overflow-y-auto max-h-[calc(85vh-80px)] p-4">
-          {loading ? (
+        <div className="overflow-y-auto max-h-[calc(85vh-160px)] p-4">
+          {weekMode === 'custom' && (!customStart || !customEnd) ? (
+            <div className="flex flex-col items-center justify-center py-12 text-text-muted text-sm">
+              <Calendar className="w-8 h-8 mb-3 opacity-40" />
+              <p>בחר תאריך התחלה וסיום</p>
+            </div>
+          ) : loading ? (
             <div className="flex justify-center py-12">
               <LoadingSpinner />
             </div>
@@ -387,6 +492,18 @@ export default function TrainingAnalysis() {
 
   return (
     <div className="p-4 pb-10 rtl max-w-[600px] mx-auto">
+      {/* Back Arrow */}
+      <div className="flex items-center gap-3 mb-4">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="p-2 -m-2 text-text-secondary hover:text-text-primary transition-colors"
+          aria-label="חזרה לדשבורד"
+        >
+          <ArrowRight size={24} />
+        </button>
+        <h1 className="text-xl font-bold text-text-primary">תובנות AI</h1>
+      </div>
+
       {/* Title */}
       <h1 className="text-2xl font-bold text-primary mb-1 text-center">
         {analysis.title}
