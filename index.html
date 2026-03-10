@@ -45,13 +45,13 @@
               }, 5 * 60 * 1000);
 
               // Handle updates - let UpdateBanner manage the UI
+              // NOTE: Do NOT call skipWaiting here! The user must click "Update"
+              // in UpdateBanner, which triggers performUpdate → skipWaiting → reload.
               registration.addEventListener('updatefound', () => {
                 const newWorker = registration.installing;
                 newWorker.addEventListener('statechange', () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    console.log('[App] New version available');
-                    newWorker.postMessage('skipWaiting');
-                    // Don't auto-reload - UpdateBanner will show update option
+                    console.log('[App] New version available - waiting for user action');
                   }
                 });
               });

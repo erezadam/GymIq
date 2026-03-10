@@ -39,9 +39,10 @@ service cloud.firestore {
       allow update: if isOwner(userId) &&
         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
 
-      // Trainers can update trainee profiles (specific fields only, not role)
-      // This allows trainers to link trainees and update their training info
+      // Trainers can update their own trainee profiles (specific fields only, not role)
+      // Scoped to trainees linked via trainerId field
       allow update: if isTrainer() &&
+        resource.data.trainerId == request.auth.uid &&
         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'email', 'uid']));
 
       // Only admins can delete users
@@ -53,14 +54,16 @@ service cloud.firestore {
       // Admins can update any user including role
       allow update: if isAdmin();
 
-      // Trainers can read user profiles (app filters to own trainees)
-      allow read: if isTrainer();
+      // Trainers can only read profiles of their own trainees (scoped by trainerId)
+      allow read: if isTrainer() && resource.data.trainerId == request.auth.uid;
 
       // ---- AI Data subcollection (written by Cloud Functions only) ----
       match /aiData/{docId} {
-        // Owner, their trainer, and admins can read
+        // Owner, their trainer (scoped), and admins can read
         allow read: if isAuthenticated() &&
-          (request.auth.uid == userId || isTrainer() || isAdmin());
+          (request.auth.uid == userId ||
+           (isTrainer() && get(/databases/$(database)/documents/users/$(userId)).data.trainerId == request.auth.uid) ||
+           isAdmin());
 
         // No direct client writes — only via Cloud Functions (Admin SDK)
         allow write: if false;
@@ -172,8 +175,9 @@ service cloud.firestore {
       allow delete: if isAuthenticated() &&
         resource.data.userId == request.auth.uid;
 
-      // Trainers can read workout history (app filters to own trainees)
-      allow read: if isTrainer();
+      // Trainers can only read workout history of their own trainees
+      allow read: if isTrainer() &&
+        get(/databases/$(database)/documents/users/$(resource.data.userId)).data.trainerId == request.auth.uid;
 
       // Trainers can create/update workouts they report for trainees
       allow create: if isTrainer() &&
@@ -228,9 +232,6 @@ service cloud.firestore {
         (resource.data.trainerId == request.auth.uid ||
          resource.data.traineeId == request.auth.uid ||
          isAdmin());
-
-      // Trainers can read all programs (app filters to own trainees)
-      allow read: if isTrainer();
 
       // Trainers can create programs for their trainees
       allow create: if isTrainer() &&

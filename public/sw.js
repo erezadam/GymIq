@@ -1,6 +1,6 @@
 // Service Worker for GymIQ PWA
 // Version-based cache busting - increment to force update
-const CACHE_VERSION = 'v1.10.358';
+const CACHE_VERSION = 'v1.10.368';
 const CACHE_NAME = `gymiq-cache-${CACHE_VERSION}`;
 
 // Files to cache for offline use (minimal - just shell)
@@ -11,11 +11,12 @@ const STATIC_ASSETS = [
 ];
 
 // Install event - cache static assets
+// NOTE: Do NOT call skipWaiting() here! The new SW must wait until the app
+// explicitly tells it to activate (via postMessage('skipWaiting')).
+// Activating immediately can cause a white screen: the old page has old JS
+// loaded, but the new SW deletes old caches, so lazy-loaded chunks fail.
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing version:', CACHE_VERSION);
-
-  // Skip waiting to activate immediately
-  self.skipWaiting();
 
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {

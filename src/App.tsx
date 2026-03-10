@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
+import { ErrorBoundary } from '@/shared/components/ErrorBoundary'
 import { UpdateBanner } from '@/shared/components/UpdateBanner'
 import { useVersionCheck } from '@/shared/hooks/useVersionCheck'
 import { AuthGuard, GuestGuard } from '@/app/router/guards'
@@ -59,6 +60,7 @@ function App() {
         />
       )}
 
+      <ErrorBoundary>
       <Suspense fallback={<LoadingSpinner fullScreen />}>
         <Routes>
         {/* Public Routes */}
@@ -140,6 +142,7 @@ function App() {
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
       </Suspense>
+      </ErrorBoundary>
     </>
   )
 }
