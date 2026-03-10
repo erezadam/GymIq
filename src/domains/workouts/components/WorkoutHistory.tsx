@@ -433,7 +433,7 @@ export default function WorkoutHistory() {
               imageUrl: details?.imageUrl || exercise.imageUrl || '',
               primaryMuscle: details?.primaryMuscle || '',
               sets: exercise.sets || [],
-              isCompleted: exercise.isCompleted || false,  // שמירת סטטוס התרגיל
+              isCompleted: workoutSummary.status === 'cancelled' ? false : (exercise.isCompleted || false),  // cancelled = reset completion state
             }
           })
 

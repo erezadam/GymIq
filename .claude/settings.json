@@ -3,6 +3,8 @@
     "allow": [
       "Str_replace"
     ]
+  },
+  "enabledPlugins": {
+    "code-review@claude-plugins-official": true
   }
 }
-
