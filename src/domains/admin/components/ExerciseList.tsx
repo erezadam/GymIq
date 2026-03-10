@@ -788,7 +788,7 @@ export default function ExerciseList() {
               <option value="">שרירים משניים</option>
               {allSubMuscles.map((sub) => (
                 <option key={sub.id} value={sub.id}>
-                  {sub.nameHe} ({sub.parentHe})
+                  {sub.nameHe}
                 </option>
               ))}
             </select>
