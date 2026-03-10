@@ -14,7 +14,8 @@ export interface PrimaryMuscle {
   subMuscles: SubMuscle[]
 }
 
-// Default muscle mapping - can be overridden by Firebase data
+// Default muscle mapping - should match Firebase 'muscles' collection
+// Updated 2026-03-10 to sync with Firebase
 export const defaultMuscleMapping: PrimaryMuscle[] = [
   {
     id: 'arms',
@@ -24,7 +25,6 @@ export const defaultMuscleMapping: PrimaryMuscle[] = [
     subMuscles: [
       { id: 'biceps', nameHe: 'בייספס', nameEn: 'Biceps' },
       { id: 'triceps', nameHe: 'טרייספס', nameEn: 'Triceps' },
-      { id: 'forearms', nameHe: 'אמות', nameEn: 'Forearms' },
     ],
   },
   {
@@ -45,8 +45,6 @@ export const defaultMuscleMapping: PrimaryMuscle[] = [
     icon: '🔙',
     subMuscles: [
       { id: 'lats', nameHe: 'לאטס (רוחב)', nameEn: 'Lats' },
-      { id: 'upper_back', nameHe: 'גב עליון', nameEn: 'Upper Back' },
-      { id: 'lower_back', nameHe: 'גב תחתון', nameEn: 'Lower Back' },
       { id: 'traps', nameHe: 'טרפז', nameEn: 'Traps' },
     ],
   },
@@ -57,7 +55,7 @@ export const defaultMuscleMapping: PrimaryMuscle[] = [
     icon: '🏋️',
     subMuscles: [
       { id: 'front_delt', nameHe: 'כתף קדמית', nameEn: 'Front Delt' },
-      { id: 'side_delt', nameHe: 'כתף צידית', nameEn: 'Side Delt' },
+      { id: 'side_delt', nameHe: 'כתף אמצעית', nameEn: 'Side Delt' },
       { id: 'rear_delt', nameHe: 'כתף אחורית', nameEn: 'Rear Delt' },
     ],
   },
@@ -67,10 +65,11 @@ export const defaultMuscleMapping: PrimaryMuscle[] = [
     nameEn: 'Legs',
     icon: '🦵',
     subMuscles: [
-      { id: 'quads', nameHe: 'ארבע ראשי (קדמי)', nameEn: 'Quadriceps' },
-      { id: 'hamstrings', nameHe: 'אחורי ירך', nameEn: 'Hamstrings' },
+      { id: 'quads', nameHe: 'ארבע ראשי ', nameEn: 'Quadriceps' },
+      { id: 'hamstrings', nameHe: 'ירך אחורי', nameEn: 'Hamstrings' },
       { id: 'glutes', nameHe: 'ישבן', nameEn: 'Glutes' },
-      { id: 'calves', nameHe: 'תאומים (שוק)', nameEn: 'Calves' },
+      { id: 'calves', nameHe: 'תאומים ', nameEn: 'Calves' },
+      { id: 'adductor', nameHe: 'מקרבים ', nameEn: 'Adductors' },
     ],
   },
   {
@@ -82,6 +81,24 @@ export const defaultMuscleMapping: PrimaryMuscle[] = [
       { id: 'abs', nameHe: 'שריר בטן ישר', nameEn: 'Abs' },
       { id: 'obliques', nameHe: 'אלכסוניים', nameEn: 'Obliques' },
       { id: 'lower_abs', nameHe: 'בטן תחתונה', nameEn: 'Lower Abs' },
+    ],
+  },
+  {
+    id: 'gluteus_maximus',
+    nameHe: 'ישבן ',
+    nameEn: 'Gluteus Maximus',
+    icon: '🍑',
+    subMuscles: [
+      { id: 'longissimus', nameHe: 'ישבן ', nameEn: 'Longissimus' },
+    ],
+  },
+  {
+    id: 'cardio',
+    nameHe: 'אירובי ',
+    nameEn: 'Cardio',
+    icon: '❤️',
+    subMuscles: [
+      { id: 'warmup', nameHe: 'חימום', nameEn: 'Warmup' },
     ],
   },
 ]

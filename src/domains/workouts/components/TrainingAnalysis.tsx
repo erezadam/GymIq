@@ -10,7 +10,7 @@ import { X, BarChart3, TrendingUp, TrendingDown, ArrowRight, Calendar } from 'lu
 import { useAuthStore } from '@/domains/authentication/store'
 import { getUserWorkoutHistoryByDateRange } from '@/lib/firebase/workoutHistory'
 import { getExercises } from '@/lib/firebase/exercises'
-import { defaultMuscleMapping } from '@/domains/exercises/types/muscles'
+import { getMuscles } from '@/lib/firebase/muscles'
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
 import {
   getTrainingAnalysis,
@@ -22,21 +22,6 @@ import type { Exercise } from '@/domains/exercises/types/exercise.types'
 
 const MIN_SETS = 10
 const MIN_AVG_REPS = 5
-
-// Build sub-muscle → category mapping from defaultMuscleMapping (single source of truth)
-const SUB_TO_CATEGORY: Record<string, { categoryId: string; categoryHe: string }> = {}
-const SUB_MUSCLE_HE: Record<string, string> = {}
-
-for (const primary of defaultMuscleMapping) {
-  // Map category itself
-  SUB_TO_CATEGORY[primary.id] = { categoryId: primary.id, categoryHe: primary.nameHe }
-  SUB_MUSCLE_HE[primary.id] = primary.nameHe
-  // Map each sub-muscle
-  for (const sub of primary.subMuscles) {
-    SUB_TO_CATEGORY[sub.id] = { categoryId: primary.id, categoryHe: primary.nameHe }
-    SUB_MUSCLE_HE[sub.id] = sub.nameHe
-  }
-}
 
 interface MuscleRow {
   category: string
@@ -118,9 +103,10 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
         const range = getRangeForMode(weekMode)
         setWeekRange({ startStr: range.startStr, endStr: range.endStr })
 
-        const [workouts, exercises] = await Promise.all([
+        const [workouts, exercises, muscleMapping] = await Promise.all([
           getUserWorkoutHistoryByDateRange(userId, range.start, range.end),
           getExercises(),
+          getMuscles(),
         ])
 
         // Build exercise lookup
@@ -176,9 +162,9 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
         console.log('פירוט לפי תת-שריר:', JSON.stringify(debugByMuscle, null, 2))
         console.log('=== סוף דוח ===')
 
-        // Convert to rows — include ALL sub-muscles from defaultMuscleMapping
+        // Convert to rows — include ALL sub-muscles from Firebase muscle mapping
         const result: MuscleRow[] = []
-        for (const primary of defaultMuscleMapping) {
+        for (const primary of muscleMapping) {
           for (const sub of primary.subMuscles) {
             const data = muscleData.get(sub.id)
             const totalSets = data?.sets || 0
