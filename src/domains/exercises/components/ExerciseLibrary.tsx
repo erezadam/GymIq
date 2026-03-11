@@ -11,7 +11,7 @@ import { getMuscles, getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { getEquipment } from '@/lib/firebase/equipment'
 import { MuscleIcon } from '@/shared/components/MuscleIcon'
 import RecommendedSets from './RecommendedSets'
-import { saveWorkoutHistory, getRecentlyDoneExerciseIds, getLastMonthExerciseIds } from '@/lib/firebase/workoutHistory'
+import { saveWorkoutHistory, getRecentlyDoneExerciseIds, getWeeklyMuscleSets } from '@/lib/firebase/workoutHistory'
 import { useAuthStore } from '@/domains/authentication/store'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '@/domains/workouts/types/active-workout.types'
 import type { WorkoutHistoryEntry } from '@/domains/workouts/types'
@@ -76,7 +76,7 @@ export function ExerciseLibrary({
   const [selectedEquipment, setSelectedEquipment] = useState<string>('all')
   const [imageModal, setImageModal] = useState<{ url: string; name: string; instructionsHe: string[] } | null>(null)
   const [recentlyDoneExerciseIds, setRecentlyDoneExerciseIds] = useState<Set<string>>(new Set())
-  const [lastMonthExerciseIds, setLastMonthExerciseIds] = useState<Set<string>>(new Set())
+  const [weeklyMuscleSets, setWeeklyMuscleSets] = useState<Map<string, number>>(new Map())
   const [isScheduleForLater, setIsScheduleForLater] = useState(false)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const dateInputRef = useRef<HTMLInputElement>(null)
@@ -221,19 +221,25 @@ export function ExerciseLibrary({
   // When targetUserId is provided (e.g., building program for trainee), use that instead of current user
   const historyUserId = targetUserId || user?.uid
   useEffect(() => {
-    if (historyUserId && !loading) {
+    if (historyUserId && !loading && exercises.length > 0) {
+      // Build exercise lookup from already-loaded exercises
+      const exerciseLookup = new Map<string, { primaryMuscle: string }>()
+      for (const ex of exercises) {
+        exerciseLookup.set(ex.id, { primaryMuscle: ex.primaryMuscle || ex.category })
+      }
+
       // Load both in parallel
       Promise.all([
         getRecentlyDoneExerciseIds(historyUserId),
-        getLastMonthExerciseIds(historyUserId)
+        getWeeklyMuscleSets(historyUserId, exerciseLookup)
       ])
-        .then(([recentIds, monthIds]) => {
+        .then(([recentIds, muscleSets]) => {
           setRecentlyDoneExerciseIds(recentIds)
-          setLastMonthExerciseIds(monthIds)
+          setWeeklyMuscleSets(muscleSets)
         })
         .catch(err => console.error('Failed to load exercise history:', err))
     }
-  }, [historyUserId, loading])
+  }, [historyUserId, loading, exercises])
 
   // Get selected muscle name in Hebrew
   const selectedMuscleName = useMemo(() => {
@@ -718,8 +724,16 @@ export function ExerciseLibrary({
               {filteredExercises.map((exercise) => {
                 const isSelected = effectiveSelectedIds.has(exercise.id)
                 const wasInLastWorkout = recentlyDoneExerciseIds.has(exercise.id)
-                const wasInLastMonth = lastMonthExerciseIds.has(exercise.id)
                 const otherDayLetters = otherDaysMap.get(exercise.id)
+
+                // Recommended badge: only for strength categories, below weekly target, not in last workout
+                const WEEKLY_SETS_TARGET = 10
+                const STRENGTH_CATEGORIES = new Set(['legs', 'chest', 'back', 'shoulders', 'arms', 'core'])
+                const exercisePrimaryMuscle = exercise.primaryMuscle || exercise.category
+                const currentWeeklySets = weeklyMuscleSets.get(exercisePrimaryMuscle) || 0
+                const showRecommended = !wasInLastWorkout
+                  && STRENGTH_CATEGORIES.has(exercise.category)
+                  && currentWeeklySets < WEEKLY_SETS_TARGET
                 return (
                   <div
                     key={exercise.id}
@@ -749,11 +763,11 @@ export function ExerciseLibrary({
                             גמיש
                           </span>
                         )}
-                        {/* Priority: "אחרון" > "חודש אחרון" */}
+                        {/* Priority: "אחרון" > "מומלץ X/10" */}
                         {wasInLastWorkout ? (
                           <span className="badge-last-workout flex-shrink-0">אחרון</span>
-                        ) : wasInLastMonth ? (
-                          <span className="badge-last-month flex-shrink-0">חודש אחרון</span>
+                        ) : showRecommended ? (
+                          <span className="badge-recommended flex-shrink-0">מומלץ {currentWeeklySets}/{WEEKLY_SETS_TARGET}</span>
                         ) : null}
                         {/* Program: tags for other days that already include this exercise */}
                         {otherDayLetters && otherDayLetters.map((letter) => (
