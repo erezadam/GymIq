@@ -277,10 +277,10 @@
     @apply bg-accent-orange/20 text-accent-orange;
   }
 
-  /* Badge for exercises done in last month */
-  .badge-last-month {
+  /* Badge for recommended exercises (muscle below weekly target) */
+  .badge-recommended {
     @apply px-2 py-0.5 rounded-lg text-xs font-medium;
-    @apply bg-accent-purple/20 text-accent-purple;
+    @apply bg-primary-main/20 text-primary-main;
   }
 
   /* ----- PILLS (Filter buttons) ----- */

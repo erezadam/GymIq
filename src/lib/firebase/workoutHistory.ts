@@ -1264,48 +1264,41 @@ export async function getRecentlyDoneExerciseIds(userId: string): Promise<Set<st
   }
 }
 
-// Get exercise IDs that were done in the last 30 days
-export async function getLastMonthExerciseIds(userId: string): Promise<Set<string>> {
-  const result = new Set<string>()
-  const historyRef = collection(db, COLLECTION_NAME)
+// Get weekly completed sets per primaryMuscle for the current week (Sunday to now)
+// exerciseLookup maps exerciseId -> { primaryMuscle } (caller provides to avoid extra Firebase read)
+export async function getWeeklyMuscleSets(
+  userId: string,
+  exerciseLookup: Map<string, { primaryMuscle: string }>
+): Promise<Map<string, number>> {
+  const result = new Map<string, number>()
 
   try {
-    // Calculate date 30 days ago
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-    thirtyDaysAgo.setHours(0, 0, 0, 0)
+    // Calculate start of current week (Sunday)
+    const now = new Date()
+    const startOfWeek = new Date(now)
+    startOfWeek.setDate(now.getDate() - now.getDay()) // Sunday
+    startOfWeek.setHours(0, 0, 0, 0)
 
-    // Query workouts from last 30 days (uses existing index: userId + date)
-    const monthQuery = query(
-      historyRef,
-      where('userId', '==', userId),
-      where('date', '>=', thirtyDaysAgo),
-      orderBy('date', 'desc')
-    )
+    const workouts = await getUserWorkoutHistoryByDateRange(userId, startOfWeek, now)
 
-    const snapshot = await getDocs(monthQuery)
-    console.log('📅 Found', snapshot.docs.length, 'workouts in last 30 days')
+    for (const workout of workouts) {
+      if (workout.status !== 'completed') continue
 
-    // Collect all exercises from completed workouts (skip soft-deleted)
-    for (const doc of snapshot.docs) {
-      const data = doc.data()
-      if (!isNotSoftDeleted(data)) continue
+      for (const exercise of workout.exercises) {
+        const exDef = exerciseLookup.get(exercise.exerciseId)
+        const primaryMuscle = exDef?.primaryMuscle || 'other'
 
-      // Only include completed workouts
-      if (data.status === 'completed') {
-        const exercises = data.exercises || []
-        for (const ex of exercises) {
-          if (ex.exerciseId) {
-            result.add(ex.exerciseId)
-          }
+        for (const set of exercise.sets) {
+          if (!set.completed) continue
+          const current = result.get(primaryMuscle) || 0
+          result.set(primaryMuscle, current + 1)
         }
       }
     }
 
-    console.log('📅 Last month exercises:', result.size)
     return result
   } catch (error) {
-    console.error('❌ Error getting last month exercises:', error)
+    console.error('❌ Error getting weekly muscle sets:', error)
     return result
   }
 }
