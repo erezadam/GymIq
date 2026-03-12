@@ -23,6 +23,90 @@ import type { Exercise } from '@/domains/exercises/types/exercise.types'
 const MIN_SETS = 10
 const MIN_AVG_REPS = 5
 
+// exerciseId → { triceps?: number, glutes?: number }
+// ערך 0.5 = חצי סט נספר על השריר המשני לכל סט completed
+const SECONDARY_MUSCLE_MULTIPLIERS: Record<string, { triceps?: number; glutes?: number }> = {
+  "rCKv4MPkwWRgDpvQXV5X": { triceps: 0.5 },
+  "QxbXQO77g3ewGnY7PISJ": { glutes: 0.5 },
+  "CGPoXMft40TvBJl63j3P": { triceps: 0.5 },
+  "eQBfnsTE7HUUZedRZZeq": { glutes: 0.5 },
+  "M3Wl6PplSjEyPFAqTQhr": { glutes: 0.5 },
+  "C3pf1VvSCuGxIA4oWzXI": { triceps: 0.5 },
+  "eY2MblJj94vJtV6A0Zlz": { triceps: 0.5 },
+  "dkiOoNRC6InMJx6HvNCs": { glutes: 0.5 },
+  "zrnZmmlaOswF17Vi6ED2": { triceps: 0.5 },
+  "n9quUbtf4CsIsnuP6ypJ": { triceps: 0.5 },
+  "iN6CNbUITqLbPXYrVcA5": { triceps: 0.5 },
+  "S2LAJAVDoYDpSP2J5LvJ": { triceps: 0.5 },
+  "mKdO3inl3UVXkCfxyjSy": { triceps: 0.5 },
+  "Fbw48H0eQfwvkmuye8o8": { triceps: 0.5 },
+  "vTnBmyUqMoN5ikXdKONL": { triceps: 0.5 },
+  "mcoW0pzyAWBcd5C1dXad": { triceps: 0.5 },
+  "y9KWVXtSxcED7JQMpSRP": { triceps: 0.5 },
+  "lx6Uiw2h4wm1DqvBLR0Z": { glutes: 0.5 },
+  "fdOOiWXvidgtp4JJ89uM": { triceps: 0.5 },
+  "mgcEsYQyu7WTyeajQEkp": { triceps: 0.5 },
+  "Pq8DXb7jtiDUoavcK7fO": { triceps: 0.5 },
+  "f8yIQDvYF2M4LrPldgg8": { triceps: 0.5 },
+  "4o86htIR7D1BC41ilIn9": { triceps: 0.5 },
+  "uEttMMdBAEBLszuPTXCJ": { triceps: 0.5 },
+  "1ISbykeW2hJz7l6Ag1eh": { glutes: 0.5 },
+  "RLkPUj6WGQhlyHcr023o": { triceps: 0.5 },
+  "cAWWTBOa7vMM5XBTRstp": { triceps: 0.5 },
+  "15EoZ3DZm4pMas9pEb8c": { triceps: 0.5 },
+  "otCaAzOw0KvT8ONW1v1D": { triceps: 0.5 },
+  "6EUI93YQAeP9AwNzz8BL": { glutes: 0.5 },
+  "Xpd2fI0MmOw8mHTYQjEx": { triceps: 0.5, glutes: 0.5 },
+  "2UGewyMR1snvp8qMRUz9": { triceps: 0.5 },
+  "ZCwrx8BbUvf3mpJ2Jd3E": { triceps: 0.5 },
+  "ABOinRwCsKTqDRk52HYM": { triceps: 0.5 },
+  "nJtiUP2tORtm7uKqmKOu": { triceps: 0.5 },
+  "Zby1v7HRYivnkPkXVq0f": { glutes: 0.5 },
+  "ldyvkdv5EtQBg6nqMzDp": { glutes: 0.5 },
+  "BOwkhUUPpfWUPug9BsOf": { triceps: 0.5 },
+  "6zA32kE09TDiaH4LJJv6": { glutes: 0.5 },
+  "4mAbkf0hesykvFmFSD8k": { triceps: 0.5 },
+  "Xoh0Dwe168xMDsDpkNgb": { triceps: 0.5 },
+  "Vk3sCZwlvdFOJC5tT3cd": { triceps: 0.5 },
+  "llmh4oU99aNtS1vKynO9": { triceps: 0.5 },
+  "qjZ1cDTKn4WnRrORZCvR": { triceps: 0.5 },
+  "UlFsp2JWjSaJXqxH50Np": { glutes: 0.5 },
+  "LUAX1e9H0zoUFEP7l3A6": { glutes: 0.5 },
+  "JKREPoXVz7Aja4QwoyQq": { glutes: 0.5 },
+  "KItcETHzIHJXCGt4duOM": { triceps: 0.5 },
+  "jEUEyDG9ATkKIBN60k5j": { triceps: 0.5 },
+  "TaVCi6SMnlGPU44STvqB": { triceps: 0.5 },
+  "dclvw5ufIebkrbA9du5B": { triceps: 0.5 },
+  "4gl74RJQfLbj7VfeivTQ": { triceps: 0.5 },
+  "AKur5L4ib30oZSHgC9Px": { triceps: 0.5 },
+  "uZCw91GV42PurHafWFe7": { triceps: 0.5 },
+  "1ZwvAMeZeqXyx3oIJvPO": { glutes: 0.5 },
+  "FN6bKdNWcEgHjqrTPvbu": { glutes: 0.5 },
+  "ZnmjmlIkyyIAskc1Qczo": { glutes: 0.5 },
+  "ha6rSmUuqmK6v2rjiTB1": { triceps: 0.5, glutes: 0.5 },
+  "XraAam8yYCZWGI1ZF7oA": { glutes: 0.5 },
+  "oAoj1ai8K9dc6B9EaFED": { triceps: 0.5 },
+  "R968BsNAAeIweal039f2": { glutes: 0.5 },
+  "HKltSTpqJQlY9UXrSUCh": { triceps: 0.5 },
+  "9lqCm9PgTffJfwAcSVCe": { glutes: 0.5 },
+  "TvxDt0y03gmzOZzspHyU": { glutes: 0.5 },
+  "U9liue4N8IB3vetWz2wI": { triceps: 0.5 },
+  "S0Buy3UoyXWS7OIwDjQ8": { glutes: 0.5 },
+  "JClCPcKWAxKiuy7KIgRB": { glutes: 0.5 },
+  "eqLYs7TORwMcF6DmezaU": { glutes: 0.5 },
+  "R29ea1XKRxWmlqaryCAM": { glutes: 0.5 },
+  "Pxffw0KFPTW4a2xyK7fo": { triceps: 0.5, glutes: 0.5 },
+  "eC3bgOTVRk6G3NL6Jc54": { triceps: 0.5 },
+  "ixeY4g8dtzz8RpoCJtSS": { triceps: 0.5 },
+  "eRubABEIIHyzJ7YCzhSe": { glutes: 0.5 },
+  "b1EqSp0s3yqv8bpI2Pnn": { glutes: 0.5 },
+  "5HdRQfPVfu7Ee1FUHndI": { glutes: 0.5 },
+  "e8gWq4e1zsqZ3kiKepWk": { triceps: 0.5 },
+  "ls2RllIGdrXboD5nrmf2": { triceps: 0.5 },
+  "D2KUzrI3guPkMr356uGH": { triceps: 0.5 },
+  "BwVQyCeg3DqNPFqdJser": { triceps: 0.5 },
+}
+
 interface MuscleRow {
   category: string
   categoryHe: string
@@ -146,6 +230,31 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
 
               exSets++
               exReps.push(reps)
+
+              // Secondary muscle contribution
+              const secondary = SECONDARY_MUSCLE_MULTIPLIERS[exercise.exerciseId]
+              if (secondary) {
+                if (secondary.triceps) {
+                  const key = 'triceps'
+                  const ex2 = muscleData.get(key) || { sets: 0, reps: 0, repsCount: 0 }
+                  ex2.sets += secondary.triceps
+                  if (reps > 0) {
+                    ex2.reps += reps
+                    ex2.repsCount++
+                  }
+                  muscleData.set(key, ex2)
+                }
+                if (secondary.glutes) {
+                  const key = 'glutes'
+                  const ex2 = muscleData.get(key) || { sets: 0, reps: 0, repsCount: 0 }
+                  ex2.sets += secondary.glutes
+                  if (reps > 0) {
+                    ex2.reps += reps
+                    ex2.repsCount++
+                  }
+                  muscleData.set(key, ex2)
+                }
+              }
             }
 
             if (exSets > 0) {
@@ -319,7 +428,7 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
                       <td className="py-2.5">
                         {row.totalSets > 0 ? (
                           <>
-                            <div className="text-text-primary">{row.totalSets} סטים</div>
+                            <div className="text-text-primary">{Number.isInteger(row.totalSets) ? row.totalSets : row.totalSets.toFixed(1)} סטים</div>
                             <div className="text-xs text-text-muted">ממוצע {row.avgReps} חזרות</div>
                           </>
                         ) : (
