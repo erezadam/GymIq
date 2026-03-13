@@ -245,7 +245,7 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
                   muscleData.set(key, ex2)
                 }
                 if (secondary.glutes) {
-                  const key = 'glutes'
+                  const key = 'longissimus'
                   const ex2 = muscleData.get(key) || { sets: 0, reps: 0, repsCount: 0 }
                   ex2.sets += secondary.glutes
                   if (reps > 0) {
