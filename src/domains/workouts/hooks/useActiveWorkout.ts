@@ -193,7 +193,7 @@ export function useActiveWorkout() {
               targetWeight: 0,
               actualReps: set.reps,
               actualWeight: set.weight,
-              completed: set.reps > 0,
+              completed: set.reps > 0 || (set.time !== undefined && set.time > 0) || (set.zone !== undefined && set.zone > 0),
               // Extended fields (only include if defined - Firebase doesn't accept undefined)
               ...(set.time !== undefined && set.time > 0 && { time: set.time }),
               ...(set.intensity !== undefined && set.intensity > 0 && { intensity: set.intensity }),
@@ -266,7 +266,7 @@ export function useActiveWorkout() {
                   targetWeight: 0,
                   actualReps: set.reps,
                   actualWeight: set.weight,
-                  completed: set.reps > 0,
+                  completed: set.reps > 0 || (set.time !== undefined && set.time > 0) || (set.zone !== undefined && set.zone > 0),
                   ...(set.time !== undefined && set.time > 0 && { time: set.time }),
                   ...(set.intensity !== undefined && set.intensity > 0 && { intensity: set.intensity }),
                   ...(set.speed !== undefined && set.speed > 0 && { speed: set.speed }),
@@ -888,7 +888,7 @@ export function useActiveWorkout() {
                 targetWeight: 0,
                 actualReps: set.reps,
                 actualWeight: set.weight,
-                completed: set.reps > 0,
+                completed: set.reps > 0 || (set.time !== undefined && set.time > 0) || (set.zone !== undefined && set.zone > 0),
                 // Extended fields
                 ...(set.time !== undefined && set.time > 0 && { time: set.time }),
                 ...(set.intensity !== undefined && set.intensity > 0 && { intensity: set.intensity }),
@@ -1322,7 +1322,7 @@ export function useActiveWorkout() {
                 targetWeight: 0,
                 actualReps: set.reps,
                 actualWeight: set.weight,
-                completed: set.reps > 0,
+                completed: set.reps > 0 || (set.time !== undefined && set.time > 0) || (set.zone !== undefined && set.zone > 0),
                 // Extended fields (only include if defined - Firebase doesn't accept undefined)
                 ...(set.time !== undefined && set.time > 0 && { time: set.time }),
                 ...(set.intensity !== undefined && set.intensity > 0 && { intensity: set.intensity }),
@@ -1519,7 +1519,7 @@ export function useActiveWorkout() {
             targetWeight: 0,
             actualReps: set.reps,
             actualWeight: set.weight,
-            completed: set.reps > 0,
+            completed: set.reps > 0 || (set.time !== undefined && set.time > 0) || (set.zone !== undefined && set.zone > 0),
             // Extended fields (only include if defined - Firebase doesn't accept undefined)
             ...(set.time !== undefined && set.time > 0 && { time: set.time }),
             ...(set.intensity !== undefined && set.intensity > 0 && { intensity: set.intensity }),
