@@ -929,7 +929,7 @@ export function ExerciseLibrary({
             <img
               src={imageModal.url}
               alt={imageModal.name}
-              className="w-full rounded-xl"
+              className="w-full max-h-[60vh] object-contain rounded-xl"
             />
             <p className="text-white text-center mt-3 font-semibold">{imageModal.name}</p>
             {imageModal.instructionsHe.length > 0 && (

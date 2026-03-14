@@ -90,30 +90,12 @@ export async function getReportTypes(): Promise<ReportType[]> {
 }
 
 // Get only active report types (for dropdowns)
+// Uses getReportTypes() first to ensure auto-sync of missing defaults
 export async function getActiveReportTypes(): Promise<ReportType[]> {
   try {
-    const reportTypesRef = collection(db, COLLECTION_NAME)
-    // Simple query without orderBy to avoid needing composite index
-    const q = query(
-      reportTypesRef,
-      where('isActive', '==', true)
-    )
-    const snapshot = await getDocs(q)
-
-    if (snapshot.empty) {
-      // Return active defaults if no data in Firebase
-      return defaultReportTypes.filter(rt => rt.isActive)
-    }
-
-    const reportTypes = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate(),
-      updatedAt: doc.data().updatedAt?.toDate(),
-    })) as ReportType[]
-
-    // Sort by sortOrder in JavaScript instead of Firebase
-    return reportTypes.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+    // Ensure missing defaults are synced first
+    const allTypes = await getReportTypes()
+    return allTypes.filter(rt => rt.isActive).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
   } catch (error) {
     console.error('Error fetching active report types:', error)
     return defaultReportTypes.filter(rt => rt.isActive)

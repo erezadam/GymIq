@@ -732,7 +732,7 @@ export default function ExerciseForm() {
                 דוגמה: https://raw.githubusercontent.com/erezadam/exercise-images-en/main/bench_press.jpg
               </p>
             </div>
-            <div className="w-32 h-32 rounded-xl bg-dark-card border-2 border-dashed border-dark-border flex items-center justify-center overflow-hidden">
+            <div className="w-40 h-40 rounded-xl bg-dark-card border-2 border-dashed border-dark-border flex items-center justify-center overflow-hidden">
               {imageUrl ? (
                 <img
                   src={imageUrl}

@@ -1,15 +1,16 @@
 /**
  * OpenAI API Client
- * Two-call approach: (1) muscle selection, (2) workout generation with recommendations
+ * Single-call approach: workout generation with bodyRegion splits and 10 sets/muscle/week
  */
 
 import * as functions from 'firebase-functions'
 import type {
   GenerateWorkoutRequest,
   ClaudeFullResponse,
-  MuscleSelectionResponse,
   ExerciseSummary,
   ExercisePerformanceData,
+  MuscleSummary,
+  WorkoutMuscleAssignment,
 } from './types'
 
 // Initialize OpenAI client (lazy - only when needed)
@@ -21,7 +22,6 @@ async function getClient(): Promise<any> {
     if (!apiKey) {
       throw new Error('OPENAI_API_KEY not configured')
     }
-    // Dynamic import to avoid loading at deploy time
     const { default: OpenAI } = await import('openai')
     openaiClient = new OpenAI({ apiKey })
   }
@@ -29,117 +29,27 @@ async function getClient(): Promise<any> {
 }
 
 /**
- * Call 1 - Select muscles for workouts based on training history
- * Only called when user didn't select muscles manually
- * Returns null if GPT fails (triggers fallback)
- */
-export async function callGPTForMuscleSelection(
-  data: GenerateWorkoutRequest
-): Promise<MuscleSelectionResponse | null> {
-  try {
-    const client = await getClient()
-
-    const systemPrompt = `אתה מאמן כושר AI שבוחר קבוצות שרירים לאימון.
-בהתבסס על היסטוריית האימונים של המתאמן, בחר 2-3 קבוצות שרירים לכל אימון.
-הקפד לסובב בין קבוצות שרירים שונות כדי לאפשר התאוששות.
-החזר JSON בלבד.`
-
-    const userPrompt = `בהתבסס על היסטוריית האימונים, איזה שרירים לאמן?
-
-**מספר אימונים לתכנן:** ${data.request.numWorkouts}
-
-**שרירים זמינים:**
-${JSON.stringify(data.muscles.map(m => ({ id: m.id, nameHe: m.nameHe })), null, 0)}
-
-**היסטוריית אימונים (5 אחרונים):**
-${JSON.stringify(data.recentWorkouts.slice(0, 5))}
-
-**פורמט תגובה (JSON בלבד):**
-{
-  "workoutMuscles": [
-    ["muscleId1", "muscleId2"],
-    ["muscleId3", "muscleId4"]
-  ]
-}
-
-בחר 2-3 שרירים לכל אימון. הימנע מלתת אותם שרירים לאימונים עוקבים.
-החזר JSON בלבד.`
-
-    functions.logger.info('Call 1: Muscle selection', {
-      numWorkouts: data.request.numWorkouts,
-    })
-
-    const completion = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      max_tokens: 512,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-    })
-
-    const textContent = completion.choices[0]?.message?.content
-    if (!textContent) return null
-
-    const parsed = JSON.parse(textContent.trim()) as MuscleSelectionResponse
-
-    if (!parsed.workoutMuscles || !Array.isArray(parsed.workoutMuscles)) {
-      functions.logger.error('Muscle selection response missing workoutMuscles')
-      return null
-    }
-
-    functions.logger.info('Call 1 result: muscles selected', {
-      workoutMuscles: parsed.workoutMuscles,
-    })
-
-    return parsed
-  } catch (error: any) {
-    functions.logger.error('Call 1 (muscle selection) failed', { error: error.message })
-    return null
-  }
-}
-
-/**
- * Filter exercises to only include those matching selected muscles + warmup/cardio
- */
-export function filterExercisesByMuscles(
-  exercises: ExerciseSummary[],
-  selectedMuscleIds: string[]
-): ExerciseSummary[] {
-  const muscleSet = new Set(selectedMuscleIds)
-
-  return exercises.filter(ex =>
-    muscleSet.has(ex.primaryMuscle) ||
-    muscleSet.has(ex.category || '') ||
-    ex.primaryMuscle === 'cardio' ||
-    ex.category === 'cardio' ||
-    ex.category === 'warmup'
-  )
-}
-
-/**
- * Call 2 - Generate workouts with filtered exercise list and weight recommendations
+ * Generate workouts with muscle assignments and 10 sets/muscle/week logic
  * Returns null if GPT fails
  */
-export async function callGPTForBundle(
+export async function callGPTForWorkouts(
   data: GenerateWorkoutRequest,
-  filteredExercises?: ExerciseSummary[],
-  workoutMuscleAssignments?: string[][],
+  muscles: MuscleSummary[],
+  assignments: WorkoutMuscleAssignment[],
+  filteredExercises: ExerciseSummary[],
   lastAnalysisSection?: string | null
 ): Promise<ClaudeFullResponse | null> {
   try {
     const client = await getClient()
 
     const systemPrompt = buildSystemPrompt()
-    const exercisesToUse = filteredExercises || data.availableExercises
-    const userPrompt = buildBundlePrompt(data, exercisesToUse, workoutMuscleAssignments, lastAnalysisSection)
+    const userPrompt = buildUserPrompt(data, muscles, assignments, filteredExercises, lastAnalysisSection)
 
-    functions.logger.info('Call 2: Workout generation', {
+    functions.logger.info('Calling GPT for workout generation', {
       numWorkouts: data.request.numWorkouts,
       duration: data.request.duration,
-      filteredExercises: exercisesToUse.length,
-      totalExercises: data.availableExercises.length,
+      structure: data.request.workoutStructure,
+      exercises: filteredExercises.length,
     })
 
     const completion = await client.chat.completions.create({
@@ -158,83 +68,79 @@ export async function callGPTForBundle(
     const parsed = JSON.parse(textContent.trim()) as ClaudeFullResponse
 
     if (!parsed.workouts || !Array.isArray(parsed.workouts)) {
-      functions.logger.error('OpenAI bundle response missing workouts array')
+      functions.logger.error('GPT response missing workouts array')
       return null
     }
 
-    functions.logger.info('Call 2 result: workouts generated', {
+    functions.logger.info('GPT workouts generated', {
       workoutCount: parsed.workouts.length,
     })
 
     return parsed
   } catch (error: any) {
-    functions.logger.error('Call 2 (workout generation) failed', { error: error.message })
+    functions.logger.error('GPT workout generation failed', { error: error.message })
     return null
   }
 }
 
 /**
- * Build the system prompt for workout generation (Call 2)
+ * Build the system prompt for workout generation
  */
 function buildSystemPrompt(): string {
   return `אתה מאמן כושר AI מקצועי שיוצר תוכניות אימון מותאמות אישית.
 
+## עיקרון מפתח: 10 סטים לשריר בשבוע
+- כל שריר צריך לקבל ~10 סטים שבועיים (נפח אימון אופטימלי לצמיחה)
+- חלק את 10 הסטים בין האימונים שבהם השריר מופיע
+- כל תרגיל = 3-4 סטים → בממוצע 3 תרגילים לשריר בשבוע
+
 ## כללים חשובים:
-1. השתמש אך ורק ב-exerciseId מרשימת התרגילים שסופקה. אסור להמציא ID חדש. אם ID לא מופיע ברשימה - אל תשתמש בו!
+1. השתמש אך ורק ב-exerciseId מרשימת התרגילים שסופקה. אסור להמציא ID חדש!
 2. אל תחזור על תרגילים שנעשו אתמול (רשימת IDs מסופקת)
 3. התאם את מספר התרגילים למשך האימון המבוקש
-4. אם נבחרו שרירים ספציפיים - התמקד בהם
-5. התחל באימון חימום אם נדרש (תרגיל קרדיו)
-6. הוסף הסבר קצר (2-3 משפטים) לכל אימון
-7. החזר JSON בלבד
+4. התחל באימון חימום אם נדרש (תרגיל קרדיו)
+5. הוסף הסבר קצר (2-3 משפטים) לכל אימון
+6. החזר JSON בלבד
 
-## לוגיקת פיצול שבועי:
-כשמייצרים מספר אימונים, בחר פיצול חכם:
-- 2 אימונים: Full Body בשניהם
-- 3 אימונים: Push / Pull / Legs
-- 4 אימונים: Upper / Lower / Upper / Lower
-- 5 אימונים: Push / Pull / Legs / Upper / Lower
-- 6 אימונים: Push / Pull / Legs כפול
-אם המשתמש בחר שרירים ספציפיים ב-UI כבד אותם, אבל שמור על עקרונות ההתאוששות.
+## לוגיקת פיצול (bodyRegion):
+- full_body: כל אימון כולל תרגילים מכל קבוצות השרירים
+- split: אימונים מתחלפים בין פלג גוף עליון (upper) לתחתון (lower)
+  - שרירים ניטרליים (core) נכללים בכל אימון
+  - **חשוב:** עקוב אחרי הרשימה המדויקת של שרירים לכל אימון (מסופקת)
 
-## חוקי התאוששות ומניעת חפיפה:
-- אל תבחר תרגילים שמפעילים כשריר ראשי שריר שעבד אתמול
-- בדוק גם שרירים משניים כדי לא ליצור חפיפה כבדה יום אחרי יום
-- אל תחזור על אותו תרגיל באותו שבוע ככל האפשר
-- אל תחזור על אותו תרגיל יומיים ברצף אף פעם
+## חלוקת תרגילים בפיצול (10 סטים/שריר/שבוע):
+### Full Body:
+- 3 אימונים בשבוע: ~1 תרגיל (3-4 סטים) לשריר בכל אימון
+- 4 אימונים: ~1 תרגיל לשריר, חלק מהשרירים 2 תרגילים בחלק מהאימונים
+- 5-6 אימונים: ~1 תרגיל לשריר בכל אימון, סה"כ 10 סטים בשבוע
+
+### Upper/Lower Split:
+- 4 אימונים (2 upper, 2 lower): ~2 תרגילים לשריר בכל אימון
+- 3 אימונים (2 upper, 1 lower or reverse):
+  - שריר שמופיע 2 פעמים: ~1.5 תרגילים per workout
+  - שריר שמופיע 1 פעם: ~3 תרגילים in that workout
+- 6 אימונים (3 upper, 3 lower): ~1 תרגיל לשריר בכל אימון
 
 ## סדר תרגילים בתוך אימון (חובה):
-תמיד סדר מהכבד והמורכב לקל והמבודד:
-1. תרגיל עוגן - compound מורכב (סקוואט, דדליפט, לחיצת חזה, וכו')
+1. תרגיל עוגן - compound מורכב (סקוואט, דדליפט, לחיצת חזה וכו')
 2. compound נוסף בזווית או תבנית תנועה שונה
 3. תרגיל נתמך - מכשיר או וריאציה יציבה להעמסה
-4-8. תרגילי השלמה לפי הצורך: בידוד, כבלים, משקולות, מתיחות
+4-8. תרגילי השלמה: בידוד, כבלים, משקולות
 אחרון. פיניש - קל יחסית, לפאמפ או סיבולת שרירית
-- אל תשים יותר משני תרגילים עם אותה תבנית תנועה עיקרית באותו אימון
+- אל תשים יותר משני תרגילים עם אותה תבנית תנועה באותו אימון
 
 ## כיסוי תתי שריר ותבניות תנועה:
-- חזה: דאג לכיסוי עליון, אמצעי, תחתון לאורך האימון או לאורך השבוע
-- גב: שלב משיכה אנכית ומשיכה אופקית לאורך האימון או לאורך השבוע
-- רגליים: דאג לסקוואט והינג' לאורך השבוע
-- כתפיים: דאג לקדמי, צד, אחורי לאורך השבוע
-
-## חוקי ציוד:
-- אם סופק ציוד זמין, בחר רק תרגילים שתואמים לציוד
-- העדף משקולות חופשיות לתרגיל העוגן
-- העדף מכשיר לתרגיל הנתמך (מיקום 3)
+- חזה: עליון, אמצעי, תחתון לאורך השבוע
+- גב: משיכה אנכית + אופקית לאורך השבוע
+- רגליים: סקוואט + הינג' לאורך השבוע
+- כתפיים: קדמי, צד, אחורי לאורך השבוע
 
 ## כללי המלצות משקל (קריטי!):
-- בסס את ההמלצה על הביצוע האחרון של המשתמש (מסופק כ-exerciseHistory)
-- אם למשתמש יש היסטוריית ביצוע לתרגיל: המלץ על משקל קרוב למה שעשה (±5%)
-  - אם עשה 64kg × 8 בהצלחה → המלץ 64-67kg
-  - אם עשה 22.5kg × 10 בהצלחה → המלץ 22.5-25kg
-  - אם lastReps היה בקצה העליון של הטווח → בחר את החלק העליון של טווח המשקל
-  - אם lastReps היה בקצה התחתון → בחר את החלק התחתון של טווח המשקל
-- לעולם אל תמליץ על ירידה של יותר מ-10% ממה שהמשתמש עשה
-- לעולם אל תמליץ על עלייה של יותר מ-5% ממה שהמשתמש עשה
-- אם אין היסטוריה לתרגיל ספציפי: המלץ על משקל שמרני למתאמן ממוצע
-- לתרגילי משקל גוף או חימום: weight = 0
-- הוסף reasoning קצר בעברית שמסביר למה בחרת את המשקל הזה
+- בסס על הביצוע האחרון של המשתמש (exerciseHistory)
+- אם יש היסטוריה: המלץ ±5% מהמשקל האחרון
+- אם אין היסטוריה: משקל שמרני
+- לתרגילי משקל גוף/חימום: weight = 0
+- הוסף reasoning קצר בעברית
 
 ## פורמט תגובה (JSON בלבד):
 {
@@ -245,39 +151,31 @@ function buildSystemPrompt(): string {
           "exerciseId": "string (ID מרשימת התרגילים)",
           "isWarmup": boolean,
           "targetSets": number (1 לחימום, 3-4 לתרגיל רגיל),
-          "targetReps": "string (טווח חזרות, למשל: '8-12')",
-          "aiNotes": "string (טיפ קצר אופציונלי בעברית)",
+          "targetReps": "string (טווח חזרות)",
+          "aiNotes": "string (טיפ קצר בעברית)",
           "recommendation": {
-            "weight": number (המלצת משקל בק"ג - מבוסס על היסטוריית המשתמש!),
-            "repRange": "string (טווח חזרות, למשל: '8-10')",
-            "sets": number (מספר סטים מומלץ),
-            "reasoning": "string (הסבר קצר בעברית - למה משקל זה)"
+            "weight": number (ק"ג),
+            "repRange": "string",
+            "sets": number,
+            "reasoning": "string (הסבר קצר בעברית)"
           }
         }
       ],
-      "muscleGroups": ["string (שמות השרירים בעברית)"],
-      "explanation": "string (הסבר קצר בעברית - 2-3 משפטים)"
+      "muscleGroups": ["string (שמות שרירים בעברית)"],
+      "explanation": "string (הסבר 2-3 משפטים)"
     }
   ]
-}
-
-## דוגמאות לתרגילים לפי משך:
-- 30 דקות: 6 תרגילי כוח + 1 חימום = 7 סה"כ
-- 45 דקות: 8 תרגילי כוח + 1 חימום = 9 סה"כ
-- 60 דקות: 9 תרגילי כוח + 1 חימום = 10 סה"כ
-- 90 דקות: 11 תרגילי כוח + 1 חימום = 12 סה"כ`
+}`
 }
 
 /**
  * Build exercise history section for prompt
- * Maps exerciseId → last performance for GPT context
  */
 function buildExerciseHistorySection(exerciseHistory?: ExercisePerformanceData[]): string {
   if (!exerciseHistory || exerciseHistory.length === 0) {
-    return `\n**היסטוריית ביצוע לתרגילים:** אין נתונים - זה משתמש חדש, המלץ משקלות שמרניים\n`
+    return `\n**היסטוריית ביצוע:** אין נתונים - משתמש חדש, המלץ משקלות שמרניים\n`
   }
 
-  // Format as compact JSON: exerciseId → { weight, reps, volume }
   const historyMap = exerciseHistory.map(eh => ({
     id: eh.exerciseId,
     lastWeight: eh.lastWeight,
@@ -287,89 +185,80 @@ function buildExerciseHistorySection(exerciseHistory?: ExercisePerformanceData[]
   }))
 
   return `
-**היסטוריית ביצוע לתרגילים (קריטי - בסס המלצות על זה!):**
+**היסטוריית ביצוע (קריטי - בסס המלצות על זה!):**
 ${JSON.stringify(historyMap, null, 0)}
 
-⚠️ חובה: לכל תרגיל שיש לו היסטוריה למעלה, ההמלצה חייבת להיות מבוססת על המשקל האחרון שלו.
-- אם עשה Xkg - המלץ בין X*0.9 ל-X*1.05
-- לעולם לא להמליץ על משקל שונה ביותר מ-10% ממה שעשה
+⚠️ חובה: המלצת משקל חייבת להתבסס על ההיסטוריה. טווח: X*0.9 עד X*1.05
 `
 }
 
 /**
- * Build prompt for generating multiple workouts (Call 2)
- * Uses filtered exercise list for reduced token count
+ * Build the user prompt with muscle assignments
  */
-function buildBundlePrompt(
+function buildUserPrompt(
   data: GenerateWorkoutRequest,
+  muscles: MuscleSummary[],
+  assignments: WorkoutMuscleAssignment[],
   exercises: ExerciseSummary[],
-  workoutMuscleAssignments?: string[][],
   lastAnalysisSection?: string | null
 ): string {
-  const { request, muscles, recentWorkouts, yesterdayExerciseIds, exerciseHistory } = data
+  const { request, recentWorkouts, yesterdayExerciseIds, exerciseHistory } = data
 
-  // Muscle targets description
-  let muscleDesc = ''
-  if (workoutMuscleAssignments && workoutMuscleAssignments.length > 0) {
-    // Muscles selected by Call 1
-    muscleDesc = 'שרירים שנבחרו לכל אימון (ראה למטה)'
-  } else if (request.muscleSelectionMode === 'same' && request.muscleTargets.length > 0) {
-    const targetNames = request.muscleTargets
-      .map((id) => muscles.find((m) => m.id === id)?.nameHe || id)
-      .join(', ')
-    muscleDesc = `אותם שרירים לכל האימונים: ${targetNames}`
-  } else if (request.muscleSelectionMode === 'manual' && request.perWorkoutMuscles) {
-    muscleDesc = 'שרירים ידניים לכל אימון (ראה למטה)'
-  } else {
-    muscleDesc = 'בחר 2-3 קבוצות שרירים מגוונות'
-  }
-
-  // Exercise count based on duration
-  const exerciseCounts: Record<number, number> = { 30: 6, 45: 8, 60: 9, 90: 11 }
-  const targetExercises = exerciseCounts[request.duration] || 9
+  const exerciseCount = request.duration <= 60 ? 9 : request.duration <= 75 ? 10 : 11
+  const totalPerWorkout = exerciseCount + (request.warmupDuration > 0 ? 1 : 0)
 
   // Build per-workout muscle section
-  let perWorkoutMuscleSection = ''
-  if (workoutMuscleAssignments && workoutMuscleAssignments.length > 0) {
-    perWorkoutMuscleSection = `
-**שרירים לכל אימון:**
-${workoutMuscleAssignments.map((m, i) => `אימון ${i + 1}: ${m.map((id) => muscles.find((mu) => mu.id === id)?.nameHe || id).join(', ')}`).join('\n')}
-`
-  } else if (request.muscleSelectionMode === 'manual' && request.perWorkoutMuscles) {
-    perWorkoutMuscleSection = `
-**שרירים לכל אימון:**
-${request.perWorkoutMuscles.map((m, i) => `אימון ${i + 1}: ${m.map((id) => muscles.find((mu) => mu.id === id)?.nameHe || id).join(', ')}`).join('\n')}
-`
+  const workoutAssignmentsSection = assignments.map((a, i) => {
+    const regionLabel = a.region === 'full_body' ? 'כל הגוף' :
+      a.region === 'upper' ? 'פלג עליון' : 'פלג תחתון'
+    return `אימון ${i + 1} (${regionLabel}): ${a.muscleNames.join(', ')}`
+  }).join('\n')
+
+  // Calculate sets per muscle per workout for reference
+  const muscleAppearanceCount: Record<string, number> = {}
+  for (const a of assignments) {
+    for (const muscleId of a.muscleIds) {
+      muscleAppearanceCount[muscleId] = (muscleAppearanceCount[muscleId] || 0) + 1
+    }
   }
+  const setsPerMuscleSection = Object.entries(muscleAppearanceCount)
+    .map(([id, count]) => {
+      const muscle = muscles.find(m => m.id === id)
+      const setsPerWorkout = Math.round(10 / count)
+      const exercisesPerWorkout = Math.ceil(setsPerWorkout / 3)
+      return `${muscle?.nameHe || id}: ${count} אימונים, ~${setsPerWorkout} סטים/אימון (~${exercisesPerWorkout} תרגילים)`
+    }).join('\n')
 
-  return `צור ${request.numWorkouts} אימונים עם הפרטים הבאים:
+  return `צור ${request.numWorkouts} אימונים:
 
-**בקשת משתמש:**
-- כמות אימונים: ${request.numWorkouts}
-- משך כל אימון: ${request.duration} דקות
+**הגדרות:**
+- מבנה: ${request.workoutStructure === 'full_body' ? 'כל הגוף' : 'Upper/Lower Split'}
+- משך: ${request.duration} דקות
 - חימום: ${request.warmupDuration > 0 ? `${request.warmupDuration} דקות (תרגיל קרדיו אחד)` : 'ללא'}
-- קבוצות שרירים: ${muscleDesc}
-- תרגילים נדרשים: ${targetExercises} תרגילי כוח + ${request.warmupDuration > 0 ? '1 חימום' : '0 חימום'} = ${targetExercises + (request.warmupDuration > 0 ? 1 : 0)} סה"כ
-${perWorkoutMuscleSection}
+- תרגילים: ${exerciseCount} כוח + ${request.warmupDuration > 0 ? '1 חימום' : '0'} = ${totalPerWorkout} סה"כ לכל אימון
+
+**שרירים לכל אימון (חובה לעקוב!):**
+${workoutAssignmentsSection}
+
+**חלוקת סטים (10 סטים/שריר/שבוע):**
+${setsPerMuscleSection}
+
 **תרגילים זמינים:**
 ${JSON.stringify(exercises.map((e) => ({ id: e.id, nameHe: e.nameHe, muscle: e.primaryMuscle })), null, 0)}
 
-**שרירים זמינים:**
-${JSON.stringify(muscles.map((m) => ({ id: m.id, nameHe: m.nameHe })), null, 0)}
+**שרירים:**
+${JSON.stringify(muscles.map((m) => ({ id: m.id, nameHe: m.nameHe, region: m.bodyRegion })), null, 0)}
 
-**תרגילים לא לכלול (נעשו אתמול):**
+**אל תכלול (נעשו אתמול):**
 ${JSON.stringify(yesterdayExerciseIds)}
 
 **היסטוריית אימונים (5 אחרונים):**
 ${JSON.stringify(recentWorkouts.slice(0, 5))}
 ${buildExerciseHistorySection(exerciseHistory)}${lastAnalysisSection || ''}
-חשוב:
-- לכל תרגיל הוסף recommendation עם המלצת משקל, טווח חזרות, סטים ו-reasoning
-- המלצת המשקל חייבת להתבסס על היסטוריית הביצוע של המשתמש (אם קיימת)
-- אם אין היסטוריה לתרגיל: המלץ משקל שמרני (0 לתרגילי משקל גוף)
-- הוסף reasoning קצר בעברית לכל המלצה (למשל: "עשה 64kg×8, ממליץ להישאר")
-- הוסף הסבר קצר (2-3 משפטים) לכל אימון
-- חובה: השתמש אך ורק ב-exerciseId מרשימת התרגילים הזמינים למעלה. אסור להמציא ID!
-- חובה: כל אימון חייב לכלול בדיוק ${targetExercises + (request.warmupDuration > 0 ? 1 : 0)} תרגילים (${targetExercises} כוח + ${request.warmupDuration > 0 ? '1 חימום' : '0 חימום'})
+**חובה:**
+- לכל תרגיל: recommendation עם weight, repRange, sets, reasoning
+- כל אימון: בדיוק ${totalPerWorkout} תרגילים
+- עקוב אחרי חלוקת השרירים לכל אימון!
+- אל תחזור על תרגילים בין אימונים ככל האפשר
 - החזר JSON בלבד`
 }

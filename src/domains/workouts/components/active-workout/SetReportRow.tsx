@@ -317,11 +317,11 @@ export function SetReportRow({
 
   // Heart rate zone definitions
   const HEART_RATE_ZONES = [
-    { zone: 1, label: 'אזור 1', range: '< 121 פע/לד', color: '#3B82F6' },
-    { zone: 2, label: 'אזור 2', range: '122-133 פע/לד', color: '#10B981' },
-    { zone: 3, label: 'אזור 3', range: '134-143 פע/לד', color: '#F59E0B' },
-    { zone: 4, label: 'אזור 4', range: '144-153 פע/לד', color: '#F97316' },
-    { zone: 5, label: 'אזור 5', range: '154+ פע/לד', color: '#EF4444' },
+    { zone: 1, label: 'אזור 1', range: '122>', shortRange: '122>', color: '#3B82F6' },
+    { zone: 2, label: 'אזור 2', range: '122-133 פע/לד', shortRange: '122-133', color: '#10B981' },
+    { zone: 3, label: 'אזור 3', range: '134-143 פע/לד', shortRange: '134-143', color: '#F59E0B' },
+    { zone: 4, label: 'אזור 4', range: '144-153 פע/לד', shortRange: '144-153', color: '#F97316' },
+    { zone: 5, label: 'אזור 5', range: '+154 פע/לד', shortRange: '+154', color: '#EF4444' },
   ]
 
   // Render zone selector (heart rate zones 1-5)
@@ -329,7 +329,7 @@ export function SetReportRow({
     <div className="set-input-group" dir="rtl">
       <label className="set-label">אזור דופק</label>
       <div className="flex gap-1">
-        {HEART_RATE_ZONES.map(({ zone, range, color }) => (
+        {HEART_RATE_ZONES.map(({ zone, range, shortRange, color }) => (
           <button
             key={zone}
             type="button"
@@ -344,7 +344,7 @@ export function SetReportRow({
             title={range}
           >
             <span className="font-bold text-xs">{zone}</span>
-            <span className="opacity-70">{range.split(' ')[0]}</span>
+            <span className="opacity-70">{shortRange}</span>
           </button>
         ))}
       </div>

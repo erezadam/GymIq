@@ -581,6 +581,7 @@ npx playwright test
 | 09/03/2026 | הסוכן הריץ Playwright באופן אוטונומי בלי אישור | נוסף חוק ברזל: כל הרצת Playwright דורשת אישור מפורש מהמשתמש |
 | 10/03/2026 | נוסף code-review plugin | חובה להריץ /code-review לפני פתיחת PR |
 | 14/03/2026 | תת-שרירים חדשים מ-Firebase לא הופיעו בניתוח שבועי + דרופדאון ExerciseForm פולטר לפי Set קשיח | נוסף חוק ברזל: מקור אמת יחיד לשמות שרירים = Firebase. אסור רשימות סטטיות. auto-sync ב-getMuscles() |
+| 14/03/2026 | קרדיט חלקי לישבן הלך ל-longissimus במקום gluteus_maximus + חסר biceps_brachii | תוקן SECONDARY_MUSCLE_MULTIPLIERS: 3 שרירי עזר (triceps/biceps_brachii/gluteus_maximus), רשימות תרגילים עודכנו, UI שונה — סטים צבעוניים (ירוק≥10/אדום<10), ממוצע חזרות צבעוני (ירוק≥5/אדום<5), הוסר עמודת סטטוס |
 
 ---
 

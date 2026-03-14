@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { X, BarChart3, TrendingUp, TrendingDown, ArrowRight, Calendar, Download, ChevronRight } from 'lucide-react'
+import { X, BarChart3, ArrowRight, Calendar, Download, ChevronRight } from 'lucide-react'
 import { useAuthStore } from '@/domains/authentication/store'
 import { getUserWorkoutHistoryByDateRange } from '@/lib/firebase/workoutHistory'
 import { getExercises, resolveLegacyMuscleCategory } from '@/lib/firebase/exercises'
@@ -23,88 +23,94 @@ import type { Exercise } from '@/domains/exercises/types/exercise.types'
 const MIN_SETS = 10
 const MIN_AVG_REPS = 5
 
-// exerciseId → { triceps?: number, glutes?: number }
+// exerciseId → { triceps?: number, biceps_brachii?: number, gluteus_maximus?: number }
 // ערך 0.5 = חצי סט נספר על השריר המשני לכל סט completed
-const SECONDARY_MUSCLE_MULTIPLIERS: Record<string, { triceps?: number; glutes?: number }> = {
-  "rCKv4MPkwWRgDpvQXV5X": { triceps: 0.5 },
-  "QxbXQO77g3ewGnY7PISJ": { glutes: 0.5 },
-  "CGPoXMft40TvBJl63j3P": { triceps: 0.5 },
-  "eQBfnsTE7HUUZedRZZeq": { glutes: 0.5 },
-  "M3Wl6PplSjEyPFAqTQhr": { glutes: 0.5 },
+const SECONDARY_MUSCLE_MULTIPLIERS: Record<string, { triceps?: number; biceps_brachii?: number; gluteus_maximus?: number }> = {
+  // triceps (יד אחורית) — 46 תרגילים
   "C3pf1VvSCuGxIA4oWzXI": { triceps: 0.5 },
   "eY2MblJj94vJtV6A0Zlz": { triceps: 0.5 },
-  "dkiOoNRC6InMJx6HvNCs": { glutes: 0.5 },
+  "dvZ4iMKZYKUDaheoJVCh": { triceps: 0.5 },
+  "AspsDoRT9GPQOw0fYANa": { triceps: 0.5 },
+  "hdJjAx3KMp5XbuQ7UNfW": { triceps: 0.5 },
+  "Q8mHNGehBzxjDpc1dW8B": { triceps: 0.5 },
+  "Xriss1E6kkY8nSnmyWKi": { triceps: 0.5 },
+  "JnGWwa2vNbmaVxSr3li1": { triceps: 0.5 },
+  "79pWk66pXALdv4ku2pTI": { triceps: 0.5 },
+  "HL6Eq8eEfk1f6sl5R6Wq": { triceps: 0.5 },
+  "aNKatCW6yKjWCLsWgoXp": { triceps: 0.5 },
+  "0dqf0j0YQJAGf6NEMTv4": { triceps: 0.5 },
+  "oE3M2FaQeaMU5hTeOkOj": { triceps: 0.5 },
   "zrnZmmlaOswF17Vi6ED2": { triceps: 0.5 },
   "n9quUbtf4CsIsnuP6ypJ": { triceps: 0.5 },
-  "iN6CNbUITqLbPXYrVcA5": { triceps: 0.5 },
+  "p4B9Utw3H50XD1khsVHP": { triceps: 0.5 },
+  "TxiHxnar1u50kdNpJIPq": { triceps: 0.5 },
   "S2LAJAVDoYDpSP2J5LvJ": { triceps: 0.5 },
   "mKdO3inl3UVXkCfxyjSy": { triceps: 0.5 },
   "Fbw48H0eQfwvkmuye8o8": { triceps: 0.5 },
   "vTnBmyUqMoN5ikXdKONL": { triceps: 0.5 },
-  "mcoW0pzyAWBcd5C1dXad": { triceps: 0.5 },
   "y9KWVXtSxcED7JQMpSRP": { triceps: 0.5 },
-  "lx6Uiw2h4wm1DqvBLR0Z": { glutes: 0.5 },
   "fdOOiWXvidgtp4JJ89uM": { triceps: 0.5 },
   "mgcEsYQyu7WTyeajQEkp": { triceps: 0.5 },
   "Pq8DXb7jtiDUoavcK7fO": { triceps: 0.5 },
   "f8yIQDvYF2M4LrPldgg8": { triceps: 0.5 },
   "4o86htIR7D1BC41ilIn9": { triceps: 0.5 },
   "uEttMMdBAEBLszuPTXCJ": { triceps: 0.5 },
-  "1ISbykeW2hJz7l6Ag1eh": { glutes: 0.5 },
-  "RLkPUj6WGQhlyHcr023o": { triceps: 0.5 },
-  "cAWWTBOa7vMM5XBTRstp": { triceps: 0.5 },
-  "15EoZ3DZm4pMas9pEb8c": { triceps: 0.5 },
-  "otCaAzOw0KvT8ONW1v1D": { triceps: 0.5 },
-  "6EUI93YQAeP9AwNzz8BL": { glutes: 0.5 },
-  "Xpd2fI0MmOw8mHTYQjEx": { triceps: 0.5, glutes: 0.5 },
+  "Xpd2fI0MmOw8mHTYQjEx": { triceps: 0.5 },
   "2UGewyMR1snvp8qMRUz9": { triceps: 0.5 },
   "ZCwrx8BbUvf3mpJ2Jd3E": { triceps: 0.5 },
   "ABOinRwCsKTqDRk52HYM": { triceps: 0.5 },
   "nJtiUP2tORtm7uKqmKOu": { triceps: 0.5 },
-  "Zby1v7HRYivnkPkXVq0f": { glutes: 0.5 },
-  "ldyvkdv5EtQBg6nqMzDp": { glutes: 0.5 },
   "BOwkhUUPpfWUPug9BsOf": { triceps: 0.5 },
-  "6zA32kE09TDiaH4LJJv6": { glutes: 0.5 },
-  "4mAbkf0hesykvFmFSD8k": { triceps: 0.5 },
-  "Xoh0Dwe168xMDsDpkNgb": { triceps: 0.5 },
   "Vk3sCZwlvdFOJC5tT3cd": { triceps: 0.5 },
   "llmh4oU99aNtS1vKynO9": { triceps: 0.5 },
-  "qjZ1cDTKn4WnRrORZCvR": { triceps: 0.5 },
-  "UlFsp2JWjSaJXqxH50Np": { glutes: 0.5 },
-  "LUAX1e9H0zoUFEP7l3A6": { glutes: 0.5 },
-  "JKREPoXVz7Aja4QwoyQq": { glutes: 0.5 },
-  "KItcETHzIHJXCGt4duOM": { triceps: 0.5 },
   "jEUEyDG9ATkKIBN60k5j": { triceps: 0.5 },
   "TaVCi6SMnlGPU44STvqB": { triceps: 0.5 },
-  "dclvw5ufIebkrbA9du5B": { triceps: 0.5 },
   "4gl74RJQfLbj7VfeivTQ": { triceps: 0.5 },
   "AKur5L4ib30oZSHgC9Px": { triceps: 0.5 },
-  "uZCw91GV42PurHafWFe7": { triceps: 0.5 },
-  "1ZwvAMeZeqXyx3oIJvPO": { glutes: 0.5 },
-  "FN6bKdNWcEgHjqrTPvbu": { glutes: 0.5 },
-  "ZnmjmlIkyyIAskc1Qczo": { glutes: 0.5 },
-  "ha6rSmUuqmK6v2rjiTB1": { triceps: 0.5, glutes: 0.5 },
-  "XraAam8yYCZWGI1ZF7oA": { glutes: 0.5 },
   "oAoj1ai8K9dc6B9EaFED": { triceps: 0.5 },
-  "R968BsNAAeIweal039f2": { glutes: 0.5 },
   "HKltSTpqJQlY9UXrSUCh": { triceps: 0.5 },
-  "9lqCm9PgTffJfwAcSVCe": { glutes: 0.5 },
-  "TvxDt0y03gmzOZzspHyU": { glutes: 0.5 },
-  "U9liue4N8IB3vetWz2wI": { triceps: 0.5 },
-  "S0Buy3UoyXWS7OIwDjQ8": { glutes: 0.5 },
-  "JClCPcKWAxKiuy7KIgRB": { glutes: 0.5 },
-  "eqLYs7TORwMcF6DmezaU": { glutes: 0.5 },
-  "R29ea1XKRxWmlqaryCAM": { glutes: 0.5 },
-  "Pxffw0KFPTW4a2xyK7fo": { triceps: 0.5, glutes: 0.5 },
+  "Pxffw0KFPTW4a2xyK7fo": { triceps: 0.5 },
   "eC3bgOTVRk6G3NL6Jc54": { triceps: 0.5 },
   "ixeY4g8dtzz8RpoCJtSS": { triceps: 0.5 },
-  "eRubABEIIHyzJ7YCzhSe": { glutes: 0.5 },
-  "b1EqSp0s3yqv8bpI2Pnn": { glutes: 0.5 },
-  "5HdRQfPVfu7Ee1FUHndI": { glutes: 0.5 },
-  "e8gWq4e1zsqZ3kiKepWk": { triceps: 0.5 },
   "ls2RllIGdrXboD5nrmf2": { triceps: 0.5 },
-  "D2KUzrI3guPkMr356uGH": { triceps: 0.5 },
-  "BwVQyCeg3DqNPFqdJser": { triceps: 0.5 },
+  // biceps_brachii (יד קדמית) — 19 תרגילים
+  "rCKv4MPkwWRgDpvQXV5X": { biceps_brachii: 0.5 },
+  "CGPoXMft40TvBJl63j3P": { biceps_brachii: 0.5 },
+  "iN6CNbUITqLbPXYrVcA5": { biceps_brachii: 0.5 },
+  "mcoW0pzyAWBcd5C1dXad": { biceps_brachii: 0.5 },
+  "RLkPUj6WGQhlyHcr023o": { biceps_brachii: 0.5 },
+  "cAWWTBOa7vMM5XBTRstp": { biceps_brachii: 0.5 },
+  "15EoZ3DZm4pMas9pEb8c": { biceps_brachii: 0.5 },
+  "otCaAzOw0KvT8ONW1v1D": { biceps_brachii: 0.5 },
+  "4mAbkf0hesykvFmFSD8k": { biceps_brachii: 0.5 },
+  "Xoh0Dwe168xMDsDpkNgb": { biceps_brachii: 0.5 },
+  "qjZ1cDTKn4WnRrORZCvR": { biceps_brachii: 0.5 },
+  "KItcETHzIHJXCGt4duOM": { biceps_brachii: 0.5 },
+  "dclvw5ufIebkrbA9du5B": { biceps_brachii: 0.5 },
+  "uZCw91GV42PurHafWFe7": { biceps_brachii: 0.5 },
+  "ha6rSmUuqmK6v2rjiTB1": { biceps_brachii: 0.5 },
+  "U9liue4N8IB3vetWz2wI": { biceps_brachii: 0.5 },
+  "e8gWq4e1zsqZ3kiKepWk": { biceps_brachii: 0.5 },
+  "D2KUzrI3guPkMr356uGH": { biceps_brachii: 0.5 },
+  "BwVQyCeg3DqNPFqdJser": { biceps_brachii: 0.5 },
+  // gluteus_maximus (ישבן) — 17 תרגילים
+  "QxbXQO77g3ewGnY7PISJ": { gluteus_maximus: 0.5 },
+  "M3Wl6PplSjEyPFAqTQhr": { gluteus_maximus: 0.5 },
+  "dkiOoNRC6InMJx6HvNCs": { gluteus_maximus: 0.5 },
+  "1ISbykeW2hJz7l6Ag1eh": { gluteus_maximus: 0.5 },
+  "ldyvkdv5EtQBg6nqMzDp": { gluteus_maximus: 0.5 },
+  "6zA32kE09TDiaH4LJJv6": { gluteus_maximus: 0.5 },
+  "UlFsp2JWjSaJXqxH50Np": { gluteus_maximus: 0.5 },
+  "LUAX1e9H0zoUFEP7l3A6": { gluteus_maximus: 0.5 },
+  "1ZwvAMeZeqXyx3oIJvPO": { gluteus_maximus: 0.5 },
+  "FN6bKdNWcEgHjqrTPvbu": { gluteus_maximus: 0.5 },
+  "R968BsNAAeIweal039f2": { gluteus_maximus: 0.5 },
+  "9lqCm9PgTffJfwAcSVCe": { gluteus_maximus: 0.5 },
+  "TvxDt0y03gmzOZzspHyU": { gluteus_maximus: 0.5 },
+  "JClCPcKWAxKiuy7KIgRB": { gluteus_maximus: 0.5 },
+  "eqLYs7TORwMcF6DmezaU": { gluteus_maximus: 0.5 },
+  "R29ea1XKRxWmlqaryCAM": { gluteus_maximus: 0.5 },
+  "eRubABEIIHyzJ7YCzhSe": { gluteus_maximus: 0.5 },
 }
 
 interface ExerciseDetail {
@@ -258,7 +264,7 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
               const existing = muscleData.get(primaryMuscle) || { sets: 0, reps: 0, repsCount: 0 }
               existing.sets++
               const reps = set.actualReps || set.targetReps || 0
-              if (reps > 0) {
+              if (reps > 5) {
                 existing.reps += reps
                 existing.repsCount++
               }
@@ -274,14 +280,21 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
                   const key = 'triceps'
                   const ex2 = muscleData.get(key) || { sets: 0, reps: 0, repsCount: 0 }
                   ex2.sets += secondary.triceps
-                  if (reps > 0) { ex2.reps += reps; ex2.repsCount++ }
+                  if (reps > 5) { ex2.reps += reps; ex2.repsCount++ }
                   muscleData.set(key, ex2)
                 }
-                if (secondary.glutes) {
-                  const key = 'longissimus'
+                if (secondary.biceps_brachii) {
+                  const key = 'biceps_brachii'
                   const ex2 = muscleData.get(key) || { sets: 0, reps: 0, repsCount: 0 }
-                  ex2.sets += secondary.glutes
-                  if (reps > 0) { ex2.reps += reps; ex2.repsCount++ }
+                  ex2.sets += secondary.biceps_brachii
+                  if (reps > 5) { ex2.reps += reps; ex2.repsCount++ }
+                  muscleData.set(key, ex2)
+                }
+                if (secondary.gluteus_maximus) {
+                  const key = 'gluteus_maximus'
+                  const ex2 = muscleData.get(key) || { sets: 0, reps: 0, repsCount: 0 }
+                  ex2.sets += secondary.gluteus_maximus
+                  if (reps > 5) { ex2.reps += reps; ex2.repsCount++ }
                   muscleData.set(key, ex2)
                 }
               }
@@ -297,8 +310,11 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
                 if (secondary.triceps) {
                   addExerciseToMuscle('triceps', exercise.exerciseId, exName, Math.round(exSets * secondary.triceps * 10) / 10, exRepsTotal, exRepsCount)
                 }
-                if (secondary.glutes) {
-                  addExerciseToMuscle('longissimus', exercise.exerciseId, exName, Math.round(exSets * secondary.glutes * 10) / 10, exRepsTotal, exRepsCount)
+                if (secondary.biceps_brachii) {
+                  addExerciseToMuscle('biceps_brachii', exercise.exerciseId, exName, Math.round(exSets * secondary.biceps_brachii * 10) / 10, exRepsTotal, exRepsCount)
+                }
+                if (secondary.gluteus_maximus) {
+                  addExerciseToMuscle('gluteus_maximus', exercise.exerciseId, exName, Math.round(exSets * secondary.gluteus_maximus * 10) / 10, exRepsTotal, exRepsCount)
                 }
               }
             }
@@ -581,8 +597,8 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
                   <tr className="text-text-secondary text-xs border-b border-dark-border">
                     <th className="text-right py-2 pr-2 font-medium">שריר</th>
                     <th className="text-right py-2 font-medium">תת-שריר</th>
-                    <th className="text-right py-2 font-medium">סטים / ממוצע</th>
-                    <th className="text-center py-2 pl-2 font-medium">סטטוס</th>
+                    <th className="text-right py-2 font-medium">סטים</th>
+                    <th className="text-center py-2 pl-2 font-medium">ממוצע חזרות</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -595,27 +611,21 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
                         onClick={() => row.totalSets > 0 && setSelectedMuscle(row)}
                       >
                         {row.totalSets > 0 ? (
-                          <>
-                            <div className="text-primary underline decoration-primary/30">{Number.isInteger(row.totalSets) ? row.totalSets : row.totalSets.toFixed(1)} סטים</div>
-                            <div className="text-xs text-text-muted">ממוצע {row.avgReps} חזרות</div>
-                          </>
+                          <div className={`font-medium underline decoration-current/30 ${row.setsGreen ? 'text-status-success' : 'text-status-error'}`}>
+                            {Number.isInteger(row.totalSets) ? row.totalSets : row.totalSets.toFixed(1)}
+                          </div>
                         ) : (
                           <div className="text-text-muted">—</div>
                         )}
                       </td>
-                      <td className="py-2.5 pl-2">
-                        <div className="flex items-center justify-center gap-1">
-                          {row.setsGreen ? (
-                            <TrendingUp className="w-4 h-4 text-status-success" />
-                          ) : (
-                            <TrendingDown className="w-4 h-4 text-status-error" />
-                          )}
-                          {row.repsGreen ? (
-                            <TrendingUp className="w-4 h-4 text-status-success" />
-                          ) : (
-                            <TrendingDown className="w-4 h-4 text-status-error" />
-                          )}
-                        </div>
+                      <td className="py-2.5 pl-2 text-center">
+                        {row.avgReps > 0 ? (
+                          <span className={`font-medium ${row.repsGreen ? 'text-status-success' : 'text-status-error'}`}>
+                            {row.avgReps}
+                          </span>
+                        ) : (
+                          <span className="text-text-muted">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -626,15 +636,15 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
               <div className="mt-4 flex flex-col gap-1 text-xs text-text-muted">
                 <div className="flex items-center gap-3">
                   <span className="flex items-center gap-1">
-                    <TrendingUp className="w-3.5 h-3.5 text-status-success" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-status-success" />
                     עומד ביעד
                   </span>
                   <span className="flex items-center gap-1">
-                    <TrendingDown className="w-3.5 h-3.5 text-status-error" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-status-error" />
                     מתחת ליעד
                   </span>
                 </div>
-                <div>יעד: ≥{MIN_SETS} סטים, ≥{MIN_AVG_REPS} חזרות ממוצע (חץ שמאל=סטים, ימין=חזרות)</div>
+                <div>יעד: ≥{MIN_SETS} סטים, ≥{MIN_AVG_REPS} חזרות ממוצע</div>
               </div>
             </div>
           )}

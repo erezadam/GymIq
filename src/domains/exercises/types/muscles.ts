@@ -1,5 +1,7 @@
 // Muscle types and mapping
 
+export type BodyRegion = 'upper' | 'lower' | 'neutral'
+
 export interface SubMuscle {
   id: string
   nameHe: string
@@ -11,6 +13,7 @@ export interface PrimaryMuscle {
   nameHe: string
   nameEn: string
   icon: string
+  bodyRegion?: BodyRegion
   subMuscles: SubMuscle[]
 }
 

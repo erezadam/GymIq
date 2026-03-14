@@ -79,6 +79,7 @@ export async function saveMuscle(muscle: PrimaryMuscle): Promise<void> {
       nameHe: muscle.nameHe,
       nameEn: muscle.nameEn,
       icon: muscle.icon,
+      ...(muscle.bodyRegion && { bodyRegion: muscle.bodyRegion }),
       subMuscles: muscle.subMuscles,
       updatedAt: serverTimestamp(),
     })
@@ -96,6 +97,7 @@ export async function addPrimaryMuscle(muscle: Omit<PrimaryMuscle, 'subMuscles'>
       nameHe: muscle.nameHe,
       nameEn: muscle.nameEn,
       icon: muscle.icon,
+      ...(muscle.bodyRegion && { bodyRegion: muscle.bodyRegion }),
       subMuscles: muscle.subMuscles || [],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
