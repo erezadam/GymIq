@@ -207,11 +207,37 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
           exerciseMap.set(ex.id, ex)
         }
 
+        // Build normalization map: any known muscle ID → canonical Firebase muscle ID
+        // e.g. "triceps_brachii" → "triceps", "biceps" → "biceps_brachii"
+        const normalizeId = new Map<string, string>()
+        for (const primary of muscleMapping) {
+          normalizeId.set(primary.id, primary.id)
+          for (const sub of primary.subMuscles) {
+            normalizeId.set(sub.id, sub.id)
+          }
+        }
+
+        const normalizeMuscleId = (id: string): string => normalizeId.get(id) || id
+
         // Accumulate sets and reps by primaryMuscle
         const muscleData = new Map<string, { sets: number; reps: number; repsCount: number }>()
 
         // Collect per-exercise detail per muscle
         const exercisesByMuscle = new Map<string, Map<string, { name: string; sets: number; reps: number; repsCount: number }>>()
+
+        // Helper to add exercise to exercisesByMuscle
+        const addExerciseToMuscle = (muscleKey: string, exId: string, exName: string, sets: number, reps: number, repsCount: number) => {
+          if (!exercisesByMuscle.has(muscleKey)) exercisesByMuscle.set(muscleKey, new Map())
+          const exMap = exercisesByMuscle.get(muscleKey)!
+          const prev = exMap.get(exId)
+          if (prev) {
+            prev.sets += sets
+            prev.reps += reps
+            prev.repsCount += repsCount
+          } else {
+            exMap.set(exId, { name: exName, sets, reps, repsCount })
+          }
+        }
 
         for (const workout of workouts) {
           if (workout.status !== 'completed') continue
@@ -219,7 +245,7 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
           for (const exercise of workout.exercises) {
             const exDef = exerciseMap.get(exercise.exerciseId)
             const rawCategory = exDef?.primaryMuscle || exercise.category || 'other'
-            const primaryMuscle = resolveLegacyMuscleCategory(rawCategory, exDef?.primaryMuscle)
+            const primaryMuscle = normalizeMuscleId(resolveLegacyMuscleCategory(rawCategory, exDef?.primaryMuscle))
             const exName = exDef?.nameHe || exDef?.name || exercise.exerciseId
 
             let exSets = 0
@@ -262,16 +288,18 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
             }
 
             if (exSets > 0) {
-              if (!exercisesByMuscle.has(primaryMuscle)) exercisesByMuscle.set(primaryMuscle, new Map())
-              const exMap = exercisesByMuscle.get(primaryMuscle)!
-              const exKey = exercise.exerciseId
-              const prev = exMap.get(exKey)
-              if (prev) {
-                prev.sets += exSets
-                prev.reps += exRepsTotal
-                prev.repsCount += exRepsCount
-              } else {
-                exMap.set(exKey, { name: exName, sets: exSets, reps: exRepsTotal, repsCount: exRepsCount })
+              // Track exercise under its primary muscle
+              addExerciseToMuscle(primaryMuscle, exercise.exerciseId, exName, exSets, exRepsTotal, exRepsCount)
+
+              // Also track under secondary muscles
+              const secondary = SECONDARY_MUSCLE_MULTIPLIERS[exercise.exerciseId]
+              if (secondary) {
+                if (secondary.triceps) {
+                  addExerciseToMuscle('triceps', exercise.exerciseId, exName, Math.round(exSets * secondary.triceps * 10) / 10, exRepsTotal, exRepsCount)
+                }
+                if (secondary.glutes) {
+                  addExerciseToMuscle('longissimus', exercise.exerciseId, exName, Math.round(exSets * secondary.glutes * 10) / 10, exRepsTotal, exRepsCount)
+                }
               }
             }
           }
