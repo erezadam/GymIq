@@ -129,6 +129,9 @@ interface MuscleRow {
   setsGreen: boolean
   repsGreen: boolean
   exercises: ExerciseDetail[]
+  isCardio?: boolean
+  totalMinutes?: number
+  avgZone?: number
 }
 
 interface SummaryRow {
@@ -138,6 +141,9 @@ interface SummaryRow {
   avgReps: number
   setsGreen: boolean
   repsGreen: boolean
+  isCardio?: boolean
+  totalMinutes?: number
+  avgZone?: number
 }
 
 const fmt = (d: Date) =>
@@ -237,6 +243,8 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
 
         // Accumulate sets and reps by primaryMuscle
         const muscleData = new Map<string, { sets: number; reps: number; repsCount: number }>()
+        // Cardio-specific: minutes and zones
+        const cardioData = new Map<string, { totalMinutes: number; zoneSum: number; zoneCount: number }>()
 
         // Collect per-exercise detail per muscle
         const exercisesByMuscle = new Map<string, Map<string, { name: string; sets: number; reps: number; repsCount: number }>>()
@@ -267,6 +275,7 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
             let exSets = 0
             let exRepsTotal = 0
             let exRepsCount = 0
+            const isCardioExercise = (exDef?.category === 'cardio') || (exercise.category === 'cardio') || primaryMuscle === 'cardio' || primaryMuscle === 'warmup'
 
             for (const set of exercise.sets) {
               if (!set.completed) continue
@@ -282,6 +291,15 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
 
               exSets++
               if (reps > 0) { exRepsTotal += reps; exRepsCount++ }
+
+              // Cardio: accumulate minutes and zone
+              if (isCardioExercise) {
+                const cardioKey = primaryMuscle
+                const cd = cardioData.get(cardioKey) || { totalMinutes: 0, zoneSum: 0, zoneCount: 0 }
+                if ((set as any).time) cd.totalMinutes += (set as any).time / 60
+                if ((set as any).zone) { cd.zoneSum += (set as any).zone; cd.zoneCount++ }
+                cardioData.set(cardioKey, cd)
+              }
 
               // Secondary muscle contribution
               const secondary = SECONDARY_MUSCLE_MULTIPLIERS[exercise.exerciseId]
@@ -342,6 +360,9 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
           })).sort((a, b) => b.sets - a.sets)
         }
 
+        // Helper: check if a muscle ID belongs to cardio
+        const isCardioMuscle = (id: string) => id === 'cardio' || id === 'warmup'
+
         // Convert to rows — show ALL muscles from Firebase mapping (top-down)
         // Each sub-muscle gets a row. Primary muscles with no sub-muscles also get a row.
         const result: MuscleRow[] = []
@@ -353,6 +374,8 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
             const avgReps = data && data.repsCount > 0
               ? Math.round((data.reps / data.repsCount) * 10) / 10
               : 0
+            const cd = cardioData.get(primary.id)
+            const isCardio = isCardioMuscle(primary.id)
             result.push({
               category: primary.id,
               categoryHe: primary.nameHe,
@@ -363,6 +386,9 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
               setsGreen: totalSets >= MIN_SETS,
               repsGreen: avgReps >= MIN_AVG_REPS,
               exercises: getExerciseDetails(primary.id),
+              isCardio,
+              totalMinutes: cd ? Math.round(cd.totalMinutes) : 0,
+              avgZone: cd && cd.zoneCount > 0 ? Math.round((cd.zoneSum / cd.zoneCount) * 10) / 10 : 0,
             })
           } else {
             for (const sub of primary.subMuscles) {
@@ -371,6 +397,8 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
               const avgReps = data && data.repsCount > 0
                 ? Math.round((data.reps / data.repsCount) * 10) / 10
                 : 0
+              const cd = cardioData.get(sub.id)
+              const isCardio = isCardioMuscle(primary.id) || isCardioMuscle(sub.id)
               result.push({
                 category: primary.id,
                 categoryHe: primary.nameHe,
@@ -381,6 +409,9 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
                 setsGreen: totalSets >= MIN_SETS,
                 repsGreen: avgReps >= MIN_AVG_REPS,
                 exercises: getExerciseDetails(sub.id),
+                isCardio,
+                totalMinutes: cd ? Math.round(cd.totalMinutes) : 0,
+                avgZone: cd && cd.zoneCount > 0 ? Math.round((cd.zoneSum / cd.zoneCount) * 10) / 10 : 0,
               })
             }
           }
@@ -395,12 +426,19 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
         setRows(result)
 
         // Build summary rows — aggregate by category (primary muscle group)
-        const summaryMap = new Map<string, { categoryHe: string; sets: number; reps: number; repsCount: number }>()
+        const summaryMap = new Map<string, { categoryHe: string; sets: number; reps: number; repsCount: number; isCardio: boolean; totalMinutes: number; zoneSum: number; zoneCount: number }>()
         for (const row of result) {
-          const existing = summaryMap.get(row.category) || { categoryHe: row.categoryHe, sets: 0, reps: 0, repsCount: 0 }
+          const existing = summaryMap.get(row.category) || { categoryHe: row.categoryHe, sets: 0, reps: 0, repsCount: 0, isCardio: false, totalMinutes: 0, zoneSum: 0, zoneCount: 0 }
           existing.sets += row.totalSets
+          if (row.isCardio) {
+            existing.isCardio = true
+            existing.totalMinutes += row.totalMinutes || 0
+            if (row.avgZone && row.avgZone > 0) {
+              existing.zoneSum += row.avgZone * (row.totalSets || 1)
+              existing.zoneCount += row.totalSets || 1
+            }
+          }
           if (row.avgReps > 0) {
-            // Weight the reps by exercise count for proper averaging
             for (const ex of row.exercises) {
               if (ex.avgReps > 0) {
                 existing.reps += ex.avgReps * ex.sets
@@ -420,6 +458,9 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
             avgReps,
             setsGreen: totalSets >= MIN_SETS,
             repsGreen: avgReps >= MIN_AVG_REPS,
+            isCardio: data.isCardio,
+            totalMinutes: Math.round(data.totalMinutes),
+            avgZone: data.zoneCount > 0 ? Math.round((data.zoneSum / data.zoneCount) * 10) / 10 : 0,
           }
         })
         summary.sort((a, b) => b.totalSets - a.totalSets)
@@ -639,8 +680,8 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
                 <thead>
                   <tr className="text-text-secondary text-xs border-b border-dark-border">
                     <th className="text-right py-2 pr-2 font-medium">קבוצת שרירים</th>
-                    <th className="text-right py-2 font-medium">סטים</th>
-                    <th className="text-center py-2 pl-2 font-medium">ממוצע חזרות</th>
+                    <th className="text-right py-2 font-medium">סטים / דקות</th>
+                    <th className="text-center py-2 pl-2 font-medium">חזרות / zone</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -648,7 +689,13 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
                     <tr key={row.category} className={i % 2 === 0 ? 'bg-dark-card/40' : ''}>
                       <td className="py-2.5 pr-2 text-text-primary font-medium">{row.categoryHe}</td>
                       <td className="py-2.5">
-                        {row.totalSets > 0 ? (
+                        {row.isCardio ? (
+                          row.totalMinutes && row.totalMinutes > 0 ? (
+                            <div className="font-medium text-text-primary">{row.totalMinutes} דק׳</div>
+                          ) : (
+                            <div className="text-text-muted">—</div>
+                          )
+                        ) : row.totalSets > 0 ? (
                           <div className={`font-medium ${row.setsGreen ? 'text-status-success' : 'text-status-error'}`}>
                             {Number.isInteger(row.totalSets) ? row.totalSets : row.totalSets.toFixed(1)}
                           </div>
@@ -657,7 +704,13 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
                         )}
                       </td>
                       <td className="py-2.5 pl-2 text-center">
-                        {row.avgReps > 0 ? (
+                        {row.isCardio ? (
+                          row.avgZone && row.avgZone > 0 ? (
+                            <span className="font-medium text-text-primary">zone {row.avgZone}</span>
+                          ) : (
+                            <span className="text-text-muted">—</span>
+                          )
+                        ) : row.avgReps > 0 ? (
                           <span className={`font-medium ${row.repsGreen ? 'text-status-success' : 'text-status-error'}`}>
                             {row.avgReps}
                           </span>
@@ -677,8 +730,8 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
                   <tr className="text-text-secondary text-xs border-b border-dark-border">
                     <th className="text-right py-2 pr-2 font-medium">שריר</th>
                     <th className="text-right py-2 font-medium">תת-שריר</th>
-                    <th className="text-right py-2 font-medium">סטים</th>
-                    <th className="text-center py-2 pl-2 font-medium">ממוצע חזרות</th>
+                    <th className="text-right py-2 font-medium">סטים / דקות</th>
+                    <th className="text-center py-2 pl-2 font-medium">חזרות / zone</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -690,7 +743,13 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
                         className={`py-2.5 ${row.totalSets > 0 ? 'cursor-pointer hover:bg-primary/5 rounded-lg transition-colors' : ''}`}
                         onClick={() => row.totalSets > 0 && setSelectedMuscle(row)}
                       >
-                        {row.totalSets > 0 ? (
+                        {row.isCardio ? (
+                          row.totalMinutes && row.totalMinutes > 0 ? (
+                            <div className="font-medium text-text-primary underline decoration-current/30">{row.totalMinutes} דק׳</div>
+                          ) : (
+                            <div className="text-text-muted">—</div>
+                          )
+                        ) : row.totalSets > 0 ? (
                           <div className={`font-medium underline decoration-current/30 ${row.setsGreen ? 'text-status-success' : 'text-status-error'}`}>
                             {Number.isInteger(row.totalSets) ? row.totalSets : row.totalSets.toFixed(1)}
                           </div>
@@ -699,7 +758,13 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
                         )}
                       </td>
                       <td className="py-2.5 pl-2 text-center">
-                        {row.avgReps > 0 ? (
+                        {row.isCardio ? (
+                          row.avgZone && row.avgZone > 0 ? (
+                            <span className="font-medium text-text-primary">zone {row.avgZone}</span>
+                          ) : (
+                            <span className="text-text-muted">—</span>
+                          )
+                        ) : row.avgReps > 0 ? (
                           <span className={`font-medium ${row.repsGreen ? 'text-status-success' : 'text-status-error'}`}>
                             {row.avgReps}
                           </span>
