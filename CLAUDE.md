@@ -168,6 +168,39 @@ grep -r "AIza" --include="*.ts" --include="*.js" --include="*.cjs" --include="*.
 
 ---
 
+## 🔤 שמות שרירים — מקור אמת יחיד (חוק ברזל!)
+
+> **רקע:** ב-14/03/2026 תת-שרירים חדשים שנוספו ב-Firebase לא הופיעו בניתוח שבועי.
+> הסיבה: מקורות תרגום מרובים ומתחרים בקוד.
+
+### ❌ אסור בתכלית האיסור:
+- לכתוב מיפוי שמות שרירים hardcoded בקומפוננטות (כמו `if (id === 'biceps') return 'זרועות'`)
+- להסתמך על `muscleGroupNames` מ-design-tokens כמקור ראשי — זה רק fallback!
+- ליצור רשימות/sets סטטיות של שרירים תקינים (כמו `VALID_EXERCISE_CATEGORIES_SET`) — תמיד דינמי מ-Firebase
+- להוסיף שריר/תת-שריר חדש ב-Firebase בלי לוודא שהוא מופיע בכל המסכים
+
+### ✅ מקור אמת יחיד — Firebase `muscles` collection:
+1. **שרירים ראשיים ותת-שרירים** → `getMuscles()` מ-`src/lib/firebase/muscles.ts`
+2. **תרגום ID לעברית** → `getMuscleIdToNameHeMap()` מ-`src/lib/firebase/muscles.ts`
+3. **שמות ב-UI** → `getMuscleNameHe(id, dynamicNames)` מ-`src/utils/muscleTranslations.ts`
+
+### 📋 סדר עדיפות לתרגום שם שריר:
+```
+1. Firebase dynamicNames (getMuscleIdToNameHeMap) ← מקור אמת!
+2. design-tokens muscleGroupNames ← fallback בלבד
+3. ערך מקורי (ID) ← last resort
+```
+
+### 🔍 בדיקה חובה כשמוסיפים/משנים שרירים:
+```
+□ שריר מופיע בדרופדאון ExerciseForm (בחר שריר ראשי)
+□ שריר מופיע ב-ExerciseLibrary (כפתורי פילטור)
+□ שריר מופיע בניתוח שבועי (WeeklyMuscleModal)
+□ שם בעברית נכון בכל המסכים
+```
+
+---
+
 ## 🎯 פיצ'רים קריטיים - כללי ברזל
 
 ### סטטוסי אימון - התנהגות "המשך אימון"
@@ -547,6 +580,7 @@ npx playwright test
 | 08/03/2026 | נוסף Playwright MCP לשליטה בדפדפן מתוך Claude Code | קובץ `.mcp.json` בשורש הפרויקט, סקריפטי E2E ב-package.json |
 | 09/03/2026 | הסוכן הריץ Playwright באופן אוטונומי בלי אישור | נוסף חוק ברזל: כל הרצת Playwright דורשת אישור מפורש מהמשתמש |
 | 10/03/2026 | נוסף code-review plugin | חובה להריץ /code-review לפני פתיחת PR |
+| 14/03/2026 | תת-שרירים חדשים מ-Firebase לא הופיעו בניתוח שבועי + דרופדאון ExerciseForm פולטר לפי Set קשיח | נוסף חוק ברזל: מקור אמת יחיד לשמות שרירים = Firebase. אסור רשימות סטטיות. auto-sync ב-getMuscles() |
 
 ---
 

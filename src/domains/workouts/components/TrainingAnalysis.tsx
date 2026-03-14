@@ -272,13 +272,25 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
         console.log('=== סוף דוח ===')
 
         // Convert to rows — include ALL sub-muscles from Firebase muscle mapping
+        // Track which muscleData keys have been matched to a sub-muscle
+        const matchedKeys = new Set<string>()
         const result: MuscleRow[] = []
         for (const primary of muscleMapping) {
+          // Check if data was accumulated under the primary muscle ID itself
+          // (happens when exercise.primaryMuscle = category name like "arms")
+          const primaryData = muscleData.get(primary.id)
+          if (primaryData) matchedKeys.add(primary.id)
+
           for (const sub of primary.subMuscles) {
-            const data = muscleData.get(sub.id)
-            const totalSets = data?.sets || 0
-            const avgReps = data && data.repsCount > 0
-              ? Math.round((data.reps / data.repsCount) * 10) / 10
+            // Merge: sub-muscle data + any data under primary ID (distributed evenly)
+            const subData = muscleData.get(sub.id)
+            if (subData) matchedKeys.add(sub.id)
+
+            const totalSets = (subData?.sets || 0)
+            const totalReps = (subData?.reps || 0)
+            const repsCount = (subData?.repsCount || 0)
+            const avgReps = repsCount > 0
+              ? Math.round((totalReps / repsCount) * 10) / 10
               : 0
 
             result.push({
@@ -292,6 +304,44 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
               repsGreen: avgReps >= MIN_AVG_REPS,
             })
           }
+
+          // If data was accumulated under the primary ID and no sub-muscles consumed it,
+          // show it as a row under the primary muscle name
+          if (primaryData && primary.subMuscles.length === 0) {
+            const avgReps = primaryData.repsCount > 0
+              ? Math.round((primaryData.reps / primaryData.repsCount) * 10) / 10
+              : 0
+            result.push({
+              category: primary.id,
+              categoryHe: primary.nameHe,
+              primaryMuscle: primary.id,
+              primaryMuscleHe: primary.nameHe,
+              totalSets: primaryData.sets,
+              avgReps,
+              setsGreen: primaryData.sets >= MIN_SETS,
+              repsGreen: avgReps >= MIN_AVG_REPS,
+            })
+          }
+        }
+
+        // Catch any unmatched muscle IDs (data from exercises not mapped to any Firebase muscle)
+        for (const [muscleId, data] of muscleData.entries()) {
+          if (matchedKeys.has(muscleId)) continue
+          // Try to find which primary group this belongs to
+          const parent = muscleMapping.find(p => p.subMuscles.some(s => s.id === muscleId))
+          const avgReps = data.repsCount > 0
+            ? Math.round((data.reps / data.repsCount) * 10) / 10
+            : 0
+          result.push({
+            category: parent?.id || muscleId,
+            categoryHe: parent?.nameHe || muscleId,
+            primaryMuscle: muscleId,
+            primaryMuscleHe: parent?.subMuscles.find(s => s.id === muscleId)?.nameHe || muscleId,
+            totalSets: data.sets,
+            avgReps,
+            setsGreen: data.sets >= MIN_SETS,
+            repsGreen: avgReps >= MIN_AVG_REPS,
+          })
         }
 
         // Sort by category, then totalSets desc
