@@ -25,11 +25,6 @@ export interface ExercisePerformanceData {
   }[]
 }
 
-// Response from muscle selection call (Call 1)
-export interface MuscleSelectionResponse {
-  workoutMuscles: string[][]  // per-workout muscle IDs
-}
-
 // Exercise summary for prompt (minimal data to reduce tokens)
 export interface ExerciseSummary {
   id: string
@@ -39,10 +34,11 @@ export interface ExerciseSummary {
   imageUrl?: string
 }
 
-// Muscle summary for prompt
+// Muscle summary with bodyRegion for split logic
 export interface MuscleSummary {
   id: string
   nameHe: string
+  bodyRegion?: 'upper' | 'lower' | 'neutral'
 }
 
 // Recent workout summary for context
@@ -52,22 +48,25 @@ export interface RecentWorkoutSummary {
   exerciseIds: string[]
 }
 
+// Workout structure types
+export type WorkoutStructure = 'full_body' | 'split'
+export type SplitStartWith = 'upper' | 'lower'
+
 // Request from client to Cloud Function
 export interface GenerateWorkoutRequest {
   request: {
     numWorkouts: number
     duration: number
-    muscleTargets: string[]
     warmupDuration: number
     userId: string
-    muscleSelectionMode?: 'ai_rotate' | 'same' | 'manual'
-    perWorkoutMuscles?: string[][]
+    workoutStructure: WorkoutStructure
+    splitStartWith?: SplitStartWith
   }
   availableExercises: ExerciseSummary[]
   muscles: MuscleSummary[]
   recentWorkouts: RecentWorkoutSummary[]
   yesterdayExerciseIds: string[]
-  exerciseHistory?: ExercisePerformanceData[]  // Per-exercise performance from past workouts
+  exerciseHistory?: ExercisePerformanceData[]
 }
 
 // Exercise in Claude's response
@@ -126,7 +125,7 @@ export interface GeneratedWorkout {
   source: 'ai_trainer'
   aiWorkoutNumber: number
   aiExplanation?: string
-  aiRecommendations?: Record<string, AIRecommendation>  // exerciseId → recommendation
+  aiRecommendations?: Record<string, AIRecommendation>
 }
 
 // Response from Cloud Function to client
@@ -148,10 +147,11 @@ export interface RateLimitResult {
   resetAt: Date
 }
 
-// AI Trainer usage document in Firestore
-export interface AITrainerUsageDoc {
-  odאcId: string
-  date: string
-  generationsCount: number
-  lastGeneratedAt: FirebaseFirestore.Timestamp
+// Workout muscle assignment (which muscles go in which workout)
+export interface WorkoutMuscleAssignment {
+  workoutIndex: number
+  region: 'upper' | 'lower' | 'full_body'
+  muscleIds: string[]
+  muscleNames: string[]
+  targetExercises: number  // How many exercises for this workout
 }

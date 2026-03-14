@@ -1,6 +1,7 @@
 /**
  * AI Trainer Service
  * Generates personalized workout plans using AI (Cloud Function) or fallback logic
+ * New logic: bodyRegion-based splits, 10 sets/muscle/week
  */
 
 import { getExercises } from '@/lib/firebase/exercises'
@@ -10,6 +11,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions'
 import { app } from '@/lib/firebase/config'
 import type { Exercise } from '@/domains/exercises/types'
 import type { WorkoutHistoryEntry } from '@/domains/workouts/types'
+import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
 import {
   AITrainerRequest,
   AITrainerResponse,
@@ -38,7 +40,7 @@ interface CloudFunctionResponse {
 const functions = getFunctions(app)
 
 /**
- * Call Cloud Function to generate workouts via Claude API
+ * Call Cloud Function to generate workouts via GPT API
  * Returns null if Cloud Function fails (triggers local fallback)
  */
 async function callCloudFunction(
@@ -62,9 +64,12 @@ async function callCloudFunction(
         category: ex.category,
         imageUrl: ex.imageUrl,
       })),
+      // Muscles are now read from Firestore by the Cloud Function
+      // but we still send them for fallback reference
       muscles: context.muscles.map(m => ({
         id: m.id,
         nameHe: m.nameHe,
+        bodyRegion: m.bodyRegion || 'neutral',
       })),
       recentWorkouts: context.recentWorkouts,
       yesterdayExerciseIds: context.yesterdayExerciseIds,
@@ -86,7 +91,6 @@ async function callCloudFunction(
 
     // Check for specific error types
     if (error.code === 'functions/resource-exhausted') {
-      // Rate limit error from Cloud Function
       return {
         success: false,
         workouts: [],
@@ -104,11 +108,9 @@ async function callCloudFunction(
 async function getNextAIWorkoutNumber(userId: string): Promise<number> {
   try {
     const history = await getUserWorkoutHistory(userId, 100)
-    // Count existing AI workouts
     const aiWorkouts = history.filter(w => w.name.startsWith('מאמן #'))
     if (aiWorkouts.length === 0) return 1
 
-    // Find highest number
     const numbers = aiWorkouts.map(w => {
       const match = w.name.match(/מאמן #(\d+)/)
       return match ? parseInt(match[1]) : 0
@@ -122,10 +124,8 @@ async function getNextAIWorkoutNumber(userId: string): Promise<number> {
 
 // Extract per-exercise performance data from recent workout history
 function extractExerciseHistory(recentHistory: WorkoutHistoryEntry[]): ExercisePerformanceData[] {
-  // Map: exerciseId → list of { weight, reps, date, volume } sorted by date (newest first)
   const exerciseMap = new Map<string, { weight: number; reps: number; date: string; volume: number }[]>()
 
-  // Only look at completed or in_progress workouts (not planned)
   const relevantWorkouts = recentHistory.filter(w =>
     w.status === 'completed' || w.status === 'in_progress' || w.status === 'partial'
   )
@@ -136,19 +136,16 @@ function extractExerciseHistory(recentHistory: WorkoutHistoryEntry[]): ExerciseP
     for (const exercise of workout.exercises) {
       if (!exercise.exerciseId) continue
 
-      // Find best completed set (highest weight with reps > 0)
       const completedSets = exercise.sets.filter(s =>
         s.completed && (s.actualWeight || 0) > 0 && (s.actualReps || 0) > 0
       )
 
       if (completedSets.length === 0) continue
 
-      // Get the heaviest set
       const bestSet = completedSets.reduce((best, s) =>
         (s.actualWeight || 0) > (best.actualWeight || 0) ? s : best
       )
 
-      // Calculate exercise volume (use stored value or compute from sets)
       const volume = exercise.exerciseVolume ?? completedSets.reduce(
         (sum, s) => sum + (s.actualWeight || 0) * (s.actualReps || 0), 0
       )
@@ -167,11 +164,9 @@ function extractExerciseHistory(recentHistory: WorkoutHistoryEntry[]): ExerciseP
     }
   }
 
-  // Convert map to array of ExercisePerformanceData
   const result: ExercisePerformanceData[] = []
 
   for (const [exerciseId, sessions] of exerciseMap.entries()) {
-    // Sort by date (newest first)
     sessions.sort((a, b) => b.date.localeCompare(a.date))
 
     result.push({
@@ -180,7 +175,7 @@ function extractExerciseHistory(recentHistory: WorkoutHistoryEntry[]): ExerciseP
       lastReps: sessions[0].reps,
       lastDate: sessions[0].date,
       lastVolume: sessions[0].volume > 0 ? sessions[0].volume : undefined,
-      recentSessions: sessions.slice(0, 5), // Last 5 sessions
+      recentSessions: sessions.slice(0, 5),
     })
   }
 
@@ -196,24 +191,21 @@ async function buildContext(request: AITrainerRequest): Promise<AITrainerContext
     getExercises(),
     getMuscles(),
     getUserWorkoutHistory(request.userId, 7),
-    getUserWorkoutHistoryFull(request.userId, 10), // Full entries for exercise performance data
+    getUserWorkoutHistoryFull(request.userId, 10),
     getRecentlyDoneExerciseIds(request.userId),
   ])
 
-  // Convert Set to array
   const yesterdayExerciseIds = Array.from(yesterdayExerciseIdsSet)
 
   console.log(`📊 Loaded ${exercises.length} exercises, ${muscles.length} muscles`)
   console.log(`📊 Recent summaries: ${recentSummaries.length}, Full history: ${recentFullHistory.length}, Yesterday exercises: ${yesterdayExerciseIds.length}`)
 
-  // Convert recent history to summaries
   const recentWorkouts: RecentWorkoutSummary[] = recentSummaries.map(w => ({
     date: w.date.toISOString().split('T')[0],
     muscleGroups: w.muscleGroups || [],
-    exerciseIds: [], // We don't have exercise IDs in summary
+    exerciseIds: [],
   }))
 
-  // Extract per-exercise performance data from full history
   const exerciseHistory = extractExerciseHistory(recentFullHistory)
   console.log(`📊 Exercise history: ${exerciseHistory.length} exercises with past performance data`)
 
@@ -227,63 +219,61 @@ async function buildContext(request: AITrainerRequest): Promise<AITrainerContext
   }
 }
 
-// Get muscles for a specific workout based on mode
-function getMusclesForWorkout(
-  request: AITrainerRequest,
-  workoutIndex: number,
-  allMuscleIds: string[],
-  usedMuscleGroups: string[][]
-): string[] {
-  const mode = request.muscleSelectionMode || 'same'
-
-  // Manual mode - use perWorkoutMuscles
-  if (mode === 'manual' && request.perWorkoutMuscles?.[workoutIndex]?.length) {
-    return request.perWorkoutMuscles[workoutIndex]
+/**
+ * Build a split schedule: which workout targets upper/lower
+ * Returns array like ['upper', 'lower', 'upper'] for 3 workouts starting upper
+ */
+function buildSplitSchedule(
+  numWorkouts: number,
+  startWith: 'upper' | 'lower'
+): ('upper' | 'lower')[] {
+  const schedule: ('upper' | 'lower')[] = []
+  for (let i = 0; i < numWorkouts; i++) {
+    const isFirst = (i % 2 === 0)
+    if (startWith === 'upper') {
+      schedule.push(isFirst ? 'upper' : 'lower')
+    } else {
+      schedule.push(isFirst ? 'lower' : 'upper')
+    }
   }
-
-  // Same mode - use muscleTargets for all workouts
-  if (mode === 'same' && request.muscleTargets.length > 0) {
-    return request.muscleTargets
-  }
-
-  // AI rotate mode - select different muscles for each workout
-  if (mode === 'ai_rotate' || (mode === 'same' && request.muscleTargets.length === 0)) {
-    // Get all muscles used in previous workouts
-    const previouslyUsed = usedMuscleGroups.flat()
-
-    // Filter out cardio and previously used muscles
-    const availableMuscles = allMuscleIds.filter(
-      id => id !== 'cardio' && !previouslyUsed.includes(id)
-    )
-
-    // If all muscles were used, reset
-    const musclePool = availableMuscles.length >= 2
-      ? availableMuscles
-      : allMuscleIds.filter(id => id !== 'cardio')
-
-    // Shuffle and pick 2-3 muscles
-    const shuffled = [...musclePool].sort(() => Math.random() - 0.5)
-    return shuffled.slice(0, Math.min(3, shuffled.length))
-  }
-
-  // Fallback - random muscles
-  const shuffled = [...allMuscleIds.filter(id => id !== 'cardio')].sort(() => Math.random() - 0.5)
-  return shuffled.slice(0, Math.min(3, shuffled.length))
+  return schedule
 }
 
-// Fallback workout generation (when Claude API is unavailable)
-// Returns the workout and the muscle IDs that were targeted
+/**
+ * Get muscles for a specific workout based on structure and bodyRegion
+ */
+function getMusclesForWorkout(
+  muscles: PrimaryMuscle[],
+  workoutStructure: 'full_body' | 'split',
+  workoutRegion?: 'upper' | 'lower'
+): PrimaryMuscle[] {
+  if (workoutStructure === 'full_body') {
+    // Full body: all non-cardio muscles
+    return muscles.filter(m => m.id !== 'cardio')
+  }
+
+  // Split: filter by bodyRegion
+  return muscles.filter(m => {
+    if (m.id === 'cardio') return false
+    const region = m.bodyRegion || 'neutral'
+    return region === workoutRegion || region === 'neutral'
+  })
+}
+
+/**
+ * Fallback workout generation (when Cloud Function is unavailable)
+ * Uses bodyRegion-based splits and 10 sets/muscle/week logic
+ */
 function generateFallbackWorkout(
   context: AITrainerContext,
   workoutNumber: number,
   workoutIndex: number,
-  usedMuscleIds: string[][]
-): { workout: AIGeneratedWorkout; targetMuscleIds: string[] } {
+  splitSchedule: ('upper' | 'lower')[] | null
+): AIGeneratedWorkout {
   const { request, availableExercises, muscles, yesterdayExerciseIds } = context
   const exerciseCount = getExerciseCount(request.duration)
 
   console.log(`🔄 Generating fallback workout #${workoutNumber} (index ${workoutIndex})`)
-  console.log(`🎯 Target: ${exerciseCount} exercises, ${request.duration} min`)
 
   // Filter out yesterday's exercises
   const availableForToday = availableExercises.filter(
@@ -302,46 +292,47 @@ function generateFallbackWorkout(
     ex.category !== 'cardio'
   )
 
-  console.log(`📊 Available: ${cardioExercises.length} cardio, ${strengthExercises.length} strength`)
+  // Determine which muscles this workout targets
+  const workoutRegion = splitSchedule ? splitSchedule[workoutIndex] : undefined
+  const targetMuscles = getMusclesForWorkout(muscles, request.workoutStructure, workoutRegion)
+  const targetMuscleIds = targetMuscles.map(m => m.id)
 
-  // Select warmup exercise
-  let warmupExercise: Exercise | null = null
-  console.log(`🔥 Warmup: duration=${request.warmupDuration}, cardio exercises available=${cardioExercises.length}`)
-  if (request.warmupDuration > 0 && cardioExercises.length > 0) {
-    warmupExercise = cardioExercises[Math.floor(Math.random() * cardioExercises.length)]
-    console.log(`🔥 Selected warmup: ${warmupExercise.nameHe}`)
-  } else {
-    console.log(`⚠️ No warmup: warmupDuration=${request.warmupDuration}, cardioExercises=${cardioExercises.length}`)
-  }
+  console.log(`🎯 Target muscles (${request.workoutStructure}${workoutRegion ? ` - ${workoutRegion}` : ''}): ${targetMuscleIds.join(', ')}`)
 
-  // Group exercises by muscle
+  // Build muscle name map
   const muscleIdToName = muscles.reduce((map, m) => {
     map[m.id] = m.nameHe
     return map
   }, {} as Record<string, string>)
 
-  // Get all muscle IDs
-  const allMuscleIds = muscles.map(m => m.id)
-
-  // Determine which muscles to target based on mode
-  const targetMuscleIds = getMusclesForWorkout(request, workoutIndex, allMuscleIds, usedMuscleIds)
-
-  console.log(`🎯 Target muscles: ${targetMuscleIds.join(', ')}`)
+  // Calculate exercises per muscle (10 sets/week, 3 sets/exercise ≈ 3-4 exercises per muscle)
+  // Count how many workouts each muscle appears in
+  const muscleWorkoutCount: Record<string, number> = {}
+  if (splitSchedule) {
+    for (const region of splitSchedule) {
+      const regionMuscles = getMusclesForWorkout(muscles, 'split', region)
+      for (const m of regionMuscles) {
+        muscleWorkoutCount[m.id] = (muscleWorkoutCount[m.id] || 0) + 1
+      }
+    }
+  } else {
+    for (const m of targetMuscles) {
+      muscleWorkoutCount[m.id] = request.numWorkouts
+    }
+  }
 
   // Select exercises for each muscle
-  // exerciseCount is the number of MAIN exercises (not including warmup)
   const selectedExercises: Exercise[] = []
   const usedExerciseIds = new Set<string>()
-  const exercisesPerMuscle = Math.ceil(exerciseCount / targetMuscleIds.length)
+
+  // Distribute exercises evenly across target muscles
+  const exercisesPerMuscle = Math.max(1, Math.ceil(exerciseCount / targetMuscleIds.length))
 
   for (const muscleId of targetMuscleIds) {
     const muscleExercises = strengthExercises.filter(ex =>
       ex.primaryMuscle === muscleId && !usedExerciseIds.has(ex.id)
     )
 
-    console.log(`💪 Muscle "${muscleId}": ${muscleExercises.length} exercises available, need ${exercisesPerMuscle}`)
-
-    // Shuffle and take exercises
     const shuffled = [...muscleExercises].sort(() => Math.random() - 0.5)
     const toAdd = shuffled.slice(0, exercisesPerMuscle)
     toAdd.forEach(ex => {
@@ -350,35 +341,33 @@ function generateFallbackWorkout(
     })
   }
 
-  console.log(`📊 Total selected: ${selectedExercises.length}, need: ${exerciseCount}`)
-
-  // If we don't have enough exercises, fill from other available exercises
+  // Fill remaining slots if needed
   if (selectedExercises.length < exerciseCount) {
     const remaining = exerciseCount - selectedExercises.length
-    console.log(`⚠️ Missing ${remaining} exercises, filling from other muscles`)
-
-    // Get exercises from any muscle that weren't already selected
     const additionalExercises = strengthExercises.filter(ex =>
-      !usedExerciseIds.has(ex.id)
+      !usedExerciseIds.has(ex.id) && targetMuscleIds.includes(ex.primaryMuscle)
     )
-
-    // Shuffle and add what we need
     const shuffledAdditional = [...additionalExercises].sort(() => Math.random() - 0.5)
-    const toAdd = shuffledAdditional.slice(0, remaining)
-    selectedExercises.push(...toAdd)
-
-    console.log(`📊 After fill: ${selectedExercises.length} exercises`)
+    selectedExercises.push(...shuffledAdditional.slice(0, remaining))
   }
 
-  // Trim to exact count if needed (in case we somehow got more)
+  // If still not enough, expand to all strength exercises
+  if (selectedExercises.length < exerciseCount) {
+    const remaining = exerciseCount - selectedExercises.length
+    const anyExercises = strengthExercises.filter(ex => !usedExerciseIds.has(ex.id))
+    const shuffled = [...anyExercises].sort(() => Math.random() - 0.5)
+    selectedExercises.push(...shuffled.slice(0, remaining))
+  }
+
+  // Trim to exact count
   const mainExercises = selectedExercises.slice(0, exerciseCount)
-  console.log(`📊 Main exercises after trim: ${mainExercises.length}, warmup: ${warmupExercise ? 'YES' : 'NO'}, TOTAL: ${mainExercises.length + (warmupExercise ? 1 : 0)}`)
 
   // Build the workout
   const workoutExercises: AIGeneratedExercise[] = []
 
   // Add warmup if applicable
-  if (warmupExercise) {
+  if (request.warmupDuration > 0 && cardioExercises.length > 0) {
+    const warmupExercise = cardioExercises[Math.floor(Math.random() * cardioExercises.length)]
     workoutExercises.push(createExerciseEntry(warmupExercise, true, muscleIdToName, 1))
   }
 
@@ -395,15 +384,12 @@ function generateFallbackWorkout(
   )] as string[]
 
   return {
-    workout: {
-      name: getAIWorkoutName(workoutNumber),
-      exercises: workoutExercises,
-      estimatedDuration: request.duration,
-      muscleGroups,
-      source: 'ai_trainer',
-      aiWorkoutNumber: workoutNumber,
-    },
-    targetMuscleIds,  // Return muscle IDs for rotation tracking
+    name: getAIWorkoutName(workoutNumber),
+    exercises: workoutExercises,
+    estimatedDuration: request.duration,
+    muscleGroups,
+    source: 'ai_trainer',
+    aiWorkoutNumber: workoutNumber,
   }
 }
 
@@ -426,7 +412,7 @@ function createExerciseEntry(
     isWarmup,
     targetSets,
     targetReps,
-    sets: [], // AI workouts don't pre-create sets - trainee opens sets themselves
+    sets: [],
   }
 }
 
@@ -434,13 +420,13 @@ function createExerciseEntry(
 function convertToWorkoutEntry(
   workout: AIGeneratedWorkout,
   userId: string,
-  bundleId: string | null // null for single workout, string for bundle
+  bundleId: string | null
 ): Omit<WorkoutHistoryEntry, 'id'> {
   const now = new Date()
 
   return {
     userId,
-    name: `אימון AI #${workout.aiWorkoutNumber}`, // שם אחיד לכל אימוני AI
+    name: `אימון AI #${workout.aiWorkoutNumber}`,
     date: now,
     startTime: now,
     endTime: now,
@@ -463,10 +449,9 @@ function convertToWorkoutEntry(
     totalVolume: 0,
     personalRecords: 0,
     notes: `אימון שנוצר ע"י מאמן AI`,
-    // AI Trainer fields
     source: 'ai_trainer',
     aiWorkoutNumber: workout.aiWorkoutNumber,
-    bundleId: bundleId || undefined, // undefined if single workout
+    bundleId: bundleId || undefined,
     aiRecommendations: workout.aiRecommendations || undefined,
     aiExplanation: workout.aiExplanation || undefined,
   }
@@ -485,7 +470,7 @@ export async function generateAIWorkouts(
     // Build context
     const context = await buildContext(request)
 
-    // Try Cloud Function first (Claude API)
+    // Try Cloud Function first (GPT API)
     const cloudResult = await callCloudFunction(context)
 
     // If Cloud Function returned a rate limit error, pass it through
@@ -502,12 +487,10 @@ export async function generateAIWorkouts(
     if (cloudResult && cloudResult.success && cloudResult.workouts.length > 0) {
       console.log(`☁️ Cloud Function succeeded with ${cloudResult.workouts.length} workouts`)
 
-      // Generate bundleId only for multiple workouts
       const bundleId = request.numWorkouts > 1
         ? `bundle_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         : null
 
-      // Save workouts to Firebase
       for (const workout of cloudResult.workouts) {
         const entry = convertToWorkoutEntry(workout, request.userId, bundleId)
         const id = await saveWorkoutHistory(entry)
@@ -524,17 +507,19 @@ export async function generateAIWorkouts(
     // Cloud Function failed or unavailable - use local fallback
     console.log('🔄 Using local fallback generation...')
 
-    // Get starting workout number
     const startNumber = await getNextAIWorkoutNumber(request.userId)
+
+    // Build split schedule if needed
+    const splitSchedule = request.workoutStructure === 'split'
+      ? buildSplitSchedule(request.numWorkouts, request.splitStartWith || 'upper')
+      : null
 
     // Generate workouts locally
     const workouts: AIGeneratedWorkout[] = []
-    const usedMuscleIds: string[][] = []
 
     for (let i = 0; i < request.numWorkouts; i++) {
-      const { workout, targetMuscleIds } = generateFallbackWorkout(context, startNumber + i, i, usedMuscleIds)
+      const workout = generateFallbackWorkout(context, startNumber + i, i, splitSchedule)
       workouts.push(workout)
-      usedMuscleIds.push(targetMuscleIds)
     }
 
     console.log(`✅ Generated ${workouts.length} workouts (local fallback)`)
@@ -542,21 +527,16 @@ export async function generateAIWorkouts(
       console.log(`   📝 Workout ${i + 1}: "${w.name}" - ${w.exercises.length} exercises (${w.muscleGroups.join(', ')})`)
     })
 
-    // Generate bundleId only for multiple workouts
     const bundleId = request.numWorkouts > 1
       ? `bundle_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       : null
 
-    console.log(`📦 Bundle: ${bundleId ? bundleId : 'none (single workout)'}`)
-
-    // Save workouts to Firebase
     const savedIds: string[] = []
     for (const workout of workouts) {
       const entry = convertToWorkoutEntry(workout, request.userId, bundleId)
       const id = await saveWorkoutHistory(entry)
       savedIds.push(id)
-      const saveTime = new Date().toLocaleString('he-IL')
-      console.log(`💾 [${saveTime}] Saved "${workout.name}" (${workout.exercises.length} exercises) → ID: ${id}`)
+      console.log(`💾 Saved "${workout.name}" (${workout.exercises.length} exercises) → ID: ${id}`)
     }
 
     return {

@@ -19,6 +19,7 @@ export interface WorkoutSet {
   speed?: number       // Speed (treadmill, etc.)
   distance?: number    // Distance in meters
   incline?: number     // Incline percentage
+  zone?: number        // Heart rate zone 1-5
   // Assistance fields
   assistanceWeight?: number  // For graviton - counterweight in kg
   assistanceBand?: string    // For bands - single band ID (one band per set)
@@ -119,6 +120,7 @@ export interface WorkoutHistoryEntry {
       speed?: number       // Speed (treadmill, etc.)
       distance?: number    // Distance in meters
       incline?: number     // Incline percentage
+      zone?: number        // Heart rate zone 1-5
       // Assistance fields
       assistanceWeight?: number  // For graviton - counterweight in kg
       assistanceBand?: string    // For bands - single band ID (one band per set)

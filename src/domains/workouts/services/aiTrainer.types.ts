@@ -28,18 +28,18 @@ export interface ExercisePerformanceData {
   }[]
 }
 
-// Muscle selection mode for multiple workouts
-export type MuscleSelectionMode = 'ai_rotate' | 'same' | 'manual'
+// Workout structure types
+export type WorkoutStructure = 'full_body' | 'split'
+export type SplitStartWith = 'upper' | 'lower'
 
 // Request from user to generate workout
 export interface AITrainerRequest {
   numWorkouts: number        // 1-6
-  duration: number           // 30/45/60/90 minutes
-  muscleTargets: string[]    // muscle IDs from Firebase (optional)
-  warmupDuration: number     // 5/10/15 minutes warmup
+  duration: number           // 60/75/90 minutes
+  warmupDuration: number     // 0/5/10/15 minutes warmup
   userId: string
-  muscleSelectionMode?: MuscleSelectionMode  // How to select muscles for multiple workouts
-  perWorkoutMuscles?: string[][]             // Manual muscle selection per workout
+  workoutStructure: WorkoutStructure
+  splitStartWith?: SplitStartWith  // For split with 3 or 5 workouts
 }
 
 // Exercise in AI-generated workout
@@ -76,14 +76,14 @@ export interface AIGeneratedWorkout {
   aiRecommendations?: Record<string, AIRecommendation>  // exerciseId → recommendation
 }
 
-// Context passed to Claude API
+// Context passed to Cloud Function
 export interface AITrainerContext {
   request: AITrainerRequest
   availableExercises: Exercise[]
   muscles: PrimaryMuscle[]
   recentWorkouts: RecentWorkoutSummary[]
   yesterdayExerciseIds: string[]
-  exerciseHistory: ExercisePerformanceData[]  // Per-exercise performance data
+  exerciseHistory: ExercisePerformanceData[]
 }
 
 // Summary of recent workout for context
@@ -103,10 +103,9 @@ export interface AITrainerResponse {
 
 // Calculate exercise count based on duration (NOT including warmup)
 export function getExerciseCount(duration: number): number {
-  if (duration <= 30) return 6   // 30 min = 6 + warmup = 7
-  if (duration <= 45) return 8   // 45 min = 8 + warmup = 9
-  if (duration <= 60) return 9   // 60 min = 9 + warmup = 10
-  return 11                      // 90 min = 11 + warmup = 12
+  if (duration <= 60) return 9   // 60 min = 9 exercises
+  if (duration <= 75) return 10  // 75 min = 10 exercises
+  return 11                      // 90 min = 11 exercises
 }
 
 // Get workout name for AI workouts (with timestamp for identification)

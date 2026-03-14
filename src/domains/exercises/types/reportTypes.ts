@@ -4,7 +4,7 @@
  */
 
 // Field types available for set reporting
-export type ReportFieldType = 'weight' | 'reps' | 'time' | 'intensity' | 'speed' | 'distance' | 'incline'
+export type ReportFieldType = 'weight' | 'reps' | 'time' | 'intensity' | 'speed' | 'distance' | 'incline' | 'zone'
 
 // Single field configuration
 export interface ReportField {
@@ -80,6 +80,17 @@ export const defaultReportTypes: ReportType[] = [
     isActive: true,
     sortOrder: 5,
   },
+  {
+    id: 'time_zone',
+    nameHe: 'זמן + אזור דופק',
+    nameEn: 'Time + Heart Rate Zone',
+    fields: [
+      { type: 'time', label: 'זמן (דקות)', required: true },
+      { type: 'zone', label: 'אזור דופק (1-5)', required: true },
+    ],
+    isActive: true,
+    sortOrder: 6,
+  },
 ]
 
 // Helper to get default labels for field types (Hebrew)
@@ -99,6 +110,8 @@ export function getDefaultFieldLabel(fieldType: ReportFieldType): string {
       return 'מרחק'
     case 'incline':
       return 'שיפוע (1-20)'
+    case 'zone':
+      return 'אזור דופק (1-5)'
     default:
       return fieldType
   }

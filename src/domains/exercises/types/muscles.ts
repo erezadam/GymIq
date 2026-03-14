@@ -1,5 +1,7 @@
 // Muscle types and mapping
 
+export type BodyRegion = 'upper' | 'lower' | 'neutral'
+
 export interface SubMuscle {
   id: string
   nameHe: string
@@ -11,6 +13,7 @@ export interface PrimaryMuscle {
   nameHe: string
   nameEn: string
   icon: string
+  bodyRegion?: BodyRegion
   subMuscles: SubMuscle[]
 }
 
@@ -18,14 +21,18 @@ export interface PrimaryMuscle {
 // Updated 2026-03-10 to sync with Firebase
 export const defaultMuscleMapping: PrimaryMuscle[] = [
   {
-    id: 'arms',
-    nameHe: 'זרועות',
-    nameEn: 'Arms',
+    id: 'biceps_brachii',
+    nameHe: 'זרוע קדמית',
+    nameEn: 'Biceps Brachii',
     icon: '💪',
-    subMuscles: [
-      { id: 'biceps', nameHe: 'בייספס', nameEn: 'Biceps' },
-      { id: 'triceps', nameHe: 'טרייספס', nameEn: 'Triceps' },
-    ],
+    subMuscles: [],
+  },
+  {
+    id: 'triceps',
+    nameHe: 'זרוע אחורית',
+    nameEn: 'Triceps',
+    icon: '💪',
+    subMuscles: [],
   },
   {
     id: 'chest',
@@ -94,7 +101,7 @@ export const defaultMuscleMapping: PrimaryMuscle[] = [
   },
   {
     id: 'cardio',
-    nameHe: 'אירובי ',
+    nameHe: 'אירובי',
     nameEn: 'Cardio',
     icon: '❤️',
     subMuscles: [

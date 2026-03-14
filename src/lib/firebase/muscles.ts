@@ -14,6 +14,9 @@ import { defaultMuscleMapping } from '@/domains/exercises/types/muscles'
 const COLLECTION_NAME = 'muscles'
 
 // Get all muscles from Firebase (or return defaults if empty)
+// Automatically syncs missing defaults into Firebase on first call
+let syncOncePromise: Promise<void> | null = null
+
 export async function getMuscles(): Promise<PrimaryMuscle[]> {
   try {
     const musclesRef = collection(db, COLLECTION_NAME)
@@ -24,10 +27,44 @@ export async function getMuscles(): Promise<PrimaryMuscle[]> {
       return defaultMuscleMapping
     }
 
-    return snapshot.docs.map((doc) => ({
+    const muscles = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     })) as PrimaryMuscle[]
+
+    // Auto-sync missing defaults once per session
+    if (!syncOncePromise) {
+      const existingIds = new Set(muscles.map(m => m.id))
+      const missing = defaultMuscleMapping.filter(m => !existingIds.has(m.id))
+      if (missing.length > 0) {
+        syncOncePromise = (async () => {
+          for (const muscle of missing) {
+            await setDoc(doc(db, COLLECTION_NAME, muscle.id), {
+              nameHe: muscle.nameHe,
+              nameEn: muscle.nameEn,
+              icon: muscle.icon,
+              subMuscles: muscle.subMuscles,
+              updatedAt: serverTimestamp(),
+            })
+          }
+          console.log(`Auto-synced ${missing.length} missing muscles to Firebase`)
+        })()
+      } else {
+        syncOncePromise = Promise.resolve()
+      }
+    }
+
+    // If there were missing muscles, re-fetch to include them
+    await syncOncePromise
+    if (muscles.length < defaultMuscleMapping.length) {
+      const freshSnapshot = await getDocs(musclesRef)
+      return freshSnapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      })) as PrimaryMuscle[]
+    }
+
+    return muscles
   } catch (error) {
     console.error('Error fetching muscles:', error)
     return defaultMuscleMapping
@@ -42,6 +79,7 @@ export async function saveMuscle(muscle: PrimaryMuscle): Promise<void> {
       nameHe: muscle.nameHe,
       nameEn: muscle.nameEn,
       icon: muscle.icon,
+      ...(muscle.bodyRegion && { bodyRegion: muscle.bodyRegion }),
       subMuscles: muscle.subMuscles,
       updatedAt: serverTimestamp(),
     })
@@ -59,6 +97,7 @@ export async function addPrimaryMuscle(muscle: Omit<PrimaryMuscle, 'subMuscles'>
       nameHe: muscle.nameHe,
       nameEn: muscle.nameEn,
       icon: muscle.icon,
+      ...(muscle.bodyRegion && { bodyRegion: muscle.bodyRegion }),
       subMuscles: muscle.subMuscles || [],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),

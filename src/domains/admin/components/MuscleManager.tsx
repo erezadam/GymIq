@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Plus, Trash2, Edit2, Save, X, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
-import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
+import type { PrimaryMuscle, BodyRegion } from '@/domains/exercises/types/muscles'
 import { getMuscles, saveMuscle, addPrimaryMuscle, deletePrimaryMuscle, initializeMuscles, syncMissingMuscles, forceUpdateAllMuscles } from '@/lib/firebase/muscles'
 import { MuscleIcon } from '@/shared/components/MuscleIcon'
 
@@ -16,7 +16,7 @@ export default function MuscleManager() {
   const [editingSubMuscle, setEditingSubMuscle] = useState<{ primaryId: string; subId: string } | null>(null)
 
   // Form states
-  const [newMuscle, setNewMuscle] = useState({ id: '', nameHe: '', nameEn: '', icon: '' })
+  const [newMuscle, setNewMuscle] = useState({ id: '', nameHe: '', nameEn: '', icon: '', bodyRegion: '' as BodyRegion | '' })
   const [newSubMuscle, setNewSubMuscle] = useState({ id: '', nameHe: '', nameEn: '' })
   const [editSubMuscleForm, setEditSubMuscleForm] = useState({ nameHe: '', nameEn: '' })
   const [editForm, setEditForm] = useState<PrimaryMuscle | null>(null)
@@ -92,9 +92,10 @@ export default function MuscleManager() {
         nameHe: newMuscle.nameHe,
         nameEn: newMuscle.nameEn || newMuscle.id,
         icon: newMuscle.icon,
+        ...(newMuscle.bodyRegion && { bodyRegion: newMuscle.bodyRegion }),
         subMuscles: [],
       })
-      setNewMuscle({ id: '', nameHe: '', nameEn: '', icon: '' })
+      setNewMuscle({ id: '', nameHe: '', nameEn: '', icon: '', bodyRegion: '' })
       setShowAddMuscle(false)
       await loadMuscles()
     } catch (error) {
@@ -273,6 +274,16 @@ export default function MuscleManager() {
                 className="input-primary text-sm flex-1"
               />
             </div>
+            <select
+              value={newMuscle.bodyRegion}
+              onChange={(e) => setNewMuscle({ ...newMuscle, bodyRegion: e.target.value as BodyRegion | '' })}
+              className="input-primary text-sm"
+            >
+              <option value="">אזור גוף (לא נבחר)</option>
+              <option value="upper">גוף עליון</option>
+              <option value="lower">גוף תחתון</option>
+              <option value="neutral">ניטרלי</option>
+            </select>
           </div>
           <div className="flex gap-2">
             <button onClick={handleAddMuscle} className="btn-primary text-sm">שמור</button>
@@ -293,7 +304,7 @@ export default function MuscleManager() {
               <div className="flex items-center gap-3">
                 <MuscleIcon icon={editingMuscle === muscle.id && editForm ? editForm.icon : muscle.icon} size={48} />
                 {editingMuscle === muscle.id && editForm ? (
-                  <div className="flex items-center gap-2 flex-1">
+                  <div className="flex items-center gap-2 flex-1 flex-wrap">
                     <input
                       type="text"
                       value={editForm.nameHe}
@@ -309,10 +320,32 @@ export default function MuscleManager() {
                       className="input-primary text-sm flex-1"
                       onClick={(e) => e.stopPropagation()}
                     />
+                    <select
+                      value={editForm.bodyRegion || ''}
+                      onChange={(e) => setEditForm({ ...editForm, bodyRegion: (e.target.value || undefined) as BodyRegion | undefined })}
+                      className="input-primary text-sm w-28"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <option value="">אזור גוף</option>
+                      <option value="upper">גוף עליון</option>
+                      <option value="lower">גוף תחתון</option>
+                      <option value="neutral">ניטרלי</option>
+                    </select>
                   </div>
                 ) : (
                   <div>
-                    <h3 className="font-semibold text-white">{muscle.nameHe}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-white">{muscle.nameHe}</h3>
+                      {muscle.bodyRegion && (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                          muscle.bodyRegion === 'upper' ? 'bg-blue-500/20 text-blue-400' :
+                          muscle.bodyRegion === 'lower' ? 'bg-green-500/20 text-green-400' :
+                          'bg-gray-500/20 text-gray-400'
+                        }`}>
+                          {muscle.bodyRegion === 'upper' ? 'עליון' : muscle.bodyRegion === 'lower' ? 'תחתון' : 'ניטרלי'}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-neon-gray-500 text-sm">{muscle.nameEn} • {muscle.subMuscles.length} תתי שרירים</p>
                   </div>
                 )}
