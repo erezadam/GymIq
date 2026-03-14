@@ -391,6 +391,36 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
               avgZone: cd && cd.zoneCount > 0 ? Math.round((cd.zoneSum / cd.zoneCount) * 10) / 10 : 0,
             })
           } else {
+            // Also check if data was accumulated under the primary ID itself
+            // (e.g. exercises with primaryMuscle='cardio' instead of a sub-muscle like 'warmup')
+            const parentData = muscleData.get(primary.id)
+            const parentCardio = cardioData.get(primary.id)
+            const parentExercises = getExerciseDetails(primary.id)
+            const hasParentData = (parentData && parentData.sets > 0) || (parentCardio && parentCardio.totalMinutes > 0) || parentExercises.length > 0
+
+            if (hasParentData) {
+              // Show a row for data accumulated directly under the primary
+              const totalSets = parentData?.sets || 0
+              const avgReps = parentData && parentData.repsCount > 0
+                ? Math.round((parentData.reps / parentData.repsCount) * 10) / 10
+                : 0
+              const isCardio = isCardioMuscle(primary.id)
+              result.push({
+                category: primary.id,
+                categoryHe: primary.nameHe,
+                primaryMuscle: primary.id,
+                primaryMuscleHe: primary.nameHe,
+                totalSets,
+                avgReps,
+                setsGreen: totalSets >= MIN_SETS,
+                repsGreen: avgReps >= MIN_AVG_REPS,
+                exercises: parentExercises,
+                isCardio,
+                totalMinutes: parentCardio ? Math.round(parentCardio.totalMinutes) : 0,
+                avgZone: parentCardio && parentCardio.zoneCount > 0 ? Math.round((parentCardio.zoneSum / parentCardio.zoneCount) * 10) / 10 : 0,
+              })
+            }
+
             for (const sub of primary.subMuscles) {
               const data = muscleData.get(sub.id)
               const totalSets = data?.sets || 0
