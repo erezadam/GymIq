@@ -105,27 +105,6 @@ export const defaultMuscleMapping: PrimaryMuscle[] = [
       { id: 'warmup', nameHe: 'חימום', nameEn: 'Warmup' },
     ],
   },
-  {
-    id: 'warmup',
-    nameHe: 'חימום',
-    nameEn: 'Warmup',
-    icon: '🔥',
-    subMuscles: [],
-  },
-  {
-    id: 'functional',
-    nameHe: 'פונקציונלי',
-    nameEn: 'Functional',
-    icon: '⚡',
-    subMuscles: [],
-  },
-  {
-    id: 'stretching',
-    nameHe: 'מתיחות',
-    nameEn: 'Stretching',
-    icon: '🧘',
-    subMuscles: [],
-  },
 ]
 
 // Helper function to get sub-muscles for a primary muscle
