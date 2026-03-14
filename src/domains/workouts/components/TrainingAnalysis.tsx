@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { X, BarChart3, TrendingUp, TrendingDown, ArrowRight, Calendar } from 'lucide-react'
+import { X, BarChart3, TrendingUp, TrendingDown, ArrowRight, Calendar, Download, ChevronRight } from 'lucide-react'
 import { useAuthStore } from '@/domains/authentication/store'
 import { getUserWorkoutHistoryByDateRange } from '@/lib/firebase/workoutHistory'
 import { getExercises, resolveLegacyMuscleCategory } from '@/lib/firebase/exercises'
@@ -107,6 +107,12 @@ const SECONDARY_MUSCLE_MULTIPLIERS: Record<string, { triceps?: number; glutes?: 
   "BwVQyCeg3DqNPFqdJser": { triceps: 0.5 },
 }
 
+interface ExerciseDetail {
+  name: string
+  sets: number
+  avgReps: number
+}
+
 interface MuscleRow {
   category: string
   categoryHe: string
@@ -116,6 +122,7 @@ interface MuscleRow {
   avgReps: number
   setsGreen: boolean
   repsGreen: boolean
+  exercises: ExerciseDetail[]
 }
 
 const fmt = (d: Date) =>
@@ -161,6 +168,7 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
   const [weekMode, setWeekMode] = useState<WeekMode>('last')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
+  const [selectedMuscle, setSelectedMuscle] = useState<MuscleRow | null>(null)
 
   const getRangeForMode = useCallback((mode: WeekMode) => {
     if (mode === 'current') return getCurrentWeekRange()
@@ -202,8 +210,8 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
         // Accumulate sets and reps by primaryMuscle
         const muscleData = new Map<string, { sets: number; reps: number; repsCount: number }>()
 
-        // Debug: collect per-exercise detail
-        const debugByMuscle: Record<string, { exercises: { name: string; sets: number; reps: number[] }[] }> = {}
+        // Collect per-exercise detail per muscle
+        const exercisesByMuscle = new Map<string, Map<string, { name: string; sets: number; reps: number; repsCount: number }>>()
 
         for (const workout of workouts) {
           if (workout.status !== 'completed') continue
@@ -212,10 +220,11 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
             const exDef = exerciseMap.get(exercise.exerciseId)
             const rawCategory = exDef?.primaryMuscle || exercise.category || 'other'
             const primaryMuscle = resolveLegacyMuscleCategory(rawCategory, exDef?.primaryMuscle)
-            const exName = exDef?.name || exercise.exerciseId
+            const exName = exDef?.nameHe || exDef?.name || exercise.exerciseId
 
             let exSets = 0
-            const exReps: number[] = []
+            let exRepsTotal = 0
+            let exRepsCount = 0
 
             for (const set of exercise.sets) {
               if (!set.completed) continue
@@ -230,7 +239,7 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
               muscleData.set(primaryMuscle, existing)
 
               exSets++
-              exReps.push(reps)
+              if (reps > 0) { exRepsTotal += reps; exRepsCount++ }
 
               // Secondary muscle contribution
               const secondary = SECONDARY_MUSCLE_MULTIPLIERS[exercise.exerciseId]
@@ -239,38 +248,45 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
                   const key = 'triceps'
                   const ex2 = muscleData.get(key) || { sets: 0, reps: 0, repsCount: 0 }
                   ex2.sets += secondary.triceps
-                  if (reps > 0) {
-                    ex2.reps += reps
-                    ex2.repsCount++
-                  }
+                  if (reps > 0) { ex2.reps += reps; ex2.repsCount++ }
                   muscleData.set(key, ex2)
                 }
                 if (secondary.glutes) {
                   const key = 'longissimus'
                   const ex2 = muscleData.get(key) || { sets: 0, reps: 0, repsCount: 0 }
                   ex2.sets += secondary.glutes
-                  if (reps > 0) {
-                    ex2.reps += reps
-                    ex2.repsCount++
-                  }
+                  if (reps > 0) { ex2.reps += reps; ex2.repsCount++ }
                   muscleData.set(key, ex2)
                 }
               }
             }
 
             if (exSets > 0) {
-              if (!debugByMuscle[primaryMuscle]) debugByMuscle[primaryMuscle] = { exercises: [] }
-              debugByMuscle[primaryMuscle].exercises.push({ name: exName, sets: exSets, reps: exReps })
+              if (!exercisesByMuscle.has(primaryMuscle)) exercisesByMuscle.set(primaryMuscle, new Map())
+              const exMap = exercisesByMuscle.get(primaryMuscle)!
+              const exKey = exercise.exerciseId
+              const prev = exMap.get(exKey)
+              if (prev) {
+                prev.sets += exSets
+                prev.reps += exRepsTotal
+                prev.repsCount += exRepsCount
+              } else {
+                exMap.set(exKey, { name: exName, sets: exSets, reps: exRepsTotal, repsCount: exRepsCount })
+              }
             }
           }
         }
 
-        // Debug log
-        console.log('=== ניתוח שרירים שבועי - דוח מלא ===')
-        console.log('טווח תאריכים:', range.start.toLocaleDateString('he-IL'), '—', range.end.toLocaleDateString('he-IL'))
-        console.log('מספר אימונים שנמצאו:', workouts.filter(w => w.status === 'completed').length)
-        console.log('פירוט לפי תת-שריר:', JSON.stringify(debugByMuscle, null, 2))
-        console.log('=== סוף דוח ===')
+        // Helper to get exercise details for a muscle
+        const getExerciseDetails = (muscleId: string): ExerciseDetail[] => {
+          const exMap = exercisesByMuscle.get(muscleId)
+          if (!exMap) return []
+          return Array.from(exMap.values()).map(e => ({
+            name: e.name,
+            sets: e.sets,
+            avgReps: e.repsCount > 0 ? Math.round((e.reps / e.repsCount) * 10) / 10 : 0,
+          })).sort((a, b) => b.sets - a.sets)
+        }
 
         // Convert to rows — show ALL muscles from Firebase mapping (top-down)
         // Each sub-muscle gets a row. Primary muscles with no sub-muscles also get a row.
@@ -292,6 +308,7 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
               avgReps,
               setsGreen: totalSets >= MIN_SETS,
               repsGreen: avgReps >= MIN_AVG_REPS,
+              exercises: getExerciseDetails(primary.id),
             })
           } else {
             for (const sub of primary.subMuscles) {
@@ -309,6 +326,7 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
                 avgReps,
                 setsGreen: totalSets >= MIN_SETS,
                 repsGreen: avgReps >= MIN_AVG_REPS,
+                exercises: getExerciseDetails(sub.id),
               })
             }
           }
@@ -331,6 +349,86 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
     analyze()
   }, [userId, weekMode, getRangeForMode])
 
+  const handleDownloadReport = () => {
+    const lines: string[] = []
+    lines.push(`ניתוח ביצוע שבועי — ${weekRange.startStr} – ${weekRange.endStr}`)
+    lines.push('')
+
+    let currentCategory = ''
+    for (const row of rows) {
+      if (row.categoryHe !== currentCategory) {
+        currentCategory = row.categoryHe
+        lines.push(`\n--- ${currentCategory} ---`)
+      }
+      lines.push(`  ${row.primaryMuscleHe}: ${row.totalSets} סטים, ממוצע ${row.avgReps} חזרות`)
+      for (const ex of row.exercises) {
+        lines.push(`    • ${ex.name} — ${ex.sets} סטים, ממוצע ${ex.avgReps} חזרות`)
+      }
+    }
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `weekly-report-${weekRange.startStr.replace(/\//g, '-')}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // Exercise detail popup
+  if (selectedMuscle) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+        onClick={() => setSelectedMuscle(null)}
+      >
+        <div
+          className="relative w-full max-w-lg max-h-[85vh] overflow-hidden rounded-2xl bg-dark-card border border-dark-border"
+          dir="rtl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between p-4 border-b border-dark-border">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedMuscle(null)}
+                className="p-1 text-text-secondary hover:text-text-primary transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+              <div>
+                <h2 className="text-base font-bold text-text-primary">{selectedMuscle.primaryMuscleHe}</h2>
+                <p className="text-xs text-text-secondary">{selectedMuscle.totalSets} סטים · ממוצע {selectedMuscle.avgReps} חזרות</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setSelectedMuscle(null)}
+              className="flex items-center justify-center w-11 h-11 rounded-xl bg-dark-card hover:bg-dark-border transition"
+            >
+              <X className="w-5 h-5 text-text-secondary" />
+            </button>
+          </div>
+          <div className="overflow-y-auto max-h-[calc(85vh-80px)] p-4">
+            {selectedMuscle.exercises.length === 0 ? (
+              <p className="text-text-muted text-center py-8">אין תרגילים בתקופה זו</p>
+            ) : (
+              <div className="space-y-3">
+                {selectedMuscle.exercises.map((ex, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-dark-card/60 border border-dark-border">
+                    <span className="text-sm text-text-primary font-medium">{ex.name}</span>
+                    <div className="text-left">
+                      <div className="text-sm text-text-primary">{ex.sets} סטים</div>
+                      <div className="text-xs text-text-muted">ממוצע {ex.avgReps} חזרות</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
@@ -343,18 +441,37 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-dark-border">
-          <div>
-            <h2 className="text-base font-bold text-text-primary">ניתוח ביצוע שבועי</h2>
-            <p className="text-xs text-text-secondary mt-0.5">
-              {weekRange.startStr} – {weekRange.endStr}
-            </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="p-1 text-text-secondary hover:text-text-primary transition-colors"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+            <div>
+              <h2 className="text-base font-bold text-text-primary">ניתוח ביצוע שבועי</h2>
+              <p className="text-xs text-text-secondary mt-0.5">
+                {weekRange.startStr} – {weekRange.endStr}
+              </p>
+            </div>
           </div>
-          <button
-            onClick={onClose}
-            className="flex items-center justify-center w-11 h-11 rounded-xl bg-dark-card hover:bg-dark-border transition"
-          >
-            <X className="w-5 h-5 text-text-secondary" />
-          </button>
+          <div className="flex items-center gap-2">
+            {rows.length > 0 && (
+              <button
+                onClick={handleDownloadReport}
+                className="flex items-center justify-center w-11 h-11 rounded-xl bg-dark-card hover:bg-dark-border transition"
+                title="הורד דוח"
+              >
+                <Download className="w-5 h-5 text-text-secondary" />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="flex items-center justify-center w-11 h-11 rounded-xl bg-dark-card hover:bg-dark-border transition"
+            >
+              <X className="w-5 h-5 text-text-secondary" />
+            </button>
+          </div>
         </div>
 
         {/* Week Selector */}
@@ -445,10 +562,13 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
                     <tr key={row.primaryMuscle} className={i % 2 === 0 ? 'bg-dark-card/40' : ''}>
                       <td className="py-2.5 pr-2 text-text-primary font-medium">{row.categoryHe}</td>
                       <td className="py-2.5 text-text-secondary">{row.primaryMuscleHe}</td>
-                      <td className="py-2.5">
+                      <td
+                        className={`py-2.5 ${row.totalSets > 0 ? 'cursor-pointer hover:bg-primary/5 rounded-lg transition-colors' : ''}`}
+                        onClick={() => row.totalSets > 0 && setSelectedMuscle(row)}
+                      >
                         {row.totalSets > 0 ? (
                           <>
-                            <div className="text-text-primary">{Number.isInteger(row.totalSets) ? row.totalSets : row.totalSets.toFixed(1)} סטים</div>
+                            <div className="text-primary underline decoration-primary/30">{Number.isInteger(row.totalSets) ? row.totalSets : row.totalSets.toFixed(1)} סטים</div>
                             <div className="text-xs text-text-muted">ממוצע {row.avgReps} חזרות</div>
                           </>
                         ) : (
