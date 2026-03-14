@@ -28,7 +28,7 @@ const exerciseSchema = z.object({
   name: z.string().min(2, 'שם התרגיל באנגלית נדרש'),
   nameHe: z.string().min(2, 'שם התרגיל בעברית נדרש'),
   category: z.string().min(1, 'קטגוריה נדרשת'),
-  primaryMuscle: z.string().min(1, 'שריר ראשי נדרש'),
+  primaryMuscle: z.string().default(''),
   secondaryMuscles: z.array(z.string()),
   equipment: z.string().min(1, 'ציוד נדרש'),
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']),
@@ -432,7 +432,7 @@ export default function ExerciseForm() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit, (errors) => {
-        console.error('🔥 ExerciseForm: Validation errors:', JSON.stringify(errors, null, 2))
+        console.error('🔥 ExerciseForm: Validation errors:', Object.entries(errors).map(([k, v]) => `${k}: ${(v as { message?: string })?.message}`).join(', '))
         const fieldErrors = Object.entries(errors).map(([key, val]) => `${key}: ${(val as { message?: string })?.message || 'invalid'}`).join(', ')
         toast.error(`שגיאות בטופס: ${fieldErrors}`)
       })} className="space-y-8">
