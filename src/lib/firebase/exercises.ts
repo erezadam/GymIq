@@ -170,19 +170,36 @@ export const deleteAllExercises = async (): Promise<number> => {
 
 // Valid categories for exercises
 export const VALID_EXERCISE_CATEGORIES = [
-  'chest', 'back', 'legs', 'shoulders', 'arms', 'core',
+  'chest', 'back', 'legs', 'shoulders', 'biceps_brachii', 'triceps', 'core',
   'cardio', 'functional', 'stretching', 'warmup', 'glutes', 'gluteus_maximus'
 ] as const
 
 // Valid primary categories for exercises (main muscle groups only)
 // IMPORTANT: These are the ONLY valid values for the 'category' field
 export const VALID_EXERCISE_CATEGORIES_SET = new Set([
-  'legs', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio', 'warmup', 'functional', 'stretching',
+  'legs', 'chest', 'back', 'shoulders', 'biceps_brachii', 'triceps', 'core', 'cardio', 'warmup', 'functional', 'stretching',
   'glutes', 'gluteus_maximus' // Support both IDs for glutes
 ])
 
 // Alias for backward compatibility
 export const VALID_PRIMARY_MUSCLES = VALID_EXERCISE_CATEGORIES_SET
+
+/**
+ * Legacy support: workoutHistory documents saved before 14/03/2026
+ * may contain category: "arms". Resolve to new muscle IDs.
+ */
+export function resolveLegacyMuscleCategory(
+  category: string,
+  primaryMuscle?: string
+): string {
+  if (category === 'arms') {
+    if (primaryMuscle === 'triceps' || primaryMuscle === 'triceps_brachii') {
+      return 'triceps'
+    }
+    return 'biceps_brachii' // biceps, forearms, or unknown → biceps_brachii
+  }
+  return category
+}
 
 // Mapping from specific muscles to parent muscle groups
 const MUSCLE_TO_PARENT_MAPPING: Record<string, string> = {
@@ -207,13 +224,13 @@ const MUSCLE_TO_PARENT_MAPPING: Record<string, string> = {
   'lower_back': 'back',
   'upper_back': 'back',
   'mid_back': 'back',
-  // Arms
-  'biceps': 'arms',
-  'biceps_brachii': 'arms',
-  'triceps': 'arms',
-  'triceps_brachii': 'arms',
-  'forearms': 'arms',
-  'brachialis': 'arms',
+  // Arms → split into biceps_brachii / triceps
+  'biceps': 'biceps_brachii',
+  'biceps_brachii': 'biceps_brachii',
+  'forearms': 'biceps_brachii',
+  'brachialis': 'biceps_brachii',
+  'triceps': 'triceps',
+  'triceps_brachii': 'triceps',
   // Shoulders
   'deltoids': 'shoulders',
   'front_delt': 'shoulders',
@@ -374,10 +391,10 @@ export const SUB_MUSCLE_TO_CATEGORY: Record<string, string> = {
   'upper_chest': 'chest',
   'mid_chest': 'chest',
   'lower_chest': 'chest',
-  // Arms sub-muscles
-  'biceps': 'arms',
-  'triceps': 'arms',
-  'forearms': 'arms',
+  // Arms sub-muscles → split into biceps_brachii / triceps
+  'biceps': 'biceps_brachii',
+  'forearms': 'biceps_brachii',
+  'triceps': 'triceps',
   // Shoulders sub-muscles
   'front_delt': 'shoulders',
   'side_delt': 'shoulders',

@@ -728,7 +728,7 @@ export function ExerciseLibrary({
 
                 // Recommended badge: only for strength categories, below weekly target, not in last workout
                 const WEEKLY_SETS_TARGET = 10
-                const STRENGTH_CATEGORIES = new Set(['legs', 'chest', 'back', 'shoulders', 'arms', 'core'])
+                const STRENGTH_CATEGORIES = new Set(['legs', 'chest', 'back', 'shoulders', 'biceps_brachii', 'triceps', 'core'])
                 const exercisePrimaryMuscle = exercise.primaryMuscle || exercise.category
                 const currentWeeklySets = weeklyMuscleSets.get(exercisePrimaryMuscle) || 0
                 const showRecommended = !wasInLastWorkout

@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { X, BarChart3, TrendingUp, TrendingDown, ArrowRight, Calendar } from 'lucide-react'
 import { useAuthStore } from '@/domains/authentication/store'
 import { getUserWorkoutHistoryByDateRange } from '@/lib/firebase/workoutHistory'
-import { getExercises } from '@/lib/firebase/exercises'
+import { getExercises, resolveLegacyMuscleCategory } from '@/lib/firebase/exercises'
 import { getMuscles } from '@/lib/firebase/muscles'
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
 import {
@@ -210,7 +210,8 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
 
           for (const exercise of workout.exercises) {
             const exDef = exerciseMap.get(exercise.exerciseId)
-            const primaryMuscle = exDef?.primaryMuscle || exercise.category || 'other'
+            const rawCategory = exDef?.primaryMuscle || exercise.category || 'other'
+            const primaryMuscle = resolveLegacyMuscleCategory(rawCategory, exDef?.primaryMuscle)
             const exName = exDef?.name || exercise.exerciseId
 
             let exSets = 0

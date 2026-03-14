@@ -18,14 +18,18 @@ export interface PrimaryMuscle {
 // Updated 2026-03-10 to sync with Firebase
 export const defaultMuscleMapping: PrimaryMuscle[] = [
   {
-    id: 'arms',
-    nameHe: 'זרועות',
-    nameEn: 'Arms',
+    id: 'biceps_brachii',
+    nameHe: 'זרוע קדמית',
+    nameEn: 'Biceps Brachii',
     icon: '💪',
-    subMuscles: [
-      { id: 'biceps', nameHe: 'בייספס', nameEn: 'Biceps' },
-      { id: 'triceps', nameHe: 'טרייספס', nameEn: 'Triceps' },
-    ],
+    subMuscles: [],
+  },
+  {
+    id: 'triceps',
+    nameHe: 'זרוע אחורית',
+    nameEn: 'Triceps',
+    icon: '💪',
+    subMuscles: [],
   },
   {
     id: 'chest',
