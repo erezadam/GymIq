@@ -23,6 +23,7 @@ export interface ReportedSet {
   speed?: number          // Speed (km/h or pace)
   distance?: number       // Distance (meters or km)
   incline?: number        // Incline 1-20 (for treadmills, bikes, etc.)
+  zone?: number           // Heart rate zone 1-5
   completedAt?: Date
   // Assistance fields
   assistanceWeight?: number  // For graviton - counterweight in kg

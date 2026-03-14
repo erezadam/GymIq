@@ -160,6 +160,7 @@ export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'
         ...(set.speed !== undefined && set.speed > 0 && { speed: set.speed }),
         ...(set.distance !== undefined && set.distance > 0 && { distance: set.distance }),
         ...(set.incline !== undefined && set.incline > 0 && { incline: set.incline }),
+        ...(set.zone !== undefined && set.zone > 0 && { zone: set.zone }),
         // Assistance fields
         ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
         ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
@@ -1015,6 +1016,7 @@ export async function autoSaveWorkout(
         ...(set.speed !== undefined && set.speed > 0 && { speed: set.speed }),
         ...(set.distance !== undefined && set.distance > 0 && { distance: set.distance }),
         ...(set.incline !== undefined && set.incline > 0 && { incline: set.incline }),
+        ...(set.zone !== undefined && set.zone > 0 && { zone: set.zone }),
         // Assistance fields
         ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
         ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
@@ -1347,6 +1349,7 @@ export async function completeWorkout(
         ...(set.speed !== undefined && set.speed > 0 && { speed: set.speed }),
         ...(set.distance !== undefined && set.distance > 0 && { distance: set.distance }),
         ...(set.incline !== undefined && set.incline > 0 && { incline: set.incline }),
+        ...(set.zone !== undefined && set.zone > 0 && { zone: set.zone }),
         // Assistance fields
         ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
         ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),

@@ -315,6 +315,60 @@ export function SetReportRow({
     )
   }
 
+  // Heart rate zone definitions
+  const HEART_RATE_ZONES = [
+    { zone: 1, label: 'אזור 1', range: '< 121 פע/לד', color: '#3B82F6' },
+    { zone: 2, label: 'אזור 2', range: '122-133 פע/לד', color: '#10B981' },
+    { zone: 3, label: 'אזור 3', range: '134-143 פע/לד', color: '#F59E0B' },
+    { zone: 4, label: 'אזור 4', range: '144-153 פע/לד', color: '#F97316' },
+    { zone: 5, label: 'אזור 5', range: '154+ פע/לד', color: '#EF4444' },
+  ]
+
+  // Render zone selector (heart rate zones 1-5)
+  const renderZoneInput = () => (
+    <div className="set-input-group" dir="rtl">
+      <label className="set-label">אזור דופק</label>
+      <div className="flex gap-1">
+        {HEART_RATE_ZONES.map(({ zone, range, color }) => (
+          <button
+            key={zone}
+            type="button"
+            onClick={() => onUpdate({ zone })}
+            className="flex flex-col items-center rounded px-1.5 py-1 text-[10px] leading-tight transition-all"
+            style={{
+              border: `1.5px solid ${set.zone === zone ? color : '#4B5563'}`,
+              background: set.zone === zone ? `${color}22` : 'transparent',
+              color: set.zone === zone ? color : '#9CA3AF',
+              minWidth: '36px',
+            }}
+            title={range}
+          >
+            <span className="font-bold text-xs">{zone}</span>
+            <span className="opacity-70">{range.split(' ')[0]}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+
+  // Render time input in minutes only (for time_zone)
+  const renderTimeMinutesInput = () => (
+    <div className="set-input-group">
+      <label className="set-label">זמן (דקות)</label>
+      <input
+        type="text"
+        inputMode="numeric"
+        className="set-input"
+        value={set.time ? Math.round(set.time / 60) || '' : ''}
+        onChange={(e) => {
+          const mins = parseInt(e.target.value) || 0
+          onUpdate({ time: mins * 60 })
+        }}
+        placeholder="0"
+      />
+    </div>
+  )
+
   // Parse reportType to determine which fields to show
   // Supports both exact IDs (e.g., 'time_speed') and field-based parsing
   const getFieldsFromReportType = (type: string): string[] => {
@@ -334,6 +388,7 @@ export function SetReportRow({
     if (normalized.includes('distance') || normalized.includes('מרחק')) fields.push('distance')
     // Support variations for incline: incline, slope, slop, slot, שיפוע
     if (normalized.includes('incline') || normalized.includes('slope') || normalized.includes('slop') || normalized.includes('slot') || normalized.includes('שיפוע')) fields.push('incline')
+    if (normalized.includes('zone') || normalized.includes('אזור')) fields.push('zone')
 
     // If no fields detected, default to weight + reps
     if (fields.length === 0) {
@@ -371,6 +426,9 @@ export function SetReportRow({
     const fields = getFieldsFromReportType(reportType)
     console.log(`🏋️ SetReportRow: reportType=${reportType}, fields=`, fields)
 
+    // For time_zone, use minutes-only time input instead of MM:SS
+    const isTimeZone = reportType.toLowerCase().includes('zone')
+
     return (
       <>
         {fields.map((field) => {
@@ -380,7 +438,7 @@ export function SetReportRow({
             case 'reps':
               return <span key="reps">{renderRepsInput()}</span>
             case 'time':
-              return <span key="time">{renderTimeInput()}</span>
+              return <span key="time">{isTimeZone ? renderTimeMinutesInput() : renderTimeInput()}</span>
             case 'intensity':
               return <span key="intensity">{renderIntensityInput()}</span>
             case 'speed':
@@ -389,6 +447,8 @@ export function SetReportRow({
               return <span key="distance">{renderDistanceInput()}</span>
             case 'incline':
               return <span key="incline">{renderInclineInput()}</span>
+            case 'zone':
+              return <span key="zone">{renderZoneInput()}</span>
             default:
               return null
           }

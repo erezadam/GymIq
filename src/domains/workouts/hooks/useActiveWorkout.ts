@@ -200,6 +200,7 @@ export function useActiveWorkout() {
               ...(set.speed !== undefined && set.speed > 0 && { speed: set.speed }),
               ...(set.distance !== undefined && set.distance > 0 && { distance: set.distance }),
               ...(set.incline !== undefined && set.incline > 0 && { incline: set.incline }),
+              ...(set.zone !== undefined && set.zone > 0 && { zone: set.zone }),
               // Assistance fields
               ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
               ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
@@ -271,6 +272,7 @@ export function useActiveWorkout() {
                   ...(set.speed !== undefined && set.speed > 0 && { speed: set.speed }),
                   ...(set.distance !== undefined && set.distance > 0 && { distance: set.distance }),
                   ...(set.incline !== undefined && set.incline > 0 && { incline: set.incline }),
+                  ...(set.zone !== undefined && set.zone > 0 && { zone: set.zone }),
                   ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
                   ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
                 })),
@@ -404,6 +406,7 @@ export function useActiveWorkout() {
                     ...(set.speed && { speed: set.speed }),
                     ...(set.distance && { distance: set.distance }),
                     ...(set.incline && { incline: set.incline }),
+                    ...(set.zone && { zone: set.zone }),
                     // Assistance fields
                     assistanceWeight: set.assistanceWeight,
                     assistanceBand: set.assistanceBand,
@@ -714,6 +717,7 @@ export function useActiveWorkout() {
               ...(set.speed && { speed: set.speed }),
               ...(set.distance && { distance: set.distance }),
               ...(set.incline && { incline: set.incline }),
+              ...(set.zone && { zone: set.zone }),
               // Assistance fields
               assistanceWeight: set.assistanceWeight,
               assistanceBand: set.assistanceBand,
@@ -891,6 +895,7 @@ export function useActiveWorkout() {
                 ...(set.speed !== undefined && set.speed > 0 && { speed: set.speed }),
                 ...(set.distance !== undefined && set.distance > 0 && { distance: set.distance }),
                 ...(set.incline !== undefined && set.incline > 0 && { incline: set.incline }),
+                ...(set.zone !== undefined && set.zone > 0 && { zone: set.zone }),
                 // Assistance fields
                 ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
                 ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
@@ -1324,6 +1329,7 @@ export function useActiveWorkout() {
                 ...(set.speed !== undefined && set.speed > 0 && { speed: set.speed }),
                 ...(set.distance !== undefined && set.distance > 0 && { distance: set.distance }),
                 ...(set.incline !== undefined && set.incline > 0 && { incline: set.incline }),
+                ...(set.zone !== undefined && set.zone > 0 && { zone: set.zone }),
                 // Assistance fields
                 ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
                 ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),
@@ -1520,6 +1526,7 @@ export function useActiveWorkout() {
             ...(set.speed !== undefined && set.speed > 0 && { speed: set.speed }),
             ...(set.distance !== undefined && set.distance > 0 && { distance: set.distance }),
             ...(set.incline !== undefined && set.incline > 0 && { incline: set.incline }),
+            ...(set.zone !== undefined && set.zone > 0 && { zone: set.zone }),
             // Assistance fields
             ...(set.assistanceWeight !== undefined && { assistanceWeight: set.assistanceWeight }),
             ...(set.assistanceBand && { assistanceBand: set.assistanceBand }),

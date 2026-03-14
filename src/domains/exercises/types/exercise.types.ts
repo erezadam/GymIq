@@ -62,6 +62,7 @@ export type ExerciseReportType =
   | 'reps_only'     // חזרות בלבד (מתח, שכיבות סמיכה)
   | 'time_only'     // זמן בלבד (פלאנק, ריצה)
   | 'reps_time'     // חזרות + זמן (AMRAP)
+  | 'time_zone'     // זמן + אזור דופק (1-5)
   | string          // Dynamic types from Firebase
 
 // Main Exercise interface

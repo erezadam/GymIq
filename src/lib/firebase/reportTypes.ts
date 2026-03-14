@@ -22,7 +22,11 @@ import { defaultReportTypes } from '@/domains/exercises/types/reportTypes'
 
 const COLLECTION_NAME = 'reportTypes'
 
+// Auto-sync missing defaults once per session
+let syncOncePromise: Promise<void> | null = null
+
 // Get all report types from Firebase (or return defaults if empty)
+// Automatically syncs missing defaults into Firebase on first call
 export async function getReportTypes(): Promise<ReportType[]> {
   try {
     const reportTypesRef = collection(db, COLLECTION_NAME)
@@ -35,12 +39,50 @@ export async function getReportTypes(): Promise<ReportType[]> {
       return defaultReportTypes
     }
 
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate(),
-      updatedAt: doc.data().updatedAt?.toDate(),
+    const reportTypes = snapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+      createdAt: d.data().createdAt?.toDate(),
+      updatedAt: d.data().updatedAt?.toDate(),
     })) as ReportType[]
+
+    // Auto-sync missing defaults once per session
+    if (!syncOncePromise) {
+      const existingIds = new Set(reportTypes.map(rt => rt.id))
+      const missing = defaultReportTypes.filter(rt => !existingIds.has(rt.id))
+      if (missing.length > 0) {
+        syncOncePromise = (async () => {
+          for (const rt of missing) {
+            await setDoc(doc(db, COLLECTION_NAME, rt.id), {
+              nameHe: rt.nameHe,
+              nameEn: rt.nameEn,
+              fields: rt.fields,
+              isActive: rt.isActive,
+              sortOrder: rt.sortOrder,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            })
+          }
+          console.log(`📋 Auto-synced ${missing.length} missing report types to Firebase`)
+        })()
+      } else {
+        syncOncePromise = Promise.resolve()
+      }
+    }
+
+    // If there were missing report types, re-fetch to include them
+    await syncOncePromise
+    if (reportTypes.length < defaultReportTypes.length) {
+      const freshSnapshot = await getDocs(q)
+      return freshSnapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+        createdAt: d.data().createdAt?.toDate(),
+        updatedAt: d.data().updatedAt?.toDate(),
+      })) as ReportType[]
+    }
+
+    return reportTypes
   } catch (error) {
     console.error('Error fetching report types:', error)
     return defaultReportTypes
