@@ -82,6 +82,8 @@ export const muscleGroupNames: Record<string, string> = {
   gluteus_maximus: 'ישבן',
   warmup: 'חימום',
   cardio: 'אירובי',
+  functional: 'פונקציונלי',
+  stretching: 'מתיחות',
 }
 
 // Common Hebrew labels used across the app

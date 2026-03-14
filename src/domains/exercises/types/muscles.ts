@@ -94,12 +94,33 @@ export const defaultMuscleMapping: PrimaryMuscle[] = [
   },
   {
     id: 'cardio',
-    nameHe: 'אירובי ',
+    nameHe: 'אירובי',
     nameEn: 'Cardio',
     icon: '❤️',
     subMuscles: [
       { id: 'warmup', nameHe: 'חימום', nameEn: 'Warmup' },
     ],
+  },
+  {
+    id: 'warmup',
+    nameHe: 'חימום',
+    nameEn: 'Warmup',
+    icon: '🔥',
+    subMuscles: [],
+  },
+  {
+    id: 'functional',
+    nameHe: 'פונקציונלי',
+    nameEn: 'Functional',
+    icon: '⚡',
+    subMuscles: [],
+  },
+  {
+    id: 'stretching',
+    nameHe: 'מתיחות',
+    nameEn: 'Stretching',
+    icon: '🧘',
+    subMuscles: [],
   },
 ]
 
