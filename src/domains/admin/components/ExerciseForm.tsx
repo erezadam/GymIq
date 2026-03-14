@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm, useFieldArray } from 'react-hook-form'
@@ -15,7 +15,7 @@ import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
 import { getMuscles } from '@/lib/firebase/muscles'
 import { getActiveReportTypes } from '@/lib/firebase/reportTypes'
 import { getActiveBandTypes } from '@/lib/firebase/bandTypes'
-import { VALID_EXERCISE_CATEGORIES_SET, SUB_MUSCLE_TO_CATEGORY } from '@/lib/firebase/exercises'
+import { SUB_MUSCLE_TO_CATEGORY } from '@/lib/firebase/exercises'
 import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
 import type { ReportType } from '@/domains/exercises/types/reportTypes'
 import type { BandType } from '@/domains/exercises/types/bands'
@@ -73,6 +73,12 @@ export default function ExerciseForm() {
     queryKey: ['muscles'],
     queryFn: getMuscles,
   })
+
+  // Build valid muscle IDs dynamically from Firebase data
+  const validMuscleIds = useMemo(
+    () => new Set(musclesData.map(m => m.id)),
+    [musclesData]
+  )
 
   // Fetch report types from Firebase
   const { data: reportTypesData = [] } = useQuery<ReportType[]>({
@@ -200,9 +206,9 @@ export default function ExerciseForm() {
 
       // VALIDATION FIX: If the category is not valid, try to map it to a valid category
       // This handles cases where exercises were saved with sub-muscle IDs as category
-      if (categoryToSet && !VALID_EXERCISE_CATEGORIES_SET.has(categoryToSet)) {
+      if (categoryToSet && !validMuscleIds.has(categoryToSet)) {
         const mappedCategory = SUB_MUSCLE_TO_CATEGORY[categoryToSet]
-        if (mappedCategory && VALID_EXERCISE_CATEGORIES_SET.has(mappedCategory)) {
+        if (mappedCategory && validMuscleIds.has(mappedCategory)) {
           console.log('🔥 ExerciseForm: Mapping invalid category to valid one:', {
             original: categoryToSet,
             mapped: mappedCategory,
@@ -288,8 +294,8 @@ export default function ExerciseForm() {
     console.log('🔥 ExerciseForm: onSubmit called with data:', data)
     console.log('🔥 ExerciseForm: reportType selected:', data.reportType)
 
-    // VALIDATION: Ensure category is a valid primary category (not a sub-muscle)
-    if (!VALID_EXERCISE_CATEGORIES_SET.has(data.category)) {
+    // VALIDATION: Ensure category is a valid primary category from Firebase
+    if (validMuscleIds.size > 0 && !validMuscleIds.has(data.category)) {
       console.error('🔥 ExerciseForm: Invalid category:', data.category)
       toast.error(`קטגוריה לא תקינה: ${data.category}. יש לבחור קטגוריה ראשית (רגליים, חזה, גב וכו')`)
       return
@@ -493,9 +499,7 @@ export default function ExerciseForm() {
               >
                 <option value="">בחר שריר ראשי</option>
                 {/* Filter to only show muscles with valid category IDs */}
-                {musclesData
-                  .filter(muscle => VALID_EXERCISE_CATEGORIES_SET.has(muscle.id))
-                  .map((muscle) => (
+                {musclesData.map((muscle) => (
                   <option key={muscle.id} value={muscle.id}>
                     {muscle.nameHe}
                   </option>
@@ -597,7 +601,6 @@ export default function ExerciseForm() {
               </p>
               <div className="flex flex-wrap gap-2">
                 {musclesData
-                  .filter(muscle => VALID_EXERCISE_CATEGORIES_SET.has(muscle.id))
                   .filter(muscle => muscle.id !== selectedCategory) // Exclude current primary
                   .map((muscle) => (
                     <label
