@@ -131,6 +131,15 @@ interface MuscleRow {
   exercises: ExerciseDetail[]
 }
 
+interface SummaryRow {
+  category: string
+  categoryHe: string
+  totalSets: number
+  avgReps: number
+  setsGreen: boolean
+  repsGreen: boolean
+}
+
 const fmt = (d: Date) =>
   `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
 
@@ -170,6 +179,7 @@ type WeekMode = 'last' | 'current' | 'custom'
 function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () => void }) {
   const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState<MuscleRow[]>([])
+  const [summaryRows, setSummaryRows] = useState<SummaryRow[]>([])
   const [weekRange, setWeekRange] = useState({ startStr: '', endStr: '' })
   const [weekMode, setWeekMode] = useState<WeekMode>('last')
   const [customStart, setCustomStart] = useState('')
@@ -383,6 +393,37 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
         })
 
         setRows(result)
+
+        // Build summary rows — aggregate by category (primary muscle group)
+        const summaryMap = new Map<string, { categoryHe: string; sets: number; reps: number; repsCount: number }>()
+        for (const row of result) {
+          const existing = summaryMap.get(row.category) || { categoryHe: row.categoryHe, sets: 0, reps: 0, repsCount: 0 }
+          existing.sets += row.totalSets
+          if (row.avgReps > 0) {
+            // Weight the reps by exercise count for proper averaging
+            for (const ex of row.exercises) {
+              if (ex.avgReps > 0) {
+                existing.reps += ex.avgReps * ex.sets
+                existing.repsCount += ex.sets
+              }
+            }
+          }
+          summaryMap.set(row.category, existing)
+        }
+        const summary: SummaryRow[] = Array.from(summaryMap.entries()).map(([category, data]) => {
+          const totalSets = Math.round(data.sets * 10) / 10
+          const avgReps = data.repsCount > 0 ? Math.round((data.reps / data.repsCount) * 10) / 10 : 0
+          return {
+            category,
+            categoryHe: data.categoryHe,
+            totalSets,
+            avgReps,
+            setsGreen: totalSets >= MIN_SETS,
+            repsGreen: avgReps >= MIN_AVG_REPS,
+          }
+        })
+        summary.sort((a, b) => b.totalSets - a.totalSets)
+        setSummaryRows(summary)
       } catch (err) {
         console.error('Error analyzing weekly muscles:', err)
       } finally {
@@ -592,6 +633,45 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
             </div>
           ) : (
             <div className="overflow-x-auto -mx-4 px-4">
+              {/* Summary Table — aggregated by muscle group */}
+              <h3 className="text-sm font-bold text-text-primary mb-2">סיכום לפי קבוצת שרירים</h3>
+              <table className="w-full text-sm min-w-[360px] mb-6">
+                <thead>
+                  <tr className="text-text-secondary text-xs border-b border-dark-border">
+                    <th className="text-right py-2 pr-2 font-medium">קבוצת שרירים</th>
+                    <th className="text-right py-2 font-medium">סטים</th>
+                    <th className="text-center py-2 pl-2 font-medium">ממוצע חזרות</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {summaryRows.map((row, i) => (
+                    <tr key={row.category} className={i % 2 === 0 ? 'bg-dark-card/40' : ''}>
+                      <td className="py-2.5 pr-2 text-text-primary font-medium">{row.categoryHe}</td>
+                      <td className="py-2.5">
+                        {row.totalSets > 0 ? (
+                          <div className={`font-medium ${row.setsGreen ? 'text-status-success' : 'text-status-error'}`}>
+                            {Number.isInteger(row.totalSets) ? row.totalSets : row.totalSets.toFixed(1)}
+                          </div>
+                        ) : (
+                          <div className="text-text-muted">—</div>
+                        )}
+                      </td>
+                      <td className="py-2.5 pl-2 text-center">
+                        {row.avgReps > 0 ? (
+                          <span className={`font-medium ${row.repsGreen ? 'text-status-success' : 'text-status-error'}`}>
+                            {row.avgReps}
+                          </span>
+                        ) : (
+                          <span className="text-text-muted">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Detailed Table — per sub-muscle */}
+              <h3 className="text-sm font-bold text-text-primary mb-2">פירוט לפי תת-שריר</h3>
               <table className="w-full text-sm min-w-[360px]">
                 <thead>
                   <tr className="text-text-secondary text-xs border-b border-dark-border">
