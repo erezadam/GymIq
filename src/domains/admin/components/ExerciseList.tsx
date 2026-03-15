@@ -379,33 +379,42 @@ export default function ExerciseList() {
   }
 
   // Handle export
+  // Shared helper: build enriched export data with all fields
+  const buildExportData = async () => {
+    const data = await exerciseService.exportExercises()
+    const joinArr = (arr: any[] | undefined) => (arr || []).join('|')
+    return data.map(ex => ({
+      id: ex.id,
+      name: ex.name,
+      nameHe: ex.nameHe,
+      category: ex.category,
+      categoryHe: dynamicCategoryNames[ex.category] || ex.category,
+      primaryMuscle: ex.primaryMuscle,
+      primaryMuscleHe: dynamicCategoryNames[ex.primaryMuscle] || ex.primaryMuscle,
+      secondaryMuscles: joinArr(ex.secondaryMuscles),
+      secondaryMuscleCredits: joinArr((ex as any).secondaryMuscleCredits),
+      secondaryMuscleCreditsHe: ((ex as any).secondaryMuscleCredits || []).map((id: string) => dynamicCategoryNames[id] || id).join('|'),
+      equipment: ex.equipment,
+      difficulty: ex.difficulty,
+      complexity: (ex as any).complexity || '',
+      reportType: ex.reportType || 'weight_reps',
+      assistanceTypes: joinArr(ex.assistanceTypes),
+      availableBands: joinArr(ex.availableBands),
+      instructions: joinArr(ex.instructions),
+      instructionsHe: joinArr(ex.instructionsHe),
+      targetMuscles: joinArr(ex.targetMuscles),
+      imageUrl: ex.imageUrl || '',
+      tips: joinArr(ex.tips),
+      tipsHe: joinArr(ex.tipsHe),
+      createdAt: formatTimestamp((ex as any).createdAt),
+      updatedAt: formatTimestamp((ex as any).updatedAt),
+      lastEditedAt: formatTimestamp((ex as any).lastEditedAt),
+    }))
+  }
+
   const handleExport = async () => {
     try {
-      const data = await exerciseService.exportExercises()
-      const enrichedData = data.map(ex => ({
-        id: ex.id,
-        name: ex.name,
-        nameHe: ex.nameHe,
-        category: ex.category,
-        categoryHe: dynamicCategoryNames[ex.category] || ex.category,
-        primaryMuscle: ex.primaryMuscle,
-        primaryMuscleHe: dynamicCategoryNames[ex.primaryMuscle] || ex.primaryMuscle,
-        secondaryMuscles: ex.secondaryMuscles || [],
-        equipment: ex.equipment,
-        difficulty: ex.difficulty,
-        reportType: ex.reportType || 'weight_reps',
-        assistanceTypes: ex.assistanceTypes || [],
-        availableBands: ex.availableBands || [],
-        instructions: ex.instructions || [],
-        instructionsHe: ex.instructionsHe || [],
-        targetMuscles: ex.targetMuscles || [],
-        imageUrl: ex.imageUrl || '',
-        tips: ex.tips || [],
-        tipsHe: ex.tipsHe || [],
-        createdAt: formatTimestamp((ex as any).createdAt),
-        updatedAt: formatTimestamp((ex as any).updatedAt),
-        lastEditedAt: formatTimestamp((ex as any).lastEditedAt),
-      }))
+      const enrichedData = await buildExportData()
       const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), totalExercises: enrichedData.length, exercises: enrichedData }, null, 2)], {
         type: 'application/json',
       })
@@ -421,55 +430,49 @@ export default function ExerciseList() {
     }
   }
 
+  // CSV/Excel shared headers
+  const exportHeaders = [
+    'מזהה', 'שם באנגלית', 'שם בעברית',
+    'קטגוריה', 'קטגוריה בעברית',
+    'תת שריר', 'תת שריר בעברית',
+    'שרירים משניים', 'קרדיט 50%', 'קרדיט 50% בעברית',
+    'ציוד', 'רמת קושי', 'מורכבות', 'סוג דיווח',
+    'סוגי עזרה', 'גומיות זמינות',
+    'הוראות אנגלית', 'הוראות עברית',
+    'שרירי מטרה', 'כתובת תמונה',
+    'טיפים אנגלית', 'טיפים עברית',
+    'נוצר', 'עודכן', 'נערך לאחרונה',
+  ]
+
+  const exportRowValues = (ex: Awaited<ReturnType<typeof buildExportData>>[number]) => [
+    ex.id, ex.name, ex.nameHe,
+    ex.category, ex.categoryHe,
+    ex.primaryMuscle, ex.primaryMuscleHe,
+    ex.secondaryMuscles, ex.secondaryMuscleCredits, ex.secondaryMuscleCreditsHe,
+    ex.equipment, ex.difficulty, ex.complexity, ex.reportType,
+    ex.assistanceTypes, ex.availableBands,
+    ex.instructions, ex.instructionsHe,
+    ex.targetMuscles, ex.imageUrl,
+    ex.tips, ex.tipsHe,
+    ex.createdAt, ex.updatedAt, ex.lastEditedAt,
+  ]
+
   // Handle CSV export
   const handleExportCSV = async () => {
     try {
-      const data = await exerciseService.exportExercises()
-      const headers = [
-        'מזהה', 'שם באנגלית', 'שם בעברית',
-        'קטגוריה', 'קטגוריה בעברית',
-        'תת שריר', 'תת שריר בעברית',
-        'שרירים משניים', 'ציוד', 'רמת קושי', 'סוג דיווח',
-        'סוגי עזרה', 'גומיות זמינות',
-        'הוראות אנגלית', 'הוראות עברית',
-        'שרירי מטרה', 'כתובת תמונה',
-        'טיפים אנגלית', 'טיפים עברית',
-        'נוצר', 'עודכן', 'נערך לאחרונה',
-      ]
+      const enrichedData = await buildExportData()
       const escapeCSV = (val: string) => {
         if (val.includes(',') || val.includes('"') || val.includes('\n')) {
           return `"${val.replace(/"/g, '""')}"`
         }
         return val
       }
-      const joinArr = (arr: any[] | undefined) => (arr || []).join('|')
-      const rows = data.map(ex => [
-        ex.id,
-        ex.name,
-        ex.nameHe,
-        ex.category,
-        dynamicCategoryNames[ex.category] || ex.category,
-        ex.primaryMuscle,
-        dynamicCategoryNames[ex.primaryMuscle] || ex.primaryMuscle,
-        joinArr(ex.secondaryMuscles),
-        ex.equipment,
-        ex.difficulty,
-        ex.reportType || 'weight_reps',
-        joinArr(ex.assistanceTypes),
-        joinArr(ex.availableBands),
-        joinArr(ex.instructions),
-        joinArr(ex.instructionsHe),
-        joinArr(ex.targetMuscles),
-        ex.imageUrl || '',
-        joinArr(ex.tips),
-        joinArr(ex.tipsHe),
-        formatTimestamp((ex as any).createdAt),
-        formatTimestamp((ex as any).updatedAt),
-        formatTimestamp((ex as any).lastEditedAt),
-      ].map(v => escapeCSV(String(v || ''))))
+      const rows = enrichedData.map(ex =>
+        exportRowValues(ex).map(v => escapeCSV(String(v || '')))
+      )
 
       const dateStr = new Date().toISOString().slice(0, 10)
-      const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+      const csvContent = '\uFEFF' + [exportHeaders.join(','), ...rows.map(r => r.join(','))].join('\n')
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -480,6 +483,28 @@ export default function ExerciseList() {
       toast.success('ייצוא CSV הושלם בהצלחה')
     } catch {
       toast.error('שגיאה בייצוא CSV')
+    }
+  }
+
+  // Handle Excel export
+  const handleExportExcel = async () => {
+    try {
+      const XLSX = await import('xlsx')
+      const enrichedData = await buildExportData()
+      const rows = enrichedData.map(ex => exportRowValues(ex).map(v => String(v || '')))
+      const wsData = [exportHeaders, ...rows]
+      const ws = XLSX.utils.aoa_to_sheet(wsData)
+
+      // Set RTL and column widths
+      ws['!cols'] = exportHeaders.map((h) => ({ wch: Math.max(h.length, 12) }))
+
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'תרגילים')
+      const dateStr = new Date().toISOString().slice(0, 10)
+      XLSX.writeFile(wb, `exercises_export_${dateStr}.xlsx`)
+      toast.success('ייצוא Excel הושלם בהצלחה')
+    } catch {
+      toast.error('שגיאה בייצוא Excel')
     }
   }
 
@@ -687,6 +712,13 @@ export default function ExerciseList() {
           >
             <FileSpreadsheet className="w-4 h-4" />
             <span className="hidden sm:inline">CSV</span>
+          </button>
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center gap-2 px-4 py-2 bg-dark-card hover:bg-dark-border rounded-xl text-text-secondary hover:text-text-primary transition-colors"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="hidden sm:inline">Excel</span>
           </button>
           <Link
             to="/admin/exercises/new"

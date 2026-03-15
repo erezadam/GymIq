@@ -77,6 +77,7 @@ export interface Exercise {
   difficulty: ExerciseDifficulty
   complexity?: ExerciseComplexity  // מורכב (compound) = 2+ מפרקים, פשוט (simple) = מפרק 1
   reportType?: string  // סוג דיווח דינמי - ברירת מחדל: weight_reps
+  secondaryMuscleCredits?: string[]  // תת-שרירים שמקבלים 50% קרדיט (e.g. ['triceps', 'gluteus_maximus'])
   assistanceTypes?: AssistanceType[]  // אפשרויות עזרה זמינות לתרגיל (מערך)
   availableBands?: string[]  // רשימת IDs של גומיות זמינות (רק אם 'bands' נמצא ב-assistanceTypes)
   instructions: string[]
@@ -125,6 +126,7 @@ export interface CreateExerciseDto {
   difficulty: ExerciseDifficulty
   complexity?: ExerciseComplexity  // מורכב (compound) = 2+ מפרקים, פשוט (simple) = מפרק 1
   reportType?: string  // סוג דיווח דינמי - ברירת מחדל: weight_reps
+  secondaryMuscleCredits?: string[]  // תת-שרירים שמקבלים 50% קרדיט (e.g. ['triceps', 'gluteus_maximus'])
   assistanceTypes?: AssistanceType[]  // אפשרויות עזרה זמינות לתרגיל (מערך)
   availableBands?: string[]  // רשימת IDs של גומיות זמינות (רק אם 'bands' נמצא ב-assistanceTypes)
   instructions: string[]

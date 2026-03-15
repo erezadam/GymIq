@@ -37,13 +37,24 @@ export async function callGPTForWorkouts(
   muscles: MuscleSummary[],
   assignments: WorkoutMuscleAssignment[],
   filteredExercises: ExerciseSummary[],
-  lastAnalysisSection?: string | null
+  lastAnalysisSection: string | null | undefined,
+  warmupExercise: ExerciseSummary | null,
+  coreExercise: ExerciseSummary | null
 ): Promise<ClaudeFullResponse | null> {
   try {
     const client = await getClient()
 
+    // Build index-to-ID mapping so GPT works with simple numbers instead of long Firestore IDs
+    const indexToId = new Map<number, string>()
+    const idToIndex = new Map<string, number>()
+    filteredExercises.forEach((ex, i) => {
+      const idx = i + 1
+      indexToId.set(idx, ex.id)
+      idToIndex.set(ex.id, idx)
+    })
+
     const systemPrompt = buildSystemPrompt()
-    const userPrompt = buildUserPrompt(data, muscles, assignments, filteredExercises, lastAnalysisSection)
+    const userPrompt = buildUserPrompt(data, muscles, assignments, filteredExercises, lastAnalysisSection, idToIndex, warmupExercise, coreExercise)
 
     functions.logger.info('Calling GPT for workout generation', {
       numWorkouts: data.request.numWorkouts,
@@ -54,7 +65,7 @@ export async function callGPTForWorkouts(
 
     const completion = await client.chat.completions.create({
       model: 'gpt-4o-mini',
-      max_tokens: 4096,
+      max_tokens: 8192,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: systemPrompt },
@@ -72,8 +83,26 @@ export async function callGPTForWorkouts(
       return null
     }
 
+    // Remap numeric indices back to real Firestore IDs
+    let remappedCount = 0
+    let failedCount = 0
+    for (const workout of parsed.workouts) {
+      for (const ex of workout.exercises) {
+        const idx = Number(ex.exerciseId)
+        if (!isNaN(idx) && indexToId.has(idx)) {
+          ex.exerciseId = indexToId.get(idx)!
+          remappedCount++
+        } else {
+          // GPT returned something unexpected — leave as-is for downstream validation
+          failedCount++
+        }
+      }
+    }
+
     functions.logger.info('GPT workouts generated', {
       workoutCount: parsed.workouts.length,
+      remappedIds: remappedCount,
+      failedRemaps: failedCount,
     })
 
     return parsed
@@ -95,10 +124,10 @@ function buildSystemPrompt(): string {
 - כל תרגיל = 3-4 סטים → בממוצע 3 תרגילים לשריר בשבוע
 
 ## כללים חשובים:
-1. השתמש אך ורק ב-exerciseId מרשימת התרגילים שסופקה. אסור להמציא ID חדש!
-2. אל תחזור על תרגילים שנעשו אתמול (רשימת IDs מסופקת)
-3. התאם את מספר התרגילים למשך האימון המבוקש
-4. התחל באימון חימום אם נדרש (תרגיל קרדיו)
+1. השתמש אך ורק במספר האינדקס (idx) מרשימת התרגילים שסופקה. שים את המספר בשדה exerciseId. אסור להמציא מספר שלא ברשימה!
+2. אל תחזור על תרגילים שנעשו אתמול (רשימת אינדקסים מסופקת)
+3. התאם את מספר התרגילים למשך האימון המבוקש — בחר **רק תרגילי כוח** (חימום וליבה נקבעים בנפרד)
+4. אל תכלול תרגילי cardio או core — הם מנוהלים מחוץ לבחירתך
 5. הוסף הסבר קצר (2-3 משפטים) לכל אימון
 6. החזר JSON בלבד
 
@@ -129,6 +158,12 @@ function buildSystemPrompt(): string {
 אחרון. פיניש - קל יחסית, לפאמפ או סיבולת שרירית
 - אל תשים יותר משני תרגילים עם אותה תבנית תנועה באותו אימון
 
+## עקביות ציוד לפי שריר (חובה):
+- לכל קבוצת שרירים באימון, כל התרגילים חייבים להיות מאותו סוג ציוד (eq)
+- בחר מראש לכל שריר: מכונה (machine/cable_machine), משקולות חופשיות (barbell/dumbbell), או משקל גוף (bodyweight)
+- אל תערבב סוגי ציוד שונים לאותו שריר באותו אימון
+- לדוגמה: אם בחרת dumbbell לחזה — כל תרגילי החזה באימון זה יהיו עם dumbbell
+
 ## כיסוי תתי שריר ותבניות תנועה:
 - חזה: עליון, אמצעי, תחתון לאורך השבוע
 - גב: משיכה אנכית + אופקית לאורך השבוע
@@ -148,7 +183,7 @@ function buildSystemPrompt(): string {
     {
       "exercises": [
         {
-          "exerciseId": "string (ID מרשימת התרגילים)",
+          "exerciseId": number (מספר האינדקס idx מרשימת התרגילים),
           "isWarmup": boolean,
           "targetSets": number (1 לחימום, 3-4 לתרגיל רגיל),
           "targetReps": "string (טווח חזרות)",
@@ -171,18 +206,23 @@ function buildSystemPrompt(): string {
 /**
  * Build exercise history section for prompt
  */
-function buildExerciseHistorySection(exerciseHistory?: ExercisePerformanceData[]): string {
+function buildExerciseHistorySection(
+  exerciseHistory: ExercisePerformanceData[] | undefined,
+  idToIndex: Map<string, number>
+): string {
   if (!exerciseHistory || exerciseHistory.length === 0) {
     return `\n**היסטוריית ביצוע:** אין נתונים - משתמש חדש, המלץ משקלות שמרניים\n`
   }
 
-  const historyMap = exerciseHistory.map(eh => ({
-    id: eh.exerciseId,
-    lastWeight: eh.lastWeight,
-    lastReps: eh.lastReps,
-    date: eh.lastDate,
-    ...(eh.lastVolume && eh.lastVolume > 0 && { lastVolume: eh.lastVolume }),
-  }))
+  const historyMap = exerciseHistory
+    .filter(eh => idToIndex.has(eh.exerciseId))
+    .map(eh => ({
+      idx: idToIndex.get(eh.exerciseId)!,
+      lastWeight: eh.lastWeight,
+      lastReps: eh.lastReps,
+      date: eh.lastDate,
+      ...(eh.lastVolume && eh.lastVolume > 0 && { lastVolume: eh.lastVolume }),
+    }))
 
   return `
 **היסטוריית ביצוע (קריטי - בסס המלצות על זה!):**
@@ -200,12 +240,16 @@ function buildUserPrompt(
   muscles: MuscleSummary[],
   assignments: WorkoutMuscleAssignment[],
   exercises: ExerciseSummary[],
-  lastAnalysisSection?: string | null
+  lastAnalysisSection: string | null | undefined,
+  idToIndex: Map<string, number>,
+  warmupExercise: ExerciseSummary | null,
+  coreExercise: ExerciseSummary | null
 ): string {
   const { request, recentWorkouts, yesterdayExerciseIds, exerciseHistory } = data
 
-  const exerciseCount = request.duration <= 60 ? 9 : request.duration <= 75 ? 10 : 11
-  const totalPerWorkout = exerciseCount + (request.warmupDuration > 0 ? 1 : 0)
+  // Strength exercise count (warmup + core added separately)
+  const strengthCount = request.duration <= 60 ? 9 : request.duration <= 75 ? 11 : 14
+  const totalPerWorkout = strengthCount + (warmupExercise ? 1 : 0) + (coreExercise ? 1 : 0)
 
   // Build per-workout muscle section
   const workoutAssignmentsSection = assignments.map((a, i) => {
@@ -229,13 +273,21 @@ function buildUserPrompt(
       return `${muscle?.nameHe || id}: ${count} אימונים, ~${setsPerWorkout} סטים/אימון (~${exercisesPerWorkout} תרגילים)`
     }).join('\n')
 
+  const warmupLine = warmupExercise
+    ? `\n**תרגיל חימום נקבע מראש:** "${warmupExercise.nameHe}" — יתווסף ראשון אוטומטית. אל תבחר תרגילי cardio.`
+    : ''
+  const coreLine = coreExercise
+    ? `\n**תרגיל ליבה נקבע מראש:** "${coreExercise.nameHe}" — יתווסף לפני התרגיל האחרון אוטומטית. אל תבחר תרגילי core.`
+    : ''
+
   return `צור ${request.numWorkouts} אימונים:
 
 **הגדרות:**
 - מבנה: ${request.workoutStructure === 'full_body' ? 'כל הגוף' : 'Upper/Lower Split'}
 - משך: ${request.duration} דקות
-- חימום: ${request.warmupDuration > 0 ? `${request.warmupDuration} דקות (תרגיל קרדיו אחד)` : 'ללא'}
-- תרגילים: ${exerciseCount} כוח + ${request.warmupDuration > 0 ? '1 חימום' : '0'} = ${totalPerWorkout} סה"כ לכל אימון
+- תרגילי כוח: בדיוק ${strengthCount} לכל אימון (בלי חימום ובלי ליבה — הם מנוהלים בנפרד)
+- סה"כ באימון: ${totalPerWorkout} (${strengthCount} כוח${warmupExercise ? ' + 1 חימום' : ''}${coreExercise ? ' + 1 ליבה' : ''})
+${warmupLine}${coreLine}
 
 **שרירים לכל אימון (חובה לעקוב!):**
 ${workoutAssignmentsSection}
@@ -243,22 +295,23 @@ ${workoutAssignmentsSection}
 **חלוקת סטים (10 סטים/שריר/שבוע):**
 ${setsPerMuscleSection}
 
-**תרגילים זמינים:**
-${JSON.stringify(exercises.map((e) => ({ id: e.id, nameHe: e.nameHe, muscle: e.primaryMuscle })), null, 0)}
+**תרגילים זמינים (השתמש ב-idx כ-exerciseId!):**
+${JSON.stringify(exercises.map((e, i) => ({ idx: i + 1, nameHe: e.nameHe, muscle: e.primaryMuscle, eq: e.equipment || 'other' })), null, 0)}
 
 **שרירים:**
 ${JSON.stringify(muscles.map((m) => ({ id: m.id, nameHe: m.nameHe, region: m.bodyRegion })), null, 0)}
 
-**אל תכלול (נעשו אתמול):**
-${JSON.stringify(yesterdayExerciseIds)}
+**אל תכלול (נעשו אתמול, לפי idx):**
+${JSON.stringify(yesterdayExerciseIds.map(id => idToIndex.get(id)).filter(Boolean))}
 
 **היסטוריית אימונים (5 אחרונים):**
 ${JSON.stringify(recentWorkouts.slice(0, 5))}
-${buildExerciseHistorySection(exerciseHistory)}${lastAnalysisSection || ''}
+${buildExerciseHistorySection(exerciseHistory, idToIndex)}${lastAnalysisSection || ''}
 **חובה:**
 - לכל תרגיל: recommendation עם weight, repRange, sets, reasoning
-- כל אימון: בדיוק ${totalPerWorkout} תרגילים
+- כל אימון: בדיוק **${strengthCount} תרגילי כוח** (בלי חימום, בלי core — הם מנוהלים בנפרד!)
 - עקוב אחרי חלוקת השרירים לכל אימון!
 - אל תחזור על תרגילים בין אימונים ככל האפשר
+- לכל שריר — כל התרגילים מאותו סוג ציוד (eq). בחר ציוד אחד per muscle per workout
 - החזר JSON בלבד`
 }

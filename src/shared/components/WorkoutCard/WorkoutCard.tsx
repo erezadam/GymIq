@@ -207,20 +207,37 @@ export function WorkoutCard({
                             {exercise.sets.map((set, setIdx) => {
                               const reps = set.actualReps || set.targetReps || 0
                               const weight = set.actualWeight || set.targetWeight || 0
+                              const time = (set as any).time as number | undefined
+                              const zone = (set as any).zone as number | undefined
+                              const isCardioSet = (time !== undefined && time > 0) || (zone !== undefined && zone > 0)
 
                               return (
                                 <div key={setIdx} className="flex items-center gap-2 text-sm">
                                   <span className="text-text-muted w-12">סט {setIdx + 1}:</span>
-                                  <span className="text-white">{reps} חזרות</span>
 
-                                  {/* Show appropriate weight/assistance info */}
-                                  {set.assistanceWeight !== undefined && set.assistanceWeight > 0 ? (
-                                    <span className="text-teal-400">• עזרה: {set.assistanceWeight} ק"ג</span>
-                                  ) : set.assistanceBand ? (
-                                    <span className="text-purple-400">• {bandNameMap[set.assistanceBand] || set.assistanceBand}</span>
-                                  ) : weight > 0 ? (
-                                    <span className="text-text-muted">• {weight} ק"ג</span>
-                                  ) : null}
+                                  {isCardioSet ? (
+                                    <>
+                                      {time !== undefined && time > 0 && (
+                                        <span className="text-white">{Math.round(time / 60)} דק׳</span>
+                                      )}
+                                      {zone !== undefined && zone > 0 && (
+                                        <span className="text-blue-400">• אזור {zone}</span>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="text-white">{reps} חזרות</span>
+
+                                      {/* Show appropriate weight/assistance info */}
+                                      {set.assistanceWeight !== undefined && set.assistanceWeight > 0 ? (
+                                        <span className="text-teal-400">• עזרה: {set.assistanceWeight} ק"ג</span>
+                                      ) : set.assistanceBand ? (
+                                        <span className="text-purple-400">• {bandNameMap[set.assistanceBand] || set.assistanceBand}</span>
+                                      ) : weight > 0 ? (
+                                        <span className="text-text-muted">• {weight} ק"ג</span>
+                                      ) : null}
+                                    </>
+                                  )}
                                 </div>
                               )
                             })}

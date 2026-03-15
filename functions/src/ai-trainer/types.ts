@@ -32,6 +32,7 @@ export interface ExerciseSummary {
   primaryMuscle: string
   category?: string
   imageUrl?: string
+  equipment?: string
 }
 
 // Muscle summary with bodyRegion for split logic
