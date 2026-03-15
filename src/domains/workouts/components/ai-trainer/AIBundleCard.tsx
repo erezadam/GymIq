@@ -12,7 +12,7 @@ import {
   Trash2,
   Dumbbell,
 } from 'lucide-react'
-import { getMuscleNameHe } from '@/utils/muscleTranslations'
+import { getMuscleNameHe, getCategoryNameHe } from '@/utils/muscleTranslations'
 import { getWorkoutById } from '@/lib/firebase/workoutHistory'
 import type { WorkoutHistorySummary, WorkoutHistoryEntry, WorkoutCompletionStatus } from '@/domains/workouts/types'
 
@@ -212,42 +212,71 @@ export function AIBundleCard({
                       <p className="text-text-muted text-sm mt-2">טוען תרגילים...</p>
                     </div>
                   ) : expandedWorkoutDetails?.exercises ? (
-                    <div className="p-3 space-y-2">
-                      {expandedWorkoutDetails.exercises.map((exercise, exIndex) => (
-                        <div
-                          key={exercise.exerciseId || exIndex}
-                          className="flex items-center gap-3 p-2 rounded-lg bg-dark-card/50"
-                        >
-                          {/* Exercise image or icon */}
-                          <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-purple-500/10">
-                            {exercise.imageUrl ? (
-                              <img
-                                src={exercise.imageUrl}
-                                alt={exercise.exerciseNameHe || exercise.exerciseName}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <Dumbbell className="w-5 h-5 text-purple-400" />
+                    <div className="p-3 space-y-3">
+                      {/* Group exercises by muscle category */}
+                      {(() => {
+                        const groups: Record<string, typeof expandedWorkoutDetails.exercises> = {}
+                        expandedWorkoutDetails.exercises.forEach((ex) => {
+                          const muscle = ex.category || 'other'
+                          const muscleHe = getCategoryNameHe(muscle, dynamicMuscleNames)
+                          if (!groups[muscleHe]) groups[muscleHe] = []
+                          groups[muscleHe].push(ex)
+                        })
+                        return Object.entries(groups)
+                          .sort(([a], [b]) => a.localeCompare(b, 'he'))
+                          .map(([muscleGroupHe, exercises]) => (
+                            <div key={muscleGroupHe}>
+                              {/* Muscle group header */}
+                              <div className="flex items-center gap-2 mb-2 px-1">
+                                <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                                <h4 className="text-xs font-bold text-purple-300">
+                                  {muscleGroupHe}
+                                </h4>
+                                <span className="text-xs text-purple-400/50">
+                                  ({exercises.length})
+                                </span>
                               </div>
-                            )}
-                          </div>
-                          {/* Exercise info */}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-text-primary text-sm font-medium truncate">
-                              {exercise.exerciseNameHe || exercise.exerciseName}
-                            </p>
-                            {/* AI Recommendation line */}
-                            {expandedWorkoutDetails.aiRecommendations?.[exercise.exerciseId] ? (
-                              <p className="text-xs mt-0.5" style={{ color: '#A855F7' }}>
-                                {'\u{1F4A1}'} המלצה: {expandedWorkoutDetails.aiRecommendations[exercise.exerciseId].weight > 0
-                                  ? `${expandedWorkoutDetails.aiRecommendations[exercise.exerciseId].weight}kg \u00D7 `
-                                  : ''}{expandedWorkoutDetails.aiRecommendations[exercise.exerciseId].repRange} ({expandedWorkoutDetails.aiRecommendations[exercise.exerciseId].sets} סטים)
-                              </p>
-                            ) : null}
-                          </div>
-                        </div>
-                      ))}
+                              {/* Exercises in this group */}
+                              <div className="space-y-1.5">
+                                {exercises.map((exercise, exIndex) => (
+                                  <div
+                                    key={exercise.exerciseId || exIndex}
+                                    className="flex items-center gap-3 p-2 rounded-lg bg-dark-card/50"
+                                  >
+                                    {/* Exercise image or icon */}
+                                    <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-purple-500/10">
+                                      {exercise.imageUrl ? (
+                                        <img
+                                          src={exercise.imageUrl}
+                                          alt={exercise.exerciseNameHe || exercise.exerciseName}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                          <Dumbbell className="w-5 h-5 text-purple-400" />
+                                        </div>
+                                      )}
+                                    </div>
+                                    {/* Exercise info */}
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-text-primary text-sm font-medium truncate">
+                                        {exercise.exerciseNameHe || exercise.exerciseName}
+                                      </p>
+                                      {/* AI Recommendation line */}
+                                      {expandedWorkoutDetails.aiRecommendations?.[exercise.exerciseId] ? (
+                                        <p className="text-xs mt-0.5 text-purple-400">
+                                          {'\u{1F4A1}'} המלצה: {expandedWorkoutDetails.aiRecommendations[exercise.exerciseId].weight > 0
+                                            ? `${expandedWorkoutDetails.aiRecommendations[exercise.exerciseId].weight}kg \u00D7 `
+                                            : ''}{expandedWorkoutDetails.aiRecommendations[exercise.exerciseId].repRange} ({expandedWorkoutDetails.aiRecommendations[exercise.exerciseId].sets} סטים)
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))
+                      })()}
                     </div>
                   ) : (
                     <div className="p-4 text-center text-text-muted text-sm">
