@@ -63,6 +63,7 @@ async function callCloudFunction(
         primaryMuscle: ex.primaryMuscle,
         category: ex.category,
         imageUrl: ex.imageUrl,
+        equipment: ex.equipment,
       })),
       // Muscles are now read from Firestore by the Cloud Function
       // but we still send them for fallback reference
@@ -268,16 +269,17 @@ function generateFallbackWorkout(
   context: AITrainerContext,
   workoutNumber: number,
   workoutIndex: number,
-  splitSchedule: ('upper' | 'lower')[] | null
+  splitSchedule: ('upper' | 'lower')[] | null,
+  excludeExerciseIds: Set<string>
 ): AIGeneratedWorkout {
   const { request, availableExercises, muscles, yesterdayExerciseIds } = context
   const exerciseCount = getExerciseCount(request.duration)
 
   console.log(`🔄 Generating fallback workout #${workoutNumber} (index ${workoutIndex})`)
 
-  // Filter out yesterday's exercises
+  // Filter out yesterday's exercises and already-used exercises from other workouts
   const availableForToday = availableExercises.filter(
-    ex => !yesterdayExerciseIds.includes(ex.id)
+    ex => !yesterdayExerciseIds.includes(ex.id) && !excludeExerciseIds.has(ex.id)
   )
 
   // Separate cardio exercises for warmup
@@ -382,6 +384,11 @@ function generateFallbackWorkout(
     .map(e => e.category)
     .filter(Boolean)
   )] as string[]
+
+  // Add selected exercises to exclude set for next workouts
+  for (const ex of mainExercises) {
+    excludeExerciseIds.add(ex.id)
+  }
 
   return {
     name: getAIWorkoutName(workoutNumber),
@@ -517,8 +524,9 @@ export async function generateAIWorkouts(
     // Generate workouts locally
     const workouts: AIGeneratedWorkout[] = []
 
+    const usedFallbackExerciseIds = new Set<string>()
     for (let i = 0; i < request.numWorkouts; i++) {
-      const workout = generateFallbackWorkout(context, startNumber + i, i, splitSchedule)
+      const workout = generateFallbackWorkout(context, startNumber + i, i, splitSchedule, usedFallbackExerciseIds)
       workouts.push(workout)
     }
 

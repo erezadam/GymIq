@@ -21,6 +21,37 @@ import type {
   WorkoutMuscleAssignment,
 } from './types'
 
+/** Maps sub-muscle IDs to their parent Firestore muscle document ID */
+const SUB_MUSCLE_TO_PARENT: Record<string, string> = {
+  // Glutes → gluteus_maximus (Firestore muscle ID)
+  'glutes': 'gluteus_maximus',
+  'gluteus_medius': 'gluteus_maximus',
+  'gluteus_minimus': 'gluteus_maximus',
+  // Legs
+  'quads': 'legs', 'quadriceps': 'legs', 'hamstrings': 'legs', 'calves': 'legs',
+  'adductors': 'legs', 'abductors': 'legs', 'hip_flexors': 'legs',
+  'gastrocnemius': 'legs', 'gastrocnemius_soleus': 'legs',
+  // Back
+  'lats': 'back', 'latissimus_dorsi': 'back', 'upper_back': 'back',
+  'lower_back': 'back', 'mid_back': 'back',
+  'traps': 'back', 'trapezius': 'back', 'rhomboids': 'back',
+  'erector_spinae': 'back', 'longissimus': 'back',
+  // Chest
+  'upper_chest': 'chest', 'mid_chest': 'chest', 'lower_chest': 'chest',
+  'pectoralis': 'chest', 'pectoralis_major': 'chest', 'middle_chest': 'chest',
+  // Arms
+  'biceps': 'biceps_brachii', 'forearms': 'biceps_brachii', 'brachialis': 'biceps_brachii',
+  'triceps_brachii': 'triceps',
+  // Shoulders
+  'front_delt': 'shoulders', 'side_delt': 'shoulders', 'rear_delt': 'shoulders',
+  'deltoids': 'shoulders', 'anterior_deltoid': 'shoulders',
+  'lateral_deltoid': 'shoulders', 'posterior_deltoid': 'shoulders',
+  'rotator_cuff': 'shoulders',
+  // Core
+  'abs': 'core', 'obliques': 'core', 'lower_abs': 'core',
+  'upper_abs': 'core', 'transverse_abdominis': 'core', 'rectus_abdominis': 'core',
+}
+
 /**
  * Fetch the latest AI analysis for a user (if exists and not older than 30 days)
  */
@@ -93,12 +124,13 @@ async function readMusclesFromFirestore(): Promise<MuscleSummary[]> {
 }
 
 /**
- * Calculate exercise count based on duration
+ * Calculate strength exercise count based on duration
+ * (excludes warmup and core which are added separately)
  */
 function getExerciseCount(duration: number): number {
   if (duration <= 60) return 9
-  if (duration <= 75) return 10
-  return 11
+  if (duration <= 75) return 11
+  return 14
 }
 
 /**
@@ -145,7 +177,7 @@ function buildMuscleAssignments(
   // Separate muscles by region
   const upperMuscles = muscles.filter(m => m.bodyRegion === 'upper' && m.id !== 'cardio')
   const lowerMuscles = muscles.filter(m => m.bodyRegion === 'lower' && m.id !== 'cardio')
-  const neutralMuscles = muscles.filter(m => (m.bodyRegion === 'neutral' || !m.bodyRegion) && m.id !== 'cardio')
+  const neutralMuscles = muscles.filter(m => (m.bodyRegion === 'neutral' || !m.bodyRegion) && m.id !== 'cardio' && m.id !== 'core')
 
   if (workoutStructure === 'full_body') {
     // Full body: every workout targets all muscles
@@ -200,7 +232,9 @@ function convertClaudeResponse(
   claudeWorkout: ClaudeWorkoutResponse,
   exerciseMap: Map<string, ExerciseSummary>,
   workoutNumber: number,
-  duration: number
+  duration: number,
+  warmupExercise: ExerciseSummary | null,
+  coreExercise: ExerciseSummary | null
 ): GeneratedWorkout {
   const aiRecommendations: Record<string, AIRecommendation> = {}
 
@@ -249,7 +283,7 @@ function convertClaudeResponse(
   const expectedCount = getExerciseCount(duration)
   const mainExercises = exercises.filter((e) => !e.isWarmup)
 
-  if (skippedCount > 0 && mainExercises.length < expectedCount) {
+  if (mainExercises.length < expectedCount) {
     const missing = expectedCount - mainExercises.length
     functions.logger.warn('Filling missing exercises with fallback', {
       expected: expectedCount,
@@ -300,9 +334,47 @@ function convertClaudeResponse(
     }
   }
 
+  // Inject warmup at position 0 and core before the last exercise
+  const finalExercises: GeneratedExercise[] = []
+
+  if (warmupExercise) {
+    finalExercises.push({
+      exerciseId: warmupExercise.id,
+      exerciseName: warmupExercise.nameHe,
+      exerciseNameHe: warmupExercise.nameHe,
+      imageUrl: warmupExercise.imageUrl,
+      category: warmupExercise.category,
+      primaryMuscle: warmupExercise.primaryMuscle,
+      isWarmup: true,
+      targetSets: 1,
+      targetReps: '5-10',
+      sets: [],
+    })
+  }
+
+  if (coreExercise && exercises.length > 0) {
+    // Insert all exercises except last, then core, then last
+    finalExercises.push(...exercises.slice(0, -1))
+    finalExercises.push({
+      exerciseId: coreExercise.id,
+      exerciseName: coreExercise.nameHe,
+      exerciseNameHe: coreExercise.nameHe,
+      imageUrl: coreExercise.imageUrl,
+      category: coreExercise.category,
+      primaryMuscle: coreExercise.primaryMuscle,
+      isWarmup: false,
+      targetSets: 3,
+      targetReps: '12-15',
+      sets: [],
+    })
+    finalExercises.push(exercises[exercises.length - 1])
+  } else {
+    finalExercises.push(...exercises)
+  }
+
   return {
     name: getAIWorkoutName(workoutNumber),
-    exercises,
+    exercises: finalExercises,
     estimatedDuration: duration,
     muscleGroups: claudeWorkout.muscleGroups,
     source: 'ai_trainer',
@@ -319,7 +391,8 @@ function generateFallbackWorkout(
   data: GenerateWorkoutRequest,
   muscles: MuscleSummary[],
   assignment: WorkoutMuscleAssignment,
-  workoutNumber: number
+  workoutNumber: number,
+  excludeExerciseIds: Set<string>
 ): GeneratedWorkout {
   const { request, availableExercises, yesterdayExerciseIds } = data
   const exerciseCount = getExerciseCount(request.duration)
@@ -330,9 +403,9 @@ function generateFallbackWorkout(
     region: assignment.region,
   })
 
-  // Filter out yesterday's exercises
+  // Filter out yesterday's exercises and already-used exercises from other workouts
   const availableForToday = availableExercises.filter(
-    (ex) => !yesterdayExerciseIds.includes(ex.id)
+    (ex) => !yesterdayExerciseIds.includes(ex.id) && !excludeExerciseIds.has(ex.id)
   )
 
   // Separate cardio for warmup
@@ -427,6 +500,13 @@ function generateFallbackWorkout(
     ),
   ] as string[]
 
+  // Add selected exercises to exclude set for next workouts
+  for (const ex of workoutExercises) {
+    if (!ex.isWarmup) {
+      excludeExerciseIds.add(ex.exerciseId)
+    }
+  }
+
   return {
     name: getAIWorkoutName(workoutNumber),
     exercises: workoutExercises,
@@ -476,7 +556,7 @@ function validateRequest(data: any, authUid: string): GenerateWorkoutRequest {
 export const generateAIWorkout = onCall(
   {
     secrets: ['OPENAI_API_KEY'],
-    timeoutSeconds: 60,
+    timeoutSeconds: 120,
     memory: '256MiB',
   },
   async (callRequest): Promise<GenerateWorkoutResponse> => {
@@ -544,16 +624,39 @@ export const generateAIWorkout = onCall(
 
       // Filter exercises by assignment muscles (for the GPT prompt)
       const allTargetMuscleIds = [...new Set(assignments.flatMap(a => a.muscleIds))]
-      const filteredExercises = data.availableExercises.filter(ex =>
-        allTargetMuscleIds.includes(ex.primaryMuscle) ||
-        ex.primaryMuscle === 'cardio' ||
-        ex.category === 'cardio'
+
+      // Pre-select warmup (cardio) and core exercises — these won't go to GPT
+      const yesterdaySet = new Set(data.yesterdayExerciseIds)
+
+      const cardioPool = data.availableExercises.filter(ex =>
+        (ex.primaryMuscle === 'cardio' || ex.category === 'cardio') && !yesterdaySet.has(ex.id)
       )
+      const warmupExercise = cardioPool.length > 0
+        ? cardioPool[Math.floor(Math.random() * cardioPool.length)]
+        : null
+
+      const corePool = data.availableExercises.filter(ex => {
+        const parent = SUB_MUSCLE_TO_PARENT[ex.primaryMuscle] ?? ex.primaryMuscle
+        return parent === 'core' && ex.category !== 'cardio' && !yesterdaySet.has(ex.id)
+      })
+      const coreExercise = corePool.length > 0
+        ? corePool[Math.floor(Math.random() * corePool.length)]
+        : null
+
+      // Send only strength exercises to GPT (no cardio, no core)
+      const filteredExercises = data.availableExercises.filter(ex => {
+        const parentMuscle = SUB_MUSCLE_TO_PARENT[ex.primaryMuscle] ?? ex.primaryMuscle
+        if (ex.primaryMuscle === 'cardio' || ex.category === 'cardio') return false
+        if (parentMuscle === 'core') return false
+        return allTargetMuscleIds.includes(parentMuscle)
+      })
 
       functions.logger.info('Filtered exercises for GPT', {
         original: data.availableExercises.length,
         filtered: filteredExercises.length,
         targetMuscles: allTargetMuscleIds,
+        warmup: warmupExercise?.nameHe || 'none',
+        core: coreExercise?.nameHe || 'none',
       })
 
       // Fetch last analysis
@@ -565,7 +668,9 @@ export const generateAIWorkout = onCall(
         muscles,
         assignments,
         filteredExercises,
-        lastAnalysisSection
+        lastAnalysisSection,
+        warmupExercise,
+        coreExercise
       )
 
       let workouts: GeneratedWorkout[] = []
@@ -575,15 +680,16 @@ export const generateAIWorkout = onCall(
         // GPT succeeded - convert response
         functions.logger.info('GPT API succeeded')
         workouts = gptResult.workouts.map((cw, index) =>
-          convertClaudeResponse(cw, exerciseMap, startNumber + index, data.request.duration)
+          convertClaudeResponse(cw, exerciseMap, startNumber + index, data.request.duration, warmupExercise, coreExercise)
         )
       } else {
         // GPT failed or returned wrong count - use fallback
         functions.logger.info('Using fallback generation')
         usedFallback = true
 
+        const usedFallbackExerciseIds = new Set<string>()
         for (let i = 0; i < data.request.numWorkouts; i++) {
-          const workout = generateFallbackWorkout(data, muscles, assignments[i], startNumber + i)
+          const workout = generateFallbackWorkout(data, muscles, assignments[i], startNumber + i, usedFallbackExerciseIds)
           workouts.push(workout)
         }
       }
