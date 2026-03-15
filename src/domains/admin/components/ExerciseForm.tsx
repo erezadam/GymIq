@@ -657,29 +657,29 @@ export default function ExerciseForm() {
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-text-secondary mb-2">קרדיט 50% לשרירים משניים</label>
               <p className="text-text-muted text-xs mb-3">
-                תת-שרירים שמקבלים חצי סט קרדיט על כל סט שמבוצע בתרגיל (לניתוח שבועי).
+                שרירים מרכזיים שמקבלים חצי סט קרדיט על כל סט שמבוצע בתרגיל (לניתוח שבועי).
               </p>
               <div className="flex flex-wrap gap-2">
-                {musclesData.flatMap((muscle) =>
-                  (muscle.subMuscles || []).map((sub) => (
+                {musclesData
+                  .filter(muscle => muscle.id !== 'cardio' && muscle.id !== 'warmup')
+                  .map((muscle) => (
                     <label
-                      key={sub.id}
+                      key={muscle.id}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
-                        selectedSecondaryCredits?.includes(sub.id)
+                        selectedSecondaryCredits?.includes(muscle.id)
                           ? 'bg-accent-purple/20 border-accent-purple text-accent-purple'
                           : 'bg-dark-card border-dark-border text-text-secondary hover:border-accent-purple/50'
                       }`}
                     >
                       <input
                         type="checkbox"
-                        checked={selectedSecondaryCredits?.includes(sub.id) || false}
-                        onChange={() => handleSecondaryCreditToggle(sub.id)}
+                        checked={selectedSecondaryCredits?.includes(muscle.id) || false}
+                        onChange={() => handleSecondaryCreditToggle(muscle.id)}
                         className="w-4 h-4 text-accent-purple border-dark-border bg-dark-card focus:ring-accent-purple rounded"
                       />
-                      <span className="text-sm">{sub.nameHe} ({muscle.nameHe})</span>
+                      <span className="text-sm">{muscle.nameHe}</span>
                     </label>
-                  ))
-                )}
+                  ))}
               </div>
             </div>
           </div>
