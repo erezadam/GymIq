@@ -23,95 +23,6 @@ import type { Exercise } from '@/domains/exercises/types/exercise.types'
 const MIN_SETS = 10
 const MIN_AVG_REPS = 5
 
-// exerciseId → { triceps?: number, biceps_brachii?: number, gluteus_maximus?: number }
-// ערך 0.5 = חצי סט נספר על השריר המשני לכל סט completed
-const SECONDARY_MUSCLE_MULTIPLIERS: Record<string, { triceps?: number; biceps_brachii?: number; gluteus_maximus?: number }> = {
-  // triceps (יד אחורית) — 46 תרגילים
-  "C3pf1VvSCuGxIA4oWzXI": { triceps: 0.5 },
-  "eY2MblJj94vJtV6A0Zlz": { triceps: 0.5 },
-  "dvZ4iMKZYKUDaheoJVCh": { triceps: 0.5 },
-  "AspsDoRT9GPQOw0fYANa": { triceps: 0.5 },
-  "hdJjAx3KMp5XbuQ7UNfW": { triceps: 0.5 },
-  "Q8mHNGehBzxjDpc1dW8B": { triceps: 0.5 },
-  "Xriss1E6kkY8nSnmyWKi": { triceps: 0.5 },
-  "JnGWwa2vNbmaVxSr3li1": { triceps: 0.5 },
-  "79pWk66pXALdv4ku2pTI": { triceps: 0.5 },
-  "HL6Eq8eEfk1f6sl5R6Wq": { triceps: 0.5 },
-  "aNKatCW6yKjWCLsWgoXp": { triceps: 0.5 },
-  "0dqf0j0YQJAGf6NEMTv4": { triceps: 0.5 },
-  "oE3M2FaQeaMU5hTeOkOj": { triceps: 0.5 },
-  "zrnZmmlaOswF17Vi6ED2": { triceps: 0.5 },
-  "n9quUbtf4CsIsnuP6ypJ": { triceps: 0.5 },
-  "p4B9Utw3H50XD1khsVHP": { triceps: 0.5 },
-  "TxiHxnar1u50kdNpJIPq": { triceps: 0.5 },
-  "S2LAJAVDoYDpSP2J5LvJ": { triceps: 0.5 },
-  "mKdO3inl3UVXkCfxyjSy": { triceps: 0.5 },
-  "Fbw48H0eQfwvkmuye8o8": { triceps: 0.5 },
-  "vTnBmyUqMoN5ikXdKONL": { triceps: 0.5 },
-  "y9KWVXtSxcED7JQMpSRP": { triceps: 0.5 },
-  "fdOOiWXvidgtp4JJ89uM": { triceps: 0.5 },
-  "mgcEsYQyu7WTyeajQEkp": { triceps: 0.5 },
-  "Pq8DXb7jtiDUoavcK7fO": { triceps: 0.5 },
-  "f8yIQDvYF2M4LrPldgg8": { triceps: 0.5 },
-  "4o86htIR7D1BC41ilIn9": { triceps: 0.5 },
-  "uEttMMdBAEBLszuPTXCJ": { triceps: 0.5 },
-  "Xpd2fI0MmOw8mHTYQjEx": { triceps: 0.5 },
-  "2UGewyMR1snvp8qMRUz9": { triceps: 0.5 },
-  "ZCwrx8BbUvf3mpJ2Jd3E": { triceps: 0.5 },
-  "ABOinRwCsKTqDRk52HYM": { triceps: 0.5 },
-  "nJtiUP2tORtm7uKqmKOu": { triceps: 0.5 },
-  "BOwkhUUPpfWUPug9BsOf": { triceps: 0.5 },
-  "Vk3sCZwlvdFOJC5tT3cd": { triceps: 0.5 },
-  "llmh4oU99aNtS1vKynO9": { triceps: 0.5 },
-  "jEUEyDG9ATkKIBN60k5j": { triceps: 0.5 },
-  "TaVCi6SMnlGPU44STvqB": { triceps: 0.5 },
-  "4gl74RJQfLbj7VfeivTQ": { triceps: 0.5 },
-  "AKur5L4ib30oZSHgC9Px": { triceps: 0.5 },
-  "oAoj1ai8K9dc6B9EaFED": { triceps: 0.5 },
-  "HKltSTpqJQlY9UXrSUCh": { triceps: 0.5 },
-  "Pxffw0KFPTW4a2xyK7fo": { triceps: 0.5 },
-  "eC3bgOTVRk6G3NL6Jc54": { triceps: 0.5 },
-  "ixeY4g8dtzz8RpoCJtSS": { triceps: 0.5 },
-  "ls2RllIGdrXboD5nrmf2": { triceps: 0.5 },
-  // biceps_brachii (יד קדמית) — 19 תרגילים
-  "rCKv4MPkwWRgDpvQXV5X": { biceps_brachii: 0.5 },
-  "CGPoXMft40TvBJl63j3P": { biceps_brachii: 0.5 },
-  "iN6CNbUITqLbPXYrVcA5": { biceps_brachii: 0.5 },
-  "mcoW0pzyAWBcd5C1dXad": { biceps_brachii: 0.5 },
-  "RLkPUj6WGQhlyHcr023o": { biceps_brachii: 0.5 },
-  "cAWWTBOa7vMM5XBTRstp": { biceps_brachii: 0.5 },
-  "15EoZ3DZm4pMas9pEb8c": { biceps_brachii: 0.5 },
-  "otCaAzOw0KvT8ONW1v1D": { biceps_brachii: 0.5 },
-  "4mAbkf0hesykvFmFSD8k": { biceps_brachii: 0.5 },
-  "Xoh0Dwe168xMDsDpkNgb": { biceps_brachii: 0.5 },
-  "qjZ1cDTKn4WnRrORZCvR": { biceps_brachii: 0.5 },
-  "KItcETHzIHJXCGt4duOM": { biceps_brachii: 0.5 },
-  "dclvw5ufIebkrbA9du5B": { biceps_brachii: 0.5 },
-  "uZCw91GV42PurHafWFe7": { biceps_brachii: 0.5 },
-  "ha6rSmUuqmK6v2rjiTB1": { biceps_brachii: 0.5 },
-  "U9liue4N8IB3vetWz2wI": { biceps_brachii: 0.5 },
-  "e8gWq4e1zsqZ3kiKepWk": { biceps_brachii: 0.5 },
-  "D2KUzrI3guPkMr356uGH": { biceps_brachii: 0.5 },
-  "BwVQyCeg3DqNPFqdJser": { biceps_brachii: 0.5 },
-  // gluteus_maximus (ישבן) — 17 תרגילים
-  "QxbXQO77g3ewGnY7PISJ": { gluteus_maximus: 0.5 },
-  "M3Wl6PplSjEyPFAqTQhr": { gluteus_maximus: 0.5 },
-  "dkiOoNRC6InMJx6HvNCs": { gluteus_maximus: 0.5 },
-  "1ISbykeW2hJz7l6Ag1eh": { gluteus_maximus: 0.5 },
-  "ldyvkdv5EtQBg6nqMzDp": { gluteus_maximus: 0.5 },
-  "6zA32kE09TDiaH4LJJv6": { gluteus_maximus: 0.5 },
-  "UlFsp2JWjSaJXqxH50Np": { gluteus_maximus: 0.5 },
-  "LUAX1e9H0zoUFEP7l3A6": { gluteus_maximus: 0.5 },
-  "1ZwvAMeZeqXyx3oIJvPO": { gluteus_maximus: 0.5 },
-  "FN6bKdNWcEgHjqrTPvbu": { gluteus_maximus: 0.5 },
-  "R968BsNAAeIweal039f2": { gluteus_maximus: 0.5 },
-  "9lqCm9PgTffJfwAcSVCe": { gluteus_maximus: 0.5 },
-  "TvxDt0y03gmzOZzspHyU": { gluteus_maximus: 0.5 },
-  "JClCPcKWAxKiuy7KIgRB": { gluteus_maximus: 0.5 },
-  "eqLYs7TORwMcF6DmezaU": { gluteus_maximus: 0.5 },
-  "R29ea1XKRxWmlqaryCAM": { gluteus_maximus: 0.5 },
-  "eRubABEIIHyzJ7YCzhSe": { gluteus_maximus: 0.5 },
-}
 
 interface ExerciseDetail {
   name: string
@@ -301,30 +212,13 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
                 cardioData.set(cardioKey, cd)
               }
 
-              // Secondary muscle contribution
-              const secondary = SECONDARY_MUSCLE_MULTIPLIERS[exercise.exerciseId]
-              if (secondary) {
-                if (secondary.triceps) {
-                  const key = 'triceps'
-                  const ex2 = muscleData.get(key) || { sets: 0, reps: 0, repsCount: 0 }
-                  ex2.sets += secondary.triceps
-                  if (reps > 5) { ex2.reps += reps; ex2.repsCount++ }
-                  muscleData.set(key, ex2)
-                }
-                if (secondary.biceps_brachii) {
-                  const key = 'biceps_brachii'
-                  const ex2 = muscleData.get(key) || { sets: 0, reps: 0, repsCount: 0 }
-                  ex2.sets += secondary.biceps_brachii
-                  if (reps > 5) { ex2.reps += reps; ex2.repsCount++ }
-                  muscleData.set(key, ex2)
-                }
-                if (secondary.gluteus_maximus) {
-                  const key = 'gluteus_maximus'
-                  const ex2 = muscleData.get(key) || { sets: 0, reps: 0, repsCount: 0 }
-                  ex2.sets += secondary.gluteus_maximus
-                  if (reps > 5) { ex2.reps += reps; ex2.repsCount++ }
-                  muscleData.set(key, ex2)
-                }
+              // Secondary muscle contribution (from Firebase secondaryMuscleCredits)
+              const credits = exDef?.secondaryMuscleCredits || []
+              for (const muscleId of credits) {
+                const ex2 = muscleData.get(muscleId) || { sets: 0, reps: 0, repsCount: 0 }
+                ex2.sets += 0.5
+                if (reps > 5) { ex2.reps += reps; ex2.repsCount++ }
+                muscleData.set(muscleId, ex2)
               }
             }
 
@@ -332,18 +226,10 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
               // Track exercise under its primary muscle
               addExerciseToMuscle(primaryMuscle, exercise.exerciseId, exName, exSets, exRepsTotal, exRepsCount)
 
-              // Also track under secondary muscles
-              const secondary = SECONDARY_MUSCLE_MULTIPLIERS[exercise.exerciseId]
-              if (secondary) {
-                if (secondary.triceps) {
-                  addExerciseToMuscle('triceps', exercise.exerciseId, exName, Math.round(exSets * secondary.triceps * 10) / 10, exRepsTotal, exRepsCount)
-                }
-                if (secondary.biceps_brachii) {
-                  addExerciseToMuscle('biceps_brachii', exercise.exerciseId, exName, Math.round(exSets * secondary.biceps_brachii * 10) / 10, exRepsTotal, exRepsCount)
-                }
-                if (secondary.gluteus_maximus) {
-                  addExerciseToMuscle('gluteus_maximus', exercise.exerciseId, exName, Math.round(exSets * secondary.gluteus_maximus * 10) / 10, exRepsTotal, exRepsCount)
-                }
+              // Also track under secondary muscles (from Firebase secondaryMuscleCredits)
+              const exerciseCredits = exDef?.secondaryMuscleCredits || []
+              for (const muscleId of exerciseCredits) {
+                addExerciseToMuscle(muscleId, exercise.exerciseId, exName, Math.round(exSets * 0.5 * 10) / 10, exRepsTotal, exRepsCount)
               }
             }
           }
@@ -391,34 +277,49 @@ function WeeklyMuscleModal({ userId, onClose }: { userId: string; onClose: () =>
               avgZone: cd && cd.zoneCount > 0 ? Math.round((cd.zoneSum / cd.zoneCount) * 10) / 10 : 0,
             })
           } else {
-            // Also check if data was accumulated under the primary ID itself
-            // (e.g. exercises with primaryMuscle='cardio' instead of a sub-muscle like 'warmup')
+            // If data was accumulated under the primary ID itself (e.g. via secondary muscle multipliers),
+            // merge it into the first sub-muscle instead of showing a duplicate parent row
             const parentData = muscleData.get(primary.id)
             const parentCardio = cardioData.get(primary.id)
             const parentExercises = getExerciseDetails(primary.id)
             const hasParentData = (parentData && parentData.sets > 0) || (parentCardio && parentCardio.totalMinutes > 0) || parentExercises.length > 0
 
-            if (hasParentData) {
-              // Show a row for data accumulated directly under the primary
-              const totalSets = parentData?.sets || 0
-              const avgReps = parentData && parentData.repsCount > 0
-                ? Math.round((parentData.reps / parentData.repsCount) * 10) / 10
-                : 0
-              const isCardio = isCardioMuscle(primary.id)
-              result.push({
-                category: primary.id,
-                categoryHe: primary.nameHe,
-                primaryMuscle: primary.id,
-                primaryMuscleHe: primary.nameHe,
-                totalSets,
-                avgReps,
-                setsGreen: totalSets >= MIN_SETS,
-                repsGreen: avgReps >= MIN_AVG_REPS,
-                exercises: parentExercises,
-                isCardio,
-                totalMinutes: parentCardio ? Math.round(parentCardio.totalMinutes) : 0,
-                avgZone: parentCardio && parentCardio.zoneCount > 0 ? Math.round((parentCardio.zoneSum / parentCardio.zoneCount) * 10) / 10 : 0,
-              })
+            if (hasParentData && primary.subMuscles.length > 0) {
+              // Merge parent data into the first sub-muscle
+              const firstSubId = primary.subMuscles[0].id
+              const subData = muscleData.get(firstSubId) || { sets: 0, reps: 0, repsCount: 0 }
+              subData.sets += parentData?.sets || 0
+              subData.reps += parentData?.reps || 0
+              subData.repsCount += parentData?.repsCount || 0
+              muscleData.set(firstSubId, subData)
+
+              // Merge cardio data
+              if (parentCardio) {
+                const subCardio = cardioData.get(firstSubId) || { totalMinutes: 0, zoneSum: 0, zoneCount: 0 }
+                subCardio.totalMinutes += parentCardio.totalMinutes
+                subCardio.zoneSum += parentCardio.zoneSum
+                subCardio.zoneCount += parentCardio.zoneCount
+                cardioData.set(firstSubId, subCardio)
+              }
+
+              // Merge exercise details into sub-muscle's exercisesByMuscle
+              if (parentExercises.length > 0) {
+                if (!exercisesByMuscle.has(firstSubId)) exercisesByMuscle.set(firstSubId, new Map())
+                const parentExMap = exercisesByMuscle.get(primary.id)
+                if (parentExMap) {
+                  const subExMap = exercisesByMuscle.get(firstSubId)!
+                  for (const [exId, exData] of parentExMap) {
+                    const prev = subExMap.get(exId)
+                    if (prev) {
+                      prev.sets += exData.sets
+                      prev.reps += exData.reps
+                      prev.repsCount += exData.repsCount
+                    } else {
+                      subExMap.set(exId, { ...exData })
+                    }
+                  }
+                }
+              }
             }
 
             for (const sub of primary.subMuscles) {

@@ -1,10 +1,10 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ArrowRight, Save, Plus, Trash2, Image } from 'lucide-react'
+import { ArrowRight, Save, Plus, Trash2, Image, ChevronDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { exerciseService } from '@/domains/exercises/services'
 import { serverTimestamp } from 'firebase/firestore'
@@ -30,6 +30,7 @@ const exerciseSchema = z.object({
   category: z.string().min(1, 'קטגוריה נדרשת'),
   primaryMuscle: z.string().default(''),
   secondaryMuscles: z.array(z.string()),
+  secondaryMuscleCredits: z.array(z.string()),
   equipment: z.string().min(1, 'ציוד נדרש'),
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']),
   complexity: z.enum(['compound', 'simple']).default('compound'),
@@ -115,6 +116,7 @@ export default function ExerciseForm() {
       category: '',
       primaryMuscle: '',
       secondaryMuscles: [],
+      secondaryMuscleCredits: [],
       equipment: '',
       difficulty: 'beginner',
       complexity: 'compound',
@@ -154,6 +156,22 @@ export default function ExerciseForm() {
     append: appendTipHe,
     remove: removeTipHe,
   } = useFieldArray({ control, name: 'tipsHe' })
+
+  // Collapsible state for instructions/tips sections
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
+  const toggleSection = (key: string) =>
+    setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }))
+
+  // Auto-collapse sections that have content when editing data loads
+  useEffect(() => {
+    if (isEditing && existingExercise) {
+      const sections: Record<string, boolean> = {}
+      if (instructionFields.some(f => f.value?.trim())) sections.instructionsEn = true
+      if (instructionHeFields.some(f => f.value?.trim())) sections.instructionsHe = true
+      if (tipFields.some(f => f.value?.trim()) || tipHeFields.some(f => f.value?.trim())) sections.tips = true
+      setCollapsedSections(sections)
+    }
+  }, [existingExercise, isEditing])
 
   // Populate form when editing
   // IMPORTANT: Wait for both existingExercise AND musclesData to load
@@ -233,6 +251,7 @@ export default function ExerciseForm() {
         category: categoryToSet,
         primaryMuscle: primaryMuscleToSet,
         secondaryMuscles: existingExercise.secondaryMuscles || [],
+        secondaryMuscleCredits: (existingExercise as any).secondaryMuscleCredits || [],
         equipment: existingExercise.equipment || '',
         difficulty: existingExercise.difficulty || 'beginner',
         complexity: (existingExercise.complexity as 'compound' | 'simple') || 'compound',
@@ -306,6 +325,7 @@ export default function ExerciseForm() {
       category: data.category as ExerciseCategory,
       primaryMuscle: data.primaryMuscle as MuscleGroup,
       secondaryMuscles: data.secondaryMuscles as MuscleGroup[],
+      secondaryMuscleCredits: data.secondaryMuscleCredits,
       equipment: data.equipment as EquipmentType,
       complexity: data.complexity as ExerciseComplexity,
       reportType: data.reportType, // Dynamic - stored as string
@@ -336,6 +356,7 @@ export default function ExerciseForm() {
   const selectedAssistanceTypes = watch('assistanceTypes')
   const selectedBands = watch('availableBands')
   const selectedSecondaryMuscles = watch('secondaryMuscles')
+  const selectedSecondaryCredits = watch('secondaryMuscleCredits')
 
   // Handle band checkbox toggle
   const handleBandToggle = (bandId: string) => {
@@ -366,6 +387,15 @@ export default function ExerciseForm() {
     if (!newTypes.includes('bands')) {
       setValue('availableBands', [])
     }
+  }
+
+  // Handle secondary muscle credit checkbox toggle
+  const handleSecondaryCreditToggle = (muscleId: string) => {
+    const current = selectedSecondaryCredits || []
+    const updated = current.includes(muscleId)
+      ? current.filter(id => id !== muscleId)
+      : [...current, muscleId]
+    setValue('secondaryMuscleCredits', updated)
   }
 
   // Handle secondary muscle checkbox toggle
@@ -622,6 +652,36 @@ export default function ExerciseForm() {
                   ))}
               </div>
             </div>
+
+            {/* Secondary Muscle Credits (50%) - spans full width */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-text-secondary mb-2">קרדיט 50% לשרירים משניים</label>
+              <p className="text-text-muted text-xs mb-3">
+                תת-שרירים שמקבלים חצי סט קרדיט על כל סט שמבוצע בתרגיל (לניתוח שבועי).
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {musclesData.flatMap((muscle) =>
+                  (muscle.subMuscles || []).map((sub) => (
+                    <label
+                      key={sub.id}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
+                        selectedSecondaryCredits?.includes(sub.id)
+                          ? 'bg-accent-purple/20 border-accent-purple text-accent-purple'
+                          : 'bg-dark-card border-dark-border text-text-secondary hover:border-accent-purple/50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSecondaryCredits?.includes(sub.id) || false}
+                        onChange={() => handleSecondaryCreditToggle(sub.id)}
+                        className="w-4 h-4 text-accent-purple border-dark-border bg-dark-card focus:ring-accent-purple rounded"
+                      />
+                      <span className="text-sm">{sub.nameHe} ({muscle.nameHe})</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </section>
 
@@ -751,149 +811,196 @@ export default function ExerciseForm() {
 
         {/* Instructions English */}
         <section className="card-neon">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-text-primary">הוראות ביצוע (אנגלית)</h2>
-            <button
-              type="button"
-              onClick={() => appendInstruction({ value: '' })}
-              className="flex items-center gap-2 text-primary-400 hover:text-primary-300 text-sm"
-            >
-              <Plus className="w-4 h-4" />
-              הוסף הוראה
-            </button>
-          </div>
-          <div className="space-y-3">
-            {instructionFields.map((field, index) => (
-              <div key={field.id} className="flex gap-3">
-                <span className="w-8 h-12 flex items-center justify-center text-text-muted">
-                  {index + 1}.
-                </span>
-                <input
-                  {...register(`instructions.${index}.value`)}
-                  dir="ltr"
-                  placeholder="Enter instruction step..."
-                  className="input-neon flex-1"
-                />
-                {instructionFields.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeInstruction(index)}
-                    className="p-3 text-text-muted hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
+          <button
+            type="button"
+            onClick={() => toggleSection('instructionsEn')}
+            className="w-full flex items-center justify-between mb-0 cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-text-primary">הוראות ביצוע (אנגלית)</h2>
+              {collapsedSections.instructionsEn && (
+                <span className="text-xs text-text-muted">({instructionFields.length} הוראות)</span>
+              )}
+            </div>
+            <ChevronDown className={`w-5 h-5 text-text-muted transition-transform ${collapsedSections.instructionsEn ? '-rotate-90' : ''}`} />
+          </button>
+          {!collapsedSections.instructionsEn && (
+            <>
+              <div className="flex justify-end mt-4 mb-4">
+                <button
+                  type="button"
+                  onClick={() => appendInstruction({ value: '' })}
+                  className="flex items-center gap-2 text-primary-400 hover:text-primary-300 text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  הוסף הוראה
+                </button>
               </div>
-            ))}
-          </div>
+              <div className="space-y-3">
+                {instructionFields.map((field, index) => (
+                  <div key={field.id} className="flex gap-3">
+                    <span className="w-8 h-12 flex items-center justify-center text-text-muted">
+                      {index + 1}.
+                    </span>
+                    <input
+                      {...register(`instructions.${index}.value`)}
+                      dir="ltr"
+                      placeholder="Enter instruction step..."
+                      className="input-neon flex-1"
+                    />
+                    {instructionFields.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeInstruction(index)}
+                        className="p-3 text-text-muted hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </section>
 
         {/* Instructions Hebrew */}
         <section className="card-neon">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-text-primary">הוראות ביצוע (עברית)</h2>
-            <button
-              type="button"
-              onClick={() => appendInstructionHe({ value: '' })}
-              className="flex items-center gap-2 text-primary-400 hover:text-primary-300 text-sm"
-            >
-              <Plus className="w-4 h-4" />
-              הוסף הוראה
-            </button>
-          </div>
-          <div className="space-y-3">
-            {instructionHeFields.map((field, index) => (
-              <div key={field.id} className="flex gap-3">
-                <span className="w-8 h-12 flex items-center justify-center text-text-muted">
-                  {index + 1}.
-                </span>
-                <input
-                  {...register(`instructionsHe.${index}.value`)}
-                  placeholder="הזן שלב בהוראות..."
-                  className="input-neon flex-1"
-                />
-                {instructionHeFields.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeInstructionHe(index)}
-                    className="p-3 text-text-muted hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
+          <button
+            type="button"
+            onClick={() => toggleSection('instructionsHe')}
+            className="w-full flex items-center justify-between mb-0 cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-text-primary">הוראות ביצוע (עברית)</h2>
+              {collapsedSections.instructionsHe && (
+                <span className="text-xs text-text-muted">({instructionHeFields.length} הוראות)</span>
+              )}
+            </div>
+            <ChevronDown className={`w-5 h-5 text-text-muted transition-transform ${collapsedSections.instructionsHe ? '-rotate-90' : ''}`} />
+          </button>
+          {!collapsedSections.instructionsHe && (
+            <>
+              <div className="flex justify-end mt-4 mb-4">
+                <button
+                  type="button"
+                  onClick={() => appendInstructionHe({ value: '' })}
+                  className="flex items-center gap-2 text-primary-400 hover:text-primary-300 text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  הוסף הוראה
+                </button>
               </div>
-            ))}
-          </div>
+              <div className="space-y-3">
+                {instructionHeFields.map((field, index) => (
+                  <div key={field.id} className="flex gap-3">
+                    <span className="w-8 h-12 flex items-center justify-center text-text-muted">
+                      {index + 1}.
+                    </span>
+                    <input
+                      {...register(`instructionsHe.${index}.value`)}
+                      placeholder="הזן שלב בהוראות..."
+                      className="input-neon flex-1"
+                    />
+                    {instructionHeFields.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeInstructionHe(index)}
+                        className="p-3 text-text-muted hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </section>
 
         {/* Tips */}
         <section className="card-neon">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Tips English */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-medium text-text-primary">טיפים (אנגלית)</h3>
-                <button
-                  type="button"
-                  onClick={() => appendTip({ value: '' })}
-                  className="text-primary-400 hover:text-primary-300"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="space-y-2">
-                {tipFields.map((field, index) => (
-                  <div key={field.id} className="flex gap-2">
-                    <input
-                      {...register(`tips.${index}.value`)}
-                      dir="ltr"
-                      placeholder="Add a tip..."
-                      className="input-neon flex-1 !py-2"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeTip(index)}
-                      className="p-2 text-text-muted hover:text-red-400"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+          <button
+            type="button"
+            onClick={() => toggleSection('tips')}
+            className="w-full flex items-center justify-between mb-0 cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-text-primary">טיפים</h2>
+              {collapsedSections.tips && (
+                <span className="text-xs text-text-muted">({tipFields.length} אנגלית, {tipHeFields.length} עברית)</span>
+              )}
             </div>
+            <ChevronDown className={`w-5 h-5 text-text-muted transition-transform ${collapsedSections.tips ? '-rotate-90' : ''}`} />
+          </button>
+          {!collapsedSections.tips && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
+              {/* Tips English */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-medium text-text-primary">טיפים (אנגלית)</h3>
+                  <button
+                    type="button"
+                    onClick={() => appendTip({ value: '' })}
+                    className="text-primary-400 hover:text-primary-300"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {tipFields.map((field, index) => (
+                    <div key={field.id} className="flex gap-2">
+                      <input
+                        {...register(`tips.${index}.value`)}
+                        dir="ltr"
+                        placeholder="Add a tip..."
+                        className="input-neon flex-1 !py-2"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeTip(index)}
+                        className="p-2 text-text-muted hover:text-red-400"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-            {/* Tips Hebrew */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-medium text-text-primary">טיפים (עברית)</h3>
-                <button
-                  type="button"
-                  onClick={() => appendTipHe({ value: '' })}
-                  className="text-primary-400 hover:text-primary-300"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="space-y-2">
-                {tipHeFields.map((field, index) => (
-                  <div key={field.id} className="flex gap-2">
-                    <input
-                      {...register(`tipsHe.${index}.value`)}
-                      placeholder="הוסף טיפ..."
-                      className="input-neon flex-1 !py-2"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeTipHe(index)}
-                      className="p-2 text-text-muted hover:text-red-400"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+              {/* Tips Hebrew */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-medium text-text-primary">טיפים (עברית)</h3>
+                  <button
+                    type="button"
+                    onClick={() => appendTipHe({ value: '' })}
+                    className="text-primary-400 hover:text-primary-300"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {tipHeFields.map((field, index) => (
+                    <div key={field.id} className="flex gap-2">
+                      <input
+                        {...register(`tipsHe.${index}.value`)}
+                        placeholder="הוסף טיפ..."
+                        className="input-neon flex-1 !py-2"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeTipHe(index)}
+                        className="p-2 text-text-muted hover:text-red-400"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </section>
 
         {/* Submit */}
