@@ -21,7 +21,7 @@ import { useWorkoutBuilderStore } from '../store'
 import { useAuthStore } from '@/domains/authentication/store'
 import {
   saveWorkoutHistory,
-  getLastWorkoutForExercises,
+  getBestPerformanceForExercises,
   getExerciseNotesForExercises,
   autoSaveWorkout,
   getInProgressWorkout,
@@ -30,6 +30,7 @@ import {
   getWeightRecommendations,
   getLastExerciseVolumes,
   calculateExerciseVolume,
+  getWeeklySetsByCategory,
 } from '@/lib/firebase/workoutHistory'
 import { getExerciseById } from '@/lib/firebase/exercises'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
@@ -101,6 +102,9 @@ export function useActiveWorkout() {
   // Dynamic muscle name mapping from Firebase
   const [dynamicMuscleNames, setDynamicMuscleNames] = useState<Record<string, string>>({})
 
+  // Weekly muscle sets from history (loaded once on mount)
+  const [historicalWeeklyMuscleSets, setHistoricalWeeklyMuscleSets] = useState<Map<string, number>>(new Map())
+
   // Firebase workout ID for auto-save
   const [firebaseWorkoutId, setFirebaseWorkoutId] = useState<string | null>(null)
 
@@ -123,19 +127,30 @@ export function useActiveWorkout() {
   // Preserve continue workout ID across async operations (survives validation failures)
   const continueWorkoutIdRef = useRef<string | null>(null)
 
-  // Load dynamic muscle names from Firebase on mount
+  // Load dynamic muscle names and weekly muscle sets from Firebase on mount
   useEffect(() => {
-    const loadMuscleNames = async () => {
+    let cancelled = false
+    const loadInitialData = async () => {
       try {
         const mapping = await getMuscleIdToNameHeMap()
-        setDynamicMuscleNames(mapping)
-        console.log('✅ Loaded dynamic muscle names from Firebase:', Object.keys(mapping).length, 'entries')
+        if (!cancelled) setDynamicMuscleNames(mapping)
       } catch (error) {
         console.error('❌ Failed to load muscle names from Firebase:', error)
-        // Will fall back to muscleGroupNames
+      }
+
+      // Load weekly muscle sets for progress display
+      const uid = targetUserId || user?.uid
+      if (uid) {
+        try {
+          const weeklySets = await getWeeklySetsByCategory(uid)
+          if (!cancelled) setHistoricalWeeklyMuscleSets(weeklySets)
+        } catch (error) {
+          console.error('❌ Failed to load weekly muscle sets:', error)
+        }
       }
     }
-    loadMuscleNames()
+    loadInitialData()
+    return () => { cancelled = true }
   }, [])
 
   // Save to localStorage - defined early so it can be used in initWorkout
@@ -631,7 +646,7 @@ export function useActiveWorkout() {
               try {
                 const exerciseIds = newExercises.map((ex) => ex.exerciseId)
                 const [lastWorkoutData, historicalNotes] = await Promise.all([
-                  getLastWorkoutForExercises(user.uid, exerciseIds),
+                  getBestPerformanceForExercises(user.uid, exerciseIds),
                   getExerciseNotesForExercises(user.uid, exerciseIds),
                 ])
                 newExercises.forEach((ex) => {
@@ -770,7 +785,7 @@ export function useActiveWorkout() {
           try {
             const exerciseIds = exercises.map((ex) => ex.exerciseId)
             const [lastWorkoutData, historicalNotes] = await Promise.all([
-              getLastWorkoutForExercises(user.uid, exerciseIds),
+              getBestPerformanceForExercises(user.uid, exerciseIds),
               getExerciseNotesForExercises(user.uid, exerciseIds),
             ])
 
@@ -1634,6 +1649,28 @@ export function useActiveWorkout() {
     setShowSummaryModal(true)
   }, [])
 
+  // Weekly muscle sets: historical (from completed workouts) + current workout completed sets (real-time)
+  const weeklyMuscleSets = useMemo((): Map<string, number> => {
+    const result = new Map<string, number>(historicalWeeklyMuscleSets)
+
+    if (!workout) return result
+
+    // Add completed sets from current active workout
+    for (const ex of workout.exercises) {
+      const category = ex.category || ex.primaryMuscle || 'other'
+      for (const set of ex.reportedSets) {
+        // Count sets that have actual data reported (weight > 0 or reps > 0 or time > 0)
+        const hasData = (set.weight && set.weight > 0) || (set.reps && set.reps > 0) || (set.time && set.time > 0)
+        if (hasData) {
+          const current = result.get(category) || 0
+          result.set(category, current + 1)
+        }
+      }
+    }
+
+    return result
+  }, [historicalWeeklyMuscleSets, workout])
+
   // Group exercises by muscle, sort exercises within groups by Hebrew name (A-Z)
   const exercisesByMuscle = useMemo((): MuscleGroupExercises[] => {
     if (!workout) return []
@@ -1790,6 +1827,7 @@ export function useActiveWorkout() {
     exercisesByMuscle,
     exercisesByEquipment,
     exercisesByComplexity,
+    weeklyMuscleSets,
     showSummaryModal,
     isSaving,
 

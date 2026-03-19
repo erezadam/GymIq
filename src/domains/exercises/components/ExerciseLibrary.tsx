@@ -48,6 +48,8 @@ export interface ExerciseLibraryProps {
   onProgramBack?: () => void
   targetUserId?: string // When building program for trainee, pass trainee's uid to show their history tags
   programOtherDaysExercises?: ProgramDayExerciseInfo[] // Exercises from other days in the same program
+  initialMuscleFilter?: string // Pre-select muscle filter (e.g. from trainer's muscle analysis)
+  initialSubMuscleFilter?: string // Pre-select sub-muscle filter
 }
 
 export function ExerciseLibrary({
@@ -57,6 +59,8 @@ export function ExerciseLibrary({
   onProgramBack,
   targetUserId,
   programOtherDaysExercises = [],
+  initialMuscleFilter,
+  initialSubMuscleFilter,
 }: ExerciseLibraryProps = {}) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -74,8 +78,13 @@ export function ExerciseLibrary({
   ])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [selectedPrimaryMuscle, setSelectedPrimaryMuscle] = useState<string>('all')
-  const [selectedSubMuscle, setSelectedSubMuscle] = useState<string>('all')
+  // Initialize filters from URL params or props (props take priority for programMode)
+  const [selectedPrimaryMuscle, setSelectedPrimaryMuscle] = useState<string>(
+    initialMuscleFilter || (fromAnalysis && initialMuscle ? initialMuscle : 'all')
+  )
+  const [selectedSubMuscle, setSelectedSubMuscle] = useState<string>(
+    initialSubMuscleFilter || (fromAnalysis && initialSubMuscle && initialSubMuscle !== initialMuscle ? initialSubMuscle : 'all')
+  )
   const [selectedEquipment, setSelectedEquipment] = useState<string>('all')
   const [imageModal, setImageModal] = useState<{ url: string; name: string; instructionsHe: string[] } | null>(null)
   const [recentlyDoneExerciseIds, setRecentlyDoneExerciseIds] = useState<Set<string>>(new Set())
@@ -83,7 +92,7 @@ export function ExerciseLibrary({
   const [isScheduleForLater, setIsScheduleForLater] = useState(false)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const dateInputRef = useRef<HTMLInputElement>(null)
-  const analysisFilterInitialized = useRef(false)
+  const isFirstRender = useRef(true)
 
   const { selectedExercises, addExercise, addExercisesFromSet, removeExercise, clearWorkout, scheduledDate, setScheduledDate } = useWorkoutBuilderStore()
 
@@ -169,24 +178,49 @@ export function ExerciseLibrary({
   }, [scheduledDate, isScheduleForLater])
 
   useEffect(() => {
-    loadData()
-  }, [])
-
-  // Auto-set filters from analysis query params (once after data loads)
-  useEffect(() => {
-    if (fromAnalysis && initialMuscle && !analysisFilterInitialized.current && muscles.length > 0 && !loading) {
-      analysisFilterInitialized.current = true
-      setSelectedPrimaryMuscle(initialMuscle)
-      // Sub-muscle will be set after primary muscle change triggers sub-muscle reset
-      if (initialSubMuscle) {
-        // Delay to run after the sub-muscle reset effect
-        setTimeout(() => setSelectedSubMuscle(initialSubMuscle), 0)
+    let cancelled = false
+    const load = async () => {
+      setLoading(true)
+      try {
+        let [exercisesData, musclesData, muscleNamesMapping, equipmentData] = await Promise.all([
+          exerciseService.getExercises(),
+          getMuscles(),
+          getMuscleIdToNameHeMap(),
+          getEquipment(),
+        ] as const)
+        if (cancelled) return
+        const fixedIds = await autoFixEquipmentMismatch(exercisesData)
+        if (cancelled) return
+        if (fixedIds.length > 0) {
+          const fixedSet = new Set(fixedIds)
+          exercisesData = exercisesData.map((ex) =>
+            fixedSet.has(ex.id) ? { ...ex, equipment: 'smit_machine' as const } : ex
+          )
+        }
+        setExercises(exercisesData)
+        setMuscles(musclesData)
+        setDynamicMuscleNames(muscleNamesMapping)
+        setEquipmentOptions([
+          { id: 'all', label: 'הכל' },
+          ...equipmentData.map((eq) => ({ id: eq.id, label: eq.nameHe })),
+          { id: 'graviton', label: 'גרביטון' },
+        ])
+      } catch (error) {
+        if (!cancelled) console.error('Failed to load data:', error)
+      } finally {
+        if (!cancelled) setLoading(false)
       }
     }
-  }, [fromAnalysis, initialMuscle, initialSubMuscle, muscles, loading])
+    load()
+    return () => { cancelled = true }
+  }, [])
 
-  // Reset sub-muscle when primary muscle changes
+  // Reset sub-muscle when primary muscle changes (skip on first render to preserve URL params)
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
     setSelectedSubMuscle('all')
   }, [selectedPrimaryMuscle])
 
@@ -199,40 +233,6 @@ export function ExerciseLibrary({
       }, 100)
     }
   }, [showDatePicker])
-
-  const loadData = async () => {
-    setLoading(true)
-    try {
-      let [exercisesData, musclesData, muscleNamesMapping, equipmentData] = await Promise.all([
-        exerciseService.getExercises(),
-        getMuscles(),
-        getMuscleIdToNameHeMap(),
-        getEquipment(),
-      ] as const)
-      // Auto-fix equipment mismatches (e.g. Smith exercises tagged as 'machine')
-      const fixedIds = await autoFixEquipmentMismatch(exercisesData)
-      if (fixedIds.length > 0) {
-        const fixedSet = new Set(fixedIds)
-        exercisesData = exercisesData.map((ex) =>
-          fixedSet.has(ex.id) ? { ...ex, equipment: 'smit_machine' as const } : ex
-        )
-      }
-
-      setExercises(exercisesData)
-      setMuscles(musclesData)
-      setDynamicMuscleNames(muscleNamesMapping)
-
-      // Set equipment options from Firebase
-      setEquipmentOptions([
-        { id: 'all', label: 'הכל' },
-        ...equipmentData.map((eq) => ({ id: eq.id, label: eq.nameHe })),
-      ])
-    } catch (error) {
-      console.error('Failed to load data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   // Load recently done exercises and last month exercises in background (non-blocking)
   // When targetUserId is provided (e.g., building program for trainee), use that instead of current user
@@ -300,8 +300,12 @@ export function ExerciseLibrary({
         }
 
         // Equipment filter
-        if (selectedEquipment !== 'all' && ex.equipment !== selectedEquipment) {
-          return false
+        if (selectedEquipment !== 'all') {
+          if (selectedEquipment === 'graviton') {
+            if (!ex.assistanceTypes?.includes('graviton')) return false
+          } else if (ex.equipment !== selectedEquipment) {
+            return false
+          }
         }
 
         return true

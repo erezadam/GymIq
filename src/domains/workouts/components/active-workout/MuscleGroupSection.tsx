@@ -7,8 +7,11 @@ import type { MuscleGroupExercises } from '../../types/active-workout.types'
 import { ExerciseCard } from './ExerciseCard'
 import type { ReportedSet } from '../../types/active-workout.types'
 
+const WEEKLY_SETS_TARGET = 10
+
 interface MuscleGroupSectionProps {
   group: MuscleGroupExercises
+  weeklyMuscleSets?: Map<string, number>
   onToggleExercise: (exerciseId: string) => void
   onAddSet: (exerciseId: string) => void
   onUpdateSet: (exerciseId: string, setId: string, updates: Partial<ReportedSet>) => void
@@ -21,6 +24,7 @@ interface MuscleGroupSectionProps {
 
 export function MuscleGroupSection({
   group,
+  weeklyMuscleSets,
   onToggleExercise,
   onAddSet,
   onUpdateSet,
@@ -30,10 +34,24 @@ export function MuscleGroupSection({
   onUpdateNotes,
   onSetAssistanceType,
 }: MuscleGroupSectionProps) {
+  const currentSets = weeklyMuscleSets?.get(group.muscleGroup) || 0
+  const reachedTarget = currentSets >= WEEKLY_SETS_TARGET
+
   return (
     <section className="muscle-group-section" dir="rtl">
-      {/* Muscle group header */}
-      <h2 className="muscle-group-header">{group.muscleGroupHe}</h2>
+      {/* Muscle group header with weekly sets progress */}
+      <h2 className="muscle-group-header flex items-center justify-between">
+        <span>{group.muscleGroupHe}</span>
+        {weeklyMuscleSets && (
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+            reachedTarget
+              ? 'bg-status-success/20 text-status-success'
+              : 'bg-accent-purple/20 text-accent-purple'
+          }`}>
+            {currentSets}/{WEEKLY_SETS_TARGET} סטים
+          </span>
+        )}
+      </h2>
 
       {/* Exercise cards */}
       <div className="muscle-group-list">

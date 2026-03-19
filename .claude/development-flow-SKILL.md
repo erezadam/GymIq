@@ -183,6 +183,40 @@ grep -r "\.filter(" src/domains/workouts/components/WorkoutHistory.tsx
 
 ---
 
+### 🔄 באגים ב-React — צ'קליסט מחזור חיים (חובה!)
+
+> **לקח קריטי (18/03/2026):** באג "זרוע אחורית מציגה 0 תרגילים" לקח 3 ניסיונות לתקן כי לא נבדק מחזור החיים המלא של הקומפוננטה. כל ניסיון תיקן שכבה אחת בלבד.
+
+**לפני שכותבים שורת תיקון — עקבו אחרי הזרימה המלאה:**
+
+```
+□ 1. Initial State — האם ערכים ידועים (URL params, props) מאותחלים ב-useState?
+     ❌ שגוי: useState('all') ואז useEffect → setState(urlParam)
+     ✅ נכון: useState(urlParam || 'all')
+
+□ 2. Effects — רשמו את כל ה-effects שרצים ובאיזה סדר:
+     Effect 1: _____ [deps: _____]
+     Effect 2: _____ [deps: _____]
+     האם יש race condition בין effects שמשנים אותו state?
+
+□ 3. StrictMode — בדקו ב-main.tsx אם <StrictMode> פעיל!
+     אם כן: effects רצים פעמיים. בדקו:
+     □ האם refs שומרים ערך נכון אחרי double-mount?
+     □ האם async effects כוללים cleanup function עם cancelled flag?
+     □ האם setLoading(true) נקרא שוב בקריאה השנייה?
+
+□ 4. Async Completion — מה קורה כשנתונים חוזרים?
+     □ האם קריאה ישנה (cancelled) עדיין מעדכנת state?
+     □ האם setLoading(true) מכסה נתונים שכבר נטענו?
+```
+
+**כלל אצבע:**
+- State מ-URL/props → `useState(value)`, **לא** `useEffect → setState`
+- כל effect עם async → חובה `cancelled` flag ו-cleanup
+- לא לתקן effect אחד בלי לבדוק את כל ה-effects באותה קומפוננטה
+
+---
+
 ### שלב א: הבנת הבעיה
 ```
 מה המשתמש דיווח: _______________
@@ -284,6 +318,6 @@ grep -r "relevantState" src/
 
 ```
 ══════════════════════════════════════════════════════════════
-נוצר: 26/01/2026 | עדכון: 30/01/2026 - הוספת כלל "בדוק תצוגה קודם"
+נוצר: 26/01/2026 | עדכון: 18/03/2026 - הוספת צ'קליסט React lifecycle לחקירת באגים
 ══════════════════════════════════════════════════════════════
 ```

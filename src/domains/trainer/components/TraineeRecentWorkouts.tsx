@@ -63,6 +63,16 @@ function formatDuration(seconds: number): string {
   return `${mins} דקות`
 }
 
+type StatusFilter = 'all' | 'completed' | 'in_progress' | 'cancelled' | 'planned'
+
+const STATUS_FILTERS: { id: StatusFilter; label: string }[] = [
+  { id: 'all', label: 'הכל' },
+  { id: 'completed', label: 'הושלם' },
+  { id: 'in_progress', label: 'בתהליך' },
+  { id: 'cancelled', label: 'בוטל' },
+  { id: 'planned', label: 'מתוכנן' },
+]
+
 export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, isLoading }: TraineeRecentWorkoutsProps) {
   const [allWorkouts, setAllWorkouts] = useState<WorkoutHistorySummary[]>(initialWorkouts)
   const [hasMore, setHasMore] = useState(initialWorkouts.length >= 10)
@@ -70,17 +80,21 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
   const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(null)
   const [expandedWorkoutData, setExpandedWorkoutData] = useState<WorkoutHistoryEntry | null>(null)
   const [loadingExpand, setLoadingExpand] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
   // Sync with parent prop when it changes
-  const workouts = allWorkouts.length > initialWorkouts.length ? allWorkouts : initialWorkouts
+  const rawWorkouts = allWorkouts.length > initialWorkouts.length ? allWorkouts : initialWorkouts
+  const workouts = statusFilter === 'all'
+    ? rawWorkouts
+    : rawWorkouts.filter(w => w.status === statusFilter || (statusFilter === 'in_progress' && w.status === 'partial'))
 
   const handleLoadMore = async () => {
-    if (loadingMore || !hasMore || workouts.length === 0) return
+    if (loadingMore || !hasMore || rawWorkouts.length === 0) return
     setLoadingMore(true)
     try {
-      const lastDate = workouts[workouts.length - 1].date
+      const lastDate = rawWorkouts[rawWorkouts.length - 1].date
       const result = await getUserWorkoutHistoryPaginated(traineeId, 20, lastDate, true)
-      setAllWorkouts([...workouts, ...result.summaries])
+      setAllWorkouts([...rawWorkouts, ...result.summaries])
       setHasMore(result.hasMore)
     } catch {
       // silently fail
@@ -128,7 +142,27 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
 
   return (
     <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-5">
+      {/* Status Filter */}
+      <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1">
+        {STATUS_FILTERS.map(filter => (
+          <button
+            key={filter.id}
+            onClick={() => setStatusFilter(filter.id)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ${
+              statusFilter === filter.id
+                ? 'bg-primary-main/20 text-primary-main border border-primary-main/30'
+                : 'bg-dark-surface/50 text-text-muted border border-transparent hover:text-text-secondary'
+            }`}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
+
       <div className="space-y-3">
+        {workouts.length === 0 ? (
+          <p className="text-sm text-text-muted text-center py-4">אין אימונים בסטטוס זה</p>
+        ) : null}
         {workouts.map((workout, index) => {
           const isDeleted = !!workout.deletedByTrainee
           const config = statusConfig[workout.status] || statusConfig.planned
