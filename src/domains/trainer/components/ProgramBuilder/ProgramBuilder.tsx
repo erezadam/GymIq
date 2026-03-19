@@ -74,6 +74,8 @@ export default function ProgramBuilder() {
   const { id: editId } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
   const preSelectedTraineeId = searchParams.get('traineeId')
+  const filterMuscle = searchParams.get('filterMuscle')
+  const filterSubMuscle = searchParams.get('filterSubMuscle')
   const { user } = useAuthStore()
   const isEditMode = !!editId
 
@@ -498,6 +500,8 @@ export default function ProgramBuilder() {
           onProgramBack={() => { setShowExercisePicker(false); saveDraftInBackground() }}
           targetUserId={traineeId}
           programOtherDaysExercises={getOtherDaysExercises(selectedMobileDayIndex)}
+          initialMuscleFilter={filterMuscle || undefined}
+          initialSubMuscleFilter={filterSubMuscle || undefined}
         />
       </div>
     )

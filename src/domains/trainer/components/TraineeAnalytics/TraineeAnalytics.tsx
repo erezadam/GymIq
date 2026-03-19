@@ -5,14 +5,16 @@ import { TotalWorkoutsTab } from './TotalWorkoutsTab'
 import { StreakTab } from './StreakTab'
 import { WeeklyComplianceTab } from './WeeklyComplianceTab'
 import { PRTab } from './PRTab'
+import { MuscleAnalysisTab } from './MuscleAnalysisTab'
 
-type TabId = 'total' | 'streak' | 'weekly' | 'pr'
+type TabId = 'total' | 'streak' | 'weekly' | 'pr' | 'muscles'
 
 const TABS: { id: TabId; icon: string; label: string }[] = [
   { id: 'total', icon: '📊', label: 'סה"כ אימונים' },
   { id: 'streak', icon: '🔥', label: 'רצף ימים' },
   { id: 'weekly', icon: '📅', label: 'השבוע' },
   { id: 'pr', icon: '🏆', label: 'PR' },
+  { id: 'muscles', icon: '💪', label: 'שרירים' },
 ]
 
 export default function TraineeAnalytics() {
@@ -75,6 +77,7 @@ export default function TraineeAnalytics() {
         {activeTab === 'streak' && <StreakTab data={data} />}
         {activeTab === 'weekly' && <WeeklyComplianceTab data={data} />}
         {activeTab === 'pr' && <PRTab data={data} />}
+        {activeTab === 'muscles' && traineeId && <MuscleAnalysisTab traineeId={traineeId} />}
       </div>
     </div>
   )

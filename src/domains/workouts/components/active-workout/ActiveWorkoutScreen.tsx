@@ -51,6 +51,7 @@ export default function ActiveWorkoutScreen() {
     formattedTime,
     exercisesByMuscle,
     exercisesByEquipment,
+    weeklyMuscleSets,
     showSummaryModal,
     isSaving,
 
@@ -282,6 +283,7 @@ export default function ActiveWorkoutScreen() {
           <MuscleGroupSection
             key={group.muscleGroupHe}
             group={group}
+            weeklyMuscleSets={sortBy === 'muscle' ? weeklyMuscleSets : undefined}
             onToggleExercise={handleToggleExercise}
             onAddSet={handleAddSet}
             onUpdateSet={updateSet}

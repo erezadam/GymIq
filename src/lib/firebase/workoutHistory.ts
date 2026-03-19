@@ -517,6 +517,81 @@ export async function getLastWorkoutForExercises(
   return result
 }
 
+// Get personal best (PR) for multiple exercises — highest weight across ALL workouts
+export async function getBestPerformanceForExercises(
+  userId: string,
+  exerciseIds: string[]
+): Promise<Record<string, { weight: number; reps: number; date: Date }>> {
+  const historyRef = collection(db, COLLECTION_NAME)
+
+  const q = query(
+    historyRef,
+    where('userId', '==', userId),
+    orderBy('date', 'desc')
+  )
+
+  const snapshot = await getDocs(q)
+  const result: Record<string, { weight: number; reps: number; date: Date }> = {}
+  const exerciseIdSet = new Set(exerciseIds)
+
+  for (const doc of snapshot.docs) {
+    const data = doc.data()
+    if (!isNotSoftDeleted(data)) continue
+    if (data.status !== 'completed') continue
+
+    const exercises = data.exercises || []
+    const workoutDate = data.date?.toDate() || new Date()
+
+    for (const exercise of exercises) {
+      if (!exerciseIdSet.has(exercise.exerciseId)) continue
+      if (!exercise.sets || exercise.sets.length === 0) continue
+
+      const validSets = exercise.sets.filter((set: any) =>
+        set.type !== 'warmup' &&
+        ((set.actualReps && set.actualReps > 0) || set.completed)
+      )
+
+      if (validSets.length === 0) continue
+
+      const allWeightsZero = validSets.every((set: any) => !set.actualWeight || set.actualWeight === 0)
+
+      const bestSet = validSets.reduce((best: any, current: any) => {
+        if (allWeightsZero) {
+          const currentReps = current.actualReps || 0
+          const bestReps = best.actualReps || 0
+          return currentReps > bestReps ? current : best
+        } else {
+          const currentWeight = current.actualWeight || 0
+          const bestWeight = best.actualWeight || 0
+          if (currentWeight > bestWeight) return current
+          if (currentWeight === bestWeight) {
+            return (current.actualReps || 0) > (best.actualReps || 0) ? current : best
+          }
+          return best
+        }
+      }, validSets[0])
+
+      const bestWeight = bestSet.actualWeight || bestSet.targetWeight || 0
+      const bestReps = bestSet.actualReps || bestSet.targetReps || 0
+      const existing = result[exercise.exerciseId]
+
+      if (!existing) {
+        result[exercise.exerciseId] = { weight: bestWeight, reps: bestReps, date: workoutDate }
+      } else if (allWeightsZero) {
+        if (bestReps > existing.reps) {
+          result[exercise.exerciseId] = { weight: bestWeight, reps: bestReps, date: workoutDate }
+        }
+      } else {
+        if (bestWeight > existing.weight || (bestWeight === existing.weight && bestReps > existing.reps)) {
+          result[exercise.exerciseId] = { weight: bestWeight, reps: bestReps, date: workoutDate }
+        }
+      }
+    }
+  }
+
+  return result
+}
+
 // Calculate exercise volume for active workout sets (reps × weight for completed sets)
 // Only weight-based exercises (reportType includes 'weight' or is default weight_reps)
 export function calculateExerciseVolume(
@@ -1301,6 +1376,44 @@ export async function getWeeklyMuscleSets(
     return result
   } catch (error) {
     console.error('❌ Error getting weekly muscle sets:', error)
+    return result
+  }
+}
+
+/**
+ * Get weekly completed sets grouped by category (muscle group).
+ * Used by active workout screen for real-time weekly progress display.
+ */
+export async function getWeeklySetsByCategory(
+  userId: string
+): Promise<Map<string, number>> {
+  const result = new Map<string, number>()
+
+  try {
+    const now = new Date()
+    const startOfWeek = new Date(now)
+    startOfWeek.setDate(now.getDate() - now.getDay()) // Sunday
+    startOfWeek.setHours(0, 0, 0, 0)
+
+    const workouts = await getUserWorkoutHistoryByDateRange(userId, startOfWeek, now)
+
+    for (const workout of workouts) {
+      if (workout.status !== 'completed') continue
+
+      for (const exercise of workout.exercises) {
+        const category = exercise.category || 'other'
+
+        for (const set of exercise.sets) {
+          if (!set.completed) continue
+          const current = result.get(category) || 0
+          result.set(category, current + 1)
+        }
+      }
+    }
+
+    return result
+  } catch (error) {
+    console.error('❌ Error getting weekly sets by category:', error)
     return result
   }
 }
