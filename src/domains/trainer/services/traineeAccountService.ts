@@ -3,14 +3,16 @@ import {
   getAuth,
   createUserWithEmailAndPassword,
   updateProfile,
-  sendPasswordResetEmail,
 } from 'firebase/auth'
 import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
-import { db, auth } from '@/lib/firebase/config'
+import { getFunctions, httpsCallable } from 'firebase/functions'
+import { db, app } from '@/lib/firebase/config'
 import { firebaseConfig } from '@/lib/firebase/config'
 import type { CreateTraineeData, TrainingGoal } from '../types'
 import { trainerService } from './trainerService'
 import type { AppUser } from '@/lib/firebase/auth'
+
+const functions = getFunctions(app)
 
 export const traineeAccountService = {
   /**
@@ -22,7 +24,7 @@ export const traineeAccountService = {
    * 2. Update display name
    * 3. Create user document in Firestore (with trainerId)
    * 4. Create trainer-trainee relationship
-   * 5. Send password reset email (trainee sets own password)
+   * 5. Send welcome email with password setup link (via Cloud Function)
    * 6. Clean up secondary app
    */
   async createTraineeAccount(
@@ -94,9 +96,19 @@ export const traineeAccountService = {
         notes: data.notes?.trim() || undefined,
       })
 
-      // Step 5: Send password reset email so trainee can set their own password
-      // Using primary auth since it doesn't require being signed in
-      await sendPasswordResetEmail(auth, data.email)
+      // Step 5: Send welcome email with password setup link
+      // Cloud Function generates the password reset link via Admin SDK and sends branded email
+      try {
+        const sendWelcomeEmail = httpsCallable(functions, 'sendWelcomeEmail')
+        await sendWelcomeEmail({
+          traineeEmail: data.email,
+          traineeName: `${data.firstName} ${data.lastName}`,
+          trainerName,
+        })
+      } catch (emailError) {
+        // Email failure should not block trainee creation
+        console.error('Failed to send welcome email:', emailError)
+      }
 
       return { uid: credential.user.uid, email: data.email }
     } finally {

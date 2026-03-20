@@ -3,6 +3,10 @@ import { X, Save, Loader2 } from 'lucide-react'
 import { trainerService } from '../services/trainerService'
 import type { TraineeWithStats, TrainingGoal } from '../types'
 import { TRAINING_GOAL_LABELS } from '../types'
+import { getFunctions, httpsCallable } from 'firebase/functions'
+import { app } from '@/lib/firebase/config'
+
+const functions = getFunctions(app)
 
 interface TraineeEditModalProps {
   trainee: TraineeWithStats
@@ -24,6 +28,7 @@ const GOAL_OPTIONS: TrainingGoal[] = [
 interface FormData {
   firstName: string
   lastName: string
+  email: string
   phoneNumber: string
   trainingGoals: TrainingGoal[]
   injuriesOrLimitations: string
@@ -42,6 +47,7 @@ export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalP
   const [formData, setFormData] = useState<FormData>({
     firstName: profile?.firstName || '',
     lastName: profile?.lastName || '',
+    email: profile?.email || '',
     phoneNumber: profile?.phoneNumber || '',
     trainingGoals: (profile?.trainingGoals as TrainingGoal[]) || [],
     injuriesOrLimitations: profile?.injuriesOrLimitations || '',
@@ -65,6 +71,13 @@ export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalP
     setError(null)
 
     try {
+      // If email changed, update via Cloud Function (Auth + Firestore)
+      const emailChanged = formData.email.trim() && formData.email.trim() !== (profile?.email || '')
+      if (emailChanged) {
+        const updateEmail = httpsCallable(functions, 'updateUserEmail')
+        await updateEmail({ userId: profile.uid, newEmail: formData.email.trim() })
+      }
+
       // Update user profile fields
       await trainerService.updateTraineeProfile(profile.uid, {
         firstName: formData.firstName.trim(),
@@ -159,6 +172,21 @@ export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalP
                 required
               />
             </div>
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">
+              אימייל
+            </label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => updateField('email', e.target.value)}
+              className="input-primary"
+              placeholder="user@example.com"
+              dir="ltr"
+            />
           </div>
 
           {/* Phone */}
