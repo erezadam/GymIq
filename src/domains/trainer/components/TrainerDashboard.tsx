@@ -1,14 +1,14 @@
 import { useState, useMemo, useEffect } from 'react'
 import { UserPlus, Users, RefreshCw, Dumbbell, TrendingUp, MessageSquare } from 'lucide-react'
 import { useTrainerData } from '../hooks/useTrainerData'
-import { useAuthStore } from '@/domains/authentication/store'
+import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { messageService } from '../services/messageService'
 import { TraineeCard } from './TraineeCard'
 import { TraineeRegistrationModal } from './TraineeRegistrationModal'
 
 export default function TrainerDashboard() {
   const { trainees, isLoading, error, refreshTrainees } = useTrainerData()
-  const { user } = useAuthStore()
+  const user = useEffectiveUser()
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
   const [totalMessages, setTotalMessages] = useState(0)
 

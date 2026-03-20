@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import { Trophy, AlertCircle, Timer } from 'lucide-react'
 import { useWorkoutSession } from '../../hooks/useWorkoutSession'
 import { saveWorkoutHistory } from '@/lib/firebase/workoutHistory'
-import { useAuthStore } from '@/domains/authentication/store'
+import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import toast from 'react-hot-toast'
 
 import { ExerciseNavigationHeader } from './ExerciseNavigationHeader'
@@ -18,7 +18,7 @@ import { CompletedSetRow, ActiveSetCard, UpcomingSetRow } from './SetRow'
 
 export default function WorkoutSessionScreen() {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const user = useEffectiveUser()
 
   const {
     session,

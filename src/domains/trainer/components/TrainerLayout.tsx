@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '@/domains/authentication/store'
+import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 
 const navigation = [
   { name: 'מתאמנים', href: '/trainer', icon: Users, end: true },
@@ -20,7 +21,8 @@ const navigation = [
 export default function TrainerLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const navigate = useNavigate()
-  const { user, logout } = useAuthStore()
+  const { logout } = useAuthStore()
+  const user = useEffectiveUser()
 
   const handleLogout = () => {
     logout()

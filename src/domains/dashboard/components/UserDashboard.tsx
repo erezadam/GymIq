@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuthStore } from '@/domains/authentication/store'
+import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { getUserWorkoutStats } from '@/lib/firebase/workoutHistory'
 import { getExternalComparisonUrl } from '@/lib/firebase/appSettings'
 import { useVersionCheck } from '@/shared/hooks/useVersionCheck'
@@ -106,7 +106,7 @@ function getWeekRange(): string {
 }
 
 export default function UserDashboard() {
-  const { user } = useAuthStore()
+  const user = useEffectiveUser()
   const navigate = useNavigate()
   const weekRange = getWeekRange()
   const [userStats, setUserStats] = useState(defaultStats)

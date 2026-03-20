@@ -6,7 +6,7 @@ import { getUserWorkoutHistory, getWorkoutById, updateWorkoutHistory, softDelete
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { getActiveBandTypes } from '@/lib/firebase/bandTypes'
 import toast from 'react-hot-toast'
-import { useAuthStore } from '@/domains/authentication/store'
+import { useEffectiveUser, useIsImpersonating } from '@/domains/authentication/hooks/useEffectiveUser'
 import { useWorkoutBuilderStore } from '../store'
 import { exerciseService } from '@/domains/exercises/services'
 import { WorkoutCard } from '@/shared/components/WorkoutCard'
@@ -35,7 +35,8 @@ interface EmptyWorkoutDialogState {
 
 export default function WorkoutHistory() {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const user = useEffectiveUser()
+  const isImpersonating = useIsImpersonating()
   const { addExercise, clearWorkout } = useWorkoutBuilderStore()
   const { program: trainerProgram, standaloneWorkouts, isLoading: trainerProgramLoading, refreshProgram } = useTraineeProgram()
   const [workouts, setWorkouts] = useState<WorkoutHistorySummary[]>([])
@@ -177,6 +178,7 @@ export default function WorkoutHistory() {
 
   // Handle delete confirmation (regular workout - no reason needed)
   const handleDeleteConfirm = async () => {
+    if (isImpersonating) { toast.error('לא ניתן לבצע שינויים במצב צפייה'); return }
     if (!deleteDialog.workout) return
 
     try {
@@ -342,6 +344,7 @@ export default function WorkoutHistory() {
 
   // Confirm and navigate to workout - 3 cases per spec 11.2
   const handleConfirmContinue = async () => {
+    if (isImpersonating) { toast.error('לא ניתן לבצע שינויים במצב צפייה'); return }
     if (!continueDialog.workout || !user?.uid) return
 
     const workoutSummary = continueDialog.workout

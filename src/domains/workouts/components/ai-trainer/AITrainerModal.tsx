@@ -7,7 +7,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { X, Loader2, Sparkles } from 'lucide-react'
-import { useAuthStore } from '@/domains/authentication/store'
+import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { generateAIWorkouts } from '@/domains/workouts/services/aiTrainerService'
 import type { AITrainerRequest, WorkoutStructure, SplitStartWith, AIGeneratedWorkout } from '@/domains/workouts/services/aiTrainer.types'
 import { getExerciseCount } from '@/domains/workouts/services/aiTrainer.types'
@@ -34,7 +34,7 @@ const WARMUP_OPTIONS = [
 
 export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps) {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const user = useEffectiveUser()
 
   // Form state
   const [numWorkouts, setNumWorkouts] = useState(3)

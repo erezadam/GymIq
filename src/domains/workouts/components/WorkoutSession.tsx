@@ -20,7 +20,7 @@ import { useWorkoutBuilderStore } from '../store'
 import { exerciseService } from '@/domains/exercises/services'
 import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '@/domains/exercises/utils'
 import { saveWorkoutHistory } from '@/lib/firebase/workoutHistory'
-import { useAuthStore } from '@/domains/authentication/store'
+import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import type { Exercise } from '@/domains/exercises/types'
 import type { WorkoutExercise, WorkoutCompletionStatus } from '../types'
 
@@ -33,7 +33,7 @@ interface SessionExercise extends WorkoutExercise {
 export default function WorkoutSession() {
   const navigate = useNavigate()
   const { selectedExercises, getWorkoutExercises, clearWorkout, addExercise, workoutName } = useWorkoutBuilderStore()
-  const { user } = useAuthStore()
+  const user = useEffectiveUser()
 
   // Session state
   const [exercises, setExercises] = useState<SessionExercise[]>([])

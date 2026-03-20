@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useAuthStore } from '@/domains/authentication/store'
+import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { programService } from '../services/programService'
 import type { TrainingProgram, ProgramDay } from '../types'
 
 export function useTraineeProgram(traineeId?: string) {
-  const { user } = useAuthStore()
+  const user = useEffectiveUser()
   const targetId = traineeId || user?.uid
   const [program, setProgram] = useState<TrainingProgram | null>(null)
   const [standaloneWorkouts, setStandaloneWorkouts] = useState<TrainingProgram[]>([])

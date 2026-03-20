@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useAuthStore } from '@/domains/authentication/store'
+import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { messageService } from '../services/messageService'
 import type { TrainerMessage } from '../types'
 
 export function useTrainerMessages(traineeId?: string) {
-  const { user } = useAuthStore()
+  const user = useEffectiveUser()
   const [messages, setMessages] = useState<TrainerMessage[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
