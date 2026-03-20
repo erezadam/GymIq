@@ -205,12 +205,12 @@ export function useMuscleAnalysis(
                 cardioData.set(cardioKey, cd)
               }
 
-              // Secondary muscle contribution
+              // Secondary muscle contribution — only sets at 50%, reps not counted
+              // so that secondary credit doesn't distort the average reps
               const credits = exDef?.secondaryMuscleCredits || []
               for (const muscleId of credits) {
                 const ex2 = muscleData.get(muscleId) || { sets: 0, reps: 0, repsCount: 0 }
                 ex2.sets += 0.5
-                if (reps > 5) { ex2.reps += reps; ex2.repsCount++ }
                 muscleData.set(muscleId, ex2)
               }
             }
@@ -220,7 +220,7 @@ export function useMuscleAnalysis(
 
               const exerciseCredits = exDef?.secondaryMuscleCredits || []
               for (const muscleId of exerciseCredits) {
-                addExerciseToMuscle(muscleId, exercise.exerciseId, exName, Math.round(exSets * 0.5 * 10) / 10, exRepsTotal, exRepsCount)
+                addExerciseToMuscle(muscleId, exercise.exerciseId, exName, Math.round(exSets * 0.5 * 10) / 10, 0, 0)
               }
             }
           }
@@ -350,13 +350,9 @@ export function useMuscleAnalysis(
               existing.zoneCount += row.totalSets || 1
             }
           }
-          if (row.avgReps > 0) {
-            for (const ex of row.exercises) {
-              if (ex.avgReps > 0) {
-                existing.reps += ex.avgReps * ex.sets
-                existing.repsCount += ex.sets
-              }
-            }
+          if (row.avgReps > 0 && row.totalSets > 0) {
+            existing.reps += row.avgReps * row.totalSets
+            existing.repsCount += row.totalSets
           }
           summaryMap.set(row.category, existing)
         }
