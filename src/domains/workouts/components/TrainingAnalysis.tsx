@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { X, ArrowRight, Calendar, Download, ChevronRight, Plus } from 'lucide-react'
-import { useAuthStore } from '@/domains/authentication/store'
+import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
 import {
   getTrainingAnalysis,
@@ -407,7 +407,7 @@ type ScreenState = 'loading' | 'error' | 'results'
 type ViewMode = 'muscles' | 'summary'
 
 export default function TrainingAnalysis() {
-  const { user } = useAuthStore()
+  const user = useEffectiveUser()
   const [view, setView] = useState<ViewMode>('muscles')
   const [state, setState] = useState<ScreenState>('loading')
   const [analysis, setAnalysis] = useState<TrainingAnalysisResult | null>(null)

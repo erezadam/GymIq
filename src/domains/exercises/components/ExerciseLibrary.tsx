@@ -12,7 +12,7 @@ import { getEquipment } from '@/lib/firebase/equipment'
 import { MuscleIcon } from '@/shared/components/MuscleIcon'
 import RecommendedSets from './RecommendedSets'
 import { saveWorkoutHistory, getRecentlyDoneExerciseIds, getWeeklyMuscleSets } from '@/lib/firebase/workoutHistory'
-import { useAuthStore } from '@/domains/authentication/store'
+import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '@/domains/workouts/types/active-workout.types'
 import type { WorkoutHistoryEntry } from '@/domains/workouts/types'
 import { getMuscleNameHe } from '@/utils/muscleTranslations'
@@ -68,7 +68,7 @@ export function ExerciseLibrary({
   const fromAnalysis = searchParams.get('fromAnalysis') === 'true'
   const initialMuscle = searchParams.get('muscle')
   const initialSubMuscle = searchParams.get('subMuscle')
-  const { user } = useAuthStore()
+  const user = useEffectiveUser()
 
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [muscles, setMuscles] = useState<PrimaryMuscle[]>(defaultMuscleMapping)

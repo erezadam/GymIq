@@ -5,6 +5,7 @@ import { ErrorBoundary } from '@/shared/components/ErrorBoundary'
 import { UpdateBanner } from '@/shared/components/UpdateBanner'
 import { useVersionCheck } from '@/shared/hooks/useVersionCheck'
 import { AuthGuard, GuestGuard } from '@/app/router/guards'
+import { ImpersonationBanner } from '@/shared/components/ImpersonationBanner'
 
 // Lazy load pages
 // Auth
@@ -59,6 +60,8 @@ function App() {
           newVersion={newVersion}
         />
       )}
+
+      <ImpersonationBanner />
 
       <ErrorBoundary>
       <Suspense fallback={<LoadingSpinner fullScreen />}>

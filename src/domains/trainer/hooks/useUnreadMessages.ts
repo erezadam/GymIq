@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react'
-import { useAuthStore } from '@/domains/authentication/store'
+import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { messageService } from '../services/messageService'
 import { useMessageStore } from '../store/messageStore'
 
 const POLL_INTERVAL = 60_000 // 60 seconds
 
 export function useUnreadMessages() {
-  const { user } = useAuthStore()
+  const user = useEffectiveUser()
   const { unreadCount, setUnreadCount } = useMessageStore()
   const intervalRef = useRef<number | null>(null)
 

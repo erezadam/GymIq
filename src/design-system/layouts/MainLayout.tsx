@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '@/domains/authentication/store'
+import { useEffectiveUser, useIsImpersonating } from '@/domains/authentication/hooks/useEffectiveUser'
 import {
   colors,
   spacing,
@@ -33,9 +34,13 @@ const navigation = [
 export default function MainLayout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, logout } = useAuthStore()
+  const { logout } = useAuthStore()
+  const effectiveUser = useEffectiveUser()
+  const isImpersonating = useIsImpersonating()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  // Use effective user for role-based navigation
+  const user = effectiveUser
   const isAdmin = user?.role === 'admin'
   const isTrainer = user?.role === 'trainer' || isAdmin
 
@@ -449,7 +454,7 @@ export default function MainLayout() {
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          paddingTop: hideMobileHeader ? 0 : 'calc(64px + env(safe-area-inset-top, 0px))',
+          paddingTop: hideMobileHeader ? (isImpersonating ? 44 : 0) : `calc(64px + env(safe-area-inset-top, 0px)${isImpersonating ? ' + 44px' : ''})`,
           overflow: 'hidden',
         }}
       >

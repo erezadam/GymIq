@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Trophy, ChevronRight, ChevronDown, Dumbbell, Flame } from 'lucide-react'
 import { getPersonalRecords, getExerciseHistory, PersonalRecord, ExerciseHistoryEntry } from '@/lib/firebase/workoutHistory'
-import { useAuthStore } from '@/domains/authentication/store'
+import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { getExerciseImageUrl } from '@/domains/exercises/utils/getExerciseImageUrl'
 
 // Format date for display - D/M format only
@@ -47,7 +47,7 @@ interface PersonalRecordsProps {
 
 export default function PersonalRecords({ userId: propUserId }: PersonalRecordsProps = {}) {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const user = useEffectiveUser()
   const effectiveUserId = propUserId || user?.uid
   const [records, setRecords] = useState<PersonalRecord[]>([])
   const [loading, setLoading] = useState(true)

@@ -16,6 +16,11 @@ interface AuthStore {
   isInitialized: boolean
   error: string | null
 
+  // Impersonation (admin-only, session-only)
+  impersonatedUser: AppUser | null
+  startImpersonation: (targetUser: AppUser) => void
+  stopImpersonation: () => void
+
   // Actions
   initialize: () => () => void
   login: (email: string, password: string) => Promise<void>
@@ -41,6 +46,17 @@ export const useAuthStore = create<AuthStore>()(
       isLoading: false,
       isInitialized: false,
       error: null,
+      impersonatedUser: null,
+
+      startImpersonation: (targetUser: AppUser) => {
+        const state = useAuthStore.getState()
+        if (state.user?.role !== 'admin') return
+        set({ impersonatedUser: targetUser })
+      },
+
+      stopImpersonation: () => {
+        set({ impersonatedUser: null })
+      },
 
       // Initialize auth state listener
       initialize: () => {
@@ -105,7 +121,7 @@ export const useAuthStore = create<AuthStore>()(
 
       // Logout
       logout: async () => {
-        set({ isLoading: true })
+        set({ isLoading: true, impersonatedUser: null })
         try {
           await logoutUser()
           set({

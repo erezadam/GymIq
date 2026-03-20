@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Mail } from 'lucide-react'
-import { useAuthStore } from '@/domains/authentication/store'
+import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { messageService } from '../../services/messageService'
 import { useMessageStore } from '../../store/messageStore'
 import type { TrainerMessage } from '../../types'
 import { InboxMessageCard } from './InboxMessageCard'
 
 export default function TraineeInbox() {
-  const { user } = useAuthStore()
+  const user = useEffectiveUser()
   const { setUnreadCount } = useMessageStore()
   const [messages, setMessages] = useState<TrainerMessage[]>([])
   const [isLoading, setIsLoading] = useState(true)

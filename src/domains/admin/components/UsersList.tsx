@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Users, Dumbbell, User, Trash2, Crown, RefreshCw, X, Mail, Lock, UserPlus, FileDown, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { Users, Dumbbell, User, Trash2, Crown, RefreshCw, X, Mail, Lock, UserPlus, FileDown, ArrowUpDown, ArrowUp, ArrowDown, Eye } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getAllUsers, updateUserRole, deleteUserFromFirestore, getUserStats } from '@/lib/firebase'
 import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth'
@@ -7,8 +7,12 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase/config'
 import type { AppUser } from '@/lib/firebase/auth'
 import { getUserWorkoutHistoryByDateRange } from '@/lib/firebase/workoutHistory'
+import { useAuthStore } from '@/domains/authentication/store'
+import { useNavigate } from 'react-router-dom'
 
 export default function UsersList() {
+  const navigate = useNavigate()
+  const { startImpersonation } = useAuthStore()
   const [users, setUsers] = useState<AppUser[]>([])
   const [stats, setStats] = useState({ total: 0, admins: 0, trainers: 0, users: 0 })
   const [loading, setLoading] = useState(true)
@@ -471,6 +475,18 @@ export default function UsersList() {
                     </td>
                     <td>
                       <div className="flex items-center gap-1">
+                        {user.role !== 'admin' && (
+                          <button
+                            onClick={() => {
+                              startImpersonation(user)
+                              navigate(user.role === 'trainer' ? '/trainer' : '/dashboard')
+                            }}
+                            className="p-2 text-text-muted hover:text-amber-400 hover:bg-amber-400/10 rounded-lg transition-colors"
+                            title="צפה כמשתמש"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => openReportModal(user)}
                           className="p-2 text-text-muted hover:text-primary-400 hover:bg-primary-400/10 rounded-lg transition-colors"

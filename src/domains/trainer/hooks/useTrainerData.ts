@@ -1,10 +1,10 @@
 import { useEffect, useCallback } from 'react'
 import { useTrainerStore } from '../store/trainerStore'
 import { trainerService } from '../services/trainerService'
-import { useAuthStore } from '@/domains/authentication/store'
+import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 
 export function useTrainerData() {
-  const { user } = useAuthStore()
+  const user = useEffectiveUser()
   const {
     trainees,
     isLoading,

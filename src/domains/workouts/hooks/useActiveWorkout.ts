@@ -18,7 +18,7 @@ import type {
 import type { SetType } from '../types/workout.types'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '../types/active-workout.types'
 import { useWorkoutBuilderStore } from '../store'
-import { useAuthStore } from '@/domains/authentication/store'
+import { useEffectiveUser, useIsImpersonating } from '@/domains/authentication/hooks/useEffectiveUser'
 import {
   saveWorkoutHistory,
   getBestPerformanceForExercises,
@@ -78,7 +78,8 @@ function computeStats(
 
 export function useActiveWorkout() {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const user = useEffectiveUser()
+  const isImpersonating = useIsImpersonating()
   const { selectedExercises, clearWorkout, removeExercise: removeFromStore, programId, programDayLabel, workoutName: builderWorkoutName, targetUserId, reportedBy, reportedByName } = useWorkoutBuilderStore()
 
   // Effective userId: trainee (if trainer reporting) or current user
@@ -165,6 +166,9 @@ export function useActiveWorkout() {
 
   // Auto-save to Firebase (debounced)
   const triggerAutoSave = useCallback((workoutToSave: ActiveWorkout, currentFirebaseId: string | null) => {
+    // Block writes during impersonation
+    if (isImpersonating) return
+
     // Clear any pending auto-save
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current)
