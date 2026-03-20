@@ -1,8 +1,13 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Flame, CalendarDays, CircleAlert, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Flame, CalendarDays, CircleAlert, AlertTriangle, CheckCircle, Mail, Loader2, Check } from 'lucide-react'
+import { getFunctions, httpsCallable } from 'firebase/functions'
+import { app } from '@/lib/firebase/config'
 import type { TraineeWithStats } from '../types'
 import { TRAINING_GOAL_LABELS } from '../types'
 import { TraineeAvatar } from './TraineeAvatar'
+
+const functions = getFunctions(app)
 
 function daysSince(date: Date): number {
   return Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24))
@@ -22,6 +27,7 @@ interface TraineeCardProps {
 
 export function TraineeCard({ trainee }: TraineeCardProps) {
   const navigate = useNavigate()
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
   const {
     relationship,
     traineeProfile,
@@ -30,6 +36,27 @@ export function TraineeCard({ trainee }: TraineeCardProps) {
     currentStreak,
     activeProgram,
   } = trainee
+
+  const handleResendEmail = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (emailStatus === 'sending' || emailStatus === 'sent') return
+
+    setEmailStatus('sending')
+    try {
+      const sendWelcomeEmail = httpsCallable(functions, 'sendWelcomeEmail')
+      await sendWelcomeEmail({
+        traineeEmail: relationship.traineeEmail,
+        traineeName: relationship.traineeName,
+        trainerName: relationship.trainerName,
+      })
+      setEmailStatus('sent')
+      setTimeout(() => setEmailStatus('idle'), 3000)
+    } catch (error) {
+      console.error('Failed to resend welcome email:', error)
+      setEmailStatus('error')
+      setTimeout(() => setEmailStatus('idle'), 3000)
+    }
+  }
 
   const displayName = traineeProfile
     ? `${traineeProfile.firstName} ${traineeProfile.lastName}`
@@ -130,6 +157,25 @@ export function TraineeCard({ trainee }: TraineeCardProps) {
           <p className="text-lg font-bold text-text-primary">{currentStreak}</p>
         </div>
       </div>
+
+      {/* Resend welcome email */}
+      <button
+        onClick={handleResendEmail}
+        disabled={emailStatus === 'sending' || emailStatus === 'sent'}
+        className={`mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+          emailStatus === 'sent'
+            ? 'bg-status-success/10 text-status-success border border-status-success/30'
+            : emailStatus === 'error'
+              ? 'bg-status-error/10 text-status-error border border-status-error/30'
+              : 'bg-dark-surface border border-white/10 text-text-secondary hover:text-primary-main hover:border-primary-main/30'
+        }`}
+      >
+        {emailStatus === 'sending' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+        {emailStatus === 'sent' && <Check className="w-3.5 h-3.5" />}
+        {emailStatus === 'error' && <Mail className="w-3.5 h-3.5" />}
+        {emailStatus === 'idle' && <Mail className="w-3.5 h-3.5" />}
+        {emailStatus === 'sending' ? 'שולח...' : emailStatus === 'sent' ? 'נשלח בהצלחה!' : emailStatus === 'error' ? 'שגיאה, נסה שוב' : 'שלח מייל כניסה'}
+      </button>
     </div>
   )
 }

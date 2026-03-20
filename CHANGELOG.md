@@ -10,6 +10,9 @@
   - Session-only: page refresh returns to admin
   - Works for both trainees and trainers
   - Firestore rules updated: admin can read all workout sessions and history
+- **Editable email in trainee edit modal**: Trainer/admin can update trainee email (fixes wrong email at account creation)
+  - New Cloud Function `updateUserEmail` updates both Firebase Auth and Firestore
+  - Email field added to TraineeEditModal form
 - **Welcome email for new trainees**: When a trainer creates a new trainee account, a branded HTML welcome email is sent via Resend with:
   - Welcome message with trainee and trainer names
   - Link to set up password (Firebase Auth password reset)
