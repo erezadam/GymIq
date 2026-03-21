@@ -769,13 +769,13 @@ export function ExerciseLibrary({
                 const wasInLastWorkout = recentlyDoneExerciseIds.has(exercise.id)
                 const otherDayLetters = otherDaysMap.get(exercise.id)
 
-                // Recommended badge: only for strength categories, below weekly target, not in last workout
+                // Weekly sets badge: show for all strength categories
                 const WEEKLY_SETS_TARGET = 10
                 const STRENGTH_CATEGORIES = new Set(['legs', 'chest', 'back', 'shoulders', 'biceps_brachii', 'triceps', 'core'])
                 const currentWeeklySets = weeklyMuscleSets.get(exercise.category) || 0
-                const showRecommended = !wasInLastWorkout
-                  && STRENGTH_CATEGORIES.has(exercise.category)
-                  && currentWeeklySets < WEEKLY_SETS_TARGET
+                const isStrengthCategory = STRENGTH_CATEGORIES.has(exercise.category)
+                const showRecommended = !wasInLastWorkout && isStrengthCategory && currentWeeklySets < WEEKLY_SETS_TARGET
+                const showWeeklySets = !wasInLastWorkout && isStrengthCategory && currentWeeklySets >= WEEKLY_SETS_TARGET
                 return (
                   <div
                     key={exercise.id}
@@ -805,11 +805,13 @@ export function ExerciseLibrary({
                             גמיש
                           </span>
                         )}
-                        {/* Priority: "אחרון" > "מומלץ X/10" */}
+                        {/* Priority: "אחרון" > "מומלץ X/10" > "X/10" (target met) */}
                         {wasInLastWorkout ? (
                           <span className="badge-last-workout flex-shrink-0">אחרון</span>
                         ) : showRecommended ? (
                           <span className="badge-recommended flex-shrink-0">מומלץ {currentWeeklySets}/{WEEKLY_SETS_TARGET}</span>
+                        ) : showWeeklySets ? (
+                          <span className="px-2 py-0.5 rounded-lg text-xs font-medium bg-status-success/20 text-status-success flex-shrink-0">{currentWeeklySets}/{WEEKLY_SETS_TARGET}</span>
                         ) : null}
                         {/* Program: tags for other days that already include this exercise */}
                         {otherDayLetters && otherDayLetters.map((letter) => (
