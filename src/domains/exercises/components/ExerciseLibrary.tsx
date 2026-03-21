@@ -11,7 +11,7 @@ import { getMuscles, getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { getEquipment } from '@/lib/firebase/equipment'
 import { MuscleIcon } from '@/shared/components/MuscleIcon'
 import RecommendedSets from './RecommendedSets'
-import { saveWorkoutHistory, getRecentlyDoneExerciseIds, getWeeklySetsByCategory } from '@/lib/firebase/workoutHistory'
+import { saveWorkoutHistory, getRecentlyDoneExerciseIds, getWeeklyMuscleSets } from '@/lib/firebase/workoutHistory'
 import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '@/domains/workouts/types/active-workout.types'
 import type { WorkoutHistoryEntry } from '@/domains/workouts/types'
@@ -260,10 +260,17 @@ export function ExerciseLibrary({
         return
       }
 
-      // Load both in parallel - use category-level aggregation
+      // Build exercise lookup keyed by exerciseId → category (not primaryMuscle)
+      // so weekly sets are aggregated at the muscle group level
+      const exerciseLookup = new Map<string, { primaryMuscle: string }>()
+      for (const ex of exercises) {
+        exerciseLookup.set(ex.id, { primaryMuscle: ex.category })
+      }
+
+      // Load both in parallel
       Promise.all([
         getRecentlyDoneExerciseIds(historyUserId),
-        getWeeklySetsByCategory(historyUserId)
+        getWeeklyMuscleSets(historyUserId, exerciseLookup)
       ])
         .then(([recentIds, muscleSets]) => {
           setRecentlyDoneExerciseIds(recentIds)
