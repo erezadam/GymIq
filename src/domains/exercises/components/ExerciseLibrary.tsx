@@ -11,7 +11,7 @@ import { getMuscles, getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { getEquipment } from '@/lib/firebase/equipment'
 import { MuscleIcon } from '@/shared/components/MuscleIcon'
 import RecommendedSets from './RecommendedSets'
-import { saveWorkoutHistory, getRecentlyDoneExerciseIds, getWeeklyMuscleSets } from '@/lib/firebase/workoutHistory'
+import { saveWorkoutHistory, getRecentlyDoneExerciseIds, getWeeklySetsByCategory } from '@/lib/firebase/workoutHistory'
 import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '@/domains/workouts/types/active-workout.types'
 import type { WorkoutHistoryEntry } from '@/domains/workouts/types'
@@ -237,18 +237,33 @@ export function ExerciseLibrary({
   // Load recently done exercises and last month exercises in background (non-blocking)
   // When targetUserId is provided (e.g., building program for trainee), use that instead of current user
   const historyUserId = targetUserId || user?.uid
+  // Check if scheduledDate is in a different week (future week)
+  const isScheduledInDifferentWeek = useMemo(() => {
+    if (!scheduledDate) return false
+    const now = new Date()
+    const startOfCurrentWeek = new Date(now)
+    startOfCurrentWeek.setDate(now.getDate() - now.getDay()) // Sunday
+    startOfCurrentWeek.setHours(0, 0, 0, 0)
+    const endOfCurrentWeek = new Date(startOfCurrentWeek)
+    endOfCurrentWeek.setDate(startOfCurrentWeek.getDate() + 7) // Next Sunday
+    const selected = new Date(scheduledDate)
+    selected.setHours(0, 0, 0, 0)
+    return selected >= endOfCurrentWeek
+  }, [scheduledDate])
+
   useEffect(() => {
     if (historyUserId && !loading && exercises.length > 0) {
-      // Build exercise lookup from already-loaded exercises
-      const exerciseLookup = new Map<string, { primaryMuscle: string }>()
-      for (const ex of exercises) {
-        exerciseLookup.set(ex.id, { primaryMuscle: ex.primaryMuscle || ex.category })
+      // If scheduled for a future week, no sets data needed (will show 0/10)
+      if (isScheduledInDifferentWeek) {
+        setRecentlyDoneExerciseIds(new Set())
+        setWeeklyMuscleSets(new Map())
+        return
       }
 
-      // Load both in parallel
+      // Load both in parallel - use category-level aggregation
       Promise.all([
         getRecentlyDoneExerciseIds(historyUserId),
-        getWeeklyMuscleSets(historyUserId, exerciseLookup)
+        getWeeklySetsByCategory(historyUserId)
       ])
         .then(([recentIds, muscleSets]) => {
           setRecentlyDoneExerciseIds(recentIds)
@@ -256,7 +271,7 @@ export function ExerciseLibrary({
         })
         .catch(err => console.error('Failed to load exercise history:', err))
     }
-  }, [historyUserId, loading, exercises])
+  }, [historyUserId, loading, exercises, isScheduledInDifferentWeek])
 
   // Get selected muscle name in Hebrew
   const selectedMuscleName = useMemo(() => {
@@ -750,8 +765,7 @@ export function ExerciseLibrary({
                 // Recommended badge: only for strength categories, below weekly target, not in last workout
                 const WEEKLY_SETS_TARGET = 10
                 const STRENGTH_CATEGORIES = new Set(['legs', 'chest', 'back', 'shoulders', 'biceps_brachii', 'triceps', 'core'])
-                const exercisePrimaryMuscle = exercise.primaryMuscle || exercise.category
-                const currentWeeklySets = weeklyMuscleSets.get(exercisePrimaryMuscle) || 0
+                const currentWeeklySets = weeklyMuscleSets.get(exercise.category) || 0
                 const showRecommended = !wasInLastWorkout
                   && STRENGTH_CATEGORIES.has(exercise.category)
                   && currentWeeklySets < WEEKLY_SETS_TARGET
