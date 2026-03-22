@@ -44,6 +44,7 @@
 ❌ **No Playwright without approval** - הרצת `npx playwright test` (בכל רמה) דורשת **אישור מפורש מהמשתמש** לפני ההרצה. לעולם לא להריץ טסטי Playwright באופן אוטונומי!
 ❌ **No modal without explicit close** - כל modal חייב כפתור X ייעודי (44x44px מינימום) + סגירה בלחיצה על backdrop
 ❌ **No silent AI filtering** - כל קריאה ל-AI חיצוני חייבת validation + fallback. אסור לסנן תוצאות בשקט בלי השלמה
+📖 **Database schema reference** - מבנה הנתונים מוגדר ב-`firestore.rules` (collections + הרשאות) וב-`src/domains/*/types/*.types.ts` (מבנה הנתונים). חובה לעיין בהם לפני כל שינוי במבנה הנתונים ב-Firestore
 
 ---
 
