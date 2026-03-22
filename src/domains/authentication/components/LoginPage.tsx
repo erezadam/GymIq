@@ -14,6 +14,10 @@ const loginSchema = z.object({
   password: z.string().min(6, 'סיסמה חייבת להכיל לפחות 6 תווים'),
 })
 
+const resetSchema = z.object({
+  email: z.string().email('כתובת אימייל לא תקינה'),
+})
+
 const registerSchema = z.object({
   email: z.string().email('כתובת אימייל לא תקינה'),
   password: z.string().min(6, 'סיסמה חייבת להכיל לפחות 6 תווים'),
@@ -27,12 +31,14 @@ const registerSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>
 type RegisterFormData = z.infer<typeof registerSchema>
+type ResetFormData = z.infer<typeof resetSchema>
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const { login, register: registerUser, isLoading, error, clearError, user, isAuthenticated } = useAuthStore()
-  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const { login, register: registerUser, sendPasswordReset, isLoading, error, clearError, user, isAuthenticated } = useAuthStore()
+  const [mode, setMode] = useState<'login' | 'register' | 'reset'>('login')
   const [showPassword, setShowPassword] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -55,6 +61,12 @@ export default function LoginPage() {
   const registerForm = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: { email: '', password: '', confirmPassword: '', firstName: '', lastName: '' },
+  })
+
+  // Reset password form
+  const resetForm = useForm<ResetFormData>({
+    resolver: zodResolver(resetSchema),
+    defaultValues: { email: '' },
   })
 
   // Handle login submit
@@ -90,12 +102,27 @@ export default function LoginPage() {
     }
   }
 
+  // Handle password reset
+  const handleReset = async (data: ResetFormData) => {
+    clearError()
+    try {
+      await sendPasswordReset(data.email)
+      setResetSent(true)
+      toast.success('לינק איפוס נשלח!')
+    } catch (err: any) {
+      const errorMessage = err?.message || 'שגיאה בשליחת לינק איפוס'
+      toast.error(errorMessage)
+    }
+  }
+
   // Switch mode
   const switchMode = () => {
     setMode(mode === 'login' ? 'register' : 'login')
     clearError()
+    setResetSent(false)
     loginForm.reset()
     registerForm.reset()
+    resetForm.reset()
   }
 
   return (
@@ -112,7 +139,77 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="card-neon animate-scale-in">
-          {mode === 'login' ? (
+          {mode === 'reset' ? (
+            <>
+              <button
+                onClick={switchMode}
+                className="flex items-center gap-2 text-text-muted hover:text-text-primary mb-6 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                חזרה להתחברות
+              </button>
+
+              <h2 className="text-xl font-semibold text-text-primary text-center mb-2">
+                איפוס סיסמה
+              </h2>
+              <p className="text-text-muted text-center mb-8">הזינו את כתובת האימייל לקבלת לינק איפוס</p>
+
+              {resetSent ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                    <p className="text-emerald-400 text-sm text-center">
+                      לינק איפוס סיסמה נשלח לכתובת האימייל שלך. בדקו את תיבת הדואר.
+                    </p>
+                  </div>
+                  <button
+                    onClick={switchMode}
+                    className="btn-neon w-full"
+                  >
+                    חזרה להתחברות
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={resetForm.handleSubmit(handleReset)} className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-2">
+                      אימייל
+                    </label>
+                    <div className="relative">
+                      <input
+                        {...resetForm.register('email')}
+                        type="email"
+                        dir="ltr"
+                        placeholder="your@email.com"
+                        className={`input-neon w-full pl-12 text-left ${
+                          resetForm.formState.errors.email ? 'border-red-500' : ''
+                        }`}
+                      />
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
+                    </div>
+                    {resetForm.formState.errors.email && (
+                      <p className="text-red-400 text-sm mt-1">
+                        {resetForm.formState.errors.email.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {error && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                      <p className="text-red-400 text-sm text-center">{error}</p>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="btn-neon w-full flex items-center justify-center gap-2"
+                  >
+                    {isLoading ? <LoadingSpinner size="sm" /> : 'שלח לינק איפוס'}
+                  </button>
+                </form>
+              )}
+            </>
+          ) : mode === 'login' ? (
             <>
               <h2 className="text-xl font-semibold text-text-primary text-center mb-2">
                 כניסה ל-GymIQ
@@ -173,6 +270,15 @@ export default function LoginPage() {
                       {loginForm.formState.errors.password.message}
                     </p>
                   )}
+                  <div className="text-left mt-1">
+                    <button
+                      type="button"
+                      onClick={() => { setMode('reset'); clearError(); setResetSent(false); resetForm.reset() }}
+                      className="text-sm text-neon-cyan hover:underline"
+                    >
+                      שכחתי סיסמה
+                    </button>
+                  </div>
                 </div>
 
                 {error && (
