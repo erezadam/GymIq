@@ -237,12 +237,34 @@ export function ExerciseLibrary({
   // Load recently done exercises and last month exercises in background (non-blocking)
   // When targetUserId is provided (e.g., building program for trainee), use that instead of current user
   const historyUserId = targetUserId || user?.uid
+  // Check if scheduledDate is in a different week (future week)
+  const isScheduledInDifferentWeek = useMemo(() => {
+    if (!scheduledDate) return false
+    const now = new Date()
+    const startOfCurrentWeek = new Date(now)
+    startOfCurrentWeek.setDate(now.getDate() - now.getDay()) // Sunday
+    startOfCurrentWeek.setHours(0, 0, 0, 0)
+    const endOfCurrentWeek = new Date(startOfCurrentWeek)
+    endOfCurrentWeek.setDate(startOfCurrentWeek.getDate() + 7) // Next Sunday
+    const selected = new Date(scheduledDate)
+    selected.setHours(0, 0, 0, 0)
+    return selected >= endOfCurrentWeek
+  }, [scheduledDate])
+
   useEffect(() => {
     if (historyUserId && !loading && exercises.length > 0) {
-      // Build exercise lookup from already-loaded exercises
+      // If scheduled for a future week, no sets data needed (will show 0/10)
+      if (isScheduledInDifferentWeek) {
+        setRecentlyDoneExerciseIds(new Set())
+        setWeeklyMuscleSets(new Map())
+        return
+      }
+
+      // Build exercise lookup keyed by exerciseId → category (not primaryMuscle)
+      // so weekly sets are aggregated at the muscle group level
       const exerciseLookup = new Map<string, { primaryMuscle: string }>()
       for (const ex of exercises) {
-        exerciseLookup.set(ex.id, { primaryMuscle: ex.primaryMuscle || ex.category })
+        exerciseLookup.set(ex.id, { primaryMuscle: ex.category })
       }
 
       // Load both in parallel
@@ -256,7 +278,7 @@ export function ExerciseLibrary({
         })
         .catch(err => console.error('Failed to load exercise history:', err))
     }
-  }, [historyUserId, loading, exercises])
+  }, [historyUserId, loading, exercises, isScheduledInDifferentWeek])
 
   // Get selected muscle name in Hebrew
   const selectedMuscleName = useMemo(() => {
@@ -747,14 +769,13 @@ export function ExerciseLibrary({
                 const wasInLastWorkout = recentlyDoneExerciseIds.has(exercise.id)
                 const otherDayLetters = otherDaysMap.get(exercise.id)
 
-                // Recommended badge: only for strength categories, below weekly target, not in last workout
+                // Weekly sets badge: show for all strength categories
                 const WEEKLY_SETS_TARGET = 10
                 const STRENGTH_CATEGORIES = new Set(['legs', 'chest', 'back', 'shoulders', 'biceps_brachii', 'triceps', 'core'])
-                const exercisePrimaryMuscle = exercise.primaryMuscle || exercise.category
-                const currentWeeklySets = weeklyMuscleSets.get(exercisePrimaryMuscle) || 0
-                const showRecommended = !wasInLastWorkout
-                  && STRENGTH_CATEGORIES.has(exercise.category)
-                  && currentWeeklySets < WEEKLY_SETS_TARGET
+                const currentWeeklySets = weeklyMuscleSets.get(exercise.category) || 0
+                const isStrengthCategory = STRENGTH_CATEGORIES.has(exercise.category)
+                const showRecommended = !wasInLastWorkout && isStrengthCategory && currentWeeklySets < WEEKLY_SETS_TARGET
+                const showWeeklySets = !wasInLastWorkout && isStrengthCategory && currentWeeklySets >= WEEKLY_SETS_TARGET
                 return (
                   <div
                     key={exercise.id}
@@ -784,11 +805,13 @@ export function ExerciseLibrary({
                             גמיש
                           </span>
                         )}
-                        {/* Priority: "אחרון" > "מומלץ X/10" */}
+                        {/* Priority: "אחרון" > "מומלץ X/10" > "X/10" (target met) */}
                         {wasInLastWorkout ? (
                           <span className="badge-last-workout flex-shrink-0">אחרון</span>
                         ) : showRecommended ? (
                           <span className="badge-recommended flex-shrink-0">מומלץ {currentWeeklySets}/{WEEKLY_SETS_TARGET}</span>
+                        ) : showWeeklySets ? (
+                          <span className="px-2 py-0.5 rounded-lg text-xs font-medium bg-status-success/20 text-status-success flex-shrink-0">{currentWeeklySets}/{WEEKLY_SETS_TARGET}</span>
                         ) : null}
                         {/* Program: tags for other days that already include this exercise */}
                         {otherDayLetters && otherDayLetters.map((letter) => (
