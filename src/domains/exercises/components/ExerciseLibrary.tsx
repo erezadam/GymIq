@@ -198,12 +198,14 @@ export function ExerciseLibrary({
           )
         }
         setExercises(exercisesData)
-        setMuscles(musclesData)
+        setMuscles([...musclesData].sort((a, b) => a.nameHe.trim().localeCompare(b.nameHe.trim(), 'he')))
         setDynamicMuscleNames(muscleNamesMapping)
         setEquipmentOptions([
           { id: 'all', label: 'הכל' },
-          ...equipmentData.map((eq) => ({ id: eq.id, label: eq.nameHe })),
-          { id: 'graviton', label: 'גרביטון' },
+          ...[
+            ...equipmentData.map((eq) => ({ id: eq.id, label: eq.nameHe })),
+            { id: 'graviton', label: 'גרביטון' },
+          ].sort((a, b) => a.label.trim().localeCompare(b.label.trim(), 'he')),
         ])
       } catch (error) {
         if (!cancelled) console.error('Failed to load data:', error)
@@ -291,7 +293,7 @@ export function ExerciseLibrary({
   const availableSubMuscles = useMemo(() => {
     if (selectedPrimaryMuscle === 'all') return []
     const primaryMuscle = muscles.find(m => m.id === selectedPrimaryMuscle)
-    return primaryMuscle?.subMuscles || []
+    return [...(primaryMuscle?.subMuscles || [])].sort((a, b) => a.nameHe.trim().localeCompare(b.nameHe.trim(), 'he'))
   }, [selectedPrimaryMuscle, muscles])
 
   // Set of all available exercise IDs (for RecommendedSets accuracy)

@@ -23,91 +23,66 @@ function buildWelcomeEmailHtml(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ברוכים הבאים ל-GymIQ</title>
+  <title>הגדרת סיסמה - GymIQ</title>
 </head>
-<body style="margin:0;padding:0;background-color:#0f0f1a;font-family:Arial,Helvetica,sans-serif;direction:rtl">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#0f0f1a;padding:40px 20px">
+<body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,Helvetica,sans-serif;direction:rtl">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f4;padding:40px 20px">
     <tr>
       <td align="center">
-        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color:#1a1a2e;border-radius:16px;overflow:hidden;max-width:600px;width:100%">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;width:100%">
 
           <!-- Header -->
           <tr>
-            <td style="background:linear-gradient(135deg,#00D4AA 0%,#00B894 100%);padding:40px 30px;text-align:center">
-              <h1 style="margin:0;color:#0f0f1a;font-size:28px;font-weight:bold">
+            <td style="background-color:#00D4AA;padding:30px;text-align:center">
+              <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:bold">
                 GymIQ
               </h1>
-              <p style="margin:10px 0 0;color:#0f0f1a;font-size:16px;opacity:0.8">
-                האימון החכם שלך מתחיל כאן
-              </p>
             </td>
           </tr>
 
           <!-- Body -->
           <tr>
             <td style="padding:40px 30px">
-              <h2 style="margin:0 0 20px;color:#ffffff;font-size:24px;text-align:center">
-                שלום ${traineeName}, ברוכים הבאים!
-              </h2>
-
-              <p style="color:#b0b0c0;font-size:16px;line-height:1.8;margin:0 0 20px;text-align:center">
-                המאמן <strong style="color:#00D4AA">${trainerName}</strong> יצר עבורך חשבון באפליקציית GymIQ.
+              <p style="color:#333333;font-size:18px;line-height:1.8;margin:0 0 24px;text-align:right">
+                ${traineeName} יקר/ה,
               </p>
 
-              <p style="color:#b0b0c0;font-size:16px;line-height:1.8;margin:0 0 30px;text-align:center">
-                כדי להתחיל, הגדר סיסמה והיכנס לאפליקציה:
+              <p style="color:#333333;font-size:16px;line-height:1.8;margin:0 0 8px;text-align:right">
+                המאמן <strong>${trainerName}</strong> יצר עבורך חשבון באפליקציית GymIQ.
+              </p>
+
+              <p style="color:#333333;font-size:16px;line-height:1.8;margin:0 0 32px;text-align:right">
+                יש ללחוץ על הכפתור הבא על מנת ליצור לעצמך סיסמה חדשה:
               </p>
 
               <!-- Password Setup Button -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:16px">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:32px">
                 <tr>
                   <td align="center">
                     <a href="${passwordResetLink}"
-                       style="display:inline-block;background:linear-gradient(135deg,#00D4AA 0%,#00B894 100%);color:#0f0f1a;text-decoration:none;padding:16px 40px;border-radius:12px;font-size:18px;font-weight:bold;min-width:200px;text-align:center">
-                      הגדרת סיסמה
+                       style="display:inline-block;background-color:#00D4AA;color:#ffffff;text-decoration:none;padding:16px 48px;border-radius:8px;font-size:18px;font-weight:bold;text-align:center">
+                      יצירת סיסמה
                     </a>
                   </td>
                 </tr>
               </table>
 
-              <!-- App Link Button -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:30px">
-                <tr>
-                  <td align="center">
-                    <a href="https://gymiq.web.app"
-                       style="display:inline-block;border:2px solid #00D4AA;color:#00D4AA;text-decoration:none;padding:14px 40px;border-radius:12px;font-size:16px;font-weight:bold;min-width:200px;text-align:center">
-                      כניסה לאפליקציה
-                    </a>
-                  </td>
-                </tr>
-              </table>
+              <p style="color:#666666;font-size:14px;line-height:1.8;margin:0 0 24px;text-align:right">
+                לאחר יצירת הסיסמה, היכנס לאפליקציה בכתובת:
+                <a href="https://gymiq.web.app" style="color:#00D4AA;text-decoration:underline">gymiq.web.app</a>
+              </p>
 
-              <!-- Steps -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#252540;border-radius:12px;padding:24px;margin-bottom:20px">
-                <tr>
-                  <td>
-                    <p style="color:#ffffff;font-size:16px;font-weight:bold;margin:0 0 16px;text-align:center">
-                      שלושה צעדים להתחלה:
-                    </p>
-                    <p style="color:#b0b0c0;font-size:15px;line-height:2;margin:0">
-                      1. לחץ על "הגדרת סיסמה" ובחר סיסמה<br>
-                      2. היכנס לאפליקציה עם המייל והסיסמה שבחרת<br>
-                      3. התחל לתעד אימונים ולהתקדם!
-                    </p>
-                  </td>
-                </tr>
-              </table>
+              <p style="color:#999999;font-size:13px;line-height:1.6;margin:0;text-align:right">
+                אם לא ביקשת ליצור חשבון, ניתן להתעלם מהודעה זו.
+              </p>
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td style="background-color:#151528;padding:24px 30px;text-align:center;border-top:1px solid #252540">
-              <p style="color:#b0b0c0;font-size:14px;margin:0 0 8px">
-                נשלח על ידי המאמן <strong style="color:#00D4AA">${trainerName}</strong> דרך GymIQ
-              </p>
-              <p style="color:#666680;font-size:12px;margin:0">
-                © ${new Date().getFullYear()} GymIQ
+            <td style="background-color:#f9f9f9;padding:20px 30px;text-align:center;border-top:1px solid #eeeeee">
+              <p style="color:#999999;font-size:13px;margin:0">
+                © ${new Date().getFullYear()} GymIQ | gymiq.co.il
               </p>
             </td>
           </tr>
@@ -118,6 +93,26 @@ function buildWelcomeEmailHtml(
   </table>
 </body>
 </html>`
+}
+
+function buildWelcomeEmailText(
+  traineeName: string,
+  trainerName: string,
+  passwordResetLink: string
+): string {
+  return `${traineeName} יקר/ה,
+
+המאמן ${trainerName} יצר עבורך חשבון באפליקציית GymIQ.
+
+יש ללחוץ על הקישור הבא על מנת ליצור לעצמך סיסמה חדשה:
+${passwordResetLink}
+
+לאחר יצירת הסיסמה, היכנס לאפליקציה בכתובת:
+https://gymiq.web.app
+
+אם לא ביקשת ליצור חשבון, ניתן להתעלם מהודעה זו.
+
+© ${new Date().getFullYear()} GymIQ | gymiq.co.il`
 }
 
 export const sendWelcomeEmail = onCall(
@@ -146,8 +141,9 @@ export const sendWelcomeEmail = onCall(
       throw new HttpsError('internal', 'Failed to generate password reset link')
     }
 
-    // Build email HTML
+    // Build email HTML and plain text
     const html = buildWelcomeEmailHtml(traineeName, trainerName, passwordResetLink)
+    const text = buildWelcomeEmailText(traineeName, trainerName, passwordResetLink)
 
     // Send email via Resend API (direct HTTP call)
     const resendApiKey = process.env.RESEND_API_KEY
@@ -165,8 +161,9 @@ export const sendWelcomeEmail = onCall(
         body: JSON.stringify({
           from: 'GymIQ <onboarding@gymiq.co.il>',
           to: traineeEmail,
-          subject: `${traineeName}, ברוכים הבאים ל-GymIQ!`,
+          subject: `הגדרת סיסמה - GymIQ`,
           html,
+          text,
         }),
       })
 
