@@ -42,17 +42,17 @@ export function InboxMessageCard({ message, onRead }: InboxMessageCardProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-text-muted">
+          <span className="text-xs font-medium text-on-surface-variant">
             {message.trainerName}
           </span>
-          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-dark-card text-text-muted">
+          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-dark-card text-on-surface-variant">
             {MESSAGE_TYPE_LABELS[message.type] || message.type}
           </span>
           {isHighPriority && (
             <AlertCircle className="w-3.5 h-3.5 text-status-error" />
           )}
         </div>
-        <div className="flex items-center gap-1 text-xs text-text-muted">
+        <div className="flex items-center gap-1 text-xs text-on-surface-variant">
           {isUnread ? (
             <Clock className="w-3 h-3 text-primary-main" />
           ) : (
@@ -64,13 +64,13 @@ export function InboxMessageCard({ message, onRead }: InboxMessageCardProps) {
 
       {/* Subject */}
       {message.subject && (
-        <h4 className={`text-sm mb-1 ${isUnread ? 'font-bold text-text-primary' : 'font-medium text-text-secondary'}`}>
+        <h4 className={`text-sm mb-1 ${isUnread ? 'font-bold text-text-primary' : 'font-medium text-on-surface-variant'}`}>
           {message.subject}
         </h4>
       )}
 
       {/* Body */}
-      <p className="text-sm text-text-muted whitespace-pre-line line-clamp-2">
+      <p className="text-sm text-on-surface-variant whitespace-pre-line line-clamp-2">
         {message.body}
       </p>
     </button>

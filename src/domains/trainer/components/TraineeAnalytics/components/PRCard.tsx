@@ -50,7 +50,7 @@ export function PRCard({ record, variant }: PRCardProps) {
         <div className="text-sm font-semibold text-text-primary truncate">
           {record.exerciseNameHe || record.exerciseName}
         </div>
-        <div className="text-[11px] text-text-secondary mt-0.5">
+        <div className="text-[11px] text-on-surface-variant mt-0.5">
           {isStuck && stuckRecord
             ? `ללא שיפור ${stuckRecord.weeksSinceImprovement} שבועות`
             : formatRelativeDate(record.bestDate)}
@@ -64,10 +64,10 @@ export function PRCard({ record, variant }: PRCardProps) {
             : `${record.bestWeight} ק"ג`}
         </div>
         {delta && (
-          <div className="text-[11px] text-text-muted">{delta}</div>
+          <div className="text-[11px] text-on-surface-variant">{delta}</div>
         )}
         {isStuck && (
-          <div className="text-[11px] text-text-muted">
+          <div className="text-[11px] text-on-surface-variant">
             מאז {record.bestDate.getDate()}/{record.bestDate.getMonth() + 1}
           </div>
         )}

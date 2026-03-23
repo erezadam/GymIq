@@ -35,7 +35,7 @@ const statusConfig: Record<
     icon: '✕',
     label: 'בוטל',
     labelBg: 'bg-dark-card',
-    labelText: 'text-text-muted',
+    labelText: 'text-on-surface-variant',
   },
   planned: {
     icon: '📋',
@@ -135,7 +135,7 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
   if (workouts.length === 0) {
     return (
       <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-5 text-center py-8">
-        <p className="text-sm text-text-muted">אין אימונים עדיין</p>
+        <p className="text-sm text-on-surface-variant">אין אימונים עדיין</p>
       </div>
     )
   }
@@ -151,7 +151,7 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
             className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ${
               statusFilter === filter.id
                 ? 'bg-primary-main/20 text-primary-main border border-primary-main/30'
-                : 'bg-dark-surface/50 text-text-muted border border-transparent hover:text-text-secondary'
+                : 'bg-dark-surface/50 text-on-surface-variant border border-transparent hover:text-on-surface-variant'
             }`}
           >
             {filter.label}
@@ -161,7 +161,7 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
 
       <div className="space-y-3">
         {workouts.length === 0 ? (
-          <p className="text-sm text-text-muted text-center py-4">אין אימונים בסטטוס זה</p>
+          <p className="text-sm text-on-surface-variant text-center py-4">אין אימונים בסטטוס זה</p>
         ) : null}
         {workouts.map((workout, index) => {
           const isDeleted = !!workout.deletedByTrainee
@@ -211,7 +211,7 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
                 {/* Workout Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className={`font-bold truncate text-sm ${isDeleted ? 'text-text-muted line-through' : 'text-text-primary'}`}>{workout.name}</h4>
+                    <h4 className={`font-bold truncate text-sm ${isDeleted ? 'text-on-surface-variant line-through' : 'text-text-primary'}`}>{workout.name}</h4>
                     {isDeleted ? (
                       <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded flex-shrink-0">
                         נמחק
@@ -229,7 +229,7 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
                       </span>
                     )}
                   </div>
-                  <p className="text-text-muted text-xs mt-0.5">
+                  <p className="text-on-surface-variant text-xs mt-0.5">
                     {formatDate(workout.date)}
                     {workout.duration ? ` • ${formatDuration(workout.duration)}` : ''}
                     {workout.muscleGroups && workout.muscleGroups.length > 0 && (
@@ -254,7 +254,7 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
                   {isExpanded ? (
                     <ChevronDown className={`w-4 h-4 text-${accentColor}`} />
                   ) : (
-                    <ChevronLeft className="w-4 h-4 text-text-muted" />
+                    <ChevronLeft className="w-4 h-4 text-on-surface-variant" />
                   )}
                 </div>
               </button>
@@ -297,7 +297,7 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
                                   {ex.exerciseNameHe || ex.exerciseName}
                                 </div>
                               </div>
-                              <div className="text-xs text-text-muted flex-shrink-0">
+                              <div className="text-xs text-on-surface-variant flex-shrink-0">
                                 {ex.sets?.length || 0} סטים
                               </div>
                             </div>
@@ -310,13 +310,13 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
                                   return (
                                     <div
                                       key={setIdx}
-                                      className="flex items-center gap-1.5 text-xs text-text-muted"
+                                      className="flex items-center gap-1.5 text-xs text-on-surface-variant"
                                     >
                                       <span className="text-status-success/50">
                                         {isLast ? '└─' : '├─'}
                                       </span>
                                       <span>סט {setIdx + 1}:</span>
-                                      <span className="text-text-secondary">
+                                      <span className="text-on-surface-variant">
                                         {(set.actualWeight || 0) > 0 && (
                                           <>{set.actualWeight} ק&quot;ג × </>
                                         )}
@@ -336,7 +336,7 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
                       })}
 
                       {/* Summary row */}
-                      <div className="flex items-center justify-between pt-2 text-xs text-text-muted border-t border-dark-border/30 mt-2">
+                      <div className="flex items-center justify-between pt-2 text-xs text-on-surface-variant border-t border-dark-border/30 mt-2">
                         <span>{expandedWorkoutData.completedExercises}/{expandedWorkoutData.totalExercises} תרגילים</span>
                         {expandedWorkoutData.totalVolume > 0 && (
                           <span>{Math.round(expandedWorkoutData.totalVolume)} ק&quot;ג נפח כולל</span>
@@ -346,7 +346,7 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
                   )}
 
                   {!loadingExpand && !expandedWorkoutData && (
-                    <div className="text-center py-3 text-xs text-text-muted">
+                    <div className="text-center py-3 text-xs text-on-surface-variant">
                       לא נמצאו נתונים
                     </div>
                   )}

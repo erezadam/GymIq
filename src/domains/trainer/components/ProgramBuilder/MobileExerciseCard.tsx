@@ -35,13 +35,13 @@ export function MobileExerciseCard({
           <h4 className="font-bold text-sm text-text-primary truncate">
             {exercise.exerciseNameHe}
           </h4>
-          <p className="text-xs text-text-muted truncate">
+          <p className="text-xs text-on-surface-variant truncate">
             {exercise.category} • {exercise.equipment || ''}
           </p>
         </div>
         <button
           onClick={onRemove}
-          className="p-2 text-text-muted hover:text-status-error transition flex-shrink-0"
+          className="p-2 text-on-surface-variant hover:text-status-error transition flex-shrink-0"
         >
           ⋮
         </button>
@@ -50,7 +50,7 @@ export function MobileExerciseCard({
       {/* Sets/Reps/Rest row */}
       <div className="flex items-center gap-2 mt-3">
         <div className="flex-1 bg-dark-surface rounded-lg py-2 text-center">
-          <div className="text-xs text-text-muted">סטים</div>
+          <div className="text-xs text-on-surface-variant">סטים</div>
           <input
             type="number"
             min={1}
@@ -65,7 +65,7 @@ export function MobileExerciseCard({
           />
         </div>
         <div className="flex-1 bg-dark-surface rounded-lg py-2 text-center">
-          <div className="text-xs text-text-muted">חזרות</div>
+          <div className="text-xs text-on-surface-variant">חזרות</div>
           <input
             type="text"
             value={exercise.targetReps}
@@ -75,7 +75,7 @@ export function MobileExerciseCard({
           />
         </div>
         <div className="flex-1 bg-dark-surface rounded-lg py-2 text-center">
-          <div className="text-xs text-text-muted">מנוחה</div>
+          <div className="text-xs text-on-surface-variant">מנוחה</div>
           <select
             value={exercise.restTime}
             onChange={(e) => onUpdate({ restTime: parseInt(e.target.value) })}

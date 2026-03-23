@@ -178,11 +178,11 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
               onClick={() => setShowNameInput(false)}
               className="flex items-center justify-center w-11 h-11 rounded-xl bg-dark-card hover:bg-dark-border transition"
             >
-              <X className="w-5 h-5 text-text-secondary" />
+              <X className="w-5 h-5 text-on-surface-variant" />
             </button>
           </div>
 
-          <p className="text-sm text-text-secondary mb-4">
+          <p className="text-sm text-on-surface-variant mb-4">
             {selectedExercises.length} תרגילים נבחרו
           </p>
 
@@ -192,7 +192,7 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
             </div>
           )}
 
-          <label className="block text-sm font-medium text-text-secondary mb-2">
+          <label className="block text-sm font-medium text-on-surface-variant mb-2">
             שם האימון *
           </label>
           <input
@@ -207,7 +207,7 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
           <div className="flex gap-3">
             <button
               onClick={() => setShowNameInput(false)}
-              className="flex-1 py-3 rounded-xl bg-dark-surface border border-dark-border text-text-secondary font-medium"
+              className="flex-1 py-3 rounded-xl bg-dark-surface border border-dark-border text-on-surface-variant font-medium"
             >
               ביטול
             </button>
@@ -250,25 +250,25 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setSelectedMuscle(null)}
-                className="p-1 text-text-secondary hover:text-text-primary transition-colors"
+                className="p-1 text-on-surface-variant hover:text-text-primary transition-colors"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
               <div>
                 <h2 className="text-base font-bold text-text-primary">{selectedMuscle.primaryMuscleHe}</h2>
-                <p className="text-xs text-text-secondary">{selectedMuscle.totalSets} סטים · ממוצע {selectedMuscle.avgReps} חזרות</p>
+                <p className="text-xs text-on-surface-variant">{selectedMuscle.totalSets} סטים · ממוצע {selectedMuscle.avgReps} חזרות</p>
               </div>
             </div>
             <button
               onClick={() => setSelectedMuscle(null)}
               className="flex items-center justify-center w-11 h-11 rounded-xl bg-dark-card hover:bg-dark-border transition"
             >
-              <X className="w-5 h-5 text-text-secondary" />
+              <X className="w-5 h-5 text-on-surface-variant" />
             </button>
           </div>
           <div className="overflow-y-auto max-h-[calc(85vh-80px)] p-4">
             {selectedMuscle.exercises.length === 0 ? (
-              <p className="text-text-muted text-center py-8">אין תרגילים בתקופה זו</p>
+              <p className="text-on-surface-variant text-center py-8">אין תרגילים בתקופה זו</p>
             ) : (
               <div className="space-y-3">
                 {selectedMuscle.exercises.map((ex, i) => (
@@ -276,7 +276,7 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
                     <span className="text-sm text-text-primary font-medium">{ex.name}</span>
                     <div className="text-left">
                       <div className="text-sm text-text-primary">{ex.sets} סטים</div>
-                      <div className="text-xs text-text-muted">ממוצע {ex.avgReps} חזרות</div>
+                      <div className="text-xs text-on-surface-variant">ממוצע {ex.avgReps} חזרות</div>
                     </div>
                   </div>
                 ))}
@@ -292,7 +292,7 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
     <div dir="rtl">
       {/* Week Range Display */}
       {weekRange.startStr && (
-        <p className="text-xs text-text-secondary mb-3">
+        <p className="text-xs text-on-surface-variant mb-3">
           {weekRange.startStr} – {weekRange.endStr}
         </p>
       )}
@@ -305,7 +305,7 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
             className={`flex-1 py-2 px-2 rounded-lg text-xs font-semibold transition ${
               weekMode === 'last'
                 ? 'bg-accent-purple/20 text-accent-purple border border-accent-purple/40'
-                : 'bg-dark-card text-text-secondary border border-dark-border'
+                : 'bg-dark-card text-on-surface-variant border border-dark-border'
             }`}
           >
             שבוע אחרון
@@ -315,7 +315,7 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
             className={`flex-1 py-2 px-2 rounded-lg text-xs font-semibold transition ${
               weekMode === 'current'
                 ? 'bg-accent-purple/20 text-accent-purple border border-accent-purple/40'
-                : 'bg-dark-card text-text-secondary border border-dark-border'
+                : 'bg-dark-card text-on-surface-variant border border-dark-border'
             }`}
           >
             שבוע נוכחי
@@ -325,7 +325,7 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
             className={`flex-1 py-2 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1 ${
               weekMode === 'custom'
                 ? 'bg-accent-purple/20 text-accent-purple border border-accent-purple/40'
-                : 'bg-dark-card text-text-secondary border border-dark-border'
+                : 'bg-dark-card text-on-surface-variant border border-dark-border'
             }`}
           >
             <Calendar className="w-3.5 h-3.5" />
@@ -336,7 +336,7 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
         {weekMode === 'custom' && (
           <div className="flex gap-3 mt-3">
             <div className="flex-1">
-              <label className="text-xs text-text-muted block mb-1">מתאריך</label>
+              <label className="text-xs text-on-surface-variant block mb-1">מתאריך</label>
               <input
                 type="date"
                 value={customStart}
@@ -345,7 +345,7 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
               />
             </div>
             <div className="flex-1">
-              <label className="text-xs text-text-muted block mb-1">עד תאריך</label>
+              <label className="text-xs text-on-surface-variant block mb-1">עד תאריך</label>
               <input
                 type="date"
                 value={customEnd}
@@ -360,7 +360,7 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
       {/* Content */}
       <div className={selectedExercises.length > 0 ? 'pb-20' : ''}>
         {weekMode === 'custom' && (!customStart || !customEnd) ? (
-          <div className="flex flex-col items-center justify-center py-12 text-text-muted text-sm">
+          <div className="flex flex-col items-center justify-center py-12 text-on-surface-variant text-sm">
             <Calendar className="w-8 h-8 mb-3 opacity-40" />
             <p>בחר תאריך התחלה וסיום</p>
           </div>
@@ -369,7 +369,7 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
             <div className="spinner" />
           </div>
         ) : rows.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-text-muted text-sm">
+          <div className="flex flex-col items-center justify-center py-12 text-on-surface-variant text-sm">
             <span className="text-3xl mb-3 opacity-40">🏋️</span>
             <p>אין אימונים בתקופה זו</p>
           </div>
@@ -379,7 +379,7 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
             <h3 className="text-sm font-bold text-text-primary mb-2">סיכום לפי קבוצת שרירים</h3>
             <table className="w-full text-sm min-w-[340px] mb-6">
               <thead>
-                <tr className="text-text-secondary text-xs border-b border-dark-border">
+                <tr className="text-on-surface-variant text-xs border-b border-dark-border">
                   <th className="text-right py-2 pr-2 font-medium">קבוצת שרירים</th>
                   <th className="text-right py-2 font-medium">סטים / דקות</th>
                   <th className="text-center py-2 pl-2 font-medium">חזרות / zone</th>
@@ -394,14 +394,14 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
                         row.totalMinutes && row.totalMinutes > 0 ? (
                           <div className="font-medium text-text-primary">{row.totalMinutes} דק׳</div>
                         ) : (
-                          <div className="text-text-muted">—</div>
+                          <div className="text-on-surface-variant">—</div>
                         )
                       ) : row.totalSets > 0 ? (
                         <div className={`font-medium ${row.setsGreen ? 'text-status-success' : 'text-status-error'}`}>
                           {Number.isInteger(row.totalSets) ? row.totalSets : row.totalSets.toFixed(1)}
                         </div>
                       ) : (
-                        <div className="text-text-muted">—</div>
+                        <div className="text-on-surface-variant">—</div>
                       )}
                     </td>
                     <td className="py-2.5 pl-2 text-center">
@@ -409,14 +409,14 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
                         row.avgZone && row.avgZone > 0 ? (
                           <span className="font-medium text-text-primary">zone {row.avgZone}</span>
                         ) : (
-                          <span className="text-text-muted">—</span>
+                          <span className="text-on-surface-variant">—</span>
                         )
                       ) : row.avgReps > 0 ? (
                         <span className={`font-medium ${row.repsGreen ? 'text-status-success' : 'text-status-error'}`}>
                           {row.avgReps}
                         </span>
                       ) : (
-                        <span className="text-text-muted">—</span>
+                        <span className="text-on-surface-variant">—</span>
                       )}
                     </td>
                   </tr>
@@ -428,7 +428,7 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
             <h3 className="text-sm font-bold text-text-primary mb-2">פירוט לפי תת-שריר</h3>
             <table className="w-full text-sm min-w-[340px]">
               <thead>
-                <tr className="text-text-secondary text-xs border-b border-dark-border">
+                <tr className="text-on-surface-variant text-xs border-b border-dark-border">
                   <th className="text-right py-2 pr-2 font-medium">שריר</th>
                   <th className="text-right py-2 font-medium">תת-שריר</th>
                   <th className="text-right py-2 font-medium">סטים / דקות</th>
@@ -440,7 +440,7 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
                 {rows.map((row, i) => (
                   <tr key={row.primaryMuscle} className={i % 2 === 0 ? 'bg-dark-card/40' : ''}>
                     <td className="py-2.5 pr-2 text-text-primary font-medium">{row.categoryHe}</td>
-                    <td className="py-2.5 text-text-secondary">{row.primaryMuscleHe}</td>
+                    <td className="py-2.5 text-on-surface-variant">{row.primaryMuscleHe}</td>
                     <td
                       className={`py-2.5 ${row.totalSets > 0 ? 'cursor-pointer hover:bg-primary/5 rounded-lg transition-colors' : ''}`}
                       onClick={() => row.totalSets > 0 && setSelectedMuscle(row)}
@@ -449,14 +449,14 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
                         row.totalMinutes && row.totalMinutes > 0 ? (
                           <div className="font-medium text-text-primary underline decoration-current/30">{row.totalMinutes} דק׳</div>
                         ) : (
-                          <div className="text-text-muted">—</div>
+                          <div className="text-on-surface-variant">—</div>
                         )
                       ) : row.totalSets > 0 ? (
                         <div className={`font-medium underline decoration-current/30 ${row.setsGreen ? 'text-status-success' : 'text-status-error'}`}>
                           {Number.isInteger(row.totalSets) ? row.totalSets : row.totalSets.toFixed(1)}
                         </div>
                       ) : (
-                        <div className="text-text-muted">—</div>
+                        <div className="text-on-surface-variant">—</div>
                       )}
                     </td>
                     <td className="py-2.5 text-center">
@@ -464,14 +464,14 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
                         row.avgZone && row.avgZone > 0 ? (
                           <span className="font-medium text-text-primary">zone {row.avgZone}</span>
                         ) : (
-                          <span className="text-text-muted">—</span>
+                          <span className="text-on-surface-variant">—</span>
                         )
                       ) : row.avgReps > 0 ? (
                         <span className={`font-medium ${row.repsGreen ? 'text-status-success' : 'text-status-error'}`}>
                           {row.avgReps}
                         </span>
                       ) : (
-                        <span className="text-text-muted">—</span>
+                        <span className="text-on-surface-variant">—</span>
                       )}
                     </td>
                     <td className="py-2.5 pl-2 text-center">
@@ -489,7 +489,7 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
             </table>
 
             {/* Legend */}
-            <div className="mt-4 flex flex-col gap-1 text-xs text-text-muted">
+            <div className="mt-4 flex flex-col gap-1 text-xs text-on-surface-variant">
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1">
                   <span className="w-2.5 h-2.5 rounded-full bg-status-success" />

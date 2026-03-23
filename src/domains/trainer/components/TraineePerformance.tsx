@@ -62,7 +62,7 @@ export function TraineePerformance({ stats, traineeId, isLoading }: TraineePerfo
           >
             {isLoading ? '-' : card.value}
           </div>
-          <p className="text-text-muted text-sm">{card.label}</p>
+          <p className="text-on-surface-variant text-sm">{card.label}</p>
           {card.trend && <p className={`${card.trendColor} text-xs mt-1`}>{card.trend}</p>}
         </button>
       ))}
@@ -75,7 +75,7 @@ export function TraineePerformance({ stats, traineeId, isLoading }: TraineePerfo
         <div className={`text-3xl font-black text-yellow-400 mb-1 ${isLoading ? 'opacity-50' : ''}`}>
           {isLoading ? '-' : <Trophy className="w-8 h-8 mx-auto text-yellow-400" />}
         </div>
-        <p className="text-text-muted text-sm">PR</p>
+        <p className="text-on-surface-variant text-sm">PR</p>
         {prCount !== null && prCount > 0 && (
           <p className="text-status-success text-xs mt-1">{prCount} שיפורים</p>
         )}

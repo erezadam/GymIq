@@ -25,7 +25,7 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
   if (messages.length === 0) {
     return (
       <div className="empty-state">
-        <Mail className="w-12 h-12 mx-auto mb-3 text-text-muted" />
+        <Mail className="w-12 h-12 mx-auto mb-3 text-on-surface-variant" />
         <p className="empty-state-title">אין הודעות</p>
         <p className="empty-state-text">שלח הודעה למתאמן שלך</p>
       </div>

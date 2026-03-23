@@ -36,7 +36,7 @@ export function SkipAnalysis({ items }: SkipAnalysisProps) {
               </div>
               <div>
                 <div className="text-[13px] font-medium text-text-primary">{item.dayName}</div>
-                <div className="text-[11px] text-text-secondary">
+                <div className="text-[11px] text-on-surface-variant">
                   בוצע {item.performed} מתוך {item.expected} פעמים
                 </div>
               </div>

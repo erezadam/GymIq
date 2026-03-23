@@ -32,7 +32,7 @@ export function TraineeProfileSection({ trainee, onEdit }: TraineeProfileSection
         {onEdit && (
           <button
             onClick={onEdit}
-            className="absolute top-4 left-4 z-10 p-2 rounded-lg bg-dark-surface/80 text-text-muted hover:text-primary-main hover:bg-dark-surface transition"
+            className="absolute top-4 left-4 z-10 p-2 rounded-lg bg-dark-surface/80 text-on-surface-variant hover:text-primary-main hover:bg-dark-surface transition"
           >
             <Pencil className="w-4 h-4" />
           </button>
@@ -60,7 +60,7 @@ export function TraineeProfileSection({ trainee, onEdit }: TraineeProfileSection
             <h1 className="text-2xl sm:text-3xl font-black text-text-primary truncate">
               {displayName}
             </h1>
-            <p className="text-text-muted text-sm mt-0.5 truncate">
+            <p className="text-on-surface-variant text-sm mt-0.5 truncate">
               {profile?.email}
               {profile?.phoneNumber && ` • ${profile.phoneNumber}`}
             </p>
@@ -110,7 +110,7 @@ export function TraineeProfileSection({ trainee, onEdit }: TraineeProfileSection
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-xl font-black text-text-primary">{completionPercent}%</span>
-                <span className="text-xs text-text-muted">ביצוע</span>
+                <span className="text-xs text-on-surface-variant">ביצוע</span>
               </div>
             </div>
           </div>
@@ -148,7 +148,7 @@ export function TraineeProfileSection({ trainee, onEdit }: TraineeProfileSection
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-lg font-black text-text-primary">{completionPercent}%</span>
-              <span className="text-[10px] text-text-muted">ביצוע</span>
+              <span className="text-[10px] text-on-surface-variant">ביצוע</span>
             </div>
           </div>
         </div>
@@ -170,10 +170,10 @@ export function TraineeProfileSection({ trainee, onEdit }: TraineeProfileSection
               <div className="text-lg font-bold text-primary-main">
                 {metric.value != null ? metric.value : '—'}
               </div>
-              <div className="text-xs text-text-muted">
+              <div className="text-xs text-on-surface-variant">
                 {metric.label}
                 {metric.unit && metric.value != null && (
-                  <span className="text-text-muted/60"> {metric.unit}</span>
+                  <span className="text-on-surface-variant/60"> {metric.unit}</span>
                 )}
               </div>
             </div>
@@ -188,7 +188,7 @@ export function TraineeProfileSection({ trainee, onEdit }: TraineeProfileSection
             <AlertTriangle className="w-4 h-4 text-status-warning" />
             <span className="text-sm font-medium text-status-warning">מגבלות/פציעות</span>
           </div>
-          <p className="text-sm text-text-secondary">{profile.injuriesOrLimitations}</p>
+          <p className="text-sm text-on-surface-variant">{profile.injuriesOrLimitations}</p>
         </div>
       )}
 
@@ -197,9 +197,9 @@ export function TraineeProfileSection({ trainee, onEdit }: TraineeProfileSection
         <div className="bg-dark-card/50 border border-dark-border rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <FileText className="w-4 h-4 text-status-info" />
-            <span className="text-sm font-medium text-text-secondary">הערות מאמן</span>
+            <span className="text-sm font-medium text-on-surface-variant">הערות מאמן</span>
           </div>
-          <p className="text-sm text-text-muted">{trainee.relationship.notes}</p>
+          <p className="text-sm text-on-surface-variant">{trainee.relationship.notes}</p>
         </div>
       )}
     </div>

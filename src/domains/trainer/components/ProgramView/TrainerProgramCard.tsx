@@ -86,7 +86,7 @@ export function TrainerProgramCard({ program, onDisconnected }: TrainerProgramCa
                   : ''}
               </p>
               {program.description && (
-                <p className="text-text-muted text-sm mt-0.5 line-clamp-1">
+                <p className="text-on-surface-variant text-sm mt-0.5 line-clamp-1">
                   {program.description}
                 </p>
               )}
@@ -147,7 +147,7 @@ export function TrainerProgramCard({ program, onDisconnected }: TrainerProgramCa
                           {day.dayLabel}
                           {day.name && ` - ${day.name}`}
                         </p>
-                        <p className="text-text-muted text-xs mt-0.5">
+                        <p className="text-on-surface-variant text-xs mt-0.5">
                           {day.restDay
                             ? 'יום מנוחה'
                             : `${day.exercises.length} תרגילים · ${totalSets} סטים`}
@@ -195,12 +195,12 @@ export function TrainerProgramCard({ program, onDisconnected }: TrainerProgramCa
                         ))}
                       </div>
                       {day.notes && (
-                        <p className="text-xs text-text-muted mt-2 px-1">
+                        <p className="text-xs text-on-surface-variant mt-2 px-1">
                           {day.notes}
                         </p>
                       )}
                       {day.estimatedDuration && (
-                        <div className="flex items-center gap-1 text-xs text-text-muted mt-2 px-1">
+                        <div className="flex items-center gap-1 text-xs text-on-surface-variant mt-2 px-1">
                           <Clock className="w-3 h-3" />~{day.estimatedDuration}{' '}
                           דקות
                         </div>
@@ -237,7 +237,7 @@ export function TrainerProgramCard({ program, onDisconnected }: TrainerProgramCa
               </div>
               <button
                 onClick={() => setShowDisconnectDialog(false)}
-                className="p-1 text-text-muted"
+                className="p-1 text-on-surface-variant"
                 disabled={disconnecting}
               >
                 <X className="w-5 h-5" />
@@ -246,13 +246,13 @@ export function TrainerProgramCard({ program, onDisconnected }: TrainerProgramCa
             <h3 className="text-lg font-bold text-text-primary mb-2">
               ניתוק תוכנית
             </h3>
-            <p className="text-text-muted text-sm mb-6">
+            <p className="text-on-surface-variant text-sm mb-6">
               האם לנתק את התוכנית &quot;{program.name}&quot;? התוכנית תיעלם מהתצוגה שלך.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDisconnectDialog(false)}
-                className="flex-1 py-2.5 bg-dark-card text-text-secondary rounded-xl text-sm font-medium"
+                className="flex-1 py-2.5 bg-dark-card text-on-surface-variant rounded-xl text-sm font-medium"
                 disabled={disconnecting}
               >
                 ביטול

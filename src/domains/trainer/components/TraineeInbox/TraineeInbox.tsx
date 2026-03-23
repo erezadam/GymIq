@@ -58,7 +58,7 @@ export default function TraineeInbox() {
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-text-primary">הודעות</h1>
-        <p className="text-sm text-text-muted mt-1">
+        <p className="text-sm text-on-surface-variant mt-1">
           {messages.filter((m) => !m.isRead).length > 0
             ? `${messages.filter((m) => !m.isRead).length} הודעות שלא נקראו`
             : 'כל ההודעות נקראו'}
@@ -68,7 +68,7 @@ export default function TraineeInbox() {
       {/* Messages */}
       {messages.length === 0 ? (
         <div className="empty-state">
-          <Mail className="w-16 h-16 mx-auto mb-4 text-text-muted" />
+          <Mail className="w-16 h-16 mx-auto mb-4 text-on-surface-variant" />
           <p className="empty-state-title">אין הודעות</p>
           <p className="empty-state-text">הודעות מהמאמן שלך יופיעו כאן</p>
         </div>
@@ -79,10 +79,10 @@ export default function TraineeInbox() {
               <InboxMessageCard message={message} onRead={handleRead} />
               {/* Expanded content */}
               {expandedId === message.id && (
-                <div className="mt-1 mr-4 p-4 bg-dark-card rounded-xl text-sm text-text-secondary whitespace-pre-line">
+                <div className="mt-1 mr-4 p-4 bg-dark-card rounded-xl text-sm text-on-surface-variant whitespace-pre-line">
                   {message.body}
                   {message.referenceName && (
-                    <div className="mt-3 pt-2 border-t border-dark-border/50 text-xs text-text-muted">
+                    <div className="mt-3 pt-2 border-t border-dark-border/50 text-xs text-on-surface-variant">
                       קשור ל: {message.referenceName}
                     </div>
                   )}

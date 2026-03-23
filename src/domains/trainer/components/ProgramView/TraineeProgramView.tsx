@@ -53,7 +53,7 @@ export default function TraineeProgramView() {
                 מאמן
               </span>
             </div>
-            <p className="text-xs text-text-muted">
+            <p className="text-xs text-on-surface-variant">
               {trainingDays.length} ימי אימון בשבוע
               {program.durationWeeks
                 ? ` · ${program.durationWeeks} שבועות`
@@ -63,7 +63,7 @@ export default function TraineeProgramView() {
         </div>
 
         {program.description && (
-          <p className="text-xs text-text-secondary mt-2">
+          <p className="text-xs text-on-surface-variant mt-2">
             {program.description}
           </p>
         )}
@@ -77,7 +77,7 @@ export default function TraineeProgramView() {
               <Play className="w-4 h-4 text-accent-orange flex-shrink-0" />
               <div className="min-w-0">
                 <p className="text-xs font-bold text-accent-orange">האימון של היום</p>
-                <p className="text-xs text-text-secondary truncate">
+                <p className="text-xs text-on-surface-variant truncate">
                   {todayDay.dayLabel}
                   {todayDay.name && ` - ${todayDay.name}`}
                   {' · '}
@@ -97,7 +97,7 @@ export default function TraineeProgramView() {
 
       {todayDay?.restDay && (
         <div className="mx-4 mb-3 p-3 rounded-xl bg-status-info/10 text-center">
-          <p className="text-xs text-text-muted">היום יום מנוחה</p>
+          <p className="text-xs text-on-surface-variant">היום יום מנוחה</p>
         </div>
       )}
 
@@ -128,7 +128,7 @@ export default function TraineeProgramView() {
                     {day.dayLabel}
                     {day.name && ` - ${day.name}`}
                   </p>
-                  <p className="text-xs text-text-muted">
+                  <p className="text-xs text-on-surface-variant">
                     {day.restDay
                       ? 'יום מנוחה'
                       : `${day.exercises.length} תרגילים · ${totalSets} סטים`}
@@ -148,7 +148,7 @@ export default function TraineeProgramView() {
                       </button>
                     )}
                     <ChevronDown
-                      className={`w-4 h-4 text-text-muted transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                      className={`w-4 h-4 text-on-surface-variant transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                     />
                   </div>
                 )}
@@ -167,12 +167,12 @@ export default function TraineeProgramView() {
                     ))}
                   </div>
                   {day.notes && (
-                    <p className="text-xs text-text-muted mt-2 px-1">
+                    <p className="text-xs text-on-surface-variant mt-2 px-1">
                       {day.notes}
                     </p>
                   )}
                   {day.estimatedDuration && (
-                    <div className="flex items-center gap-1 text-xs text-text-muted mt-2 px-1">
+                    <div className="flex items-center gap-1 text-xs text-on-surface-variant mt-2 px-1">
                       <Clock className="w-3 h-3" />
                       ~{day.estimatedDuration} דקות
                     </div>

@@ -33,7 +33,7 @@ export function WeeklyProgressBars({ weeks }: WeeklyProgressBarsProps) {
       <div className="space-y-2.5 mt-2">
         {weeks.map((week, i) => (
           <div key={i} className="flex items-center gap-2.5">
-            <span className="w-[60px] text-xs text-text-secondary flex-shrink-0 text-right">
+            <span className="w-[60px] text-xs text-on-surface-variant flex-shrink-0 text-right">
               {week.label}
             </span>
             <div className="flex-1 h-5 bg-dark-surface rounded-lg overflow-hidden relative">

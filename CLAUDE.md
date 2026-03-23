@@ -76,7 +76,12 @@ accent-purple: #8B5CF6 (accent.purple)
 error: #EF4444 (status.error)
 warning: #F59E0B (status.warning)
 success: #10B981 (status.success)
+surface-container: #1d2026 (surface.container)
+on-surface: #e1e2eb (on-surface.DEFAULT)
+on-surface-variant: #bbcac6 (on-surface.variant)
 ```
+
+**⚠️ מיגרציית צבעים (23/03/2026):** `text-text-muted` ו-`text-text-secondary` הוחלפו ב-`text-on-surface-variant` בכל קומפוננטות ה-trainer. יש להשתמש ב-`text-on-surface-variant` לטקסט משני/מושתק.
 
 **אם צריך צבע שלא קיים - להוסיף ל-tailwind-tokens.js, לא לכתוב hardcoded!**
 
@@ -583,6 +588,7 @@ npx playwright test
 | 10/03/2026 | נוסף code-review plugin | חובה להריץ /code-review לפני פתיחת PR |
 | 14/03/2026 | תת-שרירים חדשים מ-Firebase לא הופיעו בניתוח שבועי + דרופדאון ExerciseForm פולטר לפי Set קשיח | נוסף חוק ברזל: מקור אמת יחיד לשמות שרירים = Firebase. אסור רשימות סטטיות. auto-sync ב-getMuscles() |
 | 14/03/2026 | קרדיט חלקי לישבן הלך ל-longissimus במקום gluteus_maximus + חסר biceps_brachii | תוקן SECONDARY_MUSCLE_MULTIPLIERS: 3 שרירי עזר (triceps/biceps_brachii/gluteus_maximus), רשימות תרגילים עודכנו, UI שונה — סטים צבעוניים (ירוק≥10/אדום<10), ממוצע חזרות צבעוני (ירוק≥5/אדום<5), הוסר עמודת סטטוס |
+| 23/03/2026 | מיגרציית צבעים + עיצוב Trainer מחדש | TrainerLayout עבר ל-bottom nav + Material 3 surface tokens + מיגרציית text-text-muted/secondary ל-on-surface-variant ב-~40 קבצים + cancelled workouts נספרים בניתוח |
 
 ---
 

@@ -29,7 +29,7 @@ export function ProgramExerciseEditor({
       <div className="p-4 sm:p-5">
         <div className="flex items-center gap-3 sm:gap-4">
           {/* Drag handle */}
-          <div className="cursor-move text-text-muted hover:text-text-primary text-xl flex-shrink-0">
+          <div className="cursor-move text-on-surface-variant hover:text-text-primary text-xl flex-shrink-0">
             ⋮⋮
           </div>
 
@@ -53,7 +53,7 @@ export function ProgramExerciseEditor({
             <h4 className="font-bold text-base sm:text-lg text-text-primary truncate">
               {exercise.exerciseNameHe}
             </h4>
-            <p className="text-text-muted text-sm truncate">
+            <p className="text-on-surface-variant text-sm truncate">
               {exercise.exerciseName} • {exercise.category}
             </p>
           </div>
@@ -61,7 +61,7 @@ export function ProgramExerciseEditor({
           {/* Inline inputs - desktop */}
           <div className="hidden sm:flex items-center gap-3">
             <div className="text-center px-3 py-2 bg-dark-surface rounded-xl">
-              <div className="text-xs text-text-muted mb-1">סטים</div>
+              <div className="text-xs text-on-surface-variant mb-1">סטים</div>
               <input
                 type="number"
                 min={1}
@@ -72,7 +72,7 @@ export function ProgramExerciseEditor({
               />
             </div>
             <div className="text-center px-3 py-2 bg-dark-surface rounded-xl">
-              <div className="text-xs text-text-muted mb-1">חזרות</div>
+              <div className="text-xs text-on-surface-variant mb-1">חזרות</div>
               <input
                 type="text"
                 value={exercise.targetReps}
@@ -82,7 +82,7 @@ export function ProgramExerciseEditor({
               />
             </div>
             <div className="text-center px-3 py-2 bg-dark-surface rounded-xl">
-              <div className="text-xs text-text-muted mb-1">מנוחה</div>
+              <div className="text-xs text-on-surface-variant mb-1">מנוחה</div>
               <select
                 value={exercise.restTime}
                 onChange={(e) => onUpdate({ restTime: parseInt(e.target.value) })}
@@ -112,7 +112,7 @@ export function ProgramExerciseEditor({
       {/* Mobile inputs - shown below on small screens */}
       <div className="sm:hidden grid grid-cols-3 gap-3 px-4 pb-4">
         <div className="text-center px-2 py-2 bg-dark-surface rounded-xl">
-          <div className="text-xs text-text-muted mb-1">סטים</div>
+          <div className="text-xs text-on-surface-variant mb-1">סטים</div>
           <input
             type="number"
             min={1}
@@ -123,7 +123,7 @@ export function ProgramExerciseEditor({
           />
         </div>
         <div className="text-center px-2 py-2 bg-dark-surface rounded-xl">
-          <div className="text-xs text-text-muted mb-1">חזרות</div>
+          <div className="text-xs text-on-surface-variant mb-1">חזרות</div>
           <input
             type="text"
             value={exercise.targetReps}
@@ -133,7 +133,7 @@ export function ProgramExerciseEditor({
           />
         </div>
         <div className="text-center px-2 py-2 bg-dark-surface rounded-xl">
-          <div className="text-xs text-text-muted mb-1">מנוחה</div>
+          <div className="text-xs text-on-surface-variant mb-1">מנוחה</div>
           <select
             value={exercise.restTime}
             onChange={(e) => onUpdate({ restTime: parseInt(e.target.value) })}
@@ -152,7 +152,7 @@ export function ProgramExerciseEditor({
 
       {/* Trainer notes */}
       <div className="px-4 sm:px-5 pb-4 sm:pb-5">
-        <div className="flex items-center gap-2 text-sm text-text-muted mb-2">
+        <div className="flex items-center gap-2 text-sm text-on-surface-variant mb-2">
           💬 הערה למתאמן:
         </div>
         <input

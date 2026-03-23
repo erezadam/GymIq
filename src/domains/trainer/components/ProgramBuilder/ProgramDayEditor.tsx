@@ -133,7 +133,7 @@ export function ProgramDayEditor({ day, dayIndex, onUpdate, onBack, traineeId, p
       <div className="flex items-center justify-between">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-text-muted hover:text-text-primary transition"
+          className="flex items-center gap-2 text-on-surface-variant hover:text-text-primary transition"
         >
           <ArrowRight className="w-5 h-5" />
           <span>חזרה למבנה</span>
@@ -163,7 +163,7 @@ export function ProgramDayEditor({ day, dayIndex, onUpdate, onBack, traineeId, p
               className="bg-transparent text-xl sm:text-2xl font-bold text-text-primary focus:outline-none border-b-2 border-transparent focus:border-primary-main w-full mb-2"
               placeholder="שם האימון (למשל: חזה + טרייספס)"
             />
-            <div className="flex items-center gap-3 sm:gap-4 text-text-muted text-sm flex-wrap">
+            <div className="flex items-center gap-3 sm:gap-4 text-on-surface-variant text-sm flex-wrap">
               <span className="flex items-center gap-1">
                 📅 {day.dayLabel}
               </span>
@@ -182,7 +182,7 @@ export function ProgramDayEditor({ day, dayIndex, onUpdate, onBack, traineeId, p
           {totalSets > 0 && (
             <div className="flex flex-col items-center flex-shrink-0">
               <div className="text-2xl sm:text-3xl font-black text-primary-main">{totalSets}</div>
-              <div className="text-sm text-text-muted">סטים</div>
+              <div className="text-sm text-on-surface-variant">סטים</div>
             </div>
           )}
         </div>
@@ -194,7 +194,7 @@ export function ProgramDayEditor({ day, dayIndex, onUpdate, onBack, traineeId, p
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm transition ${
               day.restDay
                 ? 'bg-status-info/20 text-status-info border border-status-info/30'
-                : 'bg-dark-surface text-text-muted border border-dark-border hover:border-primary-main/30'
+                : 'bg-dark-surface text-on-surface-variant border border-dark-border hover:border-primary-main/30'
             }`}
           >
             {day.restDay ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
@@ -205,7 +205,7 @@ export function ProgramDayEditor({ day, dayIndex, onUpdate, onBack, traineeId, p
 
       {/* Rest day message */}
       {day.restDay && (
-        <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl text-center py-12 text-text-muted">
+        <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl text-center py-12 text-on-surface-variant">
           <Moon className="w-16 h-16 mx-auto mb-4 opacity-30" />
           <p className="text-lg">יום מנוחה - אין תרגילים</p>
         </div>
@@ -259,7 +259,7 @@ export function ProgramDayEditor({ day, dayIndex, onUpdate, onBack, traineeId, p
           {/* Add exercise button */}
           <button
             onClick={() => setShowPicker(true)}
-            className="w-full py-5 border-2 border-dashed border-dark-border rounded-2xl text-text-muted hover:border-primary-main hover:text-primary-main transition flex items-center justify-center gap-3 text-lg"
+            className="w-full py-5 border-2 border-dashed border-dark-border rounded-2xl text-on-surface-variant hover:border-primary-main hover:text-primary-main transition flex items-center justify-center gap-3 text-lg"
           >
             <Plus className="w-5 h-5" />
             הוסף תרגיל
@@ -267,7 +267,7 @@ export function ProgramDayEditor({ day, dayIndex, onUpdate, onBack, traineeId, p
 
           {/* Day notes */}
           <div>
-            <div className="flex items-center gap-2 text-sm text-text-muted mb-2">
+            <div className="flex items-center gap-2 text-sm text-on-surface-variant mb-2">
               📝 הערות ליום:
             </div>
             <textarea
@@ -285,7 +285,7 @@ export function ProgramDayEditor({ day, dayIndex, onUpdate, onBack, traineeId, p
       <div className="flex justify-between pt-4">
         <button
           onClick={onBack}
-          className="px-5 sm:px-6 py-3 sm:py-4 bg-dark-surface rounded-xl hover:bg-dark-card transition flex items-center gap-2 text-text-secondary"
+          className="px-5 sm:px-6 py-3 sm:py-4 bg-dark-surface rounded-xl hover:bg-dark-card transition flex items-center gap-2 text-on-surface-variant"
         >
           <ArrowRight className="w-4 h-4" />
           <span>חזרה למבנה</span>

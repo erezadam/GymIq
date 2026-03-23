@@ -43,7 +43,7 @@ export default function TraineeAnalytics() {
       <div className="flex items-center gap-3 p-4">
         <button
           onClick={() => navigate(`/trainer/trainee/${traineeId}`)}
-          className="flex items-center gap-1 text-text-secondary hover:text-text-primary transition"
+          className="flex items-center gap-1 text-on-surface-variant hover:text-text-primary transition"
         >
           <ArrowRight className="w-5 h-5" />
           <span className="text-sm">חזרה</span>
@@ -62,7 +62,7 @@ export default function TraineeAnalytics() {
             className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-[13px] font-medium whitespace-nowrap transition-all ${
               activeTab === tab.id
                 ? 'bg-gradient-to-r from-primary-main to-primary-main/80 text-dark-bg font-semibold'
-                : 'bg-dark-card/80 border border-dark-border text-text-secondary hover:text-text-primary hover:bg-dark-card'
+                : 'bg-dark-card/80 border border-dark-border text-on-surface-variant hover:text-text-primary hover:bg-dark-card'
             }`}
           >
             <span className="text-base">{tab.icon}</span>

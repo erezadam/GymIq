@@ -39,13 +39,13 @@ export function ProgramDayCard({
     return (
       <div className="bg-gradient-to-br from-status-info/5 to-status-info/10 border border-status-info/20 rounded-2xl p-5 opacity-70">
         <div className="flex items-center gap-4">
-          <div className="cursor-move text-text-muted hover:text-text-primary text-xl">⋮⋮</div>
+          <div className="cursor-move text-on-surface-variant hover:text-text-primary text-xl">⋮⋮</div>
           <div className="w-14 h-14 rounded-xl bg-status-info/20 flex items-center justify-center">
             <Moon className="w-6 h-6 text-status-info" />
           </div>
           <div className="flex-1">
             <p className="font-bold text-text-primary">{day.dayLabel}</p>
-            <p className="text-sm text-text-muted">יום מנוחה</p>
+            <p className="text-sm text-on-surface-variant">יום מנוחה</p>
           </div>
           <button
             onClick={() => onRemove(index)}
@@ -65,7 +65,7 @@ export function ProgramDayCard({
     >
       <div className="flex items-center gap-4">
         {/* Drag handle */}
-        <div className="cursor-move text-text-muted hover:text-text-primary text-xl flex-shrink-0">
+        <div className="cursor-move text-on-surface-variant hover:text-text-primary text-xl flex-shrink-0">
           ⋮⋮
         </div>
 
@@ -93,7 +93,7 @@ export function ProgramDayCard({
             </h4>
           )}
           <div className="flex items-center gap-3 mt-1">
-            <span className="text-text-muted text-sm">{day.dayLabel}</span>
+            <span className="text-on-surface-variant text-sm">{day.dayLabel}</span>
             <span className="text-dark-border">•</span>
             <span className="text-primary-main text-sm">
               {exerciseCount} תרגילים
@@ -101,7 +101,7 @@ export function ProgramDayCard({
             {totalSets > 0 && (
               <>
                 <span className="text-dark-border">•</span>
-                <span className="text-text-muted text-sm">{totalSets} סטים</span>
+                <span className="text-on-surface-variant text-sm">{totalSets} סטים</span>
               </>
             )}
           </div>
@@ -112,7 +112,7 @@ export function ProgramDayCard({
           {onCopy && (
             <button
               onClick={() => onCopy(index)}
-              className="p-2 hover:bg-dark-surface rounded-lg transition text-text-muted hover:text-text-primary"
+              className="p-2 hover:bg-dark-surface rounded-lg transition text-on-surface-variant hover:text-text-primary"
               title="העתק"
             >
               📋
@@ -134,13 +134,13 @@ export function ProgramDayCard({
           {day.exercises.slice(0, 4).map((ex, i) => (
             <span
               key={i}
-              className="px-2.5 py-1 bg-dark-surface/50 text-text-secondary text-xs rounded-lg"
+              className="px-2.5 py-1 bg-dark-surface/50 text-on-surface-variant text-xs rounded-lg"
             >
               {ex.exerciseNameHe}
             </span>
           ))}
           {exerciseCount > 4 && (
-            <span className="px-2.5 py-1 bg-dark-surface/50 text-text-muted text-xs rounded-lg">
+            <span className="px-2.5 py-1 bg-dark-surface/50 text-on-surface-variant text-xs rounded-lg">
               +{exerciseCount - 4}
             </span>
           )}

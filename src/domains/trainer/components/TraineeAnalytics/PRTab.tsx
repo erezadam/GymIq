@@ -42,7 +42,7 @@ export function PRTab({ data }: PRTabProps) {
       {/* Recent PRs */}
       {data.recentPRs.length > 0 && (
         <div>
-          <div className="text-[13px] font-semibold text-text-secondary mb-2.5 flex items-center gap-1.5">
+          <div className="text-[13px] font-semibold text-on-surface-variant mb-2.5 flex items-center gap-1.5">
             <span className="w-[3px] h-3.5 bg-primary-main rounded-full" />
             🎉 שיאים אחרונים
           </div>
@@ -57,7 +57,7 @@ export function PRTab({ data }: PRTabProps) {
       {/* Stuck Exercises */}
       {data.stuckExercises.length > 0 && (
         <div>
-          <div className="text-[13px] font-semibold text-text-secondary mb-2.5 flex items-center gap-1.5 mt-5">
+          <div className="text-[13px] font-semibold text-on-surface-variant mb-2.5 flex items-center gap-1.5 mt-5">
             <span className="w-[3px] h-3.5 bg-primary-main rounded-full" />
             ⚠️ תרגילים "תקועים"
           </div>
@@ -73,7 +73,7 @@ export function PRTab({ data }: PRTabProps) {
       {data.recentPRs.length === 0 && data.stuckExercises.length === 0 && (
         <div className="text-center py-8">
           <div className="text-4xl mb-3">🏆</div>
-          <p className="text-text-muted text-sm">אין עדיין מספיק נתונים להצגת שיאים</p>
+          <p className="text-on-surface-variant text-sm">אין עדיין מספיק נתונים להצגת שיאים</p>
         </div>
       )}
 

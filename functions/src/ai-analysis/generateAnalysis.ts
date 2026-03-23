@@ -233,8 +233,8 @@ async function fetchWorkoutHistory(
     .orderBy('date', 'desc')
     .get()
 
-  // Only include completed workouts (exclude cancelled, planned, in_progress)
-  const VALID_STATUSES = ['completed', 'partial']
+  // Include workouts that have reported data (exclude planned, in_progress)
+  const VALID_STATUSES = ['completed', 'partial', 'cancelled']
   const workouts: AnalysisWorkout[] = snapshot.docs
     .filter((doc) => {
       const data = doc.data()

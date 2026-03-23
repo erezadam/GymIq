@@ -78,7 +78,7 @@ export function MessageComposer({
       {/* Trainee select */}
       {!preselectedTraineeId && (
         <div>
-          <label className="block text-sm font-medium text-text-secondary mb-1.5">
+          <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
             מתאמן *
           </label>
           <select
@@ -99,7 +99,7 @@ export function MessageComposer({
       {/* Type and priority */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-text-secondary mb-1.5">
+          <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
             סוג
           </label>
           <select
@@ -115,7 +115,7 @@ export function MessageComposer({
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-text-secondary mb-1.5">
+          <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
             עדיפות
           </label>
           <select
@@ -131,7 +131,7 @@ export function MessageComposer({
 
       {/* Subject */}
       <div>
-        <label className="block text-sm font-medium text-text-secondary mb-1.5">
+        <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
           נושא
         </label>
         <input
@@ -145,7 +145,7 @@ export function MessageComposer({
 
       {/* Body */}
       <div>
-        <label className="block text-sm font-medium text-text-secondary mb-1.5">
+        <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
           תוכן ההודעה *
         </label>
         <textarea

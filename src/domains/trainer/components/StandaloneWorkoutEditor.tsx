@@ -143,14 +143,14 @@ export function StandaloneWorkoutEditor({
             <div className="flex items-center justify-between">
               <button
                 onClick={handleBack}
-                className="flex items-center gap-2 text-text-muted hover:text-text-primary transition"
+                className="flex items-center gap-2 text-on-surface-variant hover:text-text-primary transition"
               >
                 <ArrowRight className="w-5 h-5" />
                 <span>ביטול</span>
               </button>
               <div className="text-center">
                 <h1 className="text-lg font-bold text-text-primary">אימון בודד חדש</h1>
-                <p className="text-sm text-text-muted">עבור {traineeName}</p>
+                <p className="text-sm text-on-surface-variant">עבור {traineeName}</p>
               </div>
               <div className="w-16" />
             </div>
@@ -170,7 +170,7 @@ export function StandaloneWorkoutEditor({
         <div className="max-w-2xl mx-auto px-4 py-6">
           {/* Workout name input */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-text-secondary mb-2">
+            <label className="block text-sm font-medium text-on-surface-variant mb-2">
               שם האימון *
             </label>
             <input
@@ -308,7 +308,7 @@ function StandaloneExerciseList({ day, onUpdate, traineeId }: StandaloneExercise
           תרגילים ({day.exercises.length})
         </h3>
         {day.exercises.length > 0 && (
-          <div className="text-sm text-text-muted">
+          <div className="text-sm text-on-surface-variant">
             ~{Math.round(day.exercises.reduce((sum, ex) => sum + ex.targetSets * (45 + ex.restTime), 0) / 60 + day.exercises.length * 2)} דקות
           </div>
         )}
@@ -327,7 +327,7 @@ function StandaloneExerciseList({ day, onUpdate, traineeId }: StandaloneExercise
       {/* Add exercise button */}
       <button
         onClick={() => setShowPicker(true)}
-        className="w-full py-5 border-2 border-dashed border-dark-border rounded-2xl text-text-muted hover:border-primary-main hover:text-primary-main transition flex items-center justify-center gap-3 text-lg"
+        className="w-full py-5 border-2 border-dashed border-dark-border rounded-2xl text-on-surface-variant hover:border-primary-main hover:text-primary-main transition flex items-center justify-center gap-3 text-lg"
       >
         <Plus className="w-5 h-5" />
         הוסף תרגיל
@@ -335,7 +335,7 @@ function StandaloneExerciseList({ day, onUpdate, traineeId }: StandaloneExercise
 
       {/* Notes */}
       <div>
-        <div className="flex items-center gap-2 text-sm text-text-muted mb-2">
+        <div className="flex items-center gap-2 text-sm text-on-surface-variant mb-2">
           📝 הערות לאימון:
         </div>
         <textarea

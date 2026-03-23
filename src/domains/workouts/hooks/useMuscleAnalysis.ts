@@ -167,8 +167,9 @@ export function useMuscleAnalysis(
           }
         }
 
+        const COUNTABLE_STATUSES = ['completed', 'partial', 'cancelled']
         for (const workout of workouts) {
-          if (workout.status !== 'completed') continue
+          if (!COUNTABLE_STATUSES.includes(workout.status || 'completed')) continue
 
           for (const exercise of workout.exercises) {
             const exDef = exerciseMap.get(exercise.exerciseId)

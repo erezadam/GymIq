@@ -32,62 +32,62 @@ export default function TrainerDashboard() {
   }, [trainees])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Stats Row */}
       {trainees.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-dark-card border border-white/5 rounded-2xl p-4 shadow-card">
-            <div className="flex items-center justify-between mb-3">
+          <div className="bg-surface-container-low rounded-2xl p-5 border border-white/5">
+            <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-2">מתאמנים פעילים</p>
+            <div className="flex items-center justify-between">
               <span className="text-3xl font-black text-accent-orange">{stats.activeCount}</span>
               <div className="w-10 h-10 rounded-xl bg-accent-orange/15 flex items-center justify-center">
                 <Users className="w-5 h-5 text-accent-orange" />
               </div>
             </div>
-            <p className="text-text-secondary text-xs">מתאמנים פעילים</p>
           </div>
-          <div className="bg-dark-card border border-white/5 rounded-2xl p-4 shadow-card">
-            <div className="flex items-center justify-between mb-3">
+          <div className="bg-surface-container-low rounded-2xl p-5 border border-white/5">
+            <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-2">אימונים השבוע</p>
+            <div className="flex items-center justify-between">
               <span className="text-3xl font-black text-primary-main">{stats.weeklyWorkouts}</span>
               <div className="w-10 h-10 rounded-xl bg-primary-main/15 flex items-center justify-center">
                 <Dumbbell className="w-5 h-5 text-primary-main" />
               </div>
             </div>
-            <p className="text-text-secondary text-xs">אימונים השבוע</p>
           </div>
-          <div className="bg-dark-card border border-white/5 rounded-2xl p-4 shadow-card">
-            <div className="flex items-center justify-between mb-3">
+          <div className="bg-surface-container-low rounded-2xl p-5 border border-white/5">
+            <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-2">אחוז ביצוע</p>
+            <div className="flex items-center justify-between">
               <span className="text-3xl font-black text-accent-purple">{stats.avgCompletion}%</span>
               <div className="w-10 h-10 rounded-xl bg-accent-purple/15 flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-accent-purple" />
               </div>
             </div>
-            <p className="text-text-secondary text-xs">אחוז ביצוע</p>
           </div>
-          <div className="bg-dark-card border border-white/5 rounded-2xl p-4 shadow-card">
-            <div className="flex items-center justify-between mb-3">
+          <div className="bg-surface-container-low rounded-2xl p-5 border border-white/5">
+            <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-2">הודעות שנשלחו</p>
+            <div className="flex items-center justify-between">
               <span className="text-3xl font-black text-status-info">{totalMessages}</span>
               <div className="w-10 h-10 rounded-xl bg-status-info/15 flex items-center justify-center">
                 <MessageSquare className="w-5 h-5 text-status-info" />
               </div>
             </div>
-            <p className="text-text-secondary text-xs">הודעות שנשלחו</p>
           </div>
         </div>
       )}
 
       {/* Section Title */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-text-primary flex items-center gap-2">
-          <span className="w-1 h-6 bg-gradient-primary rounded-full" />
-          המתאמנים שלי
-        </h2>
+        <div>
+          <h2 className="text-xl font-bold text-text-primary">המתאמנים שלי</h2>
+          <div className="h-1 w-8 rounded-full bg-gradient-primary mt-2" />
+        </div>
         <div className="flex items-center gap-2">
           <button onClick={refreshTrainees} className="btn-icon" disabled={isLoading}>
             <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={() => setShowRegistrationModal(true)}
-            className="bg-gradient-to-br from-primary-main to-status-info px-4 py-2 rounded-xl font-medium text-white flex items-center gap-2 hover:opacity-90 transition text-sm"
+            className="bg-gradient-to-br from-primary-main to-status-info px-5 py-2.5 rounded-full font-medium text-white flex items-center gap-2 hover:opacity-90 transition text-sm shadow-lg shadow-primary-main/20"
           >
             <UserPlus className="w-4 h-4" />
             <span>מתאמן חדש</span>
@@ -112,12 +112,12 @@ export default function TrainerDashboard() {
       {/* Empty state */}
       {!isLoading && trainees.length === 0 && !error && (
         <div className="empty-state">
-          <Users className="w-16 h-16 mx-auto mb-4 text-text-muted" />
+          <Users className="w-16 h-16 mx-auto mb-4 text-on-surface-variant" />
           <p className="empty-state-title">אין מתאמנים עדיין</p>
           <p className="empty-state-text">הוסף מתאמן חדש כדי להתחיל</p>
           <button
             onClick={() => setShowRegistrationModal(true)}
-            className="bg-gradient-to-br from-primary-main to-status-info px-6 py-3 rounded-xl font-medium text-white text-sm"
+            className="bg-gradient-to-br from-primary-main to-status-info px-6 py-3 rounded-full font-medium text-white text-sm shadow-lg shadow-primary-main/20"
           >
             + מתאמן חדש
           </button>
