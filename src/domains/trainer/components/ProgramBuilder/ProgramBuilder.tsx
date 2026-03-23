@@ -580,7 +580,7 @@ export default function ProgramBuilder() {
               className="bg-transparent font-bold text-lg text-text-primary focus:outline-none w-full"
               placeholder="שם האימון..."
             />
-            <p className="text-xs text-text-muted">
+            <p className="text-xs text-on-surface-variant">
               {exerciseCount} תרגילים{estimatedMinutes > 0 ? ` • ~${estimatedMinutes} דקות` : ''}
             </p>
           </div>
@@ -600,7 +600,7 @@ export default function ProgramBuilder() {
           {/* Add exercise button */}
           <button
             onClick={() => setShowExercisePicker(true)}
-            className="w-full py-4 border-2 border-dashed border-dark-border rounded-xl text-text-muted flex items-center justify-center gap-2 hover:border-primary-main hover:text-primary-main transition"
+            className="w-full py-4 border-2 border-dashed border-dark-border rounded-xl text-on-surface-variant flex items-center justify-center gap-2 hover:border-primary-main hover:text-primary-main transition"
           >
             <Plus className="w-5 h-5" />
             הוסף תרגיל
@@ -644,7 +644,7 @@ export default function ProgramBuilder() {
                       ? 'bg-primary-main text-white'
                       : s === step
                       ? 'bg-gradient-to-br from-primary-main to-status-info text-white shadow-glow-cyan'
-                      : 'bg-dark-surface border-2 border-dark-border text-text-muted'
+                      : 'bg-dark-surface border-2 border-dark-border text-on-surface-variant'
                   }`}
                 >
                   {s < step ? '✓' : s}
@@ -652,7 +652,7 @@ export default function ProgramBuilder() {
                 {!isMobile && (
                   <span
                     className={`text-xs sm:text-sm mt-1.5 sm:mt-2 ${
-                      s <= step ? 'text-primary-main font-medium' : 'text-text-muted'
+                      s <= step ? 'text-primary-main font-medium' : 'text-on-surface-variant'
                     }`}
                   >
                     {STEP_LABELS[s - 1]}
@@ -696,14 +696,14 @@ export default function ProgramBuilder() {
             </div>
             <div>
               <h2 className={`${isMobile ? 'text-base' : 'text-lg sm:text-xl'} font-bold text-text-primary`}>פרטי התוכנית</h2>
-              <p className="text-text-muted text-sm">הגדר את המידע הבסיסי</p>
+              <p className="text-on-surface-variant text-sm">הגדר את המידע הבסיסי</p>
             </div>
           </div>
 
           <div className="space-y-5">
             {/* Trainee Select */}
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-2">
+              <label className="block text-sm font-medium text-on-surface-variant mb-2">
                 <span className="text-primary-main">👤</span> בחר מתאמן *
               </label>
               <select
@@ -746,7 +746,7 @@ export default function ProgramBuilder() {
 
             {/* Program Name */}
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-2">
+              <label className="block text-sm font-medium text-on-surface-variant mb-2">
                 <span className="text-primary-main">✏️</span> שם התוכנית *
               </label>
               <input
@@ -761,7 +761,7 @@ export default function ProgramBuilder() {
                   <button
                     key={s.label}
                     onClick={() => setName(s.label)}
-                    className="px-3 py-1.5 bg-dark-surface rounded-lg text-sm text-text-secondary hover:bg-primary-main/20 hover:text-primary-main transition"
+                    className="px-3 py-1.5 bg-dark-surface rounded-lg text-sm text-on-surface-variant hover:bg-primary-main/20 hover:text-primary-main transition"
                   >
                     {s.emoji} {s.label}
                   </button>
@@ -771,7 +771,7 @@ export default function ProgramBuilder() {
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-2">
+              <label className="block text-sm font-medium text-on-surface-variant mb-2">
                 <span className="text-primary-main">📝</span> תיאור (אופציונלי)
               </label>
               <textarea
@@ -786,7 +786,7 @@ export default function ProgramBuilder() {
             {/* Date + Duration */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">
+                <label className="block text-sm font-medium text-on-surface-variant mb-2">
                   <span className="text-primary-main">📅</span> תאריך התחלה
                 </label>
                 <input
@@ -798,7 +798,7 @@ export default function ProgramBuilder() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">
+                <label className="block text-sm font-medium text-on-surface-variant mb-2">
                   <span className="text-primary-main">⏱️</span> משך (שבועות)
                 </label>
                 <div className="flex gap-2">
@@ -809,7 +809,7 @@ export default function ProgramBuilder() {
                       className={`flex-1 py-3 rounded-xl text-center font-medium transition border-2 ${
                         durationWeeks === p.value
                           ? 'bg-primary-main/20 border-primary-main text-primary-main'
-                          : 'bg-dark-surface border-dark-border hover:border-primary-main/50 text-text-secondary'
+                          : 'bg-dark-surface border-dark-border hover:border-primary-main/50 text-on-surface-variant'
                       }`}
                     >
                       {p.label}
@@ -832,12 +832,12 @@ export default function ProgramBuilder() {
               </div>
               <div>
                 <h2 className={`${isMobile ? 'text-base' : 'text-lg sm:text-xl'} font-bold text-text-primary`}>מבנה שבועי</h2>
-                <p className="text-text-muted text-sm">הגדר את ימי האימון</p>
+                <p className="text-on-surface-variant text-sm">הגדר את ימי האימון</p>
               </div>
             </div>
             <div className="text-left">
               <div className="text-2xl font-bold text-primary-main">{trainingDaysCount}</div>
-              <div className="text-sm text-text-muted">ימי אימון</div>
+              <div className="text-sm text-on-surface-variant">ימי אימון</div>
             </div>
           </div>
 
@@ -865,7 +865,7 @@ export default function ProgramBuilder() {
           {days.length < 7 && (
             <button
               onClick={addDay}
-              className="w-full py-4 border-2 border-dashed border-dark-border rounded-2xl text-text-muted hover:border-primary-main hover:text-primary-main transition flex items-center justify-center gap-2"
+              className="w-full py-4 border-2 border-dashed border-dark-border rounded-2xl text-on-surface-variant hover:border-primary-main hover:text-primary-main transition flex items-center justify-center gap-2"
             >
               <span className="text-2xl">+</span>
               הוסף יום אימון
@@ -873,23 +873,23 @@ export default function ProgramBuilder() {
           )}
 
           <div className="mt-6 pt-6 border-t border-white/10">
-            <p className="text-sm text-text-muted mb-3">תבניות מהירות:</p>
+            <p className="text-sm text-on-surface-variant mb-3">תבניות מהירות:</p>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => applyTemplate('ppl')}
-                className="px-4 py-2 bg-dark-surface rounded-xl text-sm text-text-secondary hover:bg-primary-main/20 hover:text-primary-main transition"
+                className="px-4 py-2 bg-dark-surface rounded-xl text-sm text-on-surface-variant hover:bg-primary-main/20 hover:text-primary-main transition"
               >
                 🏋️ Push/Pull/Legs
               </button>
               <button
                 onClick={() => applyTemplate('upper_lower')}
-                className="px-4 py-2 bg-dark-surface rounded-xl text-sm text-text-secondary hover:bg-primary-main/20 hover:text-primary-main transition"
+                className="px-4 py-2 bg-dark-surface rounded-xl text-sm text-on-surface-variant hover:bg-primary-main/20 hover:text-primary-main transition"
               >
                 💪 Upper/Lower
               </button>
               <button
                 onClick={() => applyTemplate('full_body')}
-                className="px-4 py-2 bg-dark-surface rounded-xl text-sm text-text-secondary hover:bg-primary-main/20 hover:text-primary-main transition"
+                className="px-4 py-2 bg-dark-surface rounded-xl text-sm text-on-surface-variant hover:bg-primary-main/20 hover:text-primary-main transition"
               >
                 🔥 Full Body 3x
               </button>
@@ -910,7 +910,7 @@ export default function ProgramBuilder() {
               </div>
               <div>
                 <h2 className="text-lg sm:text-xl font-bold text-text-primary">תרגילים ליום</h2>
-                <p className="text-text-muted text-sm">לחץ על עריכה כדי להוסיף תרגילים</p>
+                <p className="text-on-surface-variant text-sm">לחץ על עריכה כדי להוסיף תרגילים</p>
               </div>
             </div>
 
@@ -981,7 +981,7 @@ export default function ProgramBuilder() {
               className={`flex-1 py-3 text-center text-sm font-medium transition ${
                 mobileTab === 'program'
                   ? 'text-primary-main border-b-2 border-primary-main'
-                  : 'text-text-muted'
+                  : 'text-on-surface-variant'
               }`}
             >
               📋 תוכנית
@@ -991,7 +991,7 @@ export default function ProgramBuilder() {
               className={`flex-1 py-3 text-center text-sm font-medium transition ${
                 mobileTab === 'trainee'
                   ? 'text-primary-main border-b-2 border-primary-main'
-                  : 'text-text-muted'
+                  : 'text-on-surface-variant'
               }`}
             >
               👤 מתאמן
@@ -1001,7 +1001,7 @@ export default function ProgramBuilder() {
               className={`flex-1 py-3 text-center text-sm font-medium transition relative ${
                 mobileTab === 'history'
                   ? 'text-primary-main border-b-2 border-primary-main'
-                  : 'text-text-muted'
+                  : 'text-on-surface-variant'
               }`}
             >
               📊 היסטוריה
@@ -1029,7 +1029,7 @@ export default function ProgramBuilder() {
                     if (step === 3) setSelectedMobileDayIndex(0)
                     setStep(step === 4 ? 2 : (step - 1) as Step)
                   }}
-                  className="flex-1 py-3 bg-dark-surface rounded-xl font-medium text-text-secondary flex items-center justify-center gap-1"
+                  className="flex-1 py-3 bg-dark-surface rounded-xl font-medium text-on-surface-variant flex items-center justify-center gap-1"
                 >
                   <ArrowRight className="w-4 h-4" />
                   הקודם
@@ -1037,7 +1037,7 @@ export default function ProgramBuilder() {
               ) : (
                 <button
                   onClick={() => navigate(traineeId ? `/trainer/trainee/${traineeId}` : '/trainer')}
-                  className="flex-1 py-3 bg-dark-surface rounded-xl font-medium text-text-secondary"
+                  className="flex-1 py-3 bg-dark-surface rounded-xl font-medium text-on-surface-variant"
                 >
                   ביטול
                 </button>
@@ -1058,7 +1058,7 @@ export default function ProgramBuilder() {
                   <button
                     onClick={() => handleSave(false)}
                     disabled={isSaving}
-                    className="flex-1 py-3 bg-dark-surface rounded-xl font-medium text-text-secondary flex items-center justify-center gap-1"
+                    className="flex-1 py-3 bg-dark-surface rounded-xl font-medium text-on-surface-variant flex items-center justify-center gap-1"
                   >
                     {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     טיוטה
@@ -1084,7 +1084,7 @@ export default function ProgramBuilder() {
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => navigate(traineeId ? `/trainer/trainee/${traineeId}` : '/trainer')}
-            className="flex items-center gap-2 text-text-muted hover:text-text-primary transition"
+            className="flex items-center gap-2 text-on-surface-variant hover:text-text-primary transition"
           >
             <ArrowRight className="w-5 h-5" />
             <span>חזרה</span>
@@ -1106,7 +1106,7 @@ export default function ProgramBuilder() {
               {step > 1 ? (
                 <button
                   onClick={() => setStep(step === 4 ? 2 : (step - 1) as Step)}
-                  className="px-5 sm:px-6 py-3 sm:py-4 bg-dark-surface rounded-xl hover:bg-dark-card transition flex items-center gap-2 text-text-secondary"
+                  className="px-5 sm:px-6 py-3 sm:py-4 bg-dark-surface rounded-xl hover:bg-dark-card transition flex items-center gap-2 text-on-surface-variant"
                 >
                   <ArrowRight className="w-4 h-4" />
                   <span>הקודם</span>
@@ -1114,7 +1114,7 @@ export default function ProgramBuilder() {
               ) : (
                 <button
                   onClick={() => navigate(traineeId ? `/trainer/trainee/${traineeId}` : '/trainer')}
-                  className="px-5 sm:px-6 py-3 sm:py-4 bg-dark-surface rounded-xl hover:bg-dark-card transition flex items-center gap-2 text-text-secondary"
+                  className="px-5 sm:px-6 py-3 sm:py-4 bg-dark-surface rounded-xl hover:bg-dark-card transition flex items-center gap-2 text-on-surface-variant"
                 >
                   <ArrowRight className="w-4 h-4" />
                   <span>ביטול</span>
@@ -1136,7 +1136,7 @@ export default function ProgramBuilder() {
                   <button
                     onClick={() => handleSave(false)}
                     disabled={isSaving}
-                    className="px-5 sm:px-6 py-3 sm:py-4 bg-dark-surface rounded-xl hover:bg-dark-card transition flex items-center gap-2 text-text-secondary"
+                    className="px-5 sm:px-6 py-3 sm:py-4 bg-dark-surface rounded-xl hover:bg-dark-card transition flex items-center gap-2 text-on-surface-variant"
                   >
                     {isSaving ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -1181,7 +1181,7 @@ export default function ProgramBuilder() {
                       </span>
                     </div>
                     {traineeStats && (
-                      <div className="text-xs text-text-muted flex items-center gap-2">
+                      <div className="text-xs text-on-surface-variant flex items-center gap-2">
                         <span>🔥 {traineeStats.currentStreak} ימים</span>
                         <span>•</span>
                         <span>{traineeStats.thisWeekWorkouts} השבוע</span>
@@ -1215,7 +1215,7 @@ function SidePanelTabs({ traineeId }: { traineeId: string }) {
           className={`flex-1 py-2.5 text-sm font-medium text-center transition ${
             activeTab === 'profile'
               ? 'bg-primary-main/20 text-primary-main'
-              : 'text-text-muted hover:text-text-secondary'
+              : 'text-on-surface-variant hover:text-on-surface-variant'
           }`}
         >
           👤 פרופיל
@@ -1225,7 +1225,7 @@ function SidePanelTabs({ traineeId }: { traineeId: string }) {
           className={`flex-1 py-2.5 text-sm font-medium text-center transition ${
             activeTab === 'history'
               ? 'bg-primary-main/20 text-primary-main'
-              : 'text-text-muted hover:text-text-secondary'
+              : 'text-on-surface-variant hover:text-on-surface-variant'
           }`}
         >
           📊 היסטוריה

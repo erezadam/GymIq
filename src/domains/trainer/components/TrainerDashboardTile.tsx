@@ -12,9 +12,9 @@ export function TrainerDashboardTile() {
       </div>
       <div className="flex-1">
         <p className="text-sm font-bold text-text-primary">ממשק מאמן</p>
-        <p className="text-xs text-text-muted">נהל מתאמנים, תוכניות והודעות</p>
+        <p className="text-xs text-on-surface-variant">נהל מתאמנים, תוכניות והודעות</p>
       </div>
-      <div className="text-text-muted">
+      <div className="text-on-surface-variant">
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>

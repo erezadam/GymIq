@@ -62,7 +62,7 @@ export function ProgramReview({
         </div>
         <div>
           <h2 className="text-lg sm:text-xl font-bold text-text-primary">סיכום ואישור</h2>
-          <p className="text-text-muted text-sm">בדוק את התוכנית לפני הפעלה</p>
+          <p className="text-on-surface-variant text-sm">בדוק את התוכנית לפני הפעלה</p>
         </div>
       </div>
 
@@ -75,7 +75,7 @@ export function ProgramReview({
           <div className="flex-1 min-w-0">
             <h3 className="text-xl font-bold text-text-primary truncate">{name}</h3>
             {description && (
-              <p className="text-sm text-text-secondary mt-1 line-clamp-2">{description}</p>
+              <p className="text-sm text-on-surface-variant mt-1 line-clamp-2">{description}</p>
             )}
           </div>
         </div>
@@ -84,21 +84,21 @@ export function ProgramReview({
           <div className="flex items-center gap-2">
             <span className="text-primary-main">👤</span>
             <div>
-              <div className="text-xs text-text-muted">מתאמן</div>
+              <div className="text-xs text-on-surface-variant">מתאמן</div>
               <div className="text-sm font-medium text-text-primary">{traineeName}</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-primary-main">📅</span>
             <div>
-              <div className="text-xs text-text-muted">תאריך התחלה</div>
+              <div className="text-xs text-on-surface-variant">תאריך התחלה</div>
               <div className="text-sm font-medium text-text-primary">{startDate}</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-primary-main">⏱️</span>
             <div>
-              <div className="text-xs text-text-muted">משך</div>
+              <div className="text-xs text-on-surface-variant">משך</div>
               <div className="text-sm font-medium text-text-primary">
                 {durationWeeks ? `${durationWeeks} שבועות` : 'ללא הגבלה'}
               </div>
@@ -111,19 +111,19 @@ export function ProgramReview({
       <div className="grid grid-cols-4 gap-3">
         <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-3 sm:p-4 text-center">
           <div className="text-2xl sm:text-3xl font-black text-primary-main mb-1">{trainingDays}</div>
-          <p className="text-xs text-text-muted">ימי אימון</p>
+          <p className="text-xs text-on-surface-variant">ימי אימון</p>
         </div>
         <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-3 sm:p-4 text-center">
           <div className="text-2xl sm:text-3xl font-black text-status-info mb-1">{restDays}</div>
-          <p className="text-xs text-text-muted">ימי מנוחה</p>
+          <p className="text-xs text-on-surface-variant">ימי מנוחה</p>
         </div>
         <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-3 sm:p-4 text-center">
           <div className="text-2xl sm:text-3xl font-black text-accent-gold mb-1">{totalExercises}</div>
-          <p className="text-xs text-text-muted">תרגילים</p>
+          <p className="text-xs text-on-surface-variant">תרגילים</p>
         </div>
         <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-3 sm:p-4 text-center">
           <div className="text-2xl sm:text-3xl font-black text-accent-orange mb-1">{totalSets}</div>
-          <p className="text-xs text-text-muted">סטים</p>
+          <p className="text-xs text-on-surface-variant">סטים</p>
         </div>
       </div>
 
@@ -160,7 +160,7 @@ export function ProgramReview({
                   <p className="font-bold text-text-primary truncate">
                     {day.dayLabel}
                   </p>
-                  <p className="text-sm text-text-muted">
+                  <p className="text-sm text-on-surface-variant">
                     {day.restDay ? 'יום מנוחה' : day.name || 'ללא שם'}
                   </p>
                 </div>
@@ -168,10 +168,10 @@ export function ProgramReview({
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <div className="text-left">
                       <div className="text-lg font-bold text-primary-main">{day.exercises.length}</div>
-                      <div className="text-xs text-text-muted">תרגילים</div>
+                      <div className="text-xs text-on-surface-variant">תרגילים</div>
                     </div>
                     {day.exercises.length > 0 && (
-                      <ChevronDown className={`w-5 h-5 text-text-muted transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      <ChevronDown className={`w-5 h-5 text-on-surface-variant transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                     )}
                   </div>
                 )}
@@ -195,7 +195,7 @@ export function ProgramReview({
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <span className="text-text-muted text-sm w-5 flex-shrink-0">
+                          <span className="text-on-surface-variant text-sm w-5 flex-shrink-0">
                             {i + 1}.
                           </span>
                           {ex.imageUrl ? (
@@ -209,7 +209,7 @@ export function ProgramReview({
                               🏋️
                             </div>
                           )}
-                          <span className="text-text-secondary text-sm truncate">
+                          <span className="text-on-surface-variant text-sm truncate">
                             {ex.exerciseNameHe}
                           </span>
                           {isSuperset && (
@@ -218,7 +218,7 @@ export function ProgramReview({
                             </span>
                           )}
                         </div>
-                        <span className="text-text-muted text-xs flex-shrink-0 mr-2">
+                        <span className="text-on-surface-variant text-xs flex-shrink-0 mr-2">
                           {ex.targetSets}×{ex.targetReps}
                           {ex.targetWeight ? ` @ ${ex.targetWeight}ק"ג` : ''}
                         </span>
@@ -226,7 +226,7 @@ export function ProgramReview({
                     )
                   })}
                   {/* Day totals */}
-                  <div className="flex justify-end pt-2 text-xs text-text-muted">
+                  <div className="flex justify-end pt-2 text-xs text-on-surface-variant">
                     סה&quot;כ: {day.exercises.length} תרגילים • {daySets} סטים
                   </div>
                 </div>

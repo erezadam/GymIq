@@ -23,7 +23,7 @@ export function AIInsights({ insights }: AIInsightsProps) {
               <span>{insight.icon}</span>
               <span className="text-text-primary">{insight.title}</span>
             </div>
-            <p className="text-xs text-text-secondary leading-relaxed">{insight.text}</p>
+            <p className="text-xs text-on-surface-variant leading-relaxed">{insight.text}</p>
           </div>
         ))}
       </div>

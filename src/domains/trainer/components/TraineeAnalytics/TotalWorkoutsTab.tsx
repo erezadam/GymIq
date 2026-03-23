@@ -101,7 +101,7 @@ export function TotalWorkoutsTab({ data }: TotalWorkoutsTabProps) {
                   className={`w-full rounded-t-md bg-gradient-to-t ${getBarColor(week.workouts, 3)} ${getBarHeightClass(week.workouts, maxWeekly)} transition-all duration-500`}
                 />
               </div>
-              <div className="text-[9px] text-text-muted mt-1.5 text-center truncate w-full">
+              <div className="text-[9px] text-on-surface-variant mt-1.5 text-center truncate w-full">
                 {week.label}
               </div>
             </div>

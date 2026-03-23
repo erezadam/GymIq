@@ -1,6 +1,6 @@
 // Service Worker for GymIQ PWA
 // Version-based cache busting - increment to force update
-const CACHE_VERSION = 'vv2026.03.36.9859';
+const CACHE_VERSION = 'vv2026.03.41.9859';
 const CACHE_NAME = `gymiq-cache-${CACHE_VERSION}`;
 
 // Files to cache for offline use (minimal - just shell)

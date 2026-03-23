@@ -28,6 +28,8 @@ export default {
         text: tokens.colors.text,
         border: tokens.colors.border,
         status: tokens.colors.status,
+        surface: tokens.colors.surface,
+        'on-surface': tokens.colors['on-surface'],
         workout: tokens.colors.workout,
         'workout-status': tokens.colors['workout-status'],
         muscles: tokens.colors.muscles,

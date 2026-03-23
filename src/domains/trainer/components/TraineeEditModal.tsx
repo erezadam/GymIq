@@ -149,7 +149,7 @@ export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalP
           {/* Name */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+              <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
                 שם פרטי *
               </label>
               <input
@@ -161,7 +161,7 @@ export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalP
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+              <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
                 שם משפחה *
               </label>
               <input
@@ -176,7 +176,7 @@ export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalP
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
+            <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
               אימייל
             </label>
             <input
@@ -191,7 +191,7 @@ export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalP
 
           {/* Phone */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
+            <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
               טלפון
             </label>
             <input
@@ -206,12 +206,12 @@ export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalP
 
           {/* Body Metrics */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-2">
+            <label className="block text-sm font-medium text-on-surface-variant mb-2">
               מדדים גופניים
             </label>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-text-muted mb-1">
+                <label className="block text-xs text-on-surface-variant mb-1">
                   גיל
                 </label>
                 <input
@@ -226,7 +226,7 @@ export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalP
                 />
               </div>
               <div>
-                <label className="block text-xs text-text-muted mb-1">
+                <label className="block text-xs text-on-surface-variant mb-1">
                   גובה (ס&quot;מ)
                 </label>
                 <input
@@ -241,7 +241,7 @@ export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalP
                 />
               </div>
               <div>
-                <label className="block text-xs text-text-muted mb-1">
+                <label className="block text-xs text-on-surface-variant mb-1">
                   משקל (ק&quot;ג)
                 </label>
                 <input
@@ -257,7 +257,7 @@ export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalP
                 />
               </div>
               <div>
-                <label className="block text-xs text-text-muted mb-1">
+                <label className="block text-xs text-on-surface-variant mb-1">
                   אחוז שומן (%)
                 </label>
                 <input
@@ -277,7 +277,7 @@ export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalP
 
           {/* Training Goals */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-2">
+            <label className="block text-sm font-medium text-on-surface-variant mb-2">
               מטרות אימון
             </label>
             <div className="flex flex-wrap gap-2">
@@ -289,7 +289,7 @@ export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalP
                   className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
                     formData.trainingGoals.includes(goal)
                       ? 'bg-status-info/20 text-status-info border border-status-info/30'
-                      : 'bg-dark-card text-text-muted border border-dark-border hover:border-text-muted'
+                      : 'bg-dark-card text-on-surface-variant border border-dark-border hover:border-text-muted'
                   }`}
                 >
                   {TRAINING_GOAL_LABELS[goal]}
@@ -300,7 +300,7 @@ export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalP
 
           {/* Injuries */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
+            <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
               פציעות / מגבלות
             </label>
             <textarea
@@ -314,7 +314,7 @@ export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalP
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
+            <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
               הערות מאמן
             </label>
             <textarea

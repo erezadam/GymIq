@@ -81,26 +81,28 @@ export function TraineeCard({ trainee }: TraineeCardProps) {
   return (
     <div
       onClick={() => navigate(`/trainer/trainee/${relationship.traineeId}`)}
-      className={`bg-dark-card border rounded-2xl p-4 transition-all cursor-pointer shadow-card hover:shadow-card-hover ${
-        needsAttention ? 'border-accent-orange/20 hover:border-accent-orange/40' : 'border-white/5 hover:border-white/10'
+      className={`bg-surface-container-low rounded-2xl p-5 transition-all cursor-pointer shadow-card hover:shadow-card-hover border-r-2 ${
+        needsAttention
+          ? 'border-r-accent-orange border border-r-2 border-accent-orange/20 hover:border-accent-orange/30'
+          : 'border-r-primary-main border border-r-2 border-white/5 hover:border-white/10'
       }`}
     >
       {/* Needs attention badge */}
       {needsAttention && (
-        <div className="flex justify-center mb-3">
-          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-accent-orange/40 text-accent-orange text-xs">
-            דורש תשומת לב
+        <div className="flex justify-center mb-4">
+          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-orange/10 text-accent-orange text-xs font-medium">
             <CircleAlert className="w-3.5 h-3.5" />
+            דורש תשומת לב
           </span>
         </div>
       )}
 
       {/* Name + Avatar row */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-4 mb-4">
         {/* Name - first child = start = RIGHT in RTL */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-lg text-text-primary truncate">{displayName}</h3>
-          <p className="text-text-secondary text-xs truncate">
+          <h3 className="font-bold text-lg text-on-surface truncate">{displayName}</h3>
+          <p className="text-on-surface-variant text-xs truncate mt-0.5">
             {goalLabel && <>{goalLabel} &middot; </>}
             {memberDuration}
           </p>
@@ -117,18 +119,18 @@ export function TraineeCard({ trainee }: TraineeCardProps) {
             textSizeClass="text-xl"
           />
           <div
-            className={`absolute -bottom-1 -right-1 w-4 h-4 ${dotColor} rounded-full border-2 border-dark-card z-10`}
+            className={`absolute -bottom-1 -right-1 w-4 h-4 ${dotColor} rounded-full border-2 border-surface-container-low z-10`}
           />
         </div>
       </div>
 
       {/* Program status */}
-      <div className="mb-3">
+      <div className="mb-4">
         {activeProgram ? (
           <div className="flex items-center gap-1.5">
             <CheckCircle className="w-3.5 h-3.5 text-status-success" />
             <span className="text-xs text-status-success">פעיל</span>
-            <span className="text-xs text-text-secondary truncate">{activeProgram.name}</span>
+            <span className="text-xs text-on-surface-variant truncate">{activeProgram.name}</span>
           </div>
         ) : (
           <div className="flex items-center gap-1.5">
@@ -139,22 +141,22 @@ export function TraineeCard({ trainee }: TraineeCardProps) {
       </div>
 
       {/* Stat boxes */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-3">
         {/* First grid item = RIGHT column in RTL = השבוע */}
-        <div className="bg-dark-surface border border-white/10 rounded-xl px-3 py-2.5">
+        <div className="bg-surface-container rounded-xl px-3 py-3 border border-white/5">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-text-secondary text-xs">השבוע</span>
-            <CalendarDays className="w-3.5 h-3.5 text-text-secondary" />
+            <span className="text-on-surface-variant text-xs">השבוע</span>
+            <CalendarDays className="w-3.5 h-3.5 text-on-surface-variant" />
           </div>
-          <p className="text-lg font-bold text-text-primary">{thisWeekWorkouts}/3</p>
+          <p className="text-lg font-bold text-on-surface">{thisWeekWorkouts}/3</p>
         </div>
         {/* Second grid item = LEFT column in RTL = רצף ימים */}
-        <div className="bg-dark-surface border border-white/10 rounded-xl px-3 py-2.5">
+        <div className="bg-surface-container rounded-xl px-3 py-3 border border-white/5">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-text-secondary text-xs">רצף ימים</span>
+            <span className="text-on-surface-variant text-xs">רצף ימים</span>
             <Flame className="w-3.5 h-3.5 text-accent-orange" />
           </div>
-          <p className="text-lg font-bold text-text-primary">{currentStreak}</p>
+          <p className="text-lg font-bold text-on-surface">{currentStreak}</p>
         </div>
       </div>
 
@@ -162,12 +164,12 @@ export function TraineeCard({ trainee }: TraineeCardProps) {
       <button
         onClick={handleResendEmail}
         disabled={emailStatus === 'sending' || emailStatus === 'sent'}
-        className={`mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+        className={`mt-4 w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
           emailStatus === 'sent'
             ? 'bg-status-success/10 text-status-success border border-status-success/30'
             : emailStatus === 'error'
               ? 'bg-status-error/10 text-status-error border border-status-error/30'
-              : 'bg-dark-surface border border-white/10 text-text-secondary hover:text-primary-main hover:border-primary-main/30'
+              : 'bg-transparent border border-white/10 text-on-surface-variant hover:text-primary-main hover:border-primary-main/30'
         }`}
       >
         {emailStatus === 'sending' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}

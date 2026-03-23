@@ -6,7 +6,7 @@ interface PatternChartProps {
 
 function getPercentColor(pct: number): string {
   if (pct >= 70) return 'text-status-success'
-  if (pct >= 40) return 'text-text-secondary'
+  if (pct >= 40) return 'text-on-surface-variant'
   return 'text-status-error'
 }
 
@@ -35,7 +35,7 @@ export function PatternChart({ patterns }: PatternChartProps) {
       <div className="grid grid-cols-7 gap-1.5">
         {patterns.map(pattern => (
           <div key={pattern.dayName} className="text-center">
-            <div className="text-[11px] text-text-muted mb-1.5">{pattern.dayName}</div>
+            <div className="text-[11px] text-on-surface-variant mb-1.5">{pattern.dayName}</div>
             <div className="h-[60px] bg-dark-surface rounded-md relative overflow-hidden flex items-end">
               <div
                 className={`w-full bg-gradient-to-t from-primary-main to-primary-main/70 rounded-md transition-all duration-500 ${getHeightClass(pattern.percentage)}`}

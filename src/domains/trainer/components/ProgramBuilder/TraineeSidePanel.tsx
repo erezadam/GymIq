@@ -58,7 +58,7 @@ export function TraineeSidePanel({ traineeId }: TraineeSidePanelProps) {
 
   if (!traineeId) {
     return (
-      <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-6 text-center text-text-muted">
+      <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-6 text-center text-on-surface-variant">
         <p className="text-lg mb-2">👤</p>
         <p>בחר מתאמן כדי לראות פרטים</p>
       </div>
@@ -87,7 +87,7 @@ export function TraineeSidePanel({ traineeId }: TraineeSidePanelProps) {
     <div className="space-y-4">
       {/* Stats Grid */}
       <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-4">
-        <h3 className="font-bold text-sm text-text-muted mb-3 flex items-center gap-2">
+        <h3 className="font-bold text-sm text-on-surface-variant mb-3 flex items-center gap-2">
           📊 סטטיסטיקות
         </h3>
         <div className="grid grid-cols-2 gap-3">
@@ -95,25 +95,25 @@ export function TraineeSidePanel({ traineeId }: TraineeSidePanelProps) {
             <div className="text-3xl font-black text-primary-main">
               {stats?.totalWorkouts || 0}
             </div>
-            <div className="text-xs text-text-muted">סה&quot;כ אימונים</div>
+            <div className="text-xs text-on-surface-variant">סה&quot;כ אימונים</div>
           </div>
           <div className="bg-dark-surface/50 rounded-xl p-3 text-center">
             <div className="text-3xl font-black text-accent-orange">
               {stats?.currentStreak || 0}
             </div>
-            <div className="text-xs text-text-muted">רצף ימים 🔥</div>
+            <div className="text-xs text-on-surface-variant">רצף ימים 🔥</div>
           </div>
           <div className="bg-dark-surface/50 rounded-xl p-3 text-center">
             <div className="text-3xl font-black text-status-success">
               {stats?.programCompletionRate || 0}%
             </div>
-            <div className="text-xs text-text-muted">ביצוע תוכנית</div>
+            <div className="text-xs text-on-surface-variant">ביצוע תוכנית</div>
           </div>
           <div className="bg-dark-surface/50 rounded-xl p-3 text-center">
             <div className="text-3xl font-black text-status-info">
               {stats?.totalVolume ? `${Math.round(stats.totalVolume / 1000)}K` : '0'}
             </div>
-            <div className="text-xs text-text-muted">נפח חודשי (kg)</div>
+            <div className="text-xs text-on-surface-variant">נפח חודשי (kg)</div>
           </div>
         </div>
       </div>
@@ -121,7 +121,7 @@ export function TraineeSidePanel({ traineeId }: TraineeSidePanelProps) {
       {/* Goals & Info */}
       {(goals.length > 0 || fitnessLevel) && (
         <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-4">
-          <h3 className="font-bold text-sm text-text-muted mb-3 flex items-center gap-2">
+          <h3 className="font-bold text-sm text-on-surface-variant mb-3 flex items-center gap-2">
             🎯 מטרות ומידע
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -145,20 +145,20 @@ export function TraineeSidePanel({ traineeId }: TraineeSidePanelProps) {
       {/* Notes & Injuries */}
       {(injuries || notes) && (
         <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-4">
-          <h3 className="font-bold text-sm text-text-muted mb-3 flex items-center gap-2">
+          <h3 className="font-bold text-sm text-on-surface-variant mb-3 flex items-center gap-2">
             ⚠️ הערות ופציעות
           </h3>
           <div className="space-y-2">
             {injuries && (
               <div className="flex items-start gap-2 bg-status-warning/10 rounded-lg p-3">
                 <span className="text-status-warning flex-shrink-0">⚠️</span>
-                <span className="text-sm text-text-secondary">{injuries}</span>
+                <span className="text-sm text-on-surface-variant">{injuries}</span>
               </div>
             )}
             {notes && (
               <div className="flex items-start gap-2 bg-status-info/10 rounded-lg p-3">
                 <span className="text-status-info flex-shrink-0">💡</span>
-                <span className="text-sm text-text-secondary">{notes}</span>
+                <span className="text-sm text-on-surface-variant">{notes}</span>
               </div>
             )}
           </div>
@@ -168,7 +168,7 @@ export function TraineeSidePanel({ traineeId }: TraineeSidePanelProps) {
       {/* Current Program */}
       {activeProgram && (
         <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-4">
-          <h3 className="font-bold text-sm text-text-muted mb-3 flex items-center gap-2">
+          <h3 className="font-bold text-sm text-on-surface-variant mb-3 flex items-center gap-2">
             📋 תוכנית נוכחית
           </h3>
           <div className="bg-dark-surface/50 rounded-xl p-3">
@@ -179,7 +179,7 @@ export function TraineeSidePanel({ traineeId }: TraineeSidePanelProps) {
               <div>
                 <div className="font-bold text-sm text-text-primary">{activeProgram.name}</div>
                 {programWeeks && (
-                  <div className="text-xs text-text-muted">
+                  <div className="text-xs text-on-surface-variant">
                     שבוע {currentWeek} מתוך {programWeeks}
                   </div>
                 )}

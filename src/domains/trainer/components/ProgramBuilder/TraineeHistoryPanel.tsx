@@ -127,7 +127,7 @@ export function TraineeHistoryPanel({ traineeId }: TraineeHistoryPanelProps) {
 
   if (!traineeId) {
     return (
-      <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-6 text-center text-text-muted">
+      <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-6 text-center text-on-surface-variant">
         <p>בחר מתאמן כדי לראות היסטוריה</p>
       </div>
     )
@@ -154,8 +154,8 @@ export function TraineeHistoryPanel({ traineeId }: TraineeHistoryPanelProps) {
       <div className="space-y-3">
         <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-6 text-center">
           <p className="text-lg mb-2">📋</p>
-          <p className="text-text-muted">אין תוכנית פעילה</p>
-          <p className="text-text-muted text-sm mt-1">צור תוכנית כדי לראות מעקב לפי ימים</p>
+          <p className="text-on-surface-variant">אין תוכנית פעילה</p>
+          <p className="text-on-surface-variant text-sm mt-1">צור תוכנית כדי לראות מעקב לפי ימים</p>
         </div>
       </div>
     )
@@ -174,7 +174,7 @@ export function TraineeHistoryPanel({ traineeId }: TraineeHistoryPanelProps) {
                 ? 'bg-gradient-to-br from-primary-main to-status-info text-white'
                 : f.special
                   ? 'bg-dark-surface text-status-warning'
-                  : 'bg-dark-surface text-text-secondary'
+                  : 'bg-dark-surface text-on-surface-variant'
             }`}
           >
             {f.label}
@@ -184,7 +184,7 @@ export function TraineeHistoryPanel({ traineeId }: TraineeHistoryPanelProps) {
 
       {/* Program Day Cards */}
       {dayCards.length === 0 ? (
-        <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-6 text-center text-text-muted">
+        <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-2xl p-6 text-center text-on-surface-variant">
           <p>אין אימונים בתקופה זו</p>
         </div>
       ) : (
@@ -224,7 +224,7 @@ export function TraineeHistoryPanel({ traineeId }: TraineeHistoryPanelProps) {
                     <h4 className="font-bold text-base text-text-primary">
                       {card.dayLabel} - {card.dayName}
                     </h4>
-                    <p className="text-sm text-text-muted mt-1">
+                    <p className="text-sm text-on-surface-variant mt-1">
                       {card.workout ? (
                         <>
                           {formatRelativeDate(card.workout.date)}

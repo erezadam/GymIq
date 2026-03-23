@@ -255,7 +255,7 @@ export function TraineeRegistrationModal({
     switch (emailCheckStatus) {
       case 'checking':
         return (
-          <div className="flex items-center gap-2 text-text-muted text-sm">
+          <div className="flex items-center gap-2 text-on-surface-variant text-sm">
             <Loader2 className="w-4 h-4 animate-spin" />
             <span>בודק...</span>
           </div>
@@ -320,12 +320,12 @@ export function TraineeRegistrationModal({
               textSizeClass="text-2xl"
               onFileSelected={(file) => setCapturedPhoto(file)}
             />
-            <p className="text-text-secondary text-xs">לחץ לצילום תמונה</p>
+            <p className="text-on-surface-variant text-xs">לחץ לצילום תמונה</p>
           </div>
 
           {/* Email - First field for checking */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
+            <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
               אימייל *
             </label>
             <input
@@ -348,10 +348,10 @@ export function TraineeRegistrationModal({
               <p className="text-status-success text-sm font-medium mb-1">
                 משתמש קיים במערכת
               </p>
-              <p className="text-text-secondary text-sm">
+              <p className="text-on-surface-variant text-sm">
                 {existingUser.displayName || `${existingUser.firstName} ${existingUser.lastName}`} ({existingUser.email})
               </p>
-              <p className="text-text-muted text-xs mt-2">
+              <p className="text-on-surface-variant text-xs mt-2">
                 ניתן לערוך: מדדים גופניים, מטרות אימון, פציעות והערות מאמן.
               </p>
             </div>
@@ -360,28 +360,28 @@ export function TraineeRegistrationModal({
           {/* Name */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+              <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
                 שם פרטי {!isExistingUser && '*'}
               </label>
               <input
                 type="text"
                 value={formData.firstName}
                 onChange={(e) => updateField('firstName', e.target.value)}
-                className={`input-primary ${isExistingUser ? 'bg-dark-card/50 text-text-muted' : ''}`}
+                className={`input-primary ${isExistingUser ? 'bg-dark-card/50 text-on-surface-variant' : ''}`}
                 placeholder="ישראל"
                 required={!isExistingUser}
                 disabled={isExistingUser}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+              <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
                 שם משפחה {!isExistingUser && '*'}
               </label>
               <input
                 type="text"
                 value={formData.lastName}
                 onChange={(e) => updateField('lastName', e.target.value)}
-                className={`input-primary ${isExistingUser ? 'bg-dark-card/50 text-text-muted' : ''}`}
+                className={`input-primary ${isExistingUser ? 'bg-dark-card/50 text-on-surface-variant' : ''}`}
                 placeholder="ישראלי"
                 required={!isExistingUser}
                 disabled={isExistingUser}
@@ -392,7 +392,7 @@ export function TraineeRegistrationModal({
           {/* Password - only for new users */}
           {!isExistingUser && (
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+              <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
                 סיסמה זמנית *
               </label>
               <input
@@ -405,7 +405,7 @@ export function TraineeRegistrationModal({
                 minLength={6}
                 required
               />
-              <p className="text-xs text-text-muted mt-1">
+              <p className="text-xs text-on-surface-variant mt-1">
                 המתאמן יקבל אימייל לאיפוס סיסמה
               </p>
             </div>
@@ -413,14 +413,14 @@ export function TraineeRegistrationModal({
 
           {/* Phone */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
+            <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
               טלפון
             </label>
             <input
               type="tel"
               value={formData.phone}
               onChange={(e) => updateField('phone', e.target.value)}
-              className={`input-primary ${isExistingUser ? 'bg-dark-card/50 text-text-muted' : ''}`}
+              className={`input-primary ${isExistingUser ? 'bg-dark-card/50 text-on-surface-variant' : ''}`}
               placeholder="050-1234567"
               dir="ltr"
               disabled={isExistingUser}
@@ -429,12 +429,12 @@ export function TraineeRegistrationModal({
 
           {/* Body Metrics - always editable */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-2">
+            <label className="block text-sm font-medium text-on-surface-variant mb-2">
               מדדים גופניים
             </label>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-text-muted mb-1">
+                <label className="block text-xs text-on-surface-variant mb-1">
                   גיל
                 </label>
                 <input
@@ -449,7 +449,7 @@ export function TraineeRegistrationModal({
                 />
               </div>
               <div>
-                <label className="block text-xs text-text-muted mb-1">
+                <label className="block text-xs text-on-surface-variant mb-1">
                   גובה (ס&quot;מ)
                 </label>
                 <input
@@ -464,7 +464,7 @@ export function TraineeRegistrationModal({
                 />
               </div>
               <div>
-                <label className="block text-xs text-text-muted mb-1">
+                <label className="block text-xs text-on-surface-variant mb-1">
                   משקל (ק&quot;ג)
                 </label>
                 <input
@@ -480,7 +480,7 @@ export function TraineeRegistrationModal({
                 />
               </div>
               <div>
-                <label className="block text-xs text-text-muted mb-1">
+                <label className="block text-xs text-on-surface-variant mb-1">
                   אחוז שומן (%)
                 </label>
                 <input
@@ -500,7 +500,7 @@ export function TraineeRegistrationModal({
 
           {/* Training Goals - always editable */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-2">
+            <label className="block text-sm font-medium text-on-surface-variant mb-2">
               מטרות אימון
             </label>
             <div className="flex flex-wrap gap-2">
@@ -512,7 +512,7 @@ export function TraineeRegistrationModal({
                   className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
                     formData.trainingGoals?.includes(goal)
                       ? 'bg-status-info/20 text-status-info border border-status-info/30'
-                      : 'bg-dark-card text-text-muted border border-dark-border hover:border-text-muted'
+                      : 'bg-dark-card text-on-surface-variant border border-dark-border hover:border-text-muted'
                   }`}
                 >
                   {TRAINING_GOAL_LABELS[goal]}
@@ -523,7 +523,7 @@ export function TraineeRegistrationModal({
 
           {/* Injuries - always editable */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
+            <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
               פציעות / מגבלות
             </label>
             <textarea
@@ -537,7 +537,7 @@ export function TraineeRegistrationModal({
 
           {/* Notes - always editable */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
+            <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
               הערות מאמן
             </label>
             <textarea

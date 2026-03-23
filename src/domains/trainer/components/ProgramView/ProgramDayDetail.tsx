@@ -19,9 +19,9 @@ export function ProgramDayDetail({
     return (
       <div className="card text-center py-6">
         <Moon className="w-10 h-10 mx-auto mb-2 text-status-info opacity-60" />
-        <p className="text-sm text-text-muted">יום מנוחה</p>
+        <p className="text-sm text-on-surface-variant">יום מנוחה</p>
         {day.notes && (
-          <p className="text-xs text-text-muted mt-2">{day.notes}</p>
+          <p className="text-xs text-on-surface-variant mt-2">{day.notes}</p>
         )}
       </div>
     )
@@ -38,7 +38,7 @@ export function ProgramDayDetail({
               {day.dayLabel}
               {day.name && ` - ${day.name}`}
             </p>
-            <div className="flex items-center gap-3 text-xs text-text-muted mt-0.5">
+            <div className="flex items-center gap-3 text-xs text-on-surface-variant mt-0.5">
               <span>{day.exercises.length} תרגילים</span>
               <span>{totalSets} סטים</span>
               {day.estimatedDuration && (
@@ -75,7 +75,7 @@ export function ProgramDayDetail({
 
       {/* Notes */}
       {day.notes && (
-        <p className="text-xs text-text-muted mt-3 pt-2 border-t border-dark-border/50">
+        <p className="text-xs text-on-surface-variant mt-3 pt-2 border-t border-dark-border/50">
           {day.notes}
         </p>
       )}

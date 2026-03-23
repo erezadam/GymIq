@@ -223,7 +223,7 @@ export default function TraineeDetail() {
       <div className="flex justify-between items-center">
         <button
           onClick={() => navigate('/trainer')}
-          className="flex items-center gap-2 text-text-muted hover:text-text-primary transition"
+          className="flex items-center gap-2 text-on-surface-variant hover:text-text-primary transition"
         >
           <ArrowRight className="w-4 h-4" />
           <span className="text-sm">חזרה לרשימה</span>
@@ -304,7 +304,7 @@ export default function TraineeDetail() {
           <div className="space-y-2">
             {allPrograms.filter(p => p.type !== 'standalone').length === 0 ? (
               <div className="bg-dark-card/80 border border-white/10 rounded-xl p-4 text-center">
-                <p className="text-sm text-text-muted">אין תוכניות עדיין</p>
+                <p className="text-sm text-on-surface-variant">אין תוכניות עדיין</p>
               </div>
             ) : (
               allPrograms.filter(p => p.type !== 'standalone').map((program) => {
@@ -330,14 +330,14 @@ export default function TraineeDetail() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <h4 className={`font-bold truncate ${isDisconnected ? 'text-text-muted line-through' : 'text-text-primary'}`}>{program.name}</h4>
+                          <h4 className={`font-bold truncate ${isDisconnected ? 'text-on-surface-variant line-through' : 'text-text-primary'}`}>{program.name}</h4>
                           {isDisconnected ? (
                             <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded flex-shrink-0">נותק</span>
                           ) : program.status === 'active' ? (
                             <span className="px-2 py-0.5 bg-primary-main/20 text-primary-main text-xs rounded flex-shrink-0">פעילה</span>
                           ) : null}
                         </div>
-                        <p className="text-text-muted text-xs">
+                        <p className="text-on-surface-variant text-xs">
                           {progTrainingDays} ימים • {progTotalExercises} תרגילים
                           {program.durationWeeks ? ` • ${program.durationWeeks} שבועות` : ''}
                         </p>
@@ -374,7 +374,7 @@ export default function TraineeDetail() {
                       ) : isProgramExpanded ? (
                         <ChevronDown className="w-4 h-4 text-accent-purple flex-shrink-0" />
                       ) : (
-                        <ChevronLeft className="w-4 h-4 text-text-muted flex-shrink-0" />
+                        <ChevronLeft className="w-4 h-4 text-on-surface-variant flex-shrink-0" />
                       )}
                     </button>
 
@@ -435,7 +435,7 @@ export default function TraineeDetail() {
                                     }`}>
                                       {day.name || `אימון ${dayNumber}`}
                                     </div>
-                                    <div className="text-xs text-text-muted">
+                                    <div className="text-xs text-on-surface-variant">
                                       {dayCompleted ? (
                                         <span className="text-status-success/80">
                                           בוצע {dayCompleted.date.getDate()}.{dayCompleted.date.getMonth() + 1}.{dayCompleted.date.getFullYear()} •{' '}
@@ -451,7 +451,7 @@ export default function TraineeDetail() {
                                     }`} />
                                   ) : (
                                     <ChevronLeft className={`w-4 h-4 flex-shrink-0 ${
-                                      dayCompleted ? 'text-status-success/60' : 'text-text-muted'
+                                      dayCompleted ? 'text-status-success/60' : 'text-on-surface-variant'
                                     }`} />
                                   )}
                                 </button>
@@ -504,7 +504,7 @@ export default function TraineeDetail() {
                                                 {ex.exerciseNameHe || ex.exerciseName}
                                               </div>
                                               {ex.notes && (
-                                                <div className="text-xs text-text-muted truncate">
+                                                <div className="text-xs text-on-surface-variant truncate">
                                                   {ex.notes}
                                                 </div>
                                               )}
@@ -524,13 +524,13 @@ export default function TraineeDetail() {
                                                 return (
                                                   <div
                                                     key={setIdx}
-                                                    className="flex items-center gap-1.5 text-xs text-text-muted"
+                                                    className="flex items-center gap-1.5 text-xs text-on-surface-variant"
                                                   >
                                                     <span className="text-status-success/50">
                                                       {isLast ? '└─' : '├─'}
                                                     </span>
                                                     <span>סט {setIdx + 1}:</span>
-                                                    <span className="text-text-secondary">
+                                                    <span className="text-on-surface-variant">
                                                       {(set.actualWeight || 0) > 0 && (
                                                         <>{set.actualWeight} ק&quot;ג × </>
                                                       )}
@@ -563,7 +563,7 @@ export default function TraineeDetail() {
         {/* Standalone Workouts Section */}
         {allPrograms.filter(p => p.type === 'standalone').length > 0 && (
           <div className="mt-4">
-            <h4 className="text-sm font-medium text-text-muted mb-2 flex items-center gap-2">
+            <h4 className="text-sm font-medium text-on-surface-variant mb-2 flex items-center gap-2">
               <ClipboardEdit className="w-4 h-4 text-accent-orange" />
               אימונים בודדים ({allPrograms.filter(p => p.type === 'standalone').length})
             </h4>
@@ -603,7 +603,7 @@ export default function TraineeDetail() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <h4 className={`font-bold text-sm truncate ${
-                              isDisconnected ? 'text-text-muted line-through' : performedWorkout ? 'text-status-success' : 'text-text-primary'
+                              isDisconnected ? 'text-on-surface-variant line-through' : performedWorkout ? 'text-status-success' : 'text-text-primary'
                             }`}>
                               {workout.name}
                             </h4>
@@ -611,7 +611,7 @@ export default function TraineeDetail() {
                               <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded flex-shrink-0">נותק</span>
                             )}
                           </div>
-                          <p className="text-text-muted text-xs">
+                          <p className="text-on-surface-variant text-xs">
                             {exerciseCount} תרגילים
                             {performedWorkout && !isDisconnected && (
                               <span className="text-status-success/80">
@@ -688,10 +688,10 @@ export default function TraineeDetail() {
             <span className="w-1 h-5 bg-gradient-primary rounded-full" />
             אימונים אחרונים
             {workouts.length > 0 && (
-              <span className="text-sm font-normal text-text-muted">({workouts.length})</span>
+              <span className="text-sm font-normal text-on-surface-variant">({workouts.length})</span>
             )}
           </h3>
-          <ChevronDown className={`w-4 h-4 text-text-muted transition-transform ${showWorkouts ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-4 h-4 text-on-surface-variant transition-transform ${showWorkouts ? 'rotate-180' : ''}`} />
         </button>
         {showWorkouts && traineeId && (
           <TraineeRecentWorkouts workouts={workouts} traineeId={traineeId} />
@@ -731,11 +731,11 @@ export default function TraineeDetail() {
               <Trash2 className="w-6 h-6 text-red-400" />
             </div>
             <h3 className="text-lg font-bold text-text-primary">מחיקת אימון בודד</h3>
-            <p className="text-sm text-text-muted">האם למחוק את האימון הבודד? פעולה זו לא ניתנת לביטול.</p>
+            <p className="text-sm text-on-surface-variant">האם למחוק את האימון הבודד? פעולה זו לא ניתנת לביטול.</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setDeleteStandaloneId(null)}
-                className="flex-1 py-2.5 rounded-xl border border-white/10 text-text-secondary text-sm font-medium hover:bg-dark-card/50 transition"
+                className="flex-1 py-2.5 rounded-xl border border-white/10 text-on-surface-variant text-sm font-medium hover:bg-dark-card/50 transition"
               >
                 ביטול
               </button>

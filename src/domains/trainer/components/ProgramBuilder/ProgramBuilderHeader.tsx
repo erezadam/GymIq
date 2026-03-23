@@ -57,7 +57,7 @@ export function ProgramBuilderHeader({
               פעיל
             </span>
           </div>
-          <div className="text-xs text-text-muted">
+          <div className="text-xs text-on-surface-variant">
             {subtitle || (
               stats ? (
                 <span className="flex items-center gap-2">

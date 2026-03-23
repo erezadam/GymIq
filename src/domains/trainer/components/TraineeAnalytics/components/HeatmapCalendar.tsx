@@ -59,7 +59,7 @@ export function HeatmapCalendar({ data, month, onMonthChange }: HeatmapCalendarP
       {/* Day labels */}
       <div className="grid grid-cols-7 gap-1 mb-1">
         {DAY_LABELS.map(label => (
-          <div key={label} className="text-center text-[10px] text-text-muted pb-1">{label}</div>
+          <div key={label} className="text-center text-[10px] text-on-surface-variant pb-1">{label}</div>
         ))}
       </div>
 
@@ -77,7 +77,7 @@ export function HeatmapCalendar({ data, month, onMonthChange }: HeatmapCalendarP
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-1.5 mt-3 text-[10px] text-text-secondary">
+      <div className="flex items-center justify-center gap-1.5 mt-3 text-[10px] text-on-surface-variant">
         <span>פחות</span>
         <div className="w-3 h-3 rounded-sm bg-dark-surface" />
         <div className="w-3 h-3 rounded-sm bg-primary-main/25" />

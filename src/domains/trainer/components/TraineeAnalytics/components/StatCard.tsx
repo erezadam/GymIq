@@ -23,7 +23,7 @@ const valueColors: Record<string, string> = {
 const trendColors: Record<string, string> = {
   up: 'text-status-success',
   down: 'text-status-error',
-  neutral: 'text-text-muted',
+  neutral: 'text-on-surface-variant',
 }
 
 export function StatCard({ value, label, trend, trendDirection = 'neutral', variant = 'default' }: StatCardProps) {
@@ -32,7 +32,7 @@ export function StatCard({ value, label, trend, trendDirection = 'neutral', vari
       <div className={`text-2xl font-extrabold mb-0.5 ${valueColors[variant]}`}>
         {value}
       </div>
-      <p className="text-text-muted text-xs">{label}</p>
+      <p className="text-on-surface-variant text-xs">{label}</p>
       {trend && (
         <p className={`text-[11px] mt-1.5 flex items-center justify-center gap-1 ${trendColors[trendDirection]}`}>
           {trend}

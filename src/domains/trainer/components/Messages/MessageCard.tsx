@@ -33,7 +33,7 @@ export function MessageCard({ message }: MessageCardProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-dark-card text-text-muted">
+          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-dark-card text-on-surface-variant">
             {MESSAGE_TYPE_LABELS[message.type] || message.type}
           </span>
           {isHighPriority && (
@@ -42,7 +42,7 @@ export function MessageCard({ message }: MessageCardProps) {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-text-muted">
+        <div className="flex items-center gap-1.5 text-xs text-on-surface-variant">
           {message.isRead ? (
             <CheckCircle2 className="w-3.5 h-3.5 text-status-success" />
           ) : (
@@ -60,13 +60,13 @@ export function MessageCard({ message }: MessageCardProps) {
       )}
 
       {/* Body */}
-      <p className="text-sm text-text-secondary whitespace-pre-line line-clamp-3">
+      <p className="text-sm text-on-surface-variant whitespace-pre-line line-clamp-3">
         {message.body}
       </p>
 
       {/* Reference */}
       {message.referenceName && (
-        <div className="mt-2 px-2.5 py-1.5 rounded-lg bg-dark-card text-xs text-text-muted">
+        <div className="mt-2 px-2.5 py-1.5 rounded-lg bg-dark-card text-xs text-on-surface-variant">
           קשור ל: {message.referenceName}
         </div>
       )}

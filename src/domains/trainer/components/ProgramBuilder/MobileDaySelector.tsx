@@ -39,7 +39,7 @@ export function MobileDaySelector({
             className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap flex items-center gap-2 transition ${
               isSelected
                 ? 'bg-gradient-to-br from-primary-main to-status-info text-white'
-                : 'bg-dark-surface text-text-secondary'
+                : 'bg-dark-surface text-on-surface-variant'
             }`}
           >
             <span
@@ -62,7 +62,7 @@ export function MobileDaySelector({
       {days.length < 7 && (
         <button
           onClick={onAddDay}
-          className="px-4 py-2 bg-dark-surface/50 border border-dashed border-dark-border rounded-xl text-sm text-text-muted whitespace-nowrap hover:border-primary-main/50 transition"
+          className="px-4 py-2 bg-dark-surface/50 border border-dashed border-dark-border rounded-xl text-sm text-on-surface-variant whitespace-nowrap hover:border-primary-main/50 transition"
         >
           + יום
         </button>

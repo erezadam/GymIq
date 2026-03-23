@@ -90,6 +90,18 @@ module.exports = {
       'planned-text': '#EF4444',
     },
 
+    // Surface (Material 3 inspired)
+    surface: {
+      container: '#1d2026',
+      'container-low': '#191c22',
+      'container-high': '#272a31',
+      'container-highest': '#32353c',
+    },
+    'on-surface': {
+      DEFAULT: '#e1e2eb',
+      variant: '#bbcac6',
+    },
+
     // Muscle Groups
     muscles: {
       chest: '#FF6B35',

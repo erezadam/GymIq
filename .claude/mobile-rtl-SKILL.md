@@ -161,7 +161,10 @@ colors: {
   'dark-surface': '#141414',   // משטח
   'dark-card': '#1A1A1A',      // כרטיס
   'text-primary': '#FFFFFF',   // טקסט ראשי
-  'text-muted': '#6B7280',     // טקסט משני
+  // Material 3 Surface tokens (23/03/2026):
+  'surface-container': '#1d2026',
+  'on-surface': '#e1e2eb',           // טקסט ראשי על surface
+  'on-surface-variant': '#bbcac6',   // טקסט משני על surface (מחליף text-muted)
 }
 ```
 
@@ -170,10 +173,15 @@ colors: {
 // ✅ נכון - שימוש ב-tokens
 <div className="bg-dark-card text-text-primary">
 <span className="text-accent-orange">
+<p className="text-on-surface-variant">  // טקסט משני/מושתק
 
 // ❌ לא נכון - צבעים hardcoded
 <div style={{ background: '#1A1A1A' }}>
 <span className="text-orange-500">
+
+// ❌ לא נכון - tokens ישנים (הוחלפו ב-23/03/2026)
+<span className="text-text-muted">     // → text-on-surface-variant
+<span className="text-text-secondary">  // → text-on-surface-variant
 ```
 
 ### קובץ סגנונות מרכזי:
