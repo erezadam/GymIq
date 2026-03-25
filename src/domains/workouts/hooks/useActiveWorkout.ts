@@ -204,6 +204,8 @@ export function useActiveWorkout() {
             category: ex.category || '',
             isCompleted: ex.isCompleted,
             notes: ex.notes,
+            // Report type (needed for Firebase recovery)
+            ...(ex.reportType && { reportType: ex.reportType }),
             // Assistance configuration
             ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
             sets: ex.reportedSets.map((set) => ({
@@ -411,6 +413,8 @@ export function useActiveWorkout() {
                   complexity: details?.complexity || undefined,
                   isExpanded: false,
                   isCompleted: ex.isCompleted,
+                  // Restore reportType from Firebase (saved by autoSave)
+                  ...(ex.reportType && { reportType: ex.reportType }),
                   // Restore assistance type
                   ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
                   reportedSets: ex.sets.map((set: any, setIndex: number) => ({
@@ -432,6 +436,17 @@ export function useActiveWorkout() {
                   })),
                 }
               })
+
+            // Fetch previous exercise volumes (non-critical)
+            try {
+              const volExerciseIds = restoredExercises.map((ex) => ex.exerciseId)
+              const volumes = await getLastExerciseVolumes(user.uid, volExerciseIds)
+              restoredExercises.forEach((ex) => {
+                ex.previousExerciseVolume = volumes[ex.exerciseId] ?? null
+              })
+            } catch (e) {
+              console.error('Failed to fetch exercise volumes during recovery (non-critical):', e)
+            }
 
             const restoredWorkout: ActiveWorkout = {
               id: firebaseWorkout.id,
@@ -1332,6 +1347,8 @@ export function useActiveWorkout() {
               category: ex.category || '',
               isCompleted: ex.isCompleted,
               notes: ex.notes,
+              // Report type (needed for history continuation and recovery)
+              ...(ex.reportType && { reportType: ex.reportType }),
               // Assistance configuration
               ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
               ...(volume > 0 && { exerciseVolume: volume }),
