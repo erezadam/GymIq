@@ -338,6 +338,44 @@ export function ExerciseLibrary({
       .sort((a, b) => (a.nameHe || '').trim().localeCompare((b.nameHe || '').trim(), 'he'))
   }, [exercises, selectedPrimaryMuscle, selectedSubMuscle, selectedEquipment])
 
+  // Selected exercises grouped by muscle for the top section
+  const selectedExercisesGrouped = useMemo(() => {
+    if (programMode) return []
+    const selectedIds = new Set(selectedExercises.map(e => e.exerciseId))
+    if (selectedIds.size === 0) return []
+
+    // Get full Exercise objects for selected exercises
+    const selectedFull = exercises.filter(ex => selectedIds.has(ex.id))
+
+    // Group by category
+    const groups = new Map<string, Exercise[]>()
+    for (const ex of selectedFull) {
+      const cat = ex.category || 'other'
+      if (!groups.has(cat)) groups.set(cat, [])
+      groups.get(cat)!.push(ex)
+    }
+
+    // Sort exercises within each group by Hebrew name A-Z
+    for (const exList of groups.values()) {
+      exList.sort((a, b) => (a.nameHe || '').trim().localeCompare((b.nameHe || '').trim(), 'he'))
+    }
+
+    // Sort groups by Hebrew muscle name
+    return Array.from(groups.entries())
+      .map(([cat, exList]) => ({
+        category: cat,
+        categoryNameHe: getMuscleNameHe(cat, dynamicMuscleNames),
+        exercises: exList,
+      }))
+      .sort((a, b) => a.categoryNameHe.trim().localeCompare(b.categoryNameHe.trim(), 'he'))
+  }, [exercises, selectedExercises, programMode, dynamicMuscleNames])
+
+  // Unselected exercises from the filtered list (to avoid duplication with selected section)
+  const unselectedFilteredExercises = useMemo(() => {
+    if (programMode) return filteredExercises
+    return filteredExercises.filter(ex => !effectiveSelectedIds.has(ex.id))
+  }, [filteredExercises, effectiveSelectedIds, programMode])
+
   const handleToggleExercise = (exercise: Exercise) => {
     if (programMode) {
       const isSelected = effectiveSelectedIds.has(exercise.id)
@@ -758,98 +796,197 @@ export function ExerciseLibrary({
             <div className="flex items-center justify-center py-20">
               <div className="spinner"></div>
             </div>
-          ) : filteredExercises.length === 0 ? (
+          ) : filteredExercises.length === 0 && selectedExercisesGrouped.length === 0 ? (
             <div className="text-center py-16">
               <span className="text-4xl mb-4 block">🔍</span>
               <h3 className="text-lg font-semibold text-white mb-2">לא נמצאו תרגילים</h3>
               <p className="text-text-muted">נסה לשנות את הפילטרים</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {filteredExercises.map((exercise) => {
-                const isSelected = effectiveSelectedIds.has(exercise.id)
-                const wasInLastWorkout = recentlyDoneExerciseIds.has(exercise.id)
-                const otherDayLetters = otherDaysMap.get(exercise.id)
+            <>
+              {/* Selected Exercises Section - always on top, grouped by muscle */}
+              {selectedExercisesGrouped.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-sm font-bold text-primary-main mb-2">
+                    נבחרו ({selectedExercises.length})
+                  </h3>
+                  <div className="space-y-3">
+                    {selectedExercisesGrouped.map((group) => (
+                      <div key={group.category}>
+                        <p className="text-xs text-on-surface-variant mb-1 font-medium">{group.categoryNameHe}</p>
+                        <div className="space-y-1.5">
+                          {group.exercises.map((exercise) => {
+                            const wasInLastWorkout = recentlyDoneExerciseIds.has(exercise.id)
+                            const otherDayLetters = otherDaysMap.get(exercise.id)
+                            const WEEKLY_SETS_TARGET = 10
+                            const STRENGTH_CATEGORIES = new Set(['legs', 'chest', 'back', 'shoulders', 'biceps_brachii', 'triceps', 'core'])
+                            const currentWeeklySets = weeklyMuscleSets.get(exercise.category) || 0
+                            const isStrengthCategory = STRENGTH_CATEGORIES.has(exercise.category)
+                            const showRecommended = !wasInLastWorkout && isStrengthCategory && currentWeeklySets < WEEKLY_SETS_TARGET
+                            const showWeeklySets = !wasInLastWorkout && isStrengthCategory && currentWeeklySets >= WEEKLY_SETS_TARGET
+                            return (
+                              <div
+                                key={exercise.id}
+                                onClick={() => handleToggleExercise(exercise)}
+                                className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all bg-primary-main/10 border-2 border-primary-main"
+                              >
+                                {/* Checkbox */}
+                                <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 bg-primary-main">
+                                  <Check className="w-4 h-4 text-background-main" strokeWidth={3} />
+                                </div>
 
-                // Weekly sets badge: show for all strength categories
-                const WEEKLY_SETS_TARGET = 10
-                const STRENGTH_CATEGORIES = new Set(['legs', 'chest', 'back', 'shoulders', 'biceps_brachii', 'triceps', 'core'])
-                const currentWeeklySets = weeklyMuscleSets.get(exercise.category) || 0
-                const isStrengthCategory = STRENGTH_CATEGORIES.has(exercise.category)
-                const showRecommended = !wasInLastWorkout && isStrengthCategory && currentWeeklySets < WEEKLY_SETS_TARGET
-                const showWeeklySets = !wasInLastWorkout && isStrengthCategory && currentWeeklySets >= WEEKLY_SETS_TARGET
-                return (
-                  <div
-                    key={exercise.id}
-                    onClick={() => handleToggleExercise(exercise)}
-                    className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
-                      isSelected
-                        ? 'bg-primary-main/10 border-2 border-primary-main'
-                        : 'bg-background-card border border-border-default hover:border-border-light'
-                    }`}
-                  >
-                    {/* Checkbox */}
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      isSelected
-                        ? 'bg-primary-main'
-                        : 'border-2 border-border-light'
-                    }`}>
-                      {isSelected && <Check className="w-4 h-4 text-background-main" strokeWidth={3} />}
-                    </div>
+                                {/* Exercise Info */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h3 className="font-semibold text-white truncate">{exercise.nameHe}</h3>
+                                    {exercise.assistanceTypes && exercise.assistanceTypes.length > 0 && (
+                                      <span className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] rounded-full flex-shrink-0">
+                                        גמיש
+                                      </span>
+                                    )}
+                                    {wasInLastWorkout ? (
+                                      <span className="badge-last-workout flex-shrink-0">אחרון</span>
+                                    ) : showRecommended ? (
+                                      <span className="badge-recommended flex-shrink-0">מומלץ {currentWeeklySets}/{WEEKLY_SETS_TARGET}</span>
+                                    ) : showWeeklySets ? (
+                                      <span className="px-2 py-0.5 rounded-lg text-xs font-medium bg-status-success/20 text-status-success flex-shrink-0">{currentWeeklySets}/{WEEKLY_SETS_TARGET}</span>
+                                    ) : null}
+                                    {otherDayLetters && otherDayLetters.map((letter) => (
+                                      <span
+                                        key={letter}
+                                        className="px-1.5 py-0.5 bg-accent-purple/20 text-accent-purple text-[10px] rounded-full flex-shrink-0 font-bold"
+                                      >
+                                        יום {letter}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <p className="text-xs text-on-surface-variant truncate">
+                                    {getMuscleNameHe(exercise.primaryMuscle, dynamicMuscleNames)} • {getEquipmentHe(exercise.equipment)}
+                                  </p>
+                                </div>
 
-                    {/* Exercise Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold text-white truncate">{exercise.nameHe}</h3>
-                        {/* Flexible exercise tag */}
-                        {exercise.assistanceTypes && exercise.assistanceTypes.length > 0 && (
-                          <span className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] rounded-full flex-shrink-0">
-                            גמיש
-                          </span>
-                        )}
-                        {/* Priority: "אחרון" > "מומלץ X/10" > "X/10" (target met) */}
-                        {wasInLastWorkout ? (
-                          <span className="badge-last-workout flex-shrink-0">אחרון</span>
-                        ) : showRecommended ? (
-                          <span className="badge-recommended flex-shrink-0">מומלץ {currentWeeklySets}/{WEEKLY_SETS_TARGET}</span>
-                        ) : showWeeklySets ? (
-                          <span className="px-2 py-0.5 rounded-lg text-xs font-medium bg-status-success/20 text-status-success flex-shrink-0">{currentWeeklySets}/{WEEKLY_SETS_TARGET}</span>
-                        ) : null}
-                        {/* Program: tags for other days that already include this exercise */}
-                        {otherDayLetters && otherDayLetters.map((letter) => (
-                          <span
-                            key={letter}
-                            className="px-1.5 py-0.5 bg-accent-purple/20 text-accent-purple text-[10px] rounded-full flex-shrink-0 font-bold"
-                          >
-                            יום {letter}
-                          </span>
-                        ))}
+                                {/* Image */}
+                                <div
+                                  onClick={(e) => handleImageClick(e, exercise)}
+                                  className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-background-elevated"
+                                >
+                                  <img
+                                    src={getExerciseImageUrl(exercise)}
+                                    alt={exercise.nameHe}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement
+                                      target.onerror = null
+                                      target.src = EXERCISE_PLACEHOLDER_IMAGE
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
-                      <p className="text-xs text-text-muted truncate">
-                        {getMuscleNameHe(exercise.primaryMuscle, dynamicMuscleNames)} • {getEquipmentHe(exercise.equipment)}
-                      </p>
-                    </div>
-
-                    {/* Image */}
-                    <div
-                      onClick={(e) => handleImageClick(e, exercise)}
-                      className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-background-elevated"
-                    >
-                      <img
-                        src={getExerciseImageUrl(exercise)}
-                        alt={exercise.nameHe}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.onerror = null
-                          target.src = EXERCISE_PLACEHOLDER_IMAGE
-                        }}
-                      />
-                    </div>
+                    ))}
                   </div>
-                )
-              })}
-            </div>
+
+                  {/* Divider between selected and unselected */}
+                  {unselectedFilteredExercises.length > 0 && (
+                    <div className="flex items-center gap-3 my-4">
+                      <div className="flex-1 h-px bg-border-default" />
+                      <span className="text-xs text-on-surface-variant">תרגילים נוספים</span>
+                      <div className="flex-1 h-px bg-border-default" />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Unselected Exercises */}
+              <div className="space-y-2">
+                {unselectedFilteredExercises.map((exercise) => {
+                  const isSelected = effectiveSelectedIds.has(exercise.id)
+                  const wasInLastWorkout = recentlyDoneExerciseIds.has(exercise.id)
+                  const otherDayLetters = otherDaysMap.get(exercise.id)
+
+                  // Weekly sets badge: show for all strength categories
+                  const WEEKLY_SETS_TARGET = 10
+                  const STRENGTH_CATEGORIES = new Set(['legs', 'chest', 'back', 'shoulders', 'biceps_brachii', 'triceps', 'core'])
+                  const currentWeeklySets = weeklyMuscleSets.get(exercise.category) || 0
+                  const isStrengthCategory = STRENGTH_CATEGORIES.has(exercise.category)
+                  const showRecommended = !wasInLastWorkout && isStrengthCategory && currentWeeklySets < WEEKLY_SETS_TARGET
+                  const showWeeklySets = !wasInLastWorkout && isStrengthCategory && currentWeeklySets >= WEEKLY_SETS_TARGET
+                  return (
+                    <div
+                      key={exercise.id}
+                      onClick={() => handleToggleExercise(exercise)}
+                      className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
+                        isSelected
+                          ? 'bg-primary-main/10 border-2 border-primary-main'
+                          : 'bg-background-card border border-border-default hover:border-border-light'
+                      }`}
+                    >
+                      {/* Checkbox */}
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        isSelected
+                          ? 'bg-primary-main'
+                          : 'border-2 border-border-light'
+                      }`}>
+                        {isSelected && <Check className="w-4 h-4 text-background-main" strokeWidth={3} />}
+                      </div>
+
+                      {/* Exercise Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-white truncate">{exercise.nameHe}</h3>
+                          {/* Flexible exercise tag */}
+                          {exercise.assistanceTypes && exercise.assistanceTypes.length > 0 && (
+                            <span className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] rounded-full flex-shrink-0">
+                              גמיש
+                            </span>
+                          )}
+                          {/* Priority: "אחרון" > "מומלץ X/10" > "X/10" (target met) */}
+                          {wasInLastWorkout ? (
+                            <span className="badge-last-workout flex-shrink-0">אחרון</span>
+                          ) : showRecommended ? (
+                            <span className="badge-recommended flex-shrink-0">מומלץ {currentWeeklySets}/{WEEKLY_SETS_TARGET}</span>
+                          ) : showWeeklySets ? (
+                            <span className="px-2 py-0.5 rounded-lg text-xs font-medium bg-status-success/20 text-status-success flex-shrink-0">{currentWeeklySets}/{WEEKLY_SETS_TARGET}</span>
+                          ) : null}
+                          {/* Program: tags for other days that already include this exercise */}
+                          {otherDayLetters && otherDayLetters.map((letter) => (
+                            <span
+                              key={letter}
+                              className="px-1.5 py-0.5 bg-accent-purple/20 text-accent-purple text-[10px] rounded-full flex-shrink-0 font-bold"
+                            >
+                              יום {letter}
+                            </span>
+                          ))}
+                        </div>
+                        <p className="text-xs text-on-surface-variant truncate">
+                          {getMuscleNameHe(exercise.primaryMuscle, dynamicMuscleNames)} • {getEquipmentHe(exercise.equipment)}
+                        </p>
+                      </div>
+
+                      {/* Image */}
+                      <div
+                        onClick={(e) => handleImageClick(e, exercise)}
+                        className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-background-elevated"
+                      >
+                        <img
+                          src={getExerciseImageUrl(exercise)}
+                          alt={exercise.nameHe}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.onerror = null
+                            target.src = EXERCISE_PLACEHOLDER_IMAGE
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
           )}
         </div>
       </div>

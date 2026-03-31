@@ -152,6 +152,13 @@ export interface WorkoutHistoryEntry {
     deletedAt: Timestamp | Date
     reason?: string  // required when reportedBy exists
   }
+  // Trainer edit tracking
+  lastEditedByTrainer?: {
+    trainerId: string
+    trainerName: string
+    editedAt: Timestamp | Date
+    editSummary: string  // e.g., "הוסר: סקוואט | שונה: לחיצת חזה"
+  }
 }
 
 // Summary for display in lists

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronLeft, Check, Loader2 } from 'lucide-react'
+import { ChevronDown, ChevronLeft, Check, Loader2, Pencil } from 'lucide-react'
 import { getWorkoutById, getUserWorkoutHistoryPaginated } from '@/lib/firebase/workoutHistory'
 import type { WorkoutHistorySummary, WorkoutHistoryEntry } from '@/domains/workouts/types'
 
@@ -7,6 +7,7 @@ interface TraineeRecentWorkoutsProps {
   workouts: WorkoutHistorySummary[]
   traineeId: string
   isLoading?: boolean
+  onEditWorkout?: (workout: WorkoutHistoryEntry) => void
 }
 
 const statusConfig: Record<
@@ -73,7 +74,7 @@ const STATUS_FILTERS: { id: StatusFilter; label: string }[] = [
   { id: 'planned', label: 'מתוכנן' },
 ]
 
-export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, isLoading }: TraineeRecentWorkoutsProps) {
+export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, isLoading, onEditWorkout }: TraineeRecentWorkoutsProps) {
   const [allWorkouts, setAllWorkouts] = useState<WorkoutHistorySummary[]>(initialWorkouts)
   const [hasMore, setHasMore] = useState(initialWorkouts.length >= 10)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -337,10 +338,31 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
 
                       {/* Summary row */}
                       <div className="flex items-center justify-between pt-2 text-xs text-on-surface-variant border-t border-dark-border/30 mt-2">
-                        <span>{expandedWorkoutData.completedExercises}/{expandedWorkoutData.totalExercises} תרגילים</span>
-                        {expandedWorkoutData.totalVolume > 0 && (
-                          <span>{Math.round(expandedWorkoutData.totalVolume)} ק&quot;ג נפח כולל</span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          <span>{expandedWorkoutData.completedExercises}/{expandedWorkoutData.totalExercises} תרגילים</span>
+                          {expandedWorkoutData.lastEditedByTrainer && (
+                            <span className="text-accent-purple text-[10px]">
+                              נערך ע״י מאמן
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {expandedWorkoutData.totalVolume > 0 && (
+                            <span>{Math.round(expandedWorkoutData.totalVolume)} ק&quot;ג נפח כולל</span>
+                          )}
+                          {onEditWorkout && workout.status !== 'in_progress' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onEditWorkout(expandedWorkoutData)
+                              }}
+                              className="flex items-center gap-1 px-2 py-1 bg-accent-purple/10 text-accent-purple rounded-lg hover:bg-accent-purple/20 transition"
+                            >
+                              <Pencil className="w-3 h-3" />
+                              <span className="text-[10px] font-medium">עריכה</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}

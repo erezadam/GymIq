@@ -59,6 +59,15 @@ function toWorkoutHistory(id: string, data: any): WorkoutHistoryEntry {
     deletedByTrainee: data.deletedByTrainee
       ? { deletedAt: data.deletedByTrainee.deletedAt?.toDate?.() || new Date(), reason: data.deletedByTrainee.reason }
       : undefined,
+    // Trainer edit tracking
+    lastEditedByTrainer: data.lastEditedByTrainer
+      ? {
+          trainerId: data.lastEditedByTrainer.trainerId,
+          trainerName: data.lastEditedByTrainer.trainerName,
+          editedAt: data.lastEditedByTrainer.editedAt?.toDate?.() || new Date(),
+          editSummary: data.lastEditedByTrainer.editSummary || '',
+        }
+      : undefined,
   }
 }
 
@@ -1662,4 +1671,96 @@ export async function getUserWorkoutHistoryByDateRange(
     console.error('Error fetching workout history by date range:', error)
     throw error
   }
+}
+
+// ============ TRAINER WORKOUT EDITING ============
+
+/**
+ * Check if a workout can be edited by a trainer.
+ * Returns { editable: true } or { editable: false, reason: string }
+ */
+export async function isWorkoutEditable(workoutId: string): Promise<{ editable: boolean; reason?: string }> {
+  const docRef = doc(db, COLLECTION_NAME, workoutId)
+  const snapshot = await getDoc(docRef)
+
+  if (!snapshot.exists()) {
+    return { editable: false, reason: 'האימון לא נמצא' }
+  }
+
+  const data = snapshot.data()
+  if (data.status === 'in_progress') {
+    return { editable: false, reason: 'המתאמן באמצע אימון פעיל — לא ניתן לערוך כרגע' }
+  }
+
+  return { editable: true }
+}
+
+/**
+ * Trainer edits a workout's exercises in the trainee's workout history.
+ * Performs optimistic locking: re-fetches the document before saving to prevent
+ * conflicts if the trainee started the workout in the meantime.
+ */
+export async function trainerEditWorkout(
+  workoutId: string,
+  updates: {
+    exercises: WorkoutHistoryEntry['exercises']
+    lastEditedByTrainer: {
+      trainerId: string
+      trainerName: string
+      editSummary: string
+    }
+  }
+): Promise<void> {
+  // Optimistic lock: re-fetch and check status
+  const editableCheck = await isWorkoutEditable(workoutId)
+  if (!editableCheck.editable) {
+    throw new Error(editableCheck.reason || 'לא ניתן לערוך את האימון')
+  }
+
+  // Calculate aggregates from the updated exercises
+  const totalExercises = updates.exercises.length
+  const completedExercises = updates.exercises.filter(ex => ex.isCompleted).length
+  const totalSets = updates.exercises.reduce((sum, ex) => sum + (ex.sets?.length || 0), 0)
+  const completedSets = updates.exercises.reduce(
+    (sum, ex) => sum + (ex.sets?.filter(s => s.completed || (s.actualReps && s.actualReps > 0)).length || 0),
+    0
+  )
+  const totalVolume = updates.exercises.reduce((sum, ex) => {
+    const exVolume = (ex.sets || []).reduce((setSum, s) => {
+      if (s.completed || (s.actualReps && s.actualReps > 0)) {
+        return setSum + (s.actualWeight || 0) * (s.actualReps || 0)
+      }
+      return setSum
+    }, 0)
+    return sum + exVolume
+  }, 0)
+
+  // Recalculate per-exercise volume
+  const exercisesWithVolume = updates.exercises.map(ex => ({
+    ...ex,
+    exerciseVolume: (ex.sets || []).reduce((setSum, s) => {
+      if (s.completed || (s.actualReps && s.actualReps > 0)) {
+        return setSum + (s.actualWeight || 0) * (s.actualReps || 0)
+      }
+      return setSum
+    }, 0),
+  }))
+
+  const docRef = doc(db, COLLECTION_NAME, workoutId)
+  const updateData = removeUndefined({
+    exercises: exercisesWithVolume,
+    totalExercises,
+    completedExercises,
+    totalSets,
+    completedSets,
+    totalVolume,
+    lastEditedByTrainer: {
+      trainerId: updates.lastEditedByTrainer.trainerId,
+      trainerName: updates.lastEditedByTrainer.trainerName,
+      editedAt: serverTimestamp(),
+      editSummary: updates.lastEditedByTrainer.editSummary,
+    },
+  })
+
+  await updateDoc(docRef, updateData)
 }

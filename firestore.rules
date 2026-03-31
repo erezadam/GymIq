@@ -190,6 +190,10 @@ service cloud.firestore {
         request.resource.data.reportedBy == request.auth.uid;
       allow update: if isTrainer() &&
         resource.data.reportedBy == request.auth.uid;
+
+      // Trainers can edit workouts of their trainees (workout editing feature)
+      allow update: if isTrainer() &&
+        get(/databases/$(database)/documents/users/$(resource.data.userId)).data.trainerId == request.auth.uid;
     }
 
     // ============ WORKOUT TEMPLATES ============
