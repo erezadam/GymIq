@@ -681,18 +681,15 @@ export function useActiveWorkout() {
               }
 
               // Weight recommendations - separate try/catch to never affect lastWorkoutData
-              const isSelfWorkout = !parsed.reportedBy && !programId
-              if (isSelfWorkout) {
-                try {
-                  const weightRecs = await getWeightRecommendations(user.uid)
-                  newExercises.forEach((ex) => {
-                    if (weightRecs[ex.exerciseId]) {
-                      ex.weightRecommendation = true
-                    }
-                  })
-                } catch (e) {
-                  console.error('Failed to fetch weight recommendations (non-critical):', e)
-                }
+              try {
+                const weightRecs = await getWeightRecommendations(effectiveUserId)
+                newExercises.forEach((ex) => {
+                  if (weightRecs[ex.exerciseId]) {
+                    ex.weightRecommendation = true
+                  }
+                })
+              } catch (e) {
+                console.error('Failed to fetch weight recommendations (non-critical):', e)
               }
 
               // Exercise volumes - separate try/catch (non-critical)
@@ -822,18 +819,15 @@ export function useActiveWorkout() {
           }
 
           // Weight recommendations - separate try/catch to never affect lastWorkoutData
-          const isSelfWorkout = !reportedBy && !programId
-          if (isSelfWorkout) {
-            try {
-              const weightRecs = await getWeightRecommendations(user.uid)
-              exercises.forEach((ex) => {
-                if (weightRecs[ex.exerciseId]) {
-                  ex.weightRecommendation = true
-                }
-              })
-            } catch (e) {
-              console.error('Failed to fetch weight recommendations (non-critical):', e)
-            }
+          try {
+            const weightRecs = await getWeightRecommendations(effectiveUserId)
+            exercises.forEach((ex) => {
+              if (weightRecs[ex.exerciseId]) {
+                ex.weightRecommendation = true
+              }
+            })
+          } catch (e) {
+            console.error('Failed to fetch weight recommendations (non-critical):', e)
           }
 
           // Exercise volumes - separate try/catch (non-critical)
@@ -1411,19 +1405,17 @@ export function useActiveWorkout() {
           }
           toast.success('האימון נשמר בהצלחה!')
 
-          // Calculate weight recommendations for self workouts (fire-and-forget)
-          if (!workout.reportedBy && !programId) {
-            const recExercises = workout.exercises.map((ex) => ({
-              exerciseId: ex.exerciseId,
-              reportType: ex.reportType,
-              sets: ex.reportedSets
-                .filter((s) => s.reps > 0)
-                .map((s) => ({ weight: s.weight, reps: s.reps })),
-            }))
-            calculateAndSaveWeightRecommendations(workout.userId, recExercises).catch((err) =>
-              console.error('Failed to calculate weight recommendations:', err)
-            )
-          }
+          // Calculate weight recommendations (fire-and-forget)
+          const recExercises = workout.exercises.map((ex) => ({
+            exerciseId: ex.exerciseId,
+            reportType: ex.reportType,
+            sets: ex.reportedSets
+              .filter((s) => s.reps > 0)
+              .map((s) => ({ weight: s.weight, reps: s.reps })),
+          }))
+          calculateAndSaveWeightRecommendations(workout.userId, recExercises).catch((err) =>
+            console.error('Failed to calculate weight recommendations:', err)
+          )
 
           // Remember if this was a trainer report before clearing
           const wasTrainerReport = workout.reportedBy
