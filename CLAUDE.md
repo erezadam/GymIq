@@ -589,6 +589,7 @@ npx playwright test
 | 14/03/2026 | תת-שרירים חדשים מ-Firebase לא הופיעו בניתוח שבועי + דרופדאון ExerciseForm פולטר לפי Set קשיח | נוסף חוק ברזל: מקור אמת יחיד לשמות שרירים = Firebase. אסור רשימות סטטיות. auto-sync ב-getMuscles() |
 | 14/03/2026 | קרדיט חלקי לישבן הלך ל-longissimus במקום gluteus_maximus + חסר biceps_brachii | תוקן SECONDARY_MUSCLE_MULTIPLIERS: 3 שרירי עזר (triceps/biceps_brachii/gluteus_maximus), רשימות תרגילים עודכנו, UI שונה — סטים צבעוניים (ירוק≥10/אדום<10), ממוצע חזרות צבעוני (ירוק≥5/אדום<5), הוסר עמודת סטטוס |
 | 23/03/2026 | מיגרציית צבעים + עיצוב Trainer מחדש | TrainerLayout עבר ל-bottom nav + Material 3 surface tokens + מיגרציית text-text-muted/secondary ל-on-surface-variant ב-~40 קבצים + cancelled workouts נספרים בניתוח |
+| 31/03/2026 | מאמן לא יכל לערוך אימונים מופצים למתאמנים | נוסף WorkoutHistoryEditor — מאמן יכול לערוך/למחוק תרגילים באימון שלא פעיל, עם optimistic locking, audit trail, והגנה על סטים שבוצעו |
 
 ---
 
@@ -622,6 +623,6 @@ npm run test:e2e:headed   # הרצה עם דפדפן נראה
 
 ```
 ══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 08/03/2026 | נוסף Playwright MCP לשליטה בדפדפן + סקריפטי E2E
+עדכון אחרון: 31/03/2026 | נוסף WorkoutHistoryEditor — עריכת אימונים מופצים ע״י מאמן
 ══════════════════════════════════════════════════════════════════════════════
 ```

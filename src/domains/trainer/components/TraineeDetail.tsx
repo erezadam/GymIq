@@ -14,6 +14,7 @@ import { TraineePerformance } from './TraineePerformance'
 import { TraineeRecentWorkouts } from './TraineeRecentWorkouts'
 import { TraineeEditModal } from './TraineeEditModal'
 import { StandaloneWorkoutEditor } from './StandaloneWorkoutEditor'
+import { WorkoutHistoryEditor } from './WorkoutHistoryEditor'
 import { MessageComposer } from './Messages/MessageComposer'
 import toast from 'react-hot-toast'
 
@@ -39,6 +40,7 @@ export default function TraineeDetail() {
   const [showMessageComposer, setShowMessageComposer] = useState(false)
   const [deleteStandaloneId, setDeleteStandaloneId] = useState<string | null>(null)
   const [deletingStandalone, setDeletingStandalone] = useState(false)
+  const [editingWorkout, setEditingWorkout] = useState<WorkoutHistoryEntry | null>(null)
 
   const { loadFromProgram, setTrainerReport, clearWorkout } = useWorkoutBuilderStore()
 
@@ -694,7 +696,7 @@ export default function TraineeDetail() {
           <ChevronDown className={`w-4 h-4 text-on-surface-variant transition-transform ${showWorkouts ? 'rotate-180' : ''}`} />
         </button>
         {showWorkouts && traineeId && (
-          <TraineeRecentWorkouts workouts={workouts} traineeId={traineeId} />
+          <TraineeRecentWorkouts workouts={workouts} traineeId={traineeId} onEditWorkout={setEditingWorkout} />
         )}
       </div>
 
@@ -762,6 +764,32 @@ export default function TraineeDetail() {
             </div>
           </div>
         </div>,
+        document.body
+      )}
+
+      {/* Workout History Editor Modal */}
+      {editingWorkout && traineeId && user && createPortal(
+        <WorkoutHistoryEditor
+          workout={editingWorkout}
+          traineeId={traineeId}
+          traineeName={trainee?.traineeProfile?.displayName || trainee?.relationship?.traineeName || 'מתאמן'}
+          trainerId={user.uid}
+          trainerName={user.displayName || 'מאמן'}
+          onClose={() => setEditingWorkout(null)}
+          onSaved={async () => {
+            setEditingWorkout(null)
+            toast.success('האימון עודכן בהצלחה')
+            // Refresh workouts list
+            if (traineeId) {
+              try {
+                const refreshed = await getUserWorkoutHistory(traineeId, 10, true)
+                setWorkouts(refreshed)
+              } catch (err) {
+                console.error('Error refreshing workouts:', err)
+              }
+            }
+          }}
+        />,
         document.body
       )}
 
