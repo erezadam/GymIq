@@ -97,7 +97,7 @@ export function ExerciseLibrary({
   const dateInputRef = useRef<HTMLInputElement>(null)
   const isFirstRender = useRef(true)
 
-  const { selectedExercises, addExercise, addExercisesFromSet, removeExercise, clearWorkout, scheduledDate, setScheduledDate, sortExercises, setExerciseSetCount, setExerciseEmom, setWorkoutName } = useWorkoutBuilderStore()
+  const { selectedExercises, addExercise, addExercisesFromSet, removeExercise, clearWorkout, scheduledDate, setScheduledDate, sortExercises, setExerciseSetCount, quickPlanSections, activeQuickPlanSectionId, addQuickPlanSection, updateQuickPlanSectionTitle, removeQuickPlanSection, setActiveQuickPlanSection } = useWorkoutBuilderStore()
   const [exerciseOrder, setExerciseOrder] = useState<Record<string, number>>({})
   const [activeTab, setActiveTab] = useState<'library' | 'quickPlan'>('library')
 
@@ -557,7 +557,7 @@ export function ExerciseLibrary({
                     : 'text-on-surface-variant'
                 }`}
               >
-                ספרייה
+                אימון
               </button>
               <button
                 onClick={() => setActiveTab('quickPlan')}
@@ -567,7 +567,7 @@ export function ExerciseLibrary({
                     : 'text-on-surface-variant'
                 }`}
               >
-                תכנון מהיר
+                תכנון חופשי
               </button>
             </div>
           )}
@@ -765,20 +765,19 @@ export function ExerciseLibrary({
       {/* Content - extra padding for fixed footer + safe area */}
       <div style={{ flex: 1, paddingBottom: '120px' }}>
         <div className="max-w-2xl mx-auto">
-          {/* Quick Plan: Title + Selected Exercises */}
+          {/* Quick Plan: Sections with exercises */}
           {activeTab === 'quickPlan' && !programMode && !isAddingToWorkout && (
             <div className="mb-4">
-              <input
-                type="text"
-                placeholder="שם האימון (לא חובה)"
-                className="w-full mb-3 px-4 py-2.5 rounded-xl bg-surface-container text-on-surface text-sm placeholder:text-on-surface-variant border-none outline-none focus:ring-2 focus:ring-primary/40"
-                onChange={(e) => setWorkoutName(e.target.value)}
-              />
               <QuickPlanExerciseList
+                sections={quickPlanSections}
                 exercises={selectedExercises}
+                activeSectionId={activeQuickPlanSectionId}
+                onAddSection={addQuickPlanSection}
+                onUpdateSectionTitle={updateQuickPlanSectionTitle}
+                onRemoveSection={removeQuickPlanSection}
+                onSetActiveSection={setActiveQuickPlanSection}
                 onSetCountChange={setExerciseSetCount}
-                onEmomToggle={setExerciseEmom}
-                onRemove={removeExercise}
+                onRemoveExercise={removeExercise}
               />
             </div>
           )}

@@ -7,6 +7,11 @@ import type { ProgramDay } from '@/domains/trainer/types'
 // Types
 // ============================================
 
+export interface QuickPlanSection {
+  id: string
+  title: string
+}
+
 export interface SelectedExercise {
   exerciseId: string
   exerciseName: string
@@ -19,8 +24,8 @@ export interface SelectedExercise {
   reportType?: ExerciseReportType
   assistanceTypes?: AssistanceType[]  // Available assistance options for this exercise
   availableBands?: string[]           // Available band IDs (if 'bands' is in assistanceTypes)
-  isEmom?: boolean                    // Visual EMOM label (Quick Plan)
   customSetCount?: number             // User-specified set count (Quick Plan)
+  quickPlanSectionId?: string         // Which Quick Plan section this exercise belongs to
   sets: WorkoutSet[]
   restTime: number
   order: number
@@ -30,6 +35,9 @@ interface WorkoutBuilderState {
   workoutName: string
   selectedExercises: SelectedExercise[]
   scheduledDate: Date | null // null = today, Date = scheduled for that date
+  // Quick Plan sections
+  quickPlanSections: QuickPlanSection[]
+  activeQuickPlanSectionId: string | null
   // Trainer program fields
   programId?: string
   programDayLabel?: string
@@ -53,7 +61,10 @@ interface WorkoutBuilderActions {
   loadFromProgram: (day: ProgramDay, programId: string, programName: string) => void
   setTrainerReport: (targetUserId: string, reportedBy: string, reportedByName: string) => void
   setExerciseSetCount: (exerciseId: string, count: number) => void
-  setExerciseEmom: (exerciseId: string, isEmom: boolean) => void
+  addQuickPlanSection: (title: string) => string
+  updateQuickPlanSectionTitle: (sectionId: string, title: string) => void
+  removeQuickPlanSection: (sectionId: string) => void
+  setActiveQuickPlanSection: (sectionId: string | null) => void
   sortExercises: (orderedIds: string[]) => void
   clearWorkout: () => void
   getWorkoutExercises: () => WorkoutExercise[]
@@ -109,6 +120,8 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
   workoutName: '',
   selectedExercises: [],
   scheduledDate: null,
+  quickPlanSections: [],
+  activeQuickPlanSectionId: null,
   programId: undefined,
   programDayLabel: undefined,
   targetUserId: undefined,
@@ -132,6 +145,7 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
         order: state.selectedExercises.length + 1,
         sets: createDefaultSets(),
         restTime: DEFAULT_REST_TIME,
+        quickPlanSectionId: exercise.quickPlanSectionId || state.activeQuickPlanSectionId || undefined,
       }
 
       return { selectedExercises: [...state.selectedExercises, newExercise] }
@@ -294,14 +308,38 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
     }))
   },
 
-  setExerciseEmom: (exerciseId, isEmom) => {
+  addQuickPlanSection: (title) => {
+    const id = `qps_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
     set((state) => ({
-      selectedExercises: updateExerciseInList(
-        state.selectedExercises,
-        exerciseId,
-        (e) => ({ ...e, isEmom })
+      quickPlanSections: [...state.quickPlanSections, { id, title }],
+      activeQuickPlanSectionId: id,
+    }))
+    return id
+  },
+
+  updateQuickPlanSectionTitle: (sectionId, title) => {
+    set((state) => ({
+      quickPlanSections: state.quickPlanSections.map((s) =>
+        s.id === sectionId ? { ...s, title } : s
       ),
     }))
+  },
+
+  removeQuickPlanSection: (sectionId) => {
+    set((state) => ({
+      quickPlanSections: state.quickPlanSections.filter((s) => s.id !== sectionId),
+      selectedExercises: reindexExercises(
+        state.selectedExercises.filter((e) => e.quickPlanSectionId !== sectionId)
+      ),
+      activeQuickPlanSectionId:
+        state.activeQuickPlanSectionId === sectionId
+          ? (state.quickPlanSections.find((s) => s.id !== sectionId)?.id ?? null)
+          : state.activeQuickPlanSectionId,
+    }))
+  },
+
+  setActiveQuickPlanSection: (sectionId) => {
+    set({ activeQuickPlanSectionId: sectionId })
   },
 
   sortExercises: (orderedIds) => {
@@ -328,6 +366,8 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
       workoutName: '',
       selectedExercises: [],
       scheduledDate: null,
+      quickPlanSections: [],
+      activeQuickPlanSectionId: null,
       programId: undefined,
       programDayLabel: undefined,
       targetUserId: undefined,
