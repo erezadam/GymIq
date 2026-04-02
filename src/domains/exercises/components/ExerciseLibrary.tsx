@@ -575,11 +575,11 @@ export function ExerciseLibrary({
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => programMode ? onProgramBack?.() : navigate(isAddingToWorkout ? '/workout/session' : fromAnalysis ? '/analysis?scrollToDetail=true' : '/dashboard')}
+              onClick={() => (programMode || onProgramBack) ? onProgramBack?.() : navigate(isAddingToWorkout ? '/workout/session' : fromAnalysis ? '/analysis?scrollToDetail=true' : '/dashboard')}
               className={`flex items-center gap-1 transition-colors ${fromAnalysis ? 'text-status-error font-bold hover:text-red-300' : 'text-text-secondary hover:text-white'}`}
             >
               <ChevronRight className="w-5 h-5" />
-              <span className="text-sm">{programMode ? 'חזרה לאימון' : isAddingToWorkout ? 'חזרה לאימון' : fromAnalysis ? 'חזרה לניתוח' : 'חזור'}</span>
+              <span className="text-sm">{programMode ? 'חזרה לאימון' : onProgramBack ? 'חזרה לאימון' : isAddingToWorkout ? 'חזרה לאימון' : fromAnalysis ? 'חזרה לניתוח' : 'חזור'}</span>
             </button>
             <h1 className="text-xl font-bold text-white">
               {programMode ? 'בחירת תרגילים לאימון' : isAddingToWorkout ? 'הוספת תרגילים לאימון' : 'בחירת תרגילים'}
@@ -613,7 +613,7 @@ export function ExerciseLibrary({
           )}
 
           {/* Workout Mode Selection - 3 buttons in one row */}
-          {!isAddingToWorkout && !programMode && activeTab === 'library' && (
+          {!isAddingToWorkout && !programMode && !onProgramBack && activeTab === 'library' && (
             <div
               className="mt-3"
               style={{
@@ -1155,6 +1155,24 @@ export function ExerciseLibrary({
               <span className="text-white font-semibold">
                 {effectiveCount > 0
                   ? `${effectiveCount} תרגילים נבחרו`
+                  : 'בחר תרגילים'
+                }
+              </span>
+            </div>
+          ) : !programMode && onProgramBack ? (
+            /* Standalone trainer mode — show "Done" button that goes back to editor */
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => onProgramBack?.()}
+                disabled={selectedExercises.length === 0}
+                className="btn-primary flex items-center gap-2 disabled:opacity-50"
+              >
+                <Check className="w-5 h-5" />
+                <span>סיום ({selectedExercises.length} תרגילים)</span>
+              </button>
+              <span className="text-white font-semibold">
+                {selectedExercises.length > 0
+                  ? `${selectedExercises.length} תרגילים נבחרו`
                   : 'בחר תרגילים'
                 }
               </span>

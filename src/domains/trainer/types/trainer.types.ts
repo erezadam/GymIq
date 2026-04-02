@@ -120,6 +120,7 @@ export interface ProgramExercise {
   supersetGroup?: string // group ID for supersets
   reportType?: string
   assistanceTypes?: string[]
+  sectionTitle?: string // Quick Plan section header (displayed above this exercise)
 }
 
 // ============ MESSAGES ============

@@ -1,14 +1,38 @@
-import { useState } from 'react'
-import { ArrowRight, Save, Loader2, Plus } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ArrowRight, Save, Loader2, Plus, Pencil } from 'lucide-react'
 import { useAuthStore } from '@/domains/authentication/store'
 import { programService } from '../services/programService'
-import type { ProgramDay } from '../types'
+import type { ProgramExercise } from '../types'
+import { ExerciseLibrary } from '@/domains/exercises/components/ExerciseLibrary'
+import { useWorkoutBuilderStore } from '@/domains/workouts/store'
+import type { SelectedExercise } from '@/domains/workouts/store/workoutBuilderStore'
 
 interface StandaloneWorkoutEditorProps {
   traineeId: string
   traineeName: string
   onClose: () => void
   onSaved: () => void
+}
+
+// Convert store exercises to ProgramExercise format
+function toProgramExercises(exercises: SelectedExercise[]): ProgramExercise[] {
+  return exercises.map((ex, index) => ({
+    exerciseId: ex.exerciseId,
+    exerciseName: ex.exerciseName,
+    exerciseNameHe: ex.exerciseNameHe,
+    imageUrl: ex.imageUrl,
+    category: ex.category,
+    primaryMuscle: ex.primaryMuscle,
+    equipment: ex.equipment,
+    complexity: ex.complexity,
+    order: index + 1,
+    targetSets: ex.customSetCount || ex.sets.length || 3,
+    targetReps: '8-12',
+    restTime: ex.restTime || 90,
+    reportType: ex.reportType,
+    assistanceTypes: ex.assistanceTypes as string[] | undefined,
+    sectionTitle: ex.sectionTitle,
+  }))
 }
 
 export function StandaloneWorkoutEditor({
@@ -21,24 +45,26 @@ export function StandaloneWorkoutEditor({
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [continueCreating, setContinueCreating] = useState(false)
+  const [workoutName, setWorkoutName] = useState('')
+  const [showPicker, setShowPicker] = useState(false)
+  const [notes, setNotes] = useState('')
 
-  // Initialize with empty day
-  const [day, setDay] = useState<ProgramDay>({
-    dayLabel: 'אימון',
-    name: '',
-    exercises: [],
-    restDay: false,
-  })
+  const { selectedExercises, clearWorkout, quickPlanSections } = useWorkoutBuilderStore()
+
+  // Clear store when component mounts
+  useEffect(() => {
+    clearWorkout()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleSave = async () => {
     if (!user) return
 
-    // Validation
-    if (!day.name.trim()) {
+    if (!workoutName.trim()) {
       setError('נא להזין שם לאימון')
       return
     }
-    if (day.exercises.length === 0) {
+    if (selectedExercises.length === 0) {
       setError('נא להוסיף לפחות תרגיל אחד')
       return
     }
@@ -47,8 +73,10 @@ export function StandaloneWorkoutEditor({
     setError(null)
 
     try {
+      const programExercises = toProgramExercises(selectedExercises)
+
       // Clean exercises - remove undefined values (Firestore doesn't accept them)
-      const cleanExercises = day.exercises.map(ex => {
+      const cleanExercises = programExercises.map(ex => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const clean: any = {
           exerciseId: ex.exerciseId,
@@ -59,36 +87,31 @@ export function StandaloneWorkoutEditor({
           targetReps: ex.targetReps,
           restTime: ex.restTime,
         }
-        // Only add optional fields if they have values
         if (ex.imageUrl) clean.imageUrl = ex.imageUrl
         if (ex.category) clean.category = ex.category
         if (ex.primaryMuscle) clean.primaryMuscle = ex.primaryMuscle
         if (ex.equipment) clean.equipment = ex.equipment
-        if (ex.targetWeight) clean.targetWeight = ex.targetWeight
         if (ex.notes) clean.notes = ex.notes
-        if (ex.supersetGroup) clean.supersetGroup = ex.supersetGroup
         if (ex.reportType) clean.reportType = ex.reportType
         if (ex.assistanceTypes && ex.assistanceTypes.length > 0) clean.assistanceTypes = ex.assistanceTypes
+        if (ex.sectionTitle) clean.sectionTitle = ex.sectionTitle
         return clean
       })
 
-      // Clean day - build object without undefined values
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const cleanDay: any = {
-        dayLabel: day.name,
-        name: day.name,
+        dayLabel: workoutName,
+        name: workoutName,
         exercises: cleanExercises,
         restDay: false,
       }
-      if (day.notes) cleanDay.notes = day.notes
-      if (day.estimatedDuration) cleanDay.estimatedDuration = day.estimatedDuration
+      if (notes) cleanDay.notes = notes
 
-      // Create a program with single day + type: 'standalone'
       await programService.createProgram({
         trainerId: user.uid,
         traineeId,
         originalTrainerId: user.uid,
-        name: day.name,
+        name: workoutName,
         type: 'standalone',
         status: 'active',
         isModifiedByTrainee: false,
@@ -98,16 +121,13 @@ export function StandaloneWorkoutEditor({
       })
 
       if (continueCreating) {
-        // Reset for another workout
-        setDay({
-          dayLabel: 'אימון',
-          name: '',
-          exercises: [],
-          restDay: false,
-        })
+        clearWorkout()
+        setWorkoutName('')
+        setNotes('')
         setContinueCreating(false)
-        onSaved() // Refresh parent data
+        onSaved()
       } else {
+        clearWorkout()
         onSaved()
         onClose()
       }
@@ -124,15 +144,30 @@ export function StandaloneWorkoutEditor({
     handleSave()
   }
 
-  // Custom back handler for ProgramDayEditor
   const handleBack = () => {
-    if (day.exercises.length > 0) {
+    if (selectedExercises.length > 0) {
       if (!window.confirm('יש תרגילים שלא נשמרו. לצאת בכל זאת?')) {
         return
       }
     }
+    clearWorkout()
     onClose()
   }
+
+  // Show ExerciseLibrary picker (same as trainee sees)
+  if (showPicker) {
+    return (
+      <div className="fixed inset-0 z-50 bg-dark-bg overflow-y-auto">
+        <ExerciseLibrary
+          targetUserId={traineeId}
+          onProgramBack={() => setShowPicker(false)}
+        />
+      </div>
+    )
+  }
+
+  // Build section-grouped display for exercises
+  const exerciseDisplay = buildExerciseDisplay(selectedExercises, quickPlanSections)
 
   return (
     <div className="fixed inset-0 z-50 bg-dark-bg overflow-y-auto">
@@ -166,7 +201,6 @@ export function StandaloneWorkoutEditor({
           </div>
         )}
 
-        {/* Day Editor - reusing existing component */}
         <div className="max-w-2xl mx-auto px-4 py-6">
           {/* Workout name input */}
           <div className="mb-6">
@@ -175,20 +209,87 @@ export function StandaloneWorkoutEditor({
             </label>
             <input
               type="text"
-              value={day.name}
-              onChange={(e) => setDay({ ...day, name: e.target.value })}
+              value={workoutName}
+              onChange={(e) => setWorkoutName(e.target.value)}
               className="input-primary text-lg"
               placeholder="למשל: אימון רגליים, חזה + טרייספס..."
               autoFocus
             />
           </div>
 
-          {/* Exercise editor - inline version of ProgramDayEditor functionality */}
-          <StandaloneExerciseList
-            day={day}
-            onUpdate={setDay}
-            traineeId={traineeId}
-          />
+          {/* Exercise count */}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-text-primary flex items-center gap-2">
+              <span className="w-1 h-5 bg-gradient-primary rounded-full" />
+              תרגילים ({selectedExercises.length})
+            </h3>
+            {selectedExercises.length > 0 && (
+              <button
+                onClick={() => setShowPicker(true)}
+                className="flex items-center gap-1 text-sm text-primary-main hover:text-primary-main/80 transition"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                ערוך תרגילים
+              </button>
+            )}
+          </div>
+
+          {/* Exercise display - with section headers if Quick Plan was used */}
+          {exerciseDisplay.length > 0 ? (
+            <div className="space-y-3">
+              {exerciseDisplay.map((item) => {
+                if (item.type === 'header') {
+                  return (
+                    <div key={item.key} className="flex items-center gap-2 pt-2">
+                      <span className="text-sm font-bold text-primary-main">{item.title}</span>
+                      <div className="flex-1 h-px bg-primary-main/20" />
+                    </div>
+                  )
+                }
+                return (
+                  <div key={item.key} className="text-sm bg-surface-container rounded-xl px-4 py-3 flex items-center justify-between">
+                    <span className="text-on-surface font-medium">{item.exercise!.exerciseNameHe || item.exercise!.exerciseName}</span>
+                    <span className="text-on-surface-variant">
+                      {item.exercise!.customSetCount ?? 3} סטים
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowPicker(true)}
+              className="w-full py-5 border-2 border-dashed border-dark-border rounded-2xl text-on-surface-variant hover:border-primary-main hover:text-primary-main transition flex items-center justify-center gap-3 text-lg"
+            >
+              <Plus className="w-5 h-5" />
+              הוסף תרגילים
+            </button>
+          )}
+
+          {/* Add more exercises button */}
+          {selectedExercises.length > 0 && (
+            <button
+              onClick={() => setShowPicker(true)}
+              className="w-full mt-3 py-3 border-2 border-dashed border-dark-border rounded-2xl text-on-surface-variant hover:border-primary-main hover:text-primary-main transition flex items-center justify-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              הוסף עוד תרגילים
+            </button>
+          )}
+
+          {/* Notes */}
+          <div className="mt-6">
+            <div className="flex items-center gap-2 text-sm text-on-surface-variant mb-2">
+              הערות לאימון:
+            </div>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full bg-dark-surface/50 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary-main placeholder-text-muted resize-none"
+              placeholder="הערות למתאמן..."
+              rows={2}
+            />
+          </div>
         </div>
 
         {/* Fixed bottom actions */}
@@ -196,7 +297,7 @@ export function StandaloneWorkoutEditor({
           <div className="max-w-2xl mx-auto flex gap-3">
             <button
               onClick={handleSaveAndContinue}
-              disabled={isSaving || day.exercises.length === 0}
+              disabled={isSaving || selectedExercises.length === 0}
               className="flex-1 py-3 bg-dark-card border border-primary-main/30 rounded-xl text-primary-main font-medium flex items-center justify-center gap-2 hover:bg-primary-main/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="w-5 h-5" />
@@ -204,7 +305,7 @@ export function StandaloneWorkoutEditor({
             </button>
             <button
               onClick={handleSave}
-              disabled={isSaving || day.exercises.length === 0}
+              disabled={isSaving || selectedExercises.length === 0}
               className="flex-1 py-3 bg-gradient-to-r from-primary-main to-status-info rounded-xl text-white font-medium flex items-center justify-center gap-2 hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? (
@@ -226,126 +327,45 @@ export function StandaloneWorkoutEditor({
   )
 }
 
-// Simplified exercise list for standalone workouts
-import { ProgramExerciseEditor } from './ProgramBuilder/ProgramExerciseEditor'
-import { ExerciseLibrary } from '@/domains/exercises/components/ExerciseLibrary'
-import type { ProgramExercise } from '../types'
-import type { Exercise } from '@/domains/exercises/types'
+// Build a flat display list with section headers and exercises
+type DisplayItem =
+  | { type: 'header'; key: string; title: string; exercise?: undefined }
+  | { type: 'exercise'; key: string; exercise: SelectedExercise; title?: undefined }
 
-interface StandaloneExerciseListProps {
-  day: ProgramDay
-  onUpdate: (day: ProgramDay) => void
-  traineeId: string
-}
+function buildExerciseDisplay(
+  exercises: SelectedExercise[],
+  sections: { id: string; title: string }[]
+): DisplayItem[] {
+  if (sections.length === 0) {
+    // No sections — flat list
+    return exercises.map((ex) => ({
+      type: 'exercise' as const,
+      key: ex.exerciseId,
+      exercise: ex,
+    }))
+  }
 
-function StandaloneExerciseList({ day, onUpdate, traineeId }: StandaloneExerciseListProps) {
-  const [showPicker, setShowPicker] = useState(false)
-
-  const handleExerciseToggle = (exercise: Exercise, isAdding: boolean) => {
-    if (isAdding) {
-      const alreadyExists = day.exercises.some(e => e.exerciseId === exercise.id)
-      if (alreadyExists) return
-
-      const newExercise: ProgramExercise = {
-        exerciseId: exercise.id,
-        exerciseName: exercise.name,
-        exerciseNameHe: exercise.nameHe,
-        imageUrl: exercise.imageUrl,
-        category: exercise.category,
-        primaryMuscle: exercise.primaryMuscle,
-        equipment: exercise.equipment,
-        order: day.exercises.length + 1,
-        targetSets: 3,
-        targetReps: '8-12',
-        restTime: 90,
-        reportType: exercise.reportType,
-        assistanceTypes: exercise.assistanceTypes,
+  // Group exercises by section
+  const items: DisplayItem[] = []
+  for (const section of sections) {
+    const sectionExercises = exercises.filter(
+      (e) => e.quickPlanSectionId === section.id
+    )
+    if (sectionExercises.length > 0 || sections.length > 0) {
+      items.push({ type: 'header', key: `header_${section.id}`, title: section.title })
+      for (const ex of sectionExercises) {
+        items.push({ type: 'exercise', key: ex.exerciseId, exercise: ex })
       }
-      onUpdate({
-        ...day,
-        exercises: [...day.exercises, newExercise],
-      })
-    } else {
-      const updated = day.exercises.filter(e => e.exerciseId !== exercise.id)
-      updated.forEach((ex, i) => (ex.order = i + 1))
-      onUpdate({ ...day, exercises: updated })
     }
   }
 
-  const updateExercise = (index: number, updates: Partial<ProgramExercise>) => {
-    const updated = [...day.exercises]
-    updated[index] = { ...updated[index], ...updates }
-    onUpdate({ ...day, exercises: updated })
-  }
-
-  const removeExercise = (index: number) => {
-    const updated = day.exercises.filter((_, i) => i !== index)
-    updated.forEach((ex, i) => (ex.order = i + 1))
-    onUpdate({ ...day, exercises: updated })
-  }
-
-  // Full-screen ExerciseLibrary picker
-  if (showPicker) {
-    return (
-      <div className="fixed inset-0 z-50 bg-dark-bg overflow-y-auto">
-        <ExerciseLibrary
-          programMode
-          programExerciseIds={day.exercises.map(e => e.exerciseId)}
-          onProgramExerciseToggle={handleExerciseToggle}
-          onProgramBack={() => setShowPicker(false)}
-          targetUserId={traineeId}
-        />
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Exercise count */}
-      <div className="flex items-center justify-between">
-        <h3 className="font-bold text-text-primary flex items-center gap-2">
-          <span className="w-1 h-5 bg-gradient-primary rounded-full" />
-          תרגילים ({day.exercises.length})
-        </h3>
-        {day.exercises.length > 0 && (
-          <div className="text-sm text-on-surface-variant">
-            ~{Math.round(day.exercises.reduce((sum, ex) => sum + ex.targetSets * (45 + ex.restTime), 0) / 60 + day.exercises.length * 2)} דקות
-          </div>
-        )}
-      </div>
-
-      {/* Exercise list */}
-      {day.exercises.map((exercise, index) => (
-        <ProgramExerciseEditor
-          key={`${exercise.exerciseId}-${index}`}
-          exercise={exercise}
-          onUpdate={(updates) => updateExercise(index, updates)}
-          onRemove={() => removeExercise(index)}
-        />
-      ))}
-
-      {/* Add exercise button */}
-      <button
-        onClick={() => setShowPicker(true)}
-        className="w-full py-5 border-2 border-dashed border-dark-border rounded-2xl text-on-surface-variant hover:border-primary-main hover:text-primary-main transition flex items-center justify-center gap-3 text-lg"
-      >
-        <Plus className="w-5 h-5" />
-        הוסף תרגיל
-      </button>
-
-      {/* Notes */}
-      <div>
-        <div className="flex items-center gap-2 text-sm text-on-surface-variant mb-2">
-          📝 הערות לאימון:
-        </div>
-        <textarea
-          value={day.notes || ''}
-          onChange={(e) => onUpdate({ ...day, notes: e.target.value || undefined })}
-          className="w-full bg-dark-surface/50 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary-main placeholder-text-muted resize-none"
-          placeholder="הערות למתאמן..."
-          rows={2}
-        />
-      </div>
-    </div>
+  // Any exercises without a section
+  const unsectioned = exercises.filter(
+    (e) => !e.quickPlanSectionId || !sections.some((s) => s.id === e.quickPlanSectionId)
   )
+  for (const ex of unsectioned) {
+    items.push({ type: 'exercise', key: ex.exerciseId, exercise: ex })
+  }
+
+  return items
 }
