@@ -26,6 +26,7 @@ export interface SelectedExercise {
   availableBands?: string[]           // Available band IDs (if 'bands' is in assistanceTypes)
   customSetCount?: number             // User-specified set count (Quick Plan)
   quickPlanSectionId?: string         // Which Quick Plan section this exercise belongs to
+  sectionTitle?: string               // Section title (set on first exercise of each section before workout start)
   sets: WorkoutSet[]
   restTime: number
   order: number

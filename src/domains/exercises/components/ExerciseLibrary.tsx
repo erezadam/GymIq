@@ -399,6 +399,10 @@ export function ExerciseLibrary({
       onProgramExerciseToggle?.(exercise, !isSelected)
       return
     }
+    // Quick Plan: must have an active section to add exercises
+    if (activeTab === 'quickPlan' && !activeQuickPlanSectionId) {
+      return // Can't add without a section
+    }
     const isSelected = selectedExercises.some((e) => e.exerciseId === exercise.id)
     if (isSelected) {
       setExerciseOrder(prev => { const next = { ...prev }; delete next[exercise.id]; return next })
@@ -416,6 +420,8 @@ export function ExerciseLibrary({
         reportType: exercise.reportType,
         assistanceTypes: exercise.assistanceTypes,   // Pass assistance options
         availableBands: exercise.availableBands,     // Pass available bands
+        // Quick Plan: explicitly assign to active section
+        ...(activeTab === 'quickPlan' && activeQuickPlanSectionId ? { quickPlanSectionId: activeQuickPlanSectionId } : {}),
       })
     }
   }
@@ -450,8 +456,42 @@ export function ExerciseLibrary({
   const handleStartWorkout = async () => {
     if (selectedExercises.length === 0) return
 
-    // Apply user-defined order to the store before starting
-    if (Object.keys(exerciseOrder).length > 0) {
+    // Quick Plan: sort exercises by section order, then by primaryMuscle within section
+    // Also assign section titles to the first exercise of each section
+    if (activeTab === 'quickPlan' && quickPlanSections.length > 0) {
+      const sectionOrder = new Map(quickPlanSections.map((s, i) => [s.id, i]))
+      const sectionTitleMap = new Map(quickPlanSections.map((s) => [s.id, s.title]))
+      const sorted = [...selectedExercises]
+        .sort((a, b) => {
+          const sectionA = sectionOrder.get(a.quickPlanSectionId || '') ?? 999
+          const sectionB = sectionOrder.get(b.quickPlanSectionId || '') ?? 999
+          if (sectionA !== sectionB) return sectionA - sectionB
+          // Within same section, sort by primaryMuscle
+          return (a.primaryMuscle || '').localeCompare(b.primaryMuscle || '')
+        })
+      // Assign section title to first exercise of each section
+      const seenSections = new Set<string>()
+      for (const ex of sorted) {
+        const sid = ex.quickPlanSectionId
+        if (sid && !seenSections.has(sid)) {
+          seenSections.add(sid)
+          ex.sectionTitle = sectionTitleMap.get(sid) || ''
+        } else {
+          ex.sectionTitle = undefined
+        }
+      }
+      sortExercises(sorted.map(e => e.exerciseId))
+      // Update section titles on store exercises
+      const { selectedExercises: currentExercises } = useWorkoutBuilderStore.getState()
+      const titleMap = new Map(sorted.map(e => [e.exerciseId, e.sectionTitle]))
+      useWorkoutBuilderStore.setState({
+        selectedExercises: currentExercises.map(e => ({
+          ...e,
+          sectionTitle: titleMap.get(e.exerciseId),
+        }))
+      })
+    } else if (Object.keys(exerciseOrder).length > 0) {
+      // Apply user-defined order to the store before starting
       sortExercises(getOrderedExerciseIds())
     }
 

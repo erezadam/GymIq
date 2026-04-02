@@ -785,6 +785,7 @@ export function useActiveWorkout() {
             assistanceTypes: ex.assistanceTypes,    // Pass assistance options
             availableBands: ex.availableBands,      // Pass available bands
             assistanceType: autoSelectedAssistanceType, // Auto-select if only one option
+            sectionTitle: ex.sectionTitle,              // Quick Plan section header
             isExpanded: false, // All exercises start collapsed
             isCompleted: continueExercise?.isCompleted || false,
             reportedSets,
@@ -1687,6 +1688,37 @@ export function useActiveWorkout() {
   const exercisesByMuscle = useMemo((): MuscleGroupExercises[] => {
     if (!workout) return []
 
+    // Quick Plan: if any exercise has a sectionTitle, group by sections (preserve order)
+    const hasQuickPlanSections = workout.exercises.some((ex) => ex.sectionTitle)
+    if (hasQuickPlanSections) {
+      const sections: MuscleGroupExercises[] = []
+      let currentSection: MuscleGroupExercises | null = null
+
+      for (const ex of workout.exercises) {
+        if (ex.sectionTitle) {
+          currentSection = {
+            muscleGroup: `section_${sections.length}`,
+            muscleGroupHe: ex.sectionTitle,
+            exercises: [ex],
+          }
+          sections.push(currentSection)
+        } else if (currentSection) {
+          currentSection.exercises.push(ex)
+        } else {
+          // Exercise without a section (shouldn't happen, but handle gracefully)
+          currentSection = {
+            muscleGroup: 'unsectioned',
+            muscleGroupHe: 'תרגילים',
+            exercises: [ex],
+          }
+          sections.push(currentSection)
+        }
+      }
+
+      return sections
+    }
+
+    // Standard: group by muscle
     const groups: Record<string, ActiveWorkoutExercise[]> = {}
 
     workout.exercises.forEach((ex) => {
