@@ -21,16 +21,22 @@
   - 10 screenshots ויזואליים לתיעוד הזרימה
   - 3 tests passed (33.4s)
 
-- **תכנון מהיר (Quick Plan)**: מסלול קיצור חדש בתוך ExerciseLibrary לבניית אימון מהירה
-  - Tab חדש "תכנון מהיר" לצד "ספרייה" — toggle בין שני המצבים
-  - שדה כותרת חופשי (לא חובה) בראש מצב תכנון מהיר
+- **תכנון חופשי (Free Plan)**: מסלול חדש בתוך ExerciseLibrary לבניית אימון מבוסס סקציות
+  - Tab חדש "תכנון חופשי" לצד "אימון" — toggle בין שני המצבים
+  - מבנה סקציות: כותרת חופשית → תרגילים מתחת → כותרת נוספת → תרגילים
+  - כותרות חופשיות (EMOM, סופר-סט, מעגלי וכו׳ נכתבים בכותרת)
   - בחירת כמות סטים (1-20) לכל תרגיל עם stepper (+/-)
-  - סימון EMOM ויזואלי על תרגילים (תווית בלבד, ללא לוגיקה מיוחדת)
-  - הסרת תרגילים מהרשימה בלחיצה
-  - כפתור "התחל אימון" → ישירות ל-ActiveWorkoutScreen עם מספר סטים ריקים כפי שהוגדר
-  - קומפוננטה חדשה: `QuickPlanExerciseList.tsx`
-  - Store actions חדשים: `setExerciseSetCount`, `setExerciseEmom`
-  - `useActiveWorkout` מכבד `customSetCount` מה-store (ברירת מחדל נשארת 1 סט ריק)
+  - הסרת תרגילים ועריכת כותרות
+  - כפתור "התחל אימון" → ActiveWorkoutScreen עם מספר סטים ריקים כפי שהוגדר
+  - אימון פעיל מציג כותרות סקציות כהפרדה (במקום קיבוץ לפי שריר)
+  - קומפוננטה חדשה: `QuickPlanExerciseList.tsx` (סקציות + תרגילים)
+  - Store: `QuickPlanSection`, `addQuickPlanSection`, `setExerciseSetCount`, `activeQuickPlanSectionId`
+  - `useActiveWorkout` מכבד `customSetCount` + `sectionTitle`
+- **איחוד מסך בחירת תרגילים — מאמן ומתאמן**: מסך זהה לשניהם
+  - StandaloneWorkoutEditor משתמש ב-ExerciseLibrary בלי programMode
+  - מאמן רואה טאבים "אימון" / "תכנון חופשי" — בדיוק כמו המתאמן
+  - `sectionTitle` נשמר ב-ProgramExercise ועובר דרך `loadFromProgram` → store → ActiveWorkoutScreen
+  - מתאמן שמתחיל אימון מתוכנית מאמן רואה את אותו מבנה סקציות
 
 ### Changed
 - **CLAUDE.md**: נוסף חוק ברזל: **כיסוי מלא — משתמש ומאמן** — בכל פיתוח פיצ'ר חדש או שינוי בתהליך בחירת תרגילים / בניית אימון / סדר תרגילים, חובה לשאול לפני תחילת הקידוד אם השינוי חל גם על מודול המאמן (ProgramBuilder) ועל זרימת המתאמן (TraineeProgramView → workoutBuilderStore). המחדל הוא כן.
