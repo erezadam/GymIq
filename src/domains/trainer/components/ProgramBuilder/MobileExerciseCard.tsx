@@ -18,8 +18,27 @@ export function MobileExerciseCard({
 
   return (
     <div className="bg-dark-card/80 backdrop-blur-lg border border-white/10 rounded-xl p-3">
-      {/* Top row: image + name + menu */}
+      {/* Top row: order + image + name + menu */}
       <div className="flex items-center gap-3">
+        {/* Order number input */}
+        <input
+          type="number"
+          min={1}
+          max={99}
+          value={exercise.order || ''}
+          onChange={(e) => {
+            const val = e.target.value
+            if (val === '') {
+              onUpdate({ order: 0 })
+            } else {
+              const num = parseInt(val)
+              if (num >= 1 && num <= 99) {
+                onUpdate({ order: num })
+              }
+            }
+          }}
+          className="w-10 h-10 text-center rounded-lg bg-background-elevated border border-border-default text-primary-main font-bold text-sm focus:border-primary-main focus:outline-none flex-shrink-0"
+        />
         {exercise.imageUrl ? (
           <img
             src={exercise.imageUrl}

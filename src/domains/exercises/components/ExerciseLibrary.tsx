@@ -11,6 +11,7 @@ import { getMuscles, getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { getEquipment } from '@/lib/firebase/equipment'
 import { MuscleIcon } from '@/shared/components/MuscleIcon'
 import RecommendedSets from './RecommendedSets'
+import QuickPlanExerciseList from './QuickPlanExerciseList'
 import { saveWorkoutHistory, getRecentlyDoneExerciseIds, getWeeklyMuscleSets } from '@/lib/firebase/workoutHistory'
 import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '@/domains/workouts/types/active-workout.types'
@@ -50,6 +51,7 @@ export interface ExerciseLibraryProps {
   programOtherDaysExercises?: ProgramDayExerciseInfo[] // Exercises from other days in the same program
   initialMuscleFilter?: string // Pre-select muscle filter (e.g. from trainer's muscle analysis)
   initialSubMuscleFilter?: string // Pre-select sub-muscle filter
+  onProgramReorder?: (orderedExerciseIds: string[]) => void // Callback to reorder exercises in program day
 }
 
 export function ExerciseLibrary({
@@ -61,6 +63,7 @@ export function ExerciseLibrary({
   programOtherDaysExercises = [],
   initialMuscleFilter,
   initialSubMuscleFilter,
+  onProgramReorder,
 }: ExerciseLibraryProps = {}) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -94,7 +97,9 @@ export function ExerciseLibrary({
   const dateInputRef = useRef<HTMLInputElement>(null)
   const isFirstRender = useRef(true)
 
-  const { selectedExercises, addExercise, addExercisesFromSet, removeExercise, clearWorkout, scheduledDate, setScheduledDate } = useWorkoutBuilderStore()
+  const { selectedExercises, addExercise, addExercisesFromSet, removeExercise, clearWorkout, scheduledDate, setScheduledDate, sortExercises, setExerciseSetCount, setExerciseEmom, setWorkoutName } = useWorkoutBuilderStore()
+  const [exerciseOrder, setExerciseOrder] = useState<Record<string, number>>({})
+  const [activeTab, setActiveTab] = useState<'library' | 'quickPlan'>('library')
 
   // Program mode: computed selection state
   const effectiveSelectedIds = useMemo(() => {
@@ -340,50 +345,63 @@ export function ExerciseLibrary({
 
   // Selected exercises grouped by muscle for the top section
   const selectedExercisesGrouped = useMemo(() => {
-    if (programMode) return []
-    const selectedIds = new Set(selectedExercises.map(e => e.exerciseId))
-    if (selectedIds.size === 0) return []
+    if (effectiveSelectedIds.size === 0) return []
 
     // Get full Exercise objects for selected exercises
-    const selectedFull = exercises.filter(ex => selectedIds.has(ex.id))
+    const selectedFull = exercises.filter(ex => effectiveSelectedIds.has(ex.id))
 
-    // Group by category
+    // Split into numbered (user-assigned order) and unnumbered
+    const numbered = selectedFull.filter(ex => exerciseOrder[ex.id] !== undefined)
+    const unnumbered = selectedFull.filter(ex => exerciseOrder[ex.id] === undefined)
+
+    // Numbered: sorted by user number, shown as a single group at top
+    numbered.sort((a, b) => (exerciseOrder[a.id] || 0) - (exerciseOrder[b.id] || 0))
+
+    // Unnumbered: group by category, sort within by Hebrew name A-Z
     const groups = new Map<string, Exercise[]>()
-    for (const ex of selectedFull) {
+    for (const ex of unnumbered) {
       const cat = ex.category || 'other'
       if (!groups.has(cat)) groups.set(cat, [])
       groups.get(cat)!.push(ex)
     }
-
-    // Sort exercises within each group by Hebrew name A-Z
     for (const exList of groups.values()) {
       exList.sort((a, b) => (a.nameHe || '').trim().localeCompare((b.nameHe || '').trim(), 'he'))
     }
 
-    // Sort groups by Hebrew muscle name
-    return Array.from(groups.entries())
+    const unnumberedGroups = Array.from(groups.entries())
       .map(([cat, exList]) => ({
         category: cat,
         categoryNameHe: getMuscleNameHe(cat, dynamicMuscleNames),
         exercises: exList,
       }))
       .sort((a, b) => a.categoryNameHe.trim().localeCompare(b.categoryNameHe.trim(), 'he'))
-  }, [exercises, selectedExercises, programMode, dynamicMuscleNames])
+
+    if (numbered.length > 0) {
+      return [
+        { category: '__ordered__', categoryNameHe: '', exercises: numbered },
+        ...unnumberedGroups,
+      ]
+    }
+    return unnumberedGroups
+  }, [exercises, effectiveSelectedIds, dynamicMuscleNames, exerciseOrder])
 
   // Unselected exercises from the filtered list (to avoid duplication with selected section)
   const unselectedFilteredExercises = useMemo(() => {
-    if (programMode) return filteredExercises
     return filteredExercises.filter(ex => !effectiveSelectedIds.has(ex.id))
-  }, [filteredExercises, effectiveSelectedIds, programMode])
+  }, [filteredExercises, effectiveSelectedIds])
 
   const handleToggleExercise = (exercise: Exercise) => {
     if (programMode) {
       const isSelected = effectiveSelectedIds.has(exercise.id)
+      if (isSelected) {
+        setExerciseOrder(prev => { const next = { ...prev }; delete next[exercise.id]; return next })
+      }
       onProgramExerciseToggle?.(exercise, !isSelected)
       return
     }
     const isSelected = selectedExercises.some((e) => e.exerciseId === exercise.id)
     if (isSelected) {
+      setExerciseOrder(prev => { const next = { ...prev }; delete next[exercise.id]; return next })
       removeExercise(exercise.id)
     } else {
       addExercise({
@@ -420,8 +438,22 @@ export function ExerciseLibrary({
     addExercisesFromSet(mapped)
   }
 
+  // Compute ordered exercise IDs from exerciseOrder state
+  const getOrderedExerciseIds = () => {
+    const allIds = [...effectiveSelectedIds]
+    const numbered = allIds.filter(id => exerciseOrder[id] !== undefined)
+      .sort((a, b) => exerciseOrder[a] - exerciseOrder[b])
+    const unnumbered = allIds.filter(id => exerciseOrder[id] === undefined)
+    return [...numbered, ...unnumbered]
+  }
+
   const handleStartWorkout = async () => {
     if (selectedExercises.length === 0) return
+
+    // Apply user-defined order to the store before starting
+    if (Object.keys(exerciseOrder).length > 0) {
+      sortExercises(getOrderedExerciseIds())
+    }
 
     if (isAddingToWorkout) {
       // Adding exercises to existing workout - DON'T clear localStorage!
@@ -514,8 +546,34 @@ export function ExerciseLibrary({
             </h1>
           </div>
 
+          {/* Tab Toggle: Library / Quick Plan */}
+          {!programMode && !isAddingToWorkout && (
+            <div className="mt-3 flex gap-1 rounded-xl bg-surface-container p-1">
+              <button
+                onClick={() => setActiveTab('library')}
+                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                  activeTab === 'library'
+                    ? 'bg-primary/20 text-primary'
+                    : 'text-on-surface-variant'
+                }`}
+              >
+                ספרייה
+              </button>
+              <button
+                onClick={() => setActiveTab('quickPlan')}
+                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                  activeTab === 'quickPlan'
+                    ? 'bg-primary/20 text-primary'
+                    : 'text-on-surface-variant'
+                }`}
+              >
+                תכנון מהיר
+              </button>
+            </div>
+          )}
+
           {/* Workout Mode Selection - 3 buttons in one row */}
-          {!isAddingToWorkout && !programMode && (
+          {!isAddingToWorkout && !programMode && activeTab === 'library' && (
             <div
               className="mt-3"
               style={{
@@ -707,6 +765,24 @@ export function ExerciseLibrary({
       {/* Content - extra padding for fixed footer + safe area */}
       <div style={{ flex: 1, paddingBottom: '120px' }}>
         <div className="max-w-2xl mx-auto">
+          {/* Quick Plan: Title + Selected Exercises */}
+          {activeTab === 'quickPlan' && !programMode && !isAddingToWorkout && (
+            <div className="mb-4">
+              <input
+                type="text"
+                placeholder="שם האימון (לא חובה)"
+                className="w-full mb-3 px-4 py-2.5 rounded-xl bg-surface-container text-on-surface text-sm placeholder:text-on-surface-variant border-none outline-none focus:ring-2 focus:ring-primary/40"
+                onChange={(e) => setWorkoutName(e.target.value)}
+              />
+              <QuickPlanExerciseList
+                exercises={selectedExercises}
+                onSetCountChange={setExerciseSetCount}
+                onEmomToggle={setExerciseEmom}
+                onRemove={removeExercise}
+              />
+            </div>
+          )}
+
           {/* Muscle Title with Count */}
           <div className="mb-4">
             <h2 className="text-lg font-bold text-white">
@@ -782,7 +858,7 @@ export function ExerciseLibrary({
           </div>
 
           {/* Recommended Sets */}
-          {!loading && !programMode && (
+          {!loading && !programMode && activeTab === 'library' && (
             <RecommendedSets
               muscleGroup={selectedPrimaryMuscle}
               onSelectSet={handleSelectSet}
@@ -804,16 +880,18 @@ export function ExerciseLibrary({
             </div>
           ) : (
             <>
-              {/* Selected Exercises Section - always on top, grouped by muscle */}
-              {selectedExercisesGrouped.length > 0 && (
+              {/* Selected Exercises Section - always on top, grouped by muscle (hidden in Quick Plan mode) */}
+              {selectedExercisesGrouped.length > 0 && activeTab === 'library' && (
                 <div className="mb-4">
                   <h3 className="text-sm font-bold text-primary-main mb-2">
-                    נבחרו ({selectedExercises.length})
+                    נבחרו ({effectiveCount})
                   </h3>
                   <div className="space-y-3">
                     {selectedExercisesGrouped.map((group) => (
                       <div key={group.category}>
-                        <p className="text-xs text-on-surface-variant mb-1 font-medium">{group.categoryNameHe}</p>
+                        {group.category !== '__ordered__' && (
+                          <p className="text-xs text-on-surface-variant mb-1 font-medium">{group.categoryNameHe}</p>
+                        )}
                         <div className="space-y-1.5">
                           {group.exercises.map((exercise) => {
                             const wasInLastWorkout = recentlyDoneExerciseIds.has(exercise.id)
@@ -881,6 +959,27 @@ export function ExerciseLibrary({
                                     }}
                                   />
                                 </div>
+
+                                {/* Order number input */}
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={99}
+                                  value={exerciseOrder[exercise.id] ?? ''}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => {
+                                    const val = e.target.value
+                                    if (val === '') {
+                                      setExerciseOrder(prev => { const next = { ...prev }; delete next[exercise.id]; return next })
+                                    } else {
+                                      const num = parseInt(val)
+                                      if (num >= 1 && num <= 99) {
+                                        setExerciseOrder(prev => ({ ...prev, [exercise.id]: num }))
+                                      }
+                                    }
+                                  }}
+                                  className="w-10 h-10 text-center rounded-lg bg-background-elevated border border-border-default text-primary-main font-bold text-sm focus:border-primary-main focus:outline-none flex-shrink-0"
+                                />
                               </div>
                             )
                           })}
@@ -1003,7 +1102,12 @@ export function ExerciseLibrary({
           {programMode ? (
             <div className="flex items-center justify-between">
               <button
-                onClick={onProgramBack}
+                onClick={() => {
+                  if (Object.keys(exerciseOrder).length > 0 && onProgramReorder) {
+                    onProgramReorder(getOrderedExerciseIds())
+                  }
+                  onProgramBack?.()
+                }}
                 className="btn-primary flex items-center gap-2"
               >
                 <Check className="w-5 h-5" />
@@ -1076,6 +1180,7 @@ export function ExerciseLibrary({
                     clearWorkout()
                     setScheduledDate(null)
                     setIsScheduleForLater(false)
+                    setExerciseOrder({})
                   }}
                   className="text-status-error text-sm hover:underline"
                 >

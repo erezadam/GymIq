@@ -91,13 +91,17 @@ export function ProgramDayEditor({ day, dayIndex, onUpdate, onBack, traineeId, p
     })
   }
 
+  // Sort exercises by order before grouping
+  const sortedExercises = [...day.exercises].sort((a, b) => (a.order || Infinity) - (b.order || Infinity))
+
   // Group exercises for superset display
   type ExerciseGroup = {
     supersetGroup: string | null
     exercises: { exercise: ProgramExercise; originalIndex: number }[]
   }
   const exerciseGroups: ExerciseGroup[] = []
-  day.exercises.forEach((exercise, index) => {
+  sortedExercises.forEach((exercise) => {
+    const index = day.exercises.indexOf(exercise)
     const group = exercise.supersetGroup || null
     if (group) {
       const existing = exerciseGroups.find(g => g.supersetGroup === group)
@@ -111,6 +115,23 @@ export function ProgramDayEditor({ day, dayIndex, onUpdate, onBack, traineeId, p
     }
   })
 
+  const handleProgramReorder = (orderedIds: string[]) => {
+    const exerciseMap = new Map(day.exercises.map(e => [e.exerciseId, e]))
+    const reordered: ProgramExercise[] = []
+    for (const id of orderedIds) {
+      const ex = exerciseMap.get(id)
+      if (ex) {
+        reordered.push(ex)
+        exerciseMap.delete(id)
+      }
+    }
+    for (const ex of exerciseMap.values()) {
+      reordered.push(ex)
+    }
+    reordered.forEach((ex, i) => (ex.order = i + 1))
+    onUpdate({ ...day, exercises: reordered })
+  }
+
   // Full-screen ExerciseLibrary picker
   if (showPicker) {
     return (
@@ -120,6 +141,7 @@ export function ProgramDayEditor({ day, dayIndex, onUpdate, onBack, traineeId, p
           programExerciseIds={day.exercises.map(e => e.exerciseId)}
           onProgramExerciseToggle={handleExerciseToggle}
           onProgramBack={() => setShowPicker(false)}
+          onProgramReorder={handleProgramReorder}
           targetUserId={traineeId}
           programOtherDaysExercises={programOtherDaysExercises}
         />

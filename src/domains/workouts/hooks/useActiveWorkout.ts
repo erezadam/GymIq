@@ -754,15 +754,14 @@ export function useActiveWorkout() {
               assistanceBand: set.assistanceBand,
             }))
           } else {
-            // Default: one empty set
-            reportedSets = [
-              {
-                id: `set_${Date.now()}_${index}_1`,
-                setNumber: 1,
-                weight: 0,
-                reps: 0,
-              },
-            ]
+            // Default: one empty set (or customSetCount from Quick Plan)
+            const setCount = ex.customSetCount || 1
+            reportedSets = Array.from({ length: setCount }, (_, setIndex) => ({
+              id: `set_${Date.now()}_${index}_${setIndex}`,
+              setNumber: setIndex + 1,
+              weight: 0,
+              reps: 0,
+            }))
           }
 
           // Auto-select assistance type if only one option

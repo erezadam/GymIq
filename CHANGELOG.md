@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-04-02
+
+### Added
+- **מספור ידני של תרגילים**: תיבת מספר על כל תרגיל נבחר ב-ExerciseLibrary — מאפשרת קביעת סדר תרגילים באימון
+  - תרגילים ממוספרים מוצגים ראשונים (סדר עולה), השאר לפי שריר + א-ב
+  - עובד במודול משתמש (workoutBuilderStore) ובמודול מאמן (ProgramBuilder — desktop + mobile)
+  - ניקוי אוטומטי בביטול בחירה ובלחיצת "נקה"
+  - `sortExercises` חדש ב-workoutBuilderStore לסידור מחדש לפי רשימת IDs
+  - `onProgramReorder` prop חדש ב-ExerciseLibrary להעברת סדר למאמן
+- **מספור ידני בתוכנית מאמן (ProgramBuilder)**: תיבת מספר order על כל תרגיל ב-ProgramDayEditor (desktop) וב-MobileExerciseCard (mobile)
+  - שינוי מספר מעדכן את `order` על התרגיל ומשנה את סדר ההצגה בזמן אמת
+  - `order` נשמר ב-Firestore כחלק מ-`weeklyStructure[].exercises[]`
+  - TraineeProgramView, ProgramDayDetail, TrainerProgramCard — ממיינים לפי `order` (backward compatible)
+  - ProgramExerciseCard מציג `exercise.order` במקום אינדקס מערך
+  - `loadFromProgram` — ממיין לפי `order` ומעביר ל-workoutBuilderStore
+
+- **תכנון מהיר (Quick Plan)**: מסלול קיצור חדש בתוך ExerciseLibrary לבניית אימון מהירה
+  - Tab חדש "תכנון מהיר" לצד "ספרייה" — toggle בין שני המצבים
+  - שדה כותרת חופשי (לא חובה) בראש מצב תכנון מהיר
+  - בחירת כמות סטים (1-20) לכל תרגיל עם stepper (+/-)
+  - סימון EMOM ויזואלי על תרגילים (תווית בלבד, ללא לוגיקה מיוחדת)
+  - הסרת תרגילים מהרשימה בלחיצה
+  - כפתור "התחל אימון" → ישירות ל-ActiveWorkoutScreen עם מספר סטים ריקים כפי שהוגדר
+  - קומפוננטה חדשה: `QuickPlanExerciseList.tsx`
+  - Store actions חדשים: `setExerciseSetCount`, `setExerciseEmom`
+  - `useActiveWorkout` מכבד `customSetCount` מה-store (ברירת מחדל נשארת 1 סט ריק)
+
+### Changed
+- **CLAUDE.md**: נוסף חוק ברזל: **כיסוי מלא — משתמש ומאמן** — בכל פיתוח פיצ'ר חדש או שינוי בתהליך בחירת תרגילים / בניית אימון / סדר תרגילים, חובה לשאול לפני תחילת הקידוד אם השינוי חל גם על מודול המאמן (ProgramBuilder) ועל זרימת המתאמן (TraineeProgramView → workoutBuilderStore). המחדל הוא כן.
+
 ## 2026-03-23
 
 ### Changed

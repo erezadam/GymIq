@@ -186,7 +186,7 @@ export function TrainerProgramCard({ program, onDisconnected }: TrainerProgramCa
                   <div className="border-t border-accent-orange/20 bg-dark-surface/30">
                     <div className="p-3">
                       <div className="rounded-xl bg-dark-surface/50 overflow-hidden">
-                        {day.exercises.map((exercise, i) => (
+                        {[...day.exercises].sort((a, b) => (a.order || Infinity) - (b.order || Infinity)).map((exercise, i) => (
                           <ProgramExerciseCard
                             key={`${exercise.exerciseId}-${i}`}
                             exercise={exercise}

@@ -19,6 +19,8 @@ export interface SelectedExercise {
   reportType?: ExerciseReportType
   assistanceTypes?: AssistanceType[]  // Available assistance options for this exercise
   availableBands?: string[]           // Available band IDs (if 'bands' is in assistanceTypes)
+  isEmom?: boolean                    // Visual EMOM label (Quick Plan)
+  customSetCount?: number             // User-specified set count (Quick Plan)
   sets: WorkoutSet[]
   restTime: number
   order: number
@@ -50,6 +52,9 @@ interface WorkoutBuilderActions {
   updateSet: (exerciseId: string, setIndex: number, updates: Partial<WorkoutSet>) => void
   loadFromProgram: (day: ProgramDay, programId: string, programName: string) => void
   setTrainerReport: (targetUserId: string, reportedBy: string, reportedByName: string) => void
+  setExerciseSetCount: (exerciseId: string, count: number) => void
+  setExerciseEmom: (exerciseId: string, isEmom: boolean) => void
+  sortExercises: (orderedIds: string[]) => void
   clearWorkout: () => void
   getWorkoutExercises: () => WorkoutExercise[]
 }
@@ -225,7 +230,8 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
   },
 
   loadFromProgram: (day, programId, programName) => {
-    const exercises: SelectedExercise[] = day.exercises
+    const sortedExercises = [...day.exercises].sort((a, b) => (a.order || Infinity) - (b.order || Infinity))
+    const exercises: SelectedExercise[] = sortedExercises
       .filter((ex) => ex.exerciseId)
       .map((ex, index) => {
         // Parse target reps - take the middle/first value from range like "8-12"
@@ -256,7 +262,7 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
           assistanceTypes: ex.assistanceTypes as AssistanceType[] | undefined,
           sets,
           restTime: ex.restTime || DEFAULT_REST_TIME,
-          order: index + 1,
+          order: ex.order || index + 1,
         }
       })
 
@@ -271,6 +277,50 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
 
   setTrainerReport: (targetUserId, reportedBy, reportedByName) => {
     set({ targetUserId, reportedBy, reportedByName })
+  },
+
+  setExerciseSetCount: (exerciseId, count) => {
+    const clamped = Math.max(1, Math.min(20, count))
+    set((state) => ({
+      selectedExercises: updateExerciseInList(
+        state.selectedExercises,
+        exerciseId,
+        (e) => ({
+          ...e,
+          customSetCount: clamped,
+          sets: Array.from({ length: clamped }, () => createDefaultSet('working', 10, 0)),
+        })
+      ),
+    }))
+  },
+
+  setExerciseEmom: (exerciseId, isEmom) => {
+    set((state) => ({
+      selectedExercises: updateExerciseInList(
+        state.selectedExercises,
+        exerciseId,
+        (e) => ({ ...e, isEmom })
+      ),
+    }))
+  },
+
+  sortExercises: (orderedIds) => {
+    set((state) => {
+      const exerciseMap = new Map(state.selectedExercises.map(e => [e.exerciseId, e]))
+      const ordered: SelectedExercise[] = []
+      for (const id of orderedIds) {
+        const ex = exerciseMap.get(id)
+        if (ex) {
+          ordered.push(ex)
+          exerciseMap.delete(id)
+        }
+      }
+      // Append any remaining exercises not in orderedIds
+      for (const ex of exerciseMap.values()) {
+        ordered.push(ex)
+      }
+      return { selectedExercises: reindexExercises(ordered) }
+    })
   },
 
   clearWorkout: () => {
