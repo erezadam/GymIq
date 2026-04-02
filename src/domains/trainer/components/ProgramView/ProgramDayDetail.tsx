@@ -64,7 +64,7 @@ export function ProgramDayDetail({
 
       {/* Exercises */}
       <div>
-        {day.exercises.map((exercise, index) => (
+        {[...day.exercises].sort((a, b) => (a.order || Infinity) - (b.order || Infinity)).map((exercise, index) => (
           <ProgramExerciseCard
             key={`${exercise.exerciseId}-${index}`}
             exercise={exercise}

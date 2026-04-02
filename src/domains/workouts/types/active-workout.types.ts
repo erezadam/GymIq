@@ -76,6 +76,9 @@ export interface ActiveWorkoutExercise {
   // Exercise volume tracking
   previousExerciseVolume?: number | null  // null=no previous, 0=previous had no weight, >0=volume
   volumeRecordCelebratedThisSession?: boolean
+
+  // Quick Plan section title (displayed as header above this exercise in active workout)
+  sectionTitle?: string
 }
 
 // Exercises grouped by muscle

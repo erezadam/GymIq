@@ -158,7 +158,7 @@ export default function TraineeProgramView() {
               {isExpanded && !day.restDay && (
                 <div className="px-4 pb-3">
                   <div className="rounded-xl bg-dark-surface/50 overflow-hidden">
-                    {day.exercises.map((exercise, i) => (
+                    {[...day.exercises].sort((a, b) => (a.order || Infinity) - (b.order || Infinity)).map((exercise, i) => (
                       <ProgramExerciseCard
                         key={`${exercise.exerciseId}-${i}`}
                         exercise={exercise}

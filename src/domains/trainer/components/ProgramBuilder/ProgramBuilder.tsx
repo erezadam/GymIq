@@ -491,6 +491,25 @@ export default function ProgramBuilder() {
 
   if (showExercisePicker) {
     const currentDay = days[selectedMobileDayIndex]
+    const handleMobileProgramReorder = (orderedIds: string[]) => {
+      if (!currentDay) return
+      const exerciseMap = new Map(currentDay.exercises.map(e => [e.exerciseId, e]))
+      const reordered: ProgramExercise[] = []
+      for (const id of orderedIds) {
+        const ex = exerciseMap.get(id)
+        if (ex) {
+          reordered.push(ex)
+          exerciseMap.delete(id)
+        }
+      }
+      for (const ex of exerciseMap.values()) {
+        reordered.push(ex)
+      }
+      reordered.forEach((ex, i) => (ex.order = i + 1))
+      const updated = [...days]
+      updated[selectedMobileDayIndex] = { ...currentDay, exercises: reordered }
+      setDays(updated)
+    }
     return (
       <div className="fixed inset-0 z-50 bg-dark-bg overflow-y-auto">
         <ExerciseLibrary
@@ -498,6 +517,7 @@ export default function ProgramBuilder() {
           programExerciseIds={currentDay?.exercises.map(e => e.exerciseId) || []}
           onProgramExerciseToggle={handleMobileExerciseToggle}
           onProgramBack={() => { setShowExercisePicker(false); saveDraftInBackground() }}
+          onProgramReorder={handleMobileProgramReorder}
           targetUserId={traineeId}
           programOtherDaysExercises={getOtherDaysExercises(selectedMobileDayIndex)}
           initialMuscleFilter={filterMuscle || undefined}
@@ -588,12 +608,15 @@ export default function ProgramBuilder() {
 
         {/* Exercise cards */}
         <div className="space-y-3">
-          {currentDay.exercises.map((ex, i) => (
+          {currentDay.exercises
+            .map((ex, originalIndex) => ({ ex, originalIndex }))
+            .sort((a, b) => (a.ex.order || Infinity) - (b.ex.order || Infinity))
+            .map(({ ex, originalIndex }) => (
             <MobileExerciseCard
-              key={`${ex.exerciseId}-${i}`}
+              key={`${ex.exerciseId}-${originalIndex}`}
               exercise={ex}
-              onUpdate={(updates) => updateMobileExercise(selectedMobileDayIndex, i, updates)}
-              onRemove={() => removeMobileExercise(selectedMobileDayIndex, i)}
+              onUpdate={(updates) => updateMobileExercise(selectedMobileDayIndex, originalIndex, updates)}
+              onRemove={() => removeMobileExercise(selectedMobileDayIndex, originalIndex)}
             />
           ))}
 

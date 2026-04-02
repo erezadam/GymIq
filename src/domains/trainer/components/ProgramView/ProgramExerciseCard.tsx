@@ -11,7 +11,7 @@ export function ProgramExerciseCard({ exercise, index }: ProgramExerciseCardProp
     <div className="flex items-center gap-3 py-3 border-b border-dark-border/50 last:border-0">
       {/* Index number */}
       <div className="w-6 h-6 rounded-full bg-dark-card flex items-center justify-center flex-shrink-0">
-        <span className="text-xs font-medium text-on-surface-variant">{index + 1}</span>
+        <span className="text-xs font-medium text-on-surface-variant">{exercise.order || index + 1}</span>
       </div>
 
       {/* Exercise image */}

@@ -28,10 +28,26 @@ export function ProgramExerciseEditor({
       {/* Main row */}
       <div className="p-4 sm:p-5">
         <div className="flex items-center gap-3 sm:gap-4">
-          {/* Drag handle */}
-          <div className="cursor-move text-on-surface-variant hover:text-text-primary text-xl flex-shrink-0">
-            ⋮⋮
-          </div>
+          {/* Order number input */}
+          <input
+            type="number"
+            min={1}
+            max={99}
+            value={exercise.order || ''}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => {
+              const val = e.target.value
+              if (val === '') {
+                onUpdate({ order: 0 })
+              } else {
+                const num = parseInt(val)
+                if (num >= 1 && num <= 99) {
+                  onUpdate({ order: num })
+                }
+              }
+            }}
+            className="w-10 h-10 text-center rounded-lg bg-background-elevated border border-border-default text-primary-main font-bold text-sm focus:border-primary-main focus:outline-none flex-shrink-0"
+          />
 
           {/* Exercise image */}
           {exercise.imageUrl ? (

@@ -45,6 +45,7 @@
 ❌ **No modal without explicit close** - כל modal חייב כפתור X ייעודי (44x44px מינימום) + סגירה בלחיצה על backdrop
 ❌ **No silent AI filtering** - כל קריאה ל-AI חיצוני חייבת validation + fallback. אסור לסנן תוצאות בשקט בלי השלמה
 📖 **Database schema reference** - מבנה הנתונים מוגדר ב-`firestore.rules` (collections + הרשאות) וב-`src/domains/*/types/*.types.ts` (מבנה הנתונים). חובה לעיין בהם לפני כל שינוי במבנה הנתונים ב-Firestore
+❌ **כיסוי מלא — משתמש ומאמן** - בכל פיתוח פיצ'ר חדש או שינוי בתהליך בחירת תרגילים / בניית אימון / סדר תרגילים: **לפני תחילת הקידוד**, שאל את המשתמש במפורש: *"האם הפיתוח הזה חל גם על מודול המאמן (ProgramBuilder) ועל זרימת המתאמן (TraineeProgramView → workoutBuilderStore)?"* — אל תניח שהתשובה שלילית. **המחדל הוא כן** עד שנאמר אחרת.
 
 ---
 
@@ -590,6 +591,7 @@ npx playwright test
 | 14/03/2026 | קרדיט חלקי לישבן הלך ל-longissimus במקום gluteus_maximus + חסר biceps_brachii | תוקן SECONDARY_MUSCLE_MULTIPLIERS: 3 שרירי עזר (triceps/biceps_brachii/gluteus_maximus), רשימות תרגילים עודכנו, UI שונה — סטים צבעוניים (ירוק≥10/אדום<10), ממוצע חזרות צבעוני (ירוק≥5/אדום<5), הוסר עמודת סטטוס |
 | 23/03/2026 | מיגרציית צבעים + עיצוב Trainer מחדש | TrainerLayout עבר ל-bottom nav + Material 3 surface tokens + מיגרציית text-text-muted/secondary ל-on-surface-variant ב-~40 קבצים + cancelled workouts נספרים בניתוח |
 | 31/03/2026 | מאמן לא יכל לערוך אימונים מופצים למתאמנים | נוסף WorkoutHistoryEditor — מאמן יכול לערוך/למחוק תרגילים באימון שלא פעיל, עם optimistic locking, audit trail, והגנה על סטים שבוצעו |
+| 02/04/2026 | פיצ'רים פותחו רק למתאמן בלי לכסות מודול מאמן | נוסף חוק ברזל: כיסוי מלא — משתמש ומאמן. חובה לשאול לפני קידוד אם השינוי חל גם על ProgramBuilder ו-TraineeProgramView |
 
 ---
 
@@ -623,6 +625,6 @@ npm run test:e2e:headed   # הרצה עם דפדפן נראה
 
 ```
 ══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 31/03/2026 | נוסף WorkoutHistoryEditor — עריכת אימונים מופצים ע״י מאמן
+עדכון אחרון: 02/04/2026 | נוסף חוק ברזל: כיסוי מלא — משתמש ומאמן
 ══════════════════════════════════════════════════════════════════════════════
 ```

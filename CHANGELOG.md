@@ -1,5 +1,46 @@
 # Changelog
 
+## 2026-04-02
+
+### Added
+- **מספור ידני של תרגילים**: תיבת מספר על כל תרגיל נבחר ב-ExerciseLibrary — מאפשרת קביעת סדר תרגילים באימון
+  - תרגילים ממוספרים מוצגים ראשונים (סדר עולה), השאר לפי שריר + א-ב
+  - עובד במודול משתמש (workoutBuilderStore) ובמודול מאמן (ProgramBuilder — desktop + mobile)
+  - ניקוי אוטומטי בביטול בחירה ובלחיצת "נקה"
+  - `sortExercises` חדש ב-workoutBuilderStore לסידור מחדש לפי רשימת IDs
+  - `onProgramReorder` prop חדש ב-ExerciseLibrary להעברת סדר למאמן
+- **מספור ידני בתוכנית מאמן (ProgramBuilder)**: תיבת מספר order על כל תרגיל ב-ProgramDayEditor (desktop) וב-MobileExerciseCard (mobile)
+  - שינוי מספר מעדכן את `order` על התרגיל ומשנה את סדר ההצגה בזמן אמת
+  - `order` נשמר ב-Firestore כחלק מ-`weeklyStructure[].exercises[]`
+  - TraineeProgramView, ProgramDayDetail, TrainerProgramCard — ממיינים לפי `order` (backward compatible)
+  - ProgramExerciseCard מציג `exercise.order` במקום אינדקס מערך
+  - `loadFromProgram` — ממיין לפי `order` ומעביר ל-workoutBuilderStore
+- **בדיקת E2E — הוכחת סדר תרגילים**: `e2e/trainer-exercise-order-proof.spec.ts`
+  - מאמן יוצר תוכנית, מספר תרגילים ידנית (3→1→2), מפעיל
+  - מתאמן רואה את התוכנית בדשבורד
+  - 10 screenshots ויזואליים לתיעוד הזרימה
+  - 3 tests passed (33.4s)
+
+- **תכנון חופשי (Free Plan)**: מסלול חדש בתוך ExerciseLibrary לבניית אימון מבוסס סקציות
+  - Tab חדש "תכנון חופשי" לצד "אימון" — toggle בין שני המצבים
+  - מבנה סקציות: כותרת חופשית → תרגילים מתחת → כותרת נוספת → תרגילים
+  - כותרות חופשיות (EMOM, סופר-סט, מעגלי וכו׳ נכתבים בכותרת)
+  - בחירת כמות סטים (1-20) לכל תרגיל עם stepper (+/-)
+  - הסרת תרגילים ועריכת כותרות
+  - כפתור "התחל אימון" → ActiveWorkoutScreen עם מספר סטים ריקים כפי שהוגדר
+  - אימון פעיל מציג כותרות סקציות כהפרדה (במקום קיבוץ לפי שריר)
+  - קומפוננטה חדשה: `QuickPlanExerciseList.tsx` (סקציות + תרגילים)
+  - Store: `QuickPlanSection`, `addQuickPlanSection`, `setExerciseSetCount`, `activeQuickPlanSectionId`
+  - `useActiveWorkout` מכבד `customSetCount` + `sectionTitle`
+- **איחוד מסך בחירת תרגילים — מאמן ומתאמן**: מסך זהה לשניהם
+  - StandaloneWorkoutEditor משתמש ב-ExerciseLibrary בלי programMode
+  - מאמן רואה טאבים "אימון" / "תכנון חופשי" — בדיוק כמו המתאמן
+  - `sectionTitle` נשמר ב-ProgramExercise ועובר דרך `loadFromProgram` → store → ActiveWorkoutScreen
+  - מתאמן שמתחיל אימון מתוכנית מאמן רואה את אותו מבנה סקציות
+
+### Changed
+- **CLAUDE.md**: נוסף חוק ברזל: **כיסוי מלא — משתמש ומאמן** — בכל פיתוח פיצ'ר חדש או שינוי בתהליך בחירת תרגילים / בניית אימון / סדר תרגילים, חובה לשאול לפני תחילת הקידוד אם השינוי חל גם על מודול המאמן (ProgramBuilder) ועל זרימת המתאמן (TraineeProgramView → workoutBuilderStore). המחדל הוא כן.
+
 ## 2026-03-23
 
 ### Changed
