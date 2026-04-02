@@ -15,6 +15,11 @@
   - TraineeProgramView, ProgramDayDetail, TrainerProgramCard — ממיינים לפי `order` (backward compatible)
   - ProgramExerciseCard מציג `exercise.order` במקום אינדקס מערך
   - `loadFromProgram` — ממיין לפי `order` ומעביר ל-workoutBuilderStore
+- **בדיקת E2E — הוכחת סדר תרגילים**: `e2e/trainer-exercise-order-proof.spec.ts`
+  - מאמן יוצר תוכנית, מספר תרגילים ידנית (3→1→2), מפעיל
+  - מתאמן רואה את התוכנית בדשבורד
+  - 10 screenshots ויזואליים לתיעוד הזרימה
+  - 3 tests passed (33.4s)
 
 - **תכנון מהיר (Quick Plan)**: מסלול קיצור חדש בתוך ExerciseLibrary לבניית אימון מהירה
   - Tab חדש "תכנון מהיר" לצד "ספרייה" — toggle בין שני המצבים
