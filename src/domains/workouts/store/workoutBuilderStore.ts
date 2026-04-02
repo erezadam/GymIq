@@ -275,6 +275,8 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
           complexity: ex.complexity as 'compound' | 'simple' | undefined,
           reportType: ex.reportType as ExerciseReportType | undefined,
           assistanceTypes: ex.assistanceTypes as AssistanceType[] | undefined,
+          customSetCount: ex.targetSets,
+          sectionTitle: ex.sectionTitle,
           sets,
           restTime: ex.restTime || DEFAULT_REST_TIME,
           order: ex.order || index + 1,
