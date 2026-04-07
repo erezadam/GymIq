@@ -16,6 +16,8 @@ import { saveWorkoutHistory, getRecentlyDoneExerciseIds, getWeeklyMuscleSets } f
 import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '@/domains/workouts/types/active-workout.types'
 import type { WorkoutHistoryEntry } from '@/domains/workouts/types'
+import { programService } from '@/domains/trainer/services/programService'
+import type { ProgramExercise } from '@/domains/trainer/types'
 import { getMuscleNameHe } from '@/utils/muscleTranslations'
 import { autoFixEquipmentMismatch } from '@/lib/firebase/exercises'
 
@@ -97,7 +99,7 @@ export function ExerciseLibrary({
   const dateInputRef = useRef<HTMLInputElement>(null)
   const isFirstRender = useRef(true)
 
-  const { selectedExercises, addExercise, addExercisesFromSet, removeExercise, clearWorkout, scheduledDate, setScheduledDate, sortExercises, setExerciseSetCount, quickPlanSections, activeQuickPlanSectionId, addQuickPlanSection, updateQuickPlanSectionTitle, removeQuickPlanSection, setActiveQuickPlanSection } = useWorkoutBuilderStore()
+  const { selectedExercises, addExercise, addExercisesFromSet, removeExercise, clearWorkout, scheduledDate, setScheduledDate, sortExercises, setExerciseSetCount, quickPlanSections, activeQuickPlanSectionId, addQuickPlanSection, updateQuickPlanSectionTitle, removeQuickPlanSection, setActiveQuickPlanSection, setSelfStandaloneProgram, workoutName: builderWorkoutName } = useWorkoutBuilderStore()
   const [exerciseOrder, setExerciseOrder] = useState<Record<string, number>>({})
   const [activeTab, setActiveTab] = useState<'library' | 'quickPlan'>('library')
 
@@ -453,6 +455,85 @@ export function ExerciseLibrary({
     return [...numbered, ...unnumbered]
   }
 
+  // Build a default workout name from selected exercises (used when user didn't provide one)
+  const buildDefaultWorkoutName = (): string => {
+    if (builderWorkoutName?.trim()) return builderWorkoutName.trim()
+    const todayHe = new Date().toLocaleDateString('he-IL')
+    // Pick up to 2 unique muscle groups for a hint
+    const muscleHints = Array.from(
+      new Set(
+        selectedExercises
+          .map((e) => getMuscleNameHe(e.category || e.primaryMuscle || '', dynamicMuscleNames))
+          .filter(Boolean)
+      )
+    ).slice(0, 2)
+    return muscleHints.length > 0
+      ? `אימון ${muscleHints.join(' + ')} - ${todayHe}`
+      : `אימון ${todayHe}`
+  }
+
+  // Convert store exercises to ProgramExercise format for trainingPrograms collection
+  const toProgramExercisesPayload = (): ProgramExercise[] => {
+    return selectedExercises.map((ex, index) => {
+      const programEx: ProgramExercise = {
+        exerciseId: ex.exerciseId,
+        exerciseName: ex.exerciseName,
+        exerciseNameHe: ex.exerciseNameHe,
+        imageUrl: ex.imageUrl,
+        category: ex.category,
+        primaryMuscle: ex.primaryMuscle,
+        equipment: ex.equipment,
+        complexity: ex.complexity,
+        order: index + 1,
+        targetSets: ex.customSetCount || ex.sets.length || 3,
+        targetReps: '8-12',
+        restTime: ex.restTime || 90,
+        reportType: ex.reportType,
+        assistanceTypes: ex.assistanceTypes as string[] | undefined,
+        sectionTitle: ex.sectionTitle,
+      }
+      return programEx
+    })
+  }
+
+  // When the trainee builds a workout themselves (immediate or planned),
+  // also create a standalone trainingProgram so it shows up in the trainer's
+  // "אימונים בודדים" section. Returns the new programId, or null if not applicable.
+  const maybeCreateSelfStandaloneProgram = async (): Promise<string | null> => {
+    if (!user) return null
+
+    // Skip if user has no linked trainer — nobody would read the trainingPrograms doc.
+    // Independent users still get the workoutHistory entry as before.
+    if (!user.trainerId) return null
+
+    // Read latest store state to make context-aware decisions
+    const state = useWorkoutBuilderStore.getState()
+
+    // Skip if this is a trainer-reported workout (trainer acting on behalf of trainee)
+    if (state.reportedBy) return null
+    // Skip if a program link already exists (continuing a trainer-assigned program)
+    if (state.programId) return null
+
+    try {
+      const name = buildDefaultWorkoutName()
+      const programExercises = toProgramExercisesPayload()
+      const newProgramId = await programService.createSelfStandaloneProgram({
+        traineeId: user.uid,
+        trainerId: user.trainerId,
+        name,
+        exercises: programExercises,
+      })
+      // Link the active workout to this newly-created standalone program
+      setSelfStandaloneProgram(newProgramId, name)
+      return newProgramId
+    } catch (err) {
+      // Non-blocking: even if linking fails, the workout itself should still proceed.
+      // Failure here only means the trainer won't see the workout in "אימונים בודדים".
+      console.warn('Could not create self-standalone trainingProgram link:', err)
+      return null
+    }
+  }
+
   const handleStartWorkout = async () => {
     if (selectedExercises.length === 0) return
 
@@ -509,10 +590,14 @@ export function ExerciseLibrary({
         // Use scheduledDate if set, otherwise use today's date (for "plan for today")
         const workoutDate = scheduledDate || new Date()
 
-        // Create planned workout entry
+        // First, mirror this workout as a standalone trainingProgram so the trainer
+        // sees it in "אימונים בודדים" alongside the planned workoutHistory entry.
+        const linkedProgramId = await maybeCreateSelfStandaloneProgram()
+
+        // Create planned workout entry (linked to the standalone program if one was created)
         const plannedWorkout: Omit<WorkoutHistoryEntry, 'id'> = {
           userId: user.uid,
-          name: 'אימון מתוכנן',
+          name: buildDefaultWorkoutName(),
           date: workoutDate,
           startTime: workoutDate,
           endTime: workoutDate,
@@ -523,6 +608,7 @@ export function ExerciseLibrary({
             exerciseName: ex.exerciseName || '',
             exerciseNameHe: ex.exerciseNameHe,
             imageUrl: ex.imageUrl || '',
+            category: ex.category || '',
             isCompleted: false,
             sets: [
               {
@@ -541,6 +627,10 @@ export function ExerciseLibrary({
           totalSets: selectedExercises.length,
           totalVolume: 0,
           personalRecords: 0,
+          ...(linkedProgramId && {
+            source: 'self_standalone' as const,
+            programId: linkedProgramId,
+          }),
         }
 
         await saveWorkoutHistory(plannedWorkout)
@@ -555,6 +645,10 @@ export function ExerciseLibrary({
       }
       return
     }
+
+    // Immediate workout: mirror to standalone trainingProgram before starting,
+    // so the link travels through to workoutHistory via the store.
+    await maybeCreateSelfStandaloneProgram()
 
     // Starting fresh workout today - clear any existing saved workout
     localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY)

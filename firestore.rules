@@ -247,6 +247,15 @@ service cloud.firestore {
       allow create: if isTrainer() &&
         request.resource.data.trainerId == request.auth.uid;
 
+      // Trainees can create their OWN standalone workouts (self-built)
+      // - Must be a standalone (not a multi-day program)
+      // - Must be marked as createdByTrainee
+      // - traineeId must match the authenticated user
+      allow create: if isAuthenticated() &&
+        request.resource.data.traineeId == request.auth.uid &&
+        request.resource.data.type == 'standalone' &&
+        request.resource.data.createdByTrainee == true;
+
       // Trainer or admin can update programs
       allow update: if isAuthenticated() &&
         (resource.data.trainerId == request.auth.uid || isAdmin());
@@ -260,6 +269,11 @@ service cloud.firestore {
       // Trainer or admin can delete programs
       allow delete: if isAuthenticated() &&
         (resource.data.trainerId == request.auth.uid || isAdmin());
+
+      // Trainee can delete their OWN self-built standalone workouts
+      allow delete: if isAuthenticated() &&
+        resource.data.traineeId == request.auth.uid &&
+        resource.data.createdByTrainee == true;
     }
 
     // ============ TRAINER MESSAGES ============

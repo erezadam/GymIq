@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-04-07
+
+### Added
+- **חשיפת אימונים עצמאיים של המתאמן/ת למאמן/ת**: כשמתאמן/ת בונה אימון בעצמה (טאב "תכנון חופשי" או הספרייה הרגילה) — בין אם להתחלה מיידית ובין אם בתכנון לעתיד / להיום — נוצר במקביל מסמך `trainingPrograms` עם `type: 'standalone'` ו-`createdByTrainee: true`. כך:
+  - האימון מופיע אצל המאמנת בסקציית **"אימונים בודדים"** (עם תווית "נבנה ע״י המתאמן" סגולה)
+  - האימון מופיע גם בסקציית **"אימונים אחרונים"** דרך `workoutHistory` עם `source: 'self_standalone'` ו-`programId` מקושר
+  - אינדיקטור "בוצע" אצל המאמנת מתעדכן אוטומטית כי הקישור בין `workoutHistory.programId` ל-`trainingPrograms.id` נשמר לכל אורך מחזור החיים (תכנון → המשך → סיום)
+  - ניתוח ביצועים, ספירת סטים שבועיים, וכל מקום שמסתמך על `workoutHistory` ממשיכים לעבוד אוטומטית — לוגיקה אחידה: אימון שבוצע = אימון שבוצע, נספר בכל מקום
+- **שדה `createdByTrainee`** ב-`TrainingProgram` — מבחין בין standalone שנבנה ע״י המאמנת לבין כזה שנבנה ע״י המתאמן/ת
+- **`source: 'self_standalone'`** חדש ב-`WorkoutHistoryEntry`/`WorkoutHistorySummary`
+- **`programService.createSelfStandaloneProgram`** — helper ייעודי שיוצר standalone trainingProgram עם payload נקי (ללא undefined) עבור הזרימה של המתאמן/ת
+- **`workoutBuilderStore.setSelfStandaloneProgram`** + שדה `programSource` — מבדיל בין programId שמקורו ב-trainer assignment לבין self-built standalone, ומועבר ל-`useActiveWorkout` עבור שמירה ב-`workoutHistory`
+
+### Changed
+- **`firestore.rules` (trainingPrograms)**: נוסף create rule שמתיר לכל user מאומת ליצור standalone trainingProgram עבור עצמו (כשהוא ה-traineeId), כל עוד `createdByTrainee == true`. בנוסף נוסף delete rule שמתיר למתאמן/ת למחוק את ה-standalone שבנה לעצמו
+- **`useActiveWorkout`**: כל נקודות autoSave/save כעת מעבירות `programId` + `source` (`'trainer_program'` או `'self_standalone'`) במקום ה-hardcoded `'trainer_program'` הקודם. נקרא דרך `useWorkoutBuilderStore.getState()` כדי להימנע מ-stale closure ב-useCallback עם `[]` deps
+- **`ExerciseLibrary.handleStartWorkout`**: לפני navigation/save מפעיל `maybeCreateSelfStandaloneProgram()` שמדלג אם מדובר ב-trainer report (`reportedBy`) או ב-continuing trainer program (`programId` כבר קיים)
+
 ## 2026-04-02
 
 ### Added

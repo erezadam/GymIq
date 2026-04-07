@@ -85,6 +85,8 @@ export interface TrainingProgram {
   createdAt: Timestamp | Date
   updatedAt: Timestamp | Date
   notes?: string
+  // True when this standalone was built by the trainee themselves (not by the trainer)
+  createdByTrainee?: boolean
   // Soft delete: trainee disconnected from this program
   disconnectedByTrainee?: {
     disconnectedAt: Timestamp | Date

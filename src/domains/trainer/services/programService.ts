@@ -14,7 +14,7 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase/config'
-import type { TrainingProgram } from '../types'
+import type { TrainingProgram, ProgramExercise } from '../types'
 
 // Convert Firestore timestamps to Dates
 function toProgram(id: string, data: Record<string, any>): TrainingProgram {
@@ -53,6 +53,70 @@ export const programService = {
     if (data.endDate && data.endDate instanceof Date) {
       saveData.endDate = Timestamp.fromDate(data.endDate)
     }
+    await setDoc(docRef, saveData)
+    return docRef.id
+  },
+
+  // Create a standalone workout that the TRAINEE built for themselves.
+  // Visible to their trainer in the "אימונים בודדים" section, with createdByTrainee=true flag.
+  // - trainerId may be empty string if the trainee has no linked trainer (independent user)
+  async createSelfStandaloneProgram(params: {
+    traineeId: string
+    trainerId?: string
+    name: string
+    exercises: ProgramExercise[]
+    notes?: string
+  }): Promise<string> {
+    const { traineeId, trainerId, name, exercises, notes } = params
+
+    // Build a single-day standalone program
+    const day: Record<string, unknown> = {
+      dayLabel: name,
+      name,
+      restDay: false,
+      exercises: exercises.map((ex) => {
+        const clean: Record<string, unknown> = {
+          exerciseId: ex.exerciseId,
+          exerciseName: ex.exerciseName,
+          exerciseNameHe: ex.exerciseNameHe,
+          order: ex.order,
+          targetSets: ex.targetSets,
+          targetReps: ex.targetReps,
+          restTime: ex.restTime,
+        }
+        if (ex.imageUrl) clean.imageUrl = ex.imageUrl
+        if (ex.category) clean.category = ex.category
+        if (ex.primaryMuscle) clean.primaryMuscle = ex.primaryMuscle
+        if (ex.equipment) clean.equipment = ex.equipment
+        if (ex.complexity) clean.complexity = ex.complexity
+        if (ex.notes) clean.notes = ex.notes
+        if (ex.reportType) clean.reportType = ex.reportType
+        if (ex.assistanceTypes && ex.assistanceTypes.length > 0) {
+          clean.assistanceTypes = ex.assistanceTypes
+        }
+        if (ex.sectionTitle) clean.sectionTitle = ex.sectionTitle
+        return clean
+      }),
+    }
+
+    const docRef = doc(collection(db, 'trainingPrograms'))
+    const saveData: Record<string, unknown> = {
+      trainerId: trainerId || '',
+      traineeId,
+      originalTrainerId: trainerId || '',
+      name,
+      type: 'standalone',
+      status: 'active',
+      isModifiedByTrainee: false,
+      createdByTrainee: true,
+      weeklyStructure: [day],
+      startDate: Timestamp.fromDate(new Date()),
+      currentWeek: 1,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }
+    if (notes) saveData.notes = notes
+
     await setDoc(docRef, saveData)
     return docRef.id
   },
