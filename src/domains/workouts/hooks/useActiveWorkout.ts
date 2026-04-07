@@ -80,7 +80,7 @@ export function useActiveWorkout() {
   const navigate = useNavigate()
   const user = useEffectiveUser()
   const isImpersonating = useIsImpersonating()
-  const { selectedExercises, clearWorkout, removeExercise: removeFromStore, programId, programDayLabel, workoutName: builderWorkoutName, targetUserId, reportedBy, reportedByName } = useWorkoutBuilderStore()
+  const { selectedExercises, clearWorkout, removeExercise: removeFromStore, programId, programDayLabel, programSource, workoutName: builderWorkoutName, targetUserId, reportedBy, reportedByName } = useWorkoutBuilderStore()
 
   // Effective userId: trainee (if trainer reporting) or current user
   const effectiveUserId = targetUserId || user?.uid || 'anonymous'
@@ -182,6 +182,12 @@ export function useActiveWorkout() {
         return
       }
 
+      // Read latest linked-program fields from store (avoid stale closure with [] deps)
+      const builderState = useWorkoutBuilderStore.getState()
+      const linkedProgramId = builderState.programId
+      const linkedProgramSource = builderState.programSource
+      const linkedProgramDayLabel = builderState.programDayLabel
+
       try {
         const endTime = new Date()
         const duration = Math.floor((endTime.getTime() - workoutToSave.startedAt.getTime()) / 60000)
@@ -233,6 +239,12 @@ export function useActiveWorkout() {
           totalSets: workoutToSave.stats.totalSets,
           totalVolume: workoutToSave.stats.totalVolume,
           personalRecords: 0,
+          // Linked program fields (preserve trainer-assigned or self-built link)
+          ...(linkedProgramId && {
+            source: linkedProgramSource || 'trainer_program',
+            programId: linkedProgramId,
+            ...(linkedProgramDayLabel && { programDayLabel: linkedProgramDayLabel }),
+          }),
         })
 
         // Store the Firebase ID if this was a new workout
@@ -304,6 +316,12 @@ export function useActiveWorkout() {
               totalSets: workoutToSave.stats.totalSets,
               totalVolume: workoutToSave.stats.totalVolume,
               personalRecords: 0,
+              // Linked program fields (preserve trainer-assigned or self-built link)
+              ...(linkedProgramId && {
+                source: linkedProgramSource || 'trainer_program',
+                programId: linkedProgramId,
+                ...(linkedProgramDayLabel && { programDayLabel: linkedProgramDayLabel }),
+              }),
             })
             if (newId) {
               setFirebaseWorkoutId(newId)
@@ -935,8 +953,12 @@ export function useActiveWorkout() {
             totalSets: newWorkout.stats.totalSets,
             totalVolume: newWorkout.stats.totalVolume,
             personalRecords: 0,
-            // Trainer program fields
-            ...(programId && { source: 'trainer_program' as const, programId, programDayLabel }),
+            // Linked program fields (trainer-assigned or self-built standalone)
+            ...(programId && {
+              source: (programSource || 'trainer_program') as 'trainer_program' | 'self_standalone',
+              programId,
+              ...(programDayLabel && { programDayLabel }),
+            }),
           })
 
           setFirebaseWorkoutId(savedId)
@@ -1401,6 +1423,12 @@ export function useActiveWorkout() {
               totalVolume: workout.stats.totalVolume,
               personalRecords: 0,
               calories: pendingCalories,
+              // Linked program fields (trainer-assigned or self-built standalone)
+              ...(programId && {
+                source: programSource || 'trainer_program',
+                programId,
+                ...(programDayLabel && { programDayLabel }),
+              }),
             })
           }
           toast.success('האימון נשמר בהצלחה!')
@@ -1473,6 +1501,12 @@ export function useActiveWorkout() {
                 totalVolume: workout.stats.totalVolume,
                 personalRecords: 0,
                 calories: pendingCalories,
+                // Linked program fields (preserve trainer-assigned or self-built link)
+                ...(programId && {
+                  source: programSource || 'trainer_program',
+                  programId,
+                  ...(programDayLabel && { programDayLabel }),
+                }),
               })
               toast.success('האימון נשמר בהצלחה!')
               // Clear stale firebase ID so it won't cause issues again

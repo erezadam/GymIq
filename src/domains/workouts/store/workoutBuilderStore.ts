@@ -42,6 +42,8 @@ interface WorkoutBuilderState {
   // Trainer program fields
   programId?: string
   programDayLabel?: string
+  // Source of the linked program — distinguishes trainer-assigned from trainee self-built
+  programSource?: 'trainer_program' | 'self_standalone'
   // Trainer report fields (when trainer reports on behalf of trainee)
   targetUserId?: string
   reportedBy?: string
@@ -60,6 +62,7 @@ interface WorkoutBuilderActions {
   removeSet: (exerciseId: string, setIndex: number) => void
   updateSet: (exerciseId: string, setIndex: number, updates: Partial<WorkoutSet>) => void
   loadFromProgram: (day: ProgramDay, programId: string, programName: string) => void
+  setSelfStandaloneProgram: (programId: string, programDayLabel?: string) => void
   setTrainerReport: (targetUserId: string, reportedBy: string, reportedByName: string) => void
   setExerciseSetCount: (exerciseId: string, count: number) => void
   addQuickPlanSection: (title: string) => string
@@ -125,6 +128,7 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
   activeQuickPlanSectionId: null,
   programId: undefined,
   programDayLabel: undefined,
+  programSource: undefined,
   targetUserId: undefined,
   reportedBy: undefined,
   reportedByName: undefined,
@@ -289,7 +293,12 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
       scheduledDate: null,
       programId,
       programDayLabel: day.dayLabel,
+      programSource: 'trainer_program',
     })
+  },
+
+  setSelfStandaloneProgram: (programId, programDayLabel) => {
+    set({ programId, programDayLabel, programSource: 'self_standalone' })
   },
 
   setTrainerReport: (targetUserId, reportedBy, reportedByName) => {
@@ -373,6 +382,7 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
       activeQuickPlanSectionId: null,
       programId: undefined,
       programDayLabel: undefined,
+      programSource: undefined,
       targetUserId: undefined,
       reportedBy: undefined,
       reportedByName: undefined,

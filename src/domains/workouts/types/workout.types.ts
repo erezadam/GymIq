@@ -135,7 +135,7 @@ export interface WorkoutHistoryEntry {
   calories?: number // User-entered calories burned
   notes?: string
   // AI Trainer fields
-  source?: 'manual' | 'ai_trainer' | 'trainer_program' // מקור האימון
+  source?: 'manual' | 'ai_trainer' | 'trainer_program' | 'self_standalone' // מקור האימון
   aiWorkoutNumber?: number // מספר סידורי של אימון AI
   bundleId?: string // מזהה מקבץ אימונים AI (null לאימון יחיד)
   aiRecommendations?: Record<string, { weight: number; repRange: string; sets: number; reasoning?: string }> // המלצות AI לכל תרגיל
@@ -175,7 +175,7 @@ export interface WorkoutHistorySummary {
   calories?: number // User-entered calories burned
   muscleGroups?: string[] // Unique muscle groups worked
   // AI Trainer fields
-  source?: 'manual' | 'ai_trainer' | 'trainer_program' // מקור האימון
+  source?: 'manual' | 'ai_trainer' | 'trainer_program' | 'self_standalone' // מקור האימון
   aiWorkoutNumber?: number // מספר סידורי של אימון AI
   bundleId?: string // מזהה מקבץ אימונים AI (null לאימון יחיד)
   // Trainer program fields

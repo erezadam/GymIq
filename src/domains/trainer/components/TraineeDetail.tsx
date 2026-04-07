@@ -612,6 +612,9 @@ export default function TraineeDetail() {
                             {isDisconnected && (
                               <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded flex-shrink-0">נותק</span>
                             )}
+                            {workout.createdByTrainee && !isDisconnected && (
+                              <span className="px-2 py-0.5 bg-accent-purple/20 text-accent-purple text-xs rounded flex-shrink-0">נבנה ע״י המתאמן</span>
+                            )}
                           </div>
                           <p className="text-on-surface-variant text-xs">
                             {exerciseCount} תרגילים
