@@ -271,6 +271,10 @@ export function WorkoutHistoryEditor({
 
                     if (completed) {
                       // Read-only completed set
+                      const setTime = (set as any).time as number | undefined
+                      const hasTime = setTime !== undefined && setTime > 0
+                      const hasReps = (set.actualReps || 0) > 0
+                      const hasWeight = (set.actualWeight || 0) > 0
                       return (
                         <div
                           key={setIdx}
@@ -279,11 +283,14 @@ export function WorkoutHistoryEditor({
                           <Check className="w-3.5 h-3.5 text-status-success flex-shrink-0" />
                           <span className="text-xs text-on-surface-variant flex-1">
                             סט {setIdx + 1}:
-                            {(set.actualWeight || 0) > 0 && (
+                            {hasTime && (
+                              <> {`${Math.floor(setTime! / 60)}:${(setTime! % 60).toString().padStart(2, '0')}`} דק׳{(hasReps || hasWeight) && ' •'}</>
+                            )}
+                            {hasWeight && (
                               <> {set.actualWeight} ק&quot;ג × </>
                             )}
-                            {set.actualReps || 0}
-                            {(set.actualWeight || 0) === 0 && ' חזרות'}
+                            {hasReps && <> {set.actualReps} חזרות</>}
+                            {!hasTime && !hasReps && !hasWeight && ' —'}
                           </span>
                           <span className="text-[10px] text-status-success/60">בוצע</span>
                         </div>

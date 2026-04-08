@@ -218,7 +218,12 @@ export function WorkoutCard({
                                   {isCardioSet ? (
                                     <>
                                       {time !== undefined && time > 0 && (
-                                        <span className="text-white">{Math.round(time / 60)} דק׳</span>
+                                        <span className="text-white">
+                                          {`${Math.floor(time / 60)}:${(time % 60).toString().padStart(2, '0')}`} דק׳
+                                        </span>
+                                      )}
+                                      {reps > 0 && (
+                                        <span className="text-text-muted">• {reps} חזרות</span>
                                       )}
                                       {zone !== undefined && zone > 0 && (
                                         <span className="text-blue-400">• אזור {zone}</span>
