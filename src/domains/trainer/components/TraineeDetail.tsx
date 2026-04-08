@@ -93,7 +93,7 @@ export default function TraineeDetail() {
         const [relationships, traineeStats, recentWorkouts] = await Promise.all([
           trainerService.getTrainerTrainees(user.uid),
           trainerService.getTraineeStats(traineeId),
-          getUserWorkoutHistory(traineeId, 10, true),
+          getUserWorkoutHistory(traineeId, 100, true),
         ])
 
         // Load programs separately (include disconnected for trainer view)
@@ -562,28 +562,59 @@ export default function TraineeDetail() {
           </div>
         )}
 
-        {/* Standalone Workouts Section */}
-        {allPrograms.filter(p => p.type === 'standalone').length > 0 && (
+        {/* Standalone Workouts Section — driven by workout history (matches "אימונים אחרונים") */}
+        {(() => {
+          const standalonePrograms = allPrograms.filter(p => p.type === 'standalone')
+          const standaloneProgramIds = new Set(standalonePrograms.map(p => p.id))
+          // Performed standalone workouts: every history entry whose programId is a standalone program
+          const performedStandalones = workouts.filter(
+            w => w.programId && standaloneProgramIds.has(w.programId)
+          )
+          const performedProgramIds = new Set(performedStandalones.map(w => w.programId))
+          // Pending standalone programs: still in programs collection, no history yet
+          const pendingStandalonePrograms = standalonePrograms.filter(
+            p => !performedProgramIds.has(p.id)
+          )
+          const totalCount = performedStandalones.length + pendingStandalonePrograms.length
+
+          if (totalCount === 0) return null
+
+          // Render order: pending first (need action), then performed (sorted by history date desc)
+          type StandaloneItem =
+            | { kind: 'performed'; key: string; program: typeof standalonePrograms[number] | undefined; history: typeof performedStandalones[number] }
+            | { kind: 'pending'; key: string; program: typeof standalonePrograms[number] }
+
+          const items: StandaloneItem[] = [
+            ...pendingStandalonePrograms.map<StandaloneItem>(p => ({ kind: 'pending', key: `pending-${p.id}`, program: p })),
+            ...performedStandalones.map<StandaloneItem>(h => ({
+              kind: 'performed',
+              key: `history-${h.id}`,
+              program: standalonePrograms.find(p => p.id === h.programId),
+              history: h,
+            })),
+          ]
+
+          return (
           <div className="mt-4">
             <h4 className="text-sm font-medium text-on-surface-variant mb-2 flex items-center gap-2">
               <ClipboardEdit className="w-4 h-4 text-accent-orange" />
-              אימונים בודדים ({allPrograms.filter(p => p.type === 'standalone').length})
+              אימונים בודדים ({totalCount})
             </h4>
             <div className="space-y-2">
-              {allPrograms
-                .filter(p => p.type === 'standalone')
-                .map((workout) => {
-                  const day = workout.weeklyStructure?.[0]
-                  const exerciseCount = day?.exercises?.length || 0
-                  const isDisconnected = !!workout.disconnectedByTrainee
-                  // Check if this standalone workout has been performed
-                  const performedWorkout = workouts.find(
-                    w => w.programId === workout.id && w.status === 'completed'
-                  )
+              {items.map((item) => {
+                  const isPerformed = item.kind === 'performed'
+                  const program = item.program
+                  const day = program?.weeklyStructure?.[0]
+                  const exerciseCount = isPerformed
+                    ? (item.history.totalExercises ?? day?.exercises?.length ?? 0)
+                    : (day?.exercises?.length || 0)
+                  const isDisconnected = !!program?.disconnectedByTrainee
+                  const displayName = isPerformed ? (item.history.name || program?.name || 'אימון') : program!.name
+                  const performedWorkout = isPerformed ? item.history : null
 
                   return (
                     <div
-                      key={workout.id}
+                      key={item.key}
                       className={`rounded-xl overflow-hidden ${
                         isDisconnected
                           ? 'border border-red-500/20 opacity-60'
@@ -607,12 +638,12 @@ export default function TraineeDetail() {
                             <h4 className={`font-bold text-sm truncate ${
                               isDisconnected ? 'text-on-surface-variant line-through' : performedWorkout ? 'text-status-success' : 'text-text-primary'
                             }`}>
-                              {workout.name}
+                              {displayName}
                             </h4>
                             {isDisconnected && (
                               <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded flex-shrink-0">נותק</span>
                             )}
-                            {workout.createdByTrainee && !isDisconnected && (
+                            {program?.createdByTrainee && !isDisconnected && (
                               <span className="px-2 py-0.5 bg-accent-purple/20 text-accent-purple text-xs rounded flex-shrink-0">נבנה ע״י המתאמן</span>
                             )}
                           </div>
@@ -627,21 +658,21 @@ export default function TraineeDetail() {
                           {isDisconnected && (
                             <p className="text-red-400/70 text-xs mt-0.5">
                               נותק ב-{(() => {
-                                const d = workout.disconnectedByTrainee?.disconnectedAt instanceof Date
-                                  ? workout.disconnectedByTrainee.disconnectedAt
+                                const d = program?.disconnectedByTrainee?.disconnectedAt instanceof Date
+                                  ? program.disconnectedByTrainee.disconnectedAt
                                   : new Date()
                                 return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`
                               })()}
-                              {workout.disconnectedByTrainee?.reason && ` • ${workout.disconnectedByTrainee.reason}`}
+                              {program?.disconnectedByTrainee?.reason && ` • ${program.disconnectedByTrainee.reason}`}
                             </p>
                           )}
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          {isDisconnected ? (
+                          {isDisconnected && program ? (
                             <button
                               onClick={async () => {
                                 try {
-                                  await programService.reconnectProgram(workout.id)
+                                  await programService.reconnectProgram(program.id)
                                   toast.success('האימון נשלח מחדש')
                                   const programs = await programService.getTraineePrograms(traineeId!, true)
                                   setAllPrograms(programs)
@@ -656,21 +687,23 @@ export default function TraineeDetail() {
                             </button>
                           ) : (
                             <>
-                              {!performedWorkout && day && (
+                              {!performedWorkout && day && program && (
                                 <button
-                                  onClick={() => handleReportWorkout(workout, 0)}
+                                  onClick={() => handleReportWorkout(program, 0)}
                                   className="px-3 py-1.5 bg-accent-orange/10 border border-accent-orange/30 rounded-lg text-xs text-accent-orange font-medium hover:bg-accent-orange/20 transition"
                                 >
                                   דווח
                                 </button>
                               )}
-                              <button
-                                onClick={() => setDeleteStandaloneId(workout.id)}
-                                className="p-1.5 rounded-lg transition-colors"
-                                aria-label="מחק אימון בודד"
-                              >
-                                <Trash2 className="w-4 h-4 text-red-400/50 hover:text-red-400" />
-                              </button>
+                              {program && (
+                                <button
+                                  onClick={() => setDeleteStandaloneId(program.id)}
+                                  className="p-1.5 rounded-lg transition-colors"
+                                  aria-label="מחק אימון בודד"
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-400/50 hover:text-red-400" />
+                                </button>
+                              )}
                             </>
                           )}
                         </div>
@@ -680,7 +713,8 @@ export default function TraineeDetail() {
                 })}
             </div>
           </div>
-        )}
+          )
+        })()}
       </div>
 
       {/* Recent Workouts - collapsed by default */}
@@ -785,7 +819,7 @@ export default function TraineeDetail() {
             // Refresh workouts list
             if (traineeId) {
               try {
-                const refreshed = await getUserWorkoutHistory(traineeId, 10, true)
+                const refreshed = await getUserWorkoutHistory(traineeId, 100, true)
                 setWorkouts(refreshed)
               } catch (err) {
                 console.error('Error refreshing workouts:', err)

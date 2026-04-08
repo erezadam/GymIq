@@ -48,14 +48,7 @@ const statusConfig: Record<
 
 function formatDate(date: Date): string {
   const d = new Date(date)
-  const now = new Date()
-  const diff = now.getTime() - d.getTime()
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-
-  if (days === 0) return 'היום'
-  if (days === 1) return 'אתמול'
-  if (days < 7) return `לפני ${days} ימים`
-  return d.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' })
+  return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`
 }
 
 function formatDuration(seconds: number): string {
@@ -308,6 +301,10 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
                               <div className="px-2 pb-2 pr-14 space-y-0.5">
                                 {completedSets.map((set, setIdx) => {
                                   const isLast = setIdx === completedSets.length - 1
+                                  const setTime = (set as any).time as number | undefined
+                                  const hasTime = setTime !== undefined && setTime > 0
+                                  const hasReps = (set.actualReps || 0) > 0
+                                  const hasWeight = (set.actualWeight || 0) > 0
                                   return (
                                     <div
                                       key={setIdx}
@@ -318,11 +315,14 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
                                       </span>
                                       <span>סט {setIdx + 1}:</span>
                                       <span className="text-on-surface-variant">
-                                        {(set.actualWeight || 0) > 0 && (
+                                        {hasTime && (
+                                          <>{`${Math.floor(setTime! / 60)}:${(setTime! % 60).toString().padStart(2, '0')}`} דק׳{(hasReps || hasWeight) && ' • '}</>
+                                        )}
+                                        {hasWeight && (
                                           <>{set.actualWeight} ק&quot;ג × </>
                                         )}
-                                        {set.actualReps || 0}
-                                        {(set.actualWeight || 0) === 0 && ' חזרות'}
+                                        {hasReps && <>{set.actualReps} חזרות</>}
+                                        {!hasTime && !hasReps && !hasWeight && '—'}
                                       </span>
                                       {set.completed && (
                                         <Check className="w-3 h-3 text-status-success" />
