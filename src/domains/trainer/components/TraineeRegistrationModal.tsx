@@ -48,6 +48,7 @@ export function TraineeRegistrationModal({
   // Directory mode state
   const [directoryTrainees, setDirectoryTrainees] = useState<AppUser[]>([])
   const [isLoadingDirectory, setIsLoadingDirectory] = useState(false)
+  const [hasLoadedDirectory, setHasLoadedDirectory] = useState(false)
   const [directoryError, setDirectoryError] = useState<string | null>(null)
   const [selectedCity, setSelectedCity] = useState<string | null>(null)
   const [assigningUid, setAssigningUid] = useState<string | null>(null)
@@ -136,9 +137,9 @@ export function TraineeRegistrationModal({
     }
   }, [user])
 
-  // Load unassigned trainees when switching to directory mode
+  // Load unassigned trainees once when entering directory mode
   useEffect(() => {
-    if (mode !== 'directory' || directoryTrainees.length > 0 || isLoadingDirectory) return
+    if (mode !== 'directory' || hasLoadedDirectory) return
     let cancelled = false
     setIsLoadingDirectory(true)
     setDirectoryError(null)
@@ -147,10 +148,13 @@ export function TraineeRegistrationModal({
       .then(list => {
         if (cancelled) return
         setDirectoryTrainees(list)
+        setHasLoadedDirectory(true)
       })
       .catch(err => {
         console.error('Failed to load unassigned trainees:', err)
-        if (!cancelled) setDirectoryError('שגיאה בטעינת רשימת המתאמנים')
+        if (cancelled) return
+        setDirectoryError('שגיאה בטעינת רשימת המתאמנים')
+        setHasLoadedDirectory(true)
       })
       .finally(() => {
         if (!cancelled) setIsLoadingDirectory(false)
@@ -158,7 +162,7 @@ export function TraineeRegistrationModal({
     return () => {
       cancelled = true
     }
-  }, [mode, directoryTrainees.length, isLoadingDirectory])
+  }, [mode, hasLoadedDirectory])
 
   // Group unassigned trainees by city (no-city bucket first)
   const directoryByCity = useMemo(() => {
