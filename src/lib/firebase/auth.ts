@@ -29,7 +29,8 @@ export interface AppUser {
     maxTrainees?: number // default 50
   }
   // Trainee-specific (when linked to trainer)
-  trainerId?: string
+  trainerId?: string | null
+  city?: string
   trainingGoals?: string[]
   injuriesOrLimitations?: string
   // Body metrics
@@ -84,8 +85,15 @@ const createAppUser = async (
   if (additionalData?.phoneNumber) {
     newUser.phoneNumber = additionalData.phoneNumber
   }
+  if (additionalData?.city) {
+    newUser.city = additionalData.city
+  }
+  // Preserve explicit null for trainerId (needed for unassigned-trainees query)
+  if (additionalData && 'trainerId' in additionalData) {
+    newUser.trainerId = additionalData.trainerId
+  }
 
-  // Prepare Firestore document (remove any remaining undefined values)
+  // Prepare Firestore document (remove undefined but KEEP null for trainerId)
   const firestoreData = Object.fromEntries(
     Object.entries({
       ...newUser,
@@ -118,7 +126,8 @@ export const registerUser = async (
   password: string,
   firstName: string,
   lastName: string,
-  phoneNumber?: string
+  phoneNumber?: string,
+  city?: string
 ): Promise<AppUser> => {
   console.log('=== Starting registration for:', email)
 
@@ -172,6 +181,10 @@ export const registerUser = async (
       displayName: `${firstName} ${lastName}`,
       phoneNumber,
       role,
+      city: city?.trim() || undefined,
+      // Explicit null so the user can be queried via
+      // where('trainerId', '==', null) in the "unassigned trainees" directory
+      trainerId: role === 'user' ? null : undefined,
     }, true) // allowCreate = true for registration
     if (!appUser) {
       throw new Error('Failed to create user document')

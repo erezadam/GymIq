@@ -57,6 +57,14 @@ service cloud.firestore {
       // Trainers can only read profiles of their own trainees (scoped by trainerId)
       allow read: if isTrainer() && resource.data.trainerId == request.auth.uid;
 
+      // Any authenticated user can read trainer profiles (for trainee self-select flow)
+      allow read: if isAuthenticated() && resource.data.role == 'trainer';
+
+      // Trainers can read all unassigned trainee profiles (for trainee directory / city-browse flow)
+      allow read: if isTrainer() &&
+        resource.data.role == 'user' &&
+        resource.data.get('trainerId', null) == null;
+
       // ---- AI Data subcollection (written by Cloud Functions only) ----
       match /aiData/{docId} {
         // Owner, their trainer (scoped), and admins can read
@@ -220,6 +228,11 @@ service cloud.firestore {
       // Trainers can create relationships
       allow create: if isTrainer() &&
         request.resource.data.trainerId == request.auth.uid;
+
+      // Trainees can self-assign to a trainer (must create for themselves, active only)
+      allow create: if isAuthenticated() &&
+        request.resource.data.traineeId == request.auth.uid &&
+        request.resource.data.status == 'active';
 
       // Both parties can update (for acceptance/status)
       allow update: if isAuthenticated() &&

@@ -36,6 +36,7 @@ interface RegisterDto {
   firstName: string
   lastName: string
   phoneNumber?: string
+  city?: string
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -101,7 +102,8 @@ export const useAuthStore = create<AuthStore>()(
             data.password,
             data.firstName,
             data.lastName,
-            data.phoneNumber
+            data.phoneNumber,
+            data.city
           )
           set({
             user,

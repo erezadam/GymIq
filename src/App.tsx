@@ -36,6 +36,7 @@ const AdminSettings = lazy(() => import('@/domains/admin/components/AdminSetting
 // User
 const MainLayout = lazy(() => import('@/design-system/layouts/MainLayout'))
 const UserDashboard = lazy(() => import('@/domains/dashboard/components/UserDashboard'))
+const TrainerSelectionScreen = lazy(() => import('@/domains/trainee-onboarding/components/TrainerSelectionScreen'))
 
 // Workouts
 const WorkoutBuilder = lazy(() => import('@/domains/workouts/components/WorkoutBuilder'))
@@ -96,6 +97,7 @@ function App() {
           <Route path="personal-records" element={<PersonalRecords />} />
           <Route path="analysis" element={<TrainingAnalysis />} />
           <Route path="inbox" element={<TraineeInbox />} />
+          <Route path="trainers" element={<TrainerSelectionScreen />} />
           <Route path="progress" element={<UserDashboard />} /> {/* TODO: Progress page */}
           <Route path="profile" element={<UserDashboard />} /> {/* TODO: Profile page */}
         </Route>
