@@ -6,6 +6,7 @@ import { getExternalComparisonUrl } from '@/lib/firebase/appSettings'
 import { useVersionCheck } from '@/shared/hooks/useVersionCheck'
 import { colors, spacing, borderRadius, typography } from '@/styles/theme'
 import AITrainerModal from '@/domains/workouts/components/ai-trainer/AITrainerModal'
+import SelectTrainerPrompt from '@/domains/trainee-onboarding/components/SelectTrainerPrompt'
 
 // Initial stats (will be replaced with Firebase data)
 const defaultStats = {
@@ -168,6 +169,9 @@ export default function UserDashboard() {
         direction: 'rtl',
       }}
     >
+      {/* Trainer selection prompt (trainees without a trainer) */}
+      <SelectTrainerPrompt />
+
       {/* Welcome Section */}
       <div
         style={{

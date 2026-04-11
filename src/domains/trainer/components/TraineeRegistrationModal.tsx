@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { X, UserPlus, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { X, UserPlus, Loader2, CheckCircle, AlertCircle, Users, MapPin } from 'lucide-react'
 import { useAuthStore } from '@/domains/authentication/store'
 import { traineeAccountService } from '../services/traineeAccountService'
 import { trainerService } from '../services/trainerService'
@@ -33,14 +33,24 @@ type EmailCheckStatus =
   | 'has_trainer'    // Existing user with different trainer
   | 'already_yours'  // Already this trainer's trainee
 
+const NO_CITY_KEY = '__no_city__'
+
 export function TraineeRegistrationModal({
   onClose,
   onSuccess,
 }: TraineeRegistrationModalProps) {
   const { user } = useAuthStore()
+  const [mode, setMode] = useState<'new' | 'directory'>('new')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [capturedPhoto, setCapturedPhoto] = useState<File | null>(null)
+
+  // Directory mode state
+  const [directoryTrainees, setDirectoryTrainees] = useState<AppUser[]>([])
+  const [isLoadingDirectory, setIsLoadingDirectory] = useState(false)
+  const [directoryError, setDirectoryError] = useState<string | null>(null)
+  const [selectedCity, setSelectedCity] = useState<string | null>(null)
+  const [assigningUid, setAssigningUid] = useState<string | null>(null)
   const [formData, setFormData] = useState<CreateTraineeData>({
     firstName: '',
     lastName: '',
@@ -125,6 +135,74 @@ export function TraineeRegistrationModal({
       setExistingUser(null)
     }
   }, [user])
+
+  // Load unassigned trainees when switching to directory mode
+  useEffect(() => {
+    if (mode !== 'directory' || directoryTrainees.length > 0 || isLoadingDirectory) return
+    let cancelled = false
+    setIsLoadingDirectory(true)
+    setDirectoryError(null)
+    trainerService
+      .getUnassignedTrainees()
+      .then(list => {
+        if (cancelled) return
+        setDirectoryTrainees(list)
+      })
+      .catch(err => {
+        console.error('Failed to load unassigned trainees:', err)
+        if (!cancelled) setDirectoryError('שגיאה בטעינת רשימת המתאמנים')
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingDirectory(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [mode, directoryTrainees.length, isLoadingDirectory])
+
+  // Group unassigned trainees by city (no-city bucket first)
+  const directoryByCity = useMemo(() => {
+    const groups = new Map<string, AppUser[]>()
+    for (const t of directoryTrainees) {
+      const city = t.city?.trim() || NO_CITY_KEY
+      const bucket = groups.get(city) || []
+      bucket.push(t)
+      groups.set(city, bucket)
+    }
+    // Sort: no-city first, then alphabetical (Hebrew)
+    const entries = Array.from(groups.entries())
+    entries.sort((a, b) => {
+      if (a[0] === NO_CITY_KEY) return -1
+      if (b[0] === NO_CITY_KEY) return 1
+      return a[0].localeCompare(b[0], 'he')
+    })
+    return entries
+  }, [directoryTrainees])
+
+  const selectedCityTrainees = useMemo(() => {
+    if (!selectedCity) return []
+    return directoryByCity.find(([c]) => c === selectedCity)?.[1] ?? []
+  }, [selectedCity, directoryByCity])
+
+  const handleLinkFromDirectory = async (trainee: AppUser) => {
+    if (!user) return
+    setAssigningUid(trainee.uid)
+    setError(null)
+    try {
+      const trainerName = `${user.firstName} ${user.lastName}`
+      await traineeAccountService.linkExistingUser(
+        trainee,
+        user.uid,
+        trainerName,
+        {}
+      )
+      onSuccess()
+    } catch (err: any) {
+      console.error('Failed to link unassigned trainee:', err)
+      setError(err?.message || 'שגיאה בשיוך המתאמן')
+      setAssigningUid(null)
+    }
+  }
 
   // Debounced email check
   useEffect(() => {
@@ -295,14 +373,153 @@ export function TraineeRegistrationModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-dark-border sticky top-0 bg-dark-surface z-10">
           <h2 className="text-xl font-bold text-text-primary">
-            {isExistingUser ? 'הוספת מתאמן קיים' : 'רישום מתאמן חדש'}
+            {mode === 'directory'
+              ? 'בחירה מרשימת מתאמנים'
+              : isExistingUser
+                ? 'הוספת מתאמן קיים'
+                : 'רישום מתאמן חדש'}
           </h2>
           <button onClick={onClose} className="btn-icon">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Form */}
+        {/* Mode tabs */}
+        <div className="flex gap-2 p-4 border-b border-dark-border bg-dark-surface">
+          <button
+            type="button"
+            onClick={() => {
+              setMode('new')
+              setError(null)
+            }}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+              mode === 'new'
+                ? 'bg-primary text-on-primary'
+                : 'bg-dark-card text-on-surface-variant border border-dark-border hover:border-text-muted'
+            }`}
+          >
+            <UserPlus className="w-4 h-4" />
+            רישום חדש
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode('directory')
+              setError(null)
+            }}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+              mode === 'directory'
+                ? 'bg-primary text-on-primary'
+                : 'bg-dark-card text-on-surface-variant border border-dark-border hover:border-text-muted'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            בחירה מרשימה
+          </button>
+        </div>
+
+        {mode === 'directory' ? (
+          <div className="p-6 space-y-4">
+            {error && (
+              <div className="bg-status-error/10 border border-status-error/30 text-status-error rounded-xl p-3 text-sm">
+                {error}
+              </div>
+            )}
+
+            {isLoadingDirectory ? (
+              <div className="flex items-center justify-center gap-2 py-8 text-on-surface-variant">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                טוען מתאמנים...
+              </div>
+            ) : directoryError ? (
+              <div className="bg-status-error/10 border border-status-error/30 text-status-error rounded-xl p-3 text-sm">
+                {directoryError}
+              </div>
+            ) : directoryTrainees.length === 0 ? (
+              <div className="text-center py-8 text-on-surface-variant">
+                אין מתאמנים זמינים לשיוך כרגע.
+              </div>
+            ) : selectedCity === null ? (
+              <>
+                <p className="text-on-surface-variant text-sm">
+                  בחר עיר כדי לראות את המתאמנים הזמינים:
+                </p>
+                <ul className="flex flex-col gap-2">
+                  {directoryByCity.map(([city, trainees]) => {
+                    const label = city === NO_CITY_KEY ? 'ללא עיר' : city
+                    return (
+                      <li key={city}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCity(city)}
+                          className="w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-dark-card border border-dark-border hover:border-primary/40 transition-colors text-right"
+                        >
+                          <span className="flex items-center gap-2 text-text-primary font-medium">
+                            <MapPin className="w-4 h-4 text-on-surface-variant" />
+                            {label}
+                          </span>
+                          <span className="text-on-surface-variant text-sm">
+                            {trainees.length} מתאמנים
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCity(null)}
+                    className="text-sm text-on-surface-variant hover:text-text-primary flex items-center gap-1"
+                  >
+                    ← חזרה לרשימת ערים
+                  </button>
+                  <span className="text-sm text-on-surface-variant">
+                    {selectedCity === NO_CITY_KEY ? 'ללא עיר' : selectedCity}
+                  </span>
+                </div>
+                <ul className="flex flex-col gap-2">
+                  {selectedCityTrainees.map(trainee => {
+                    const fullName =
+                      [trainee.firstName, trainee.lastName].filter(Boolean).join(' ').trim() ||
+                      trainee.displayName ||
+                      trainee.email ||
+                      'מתאמן'
+                    return (
+                      <li
+                        key={trainee.uid}
+                        className="flex items-center justify-between gap-3 p-3 rounded-xl bg-dark-card border border-dark-border"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-text-primary font-medium truncate">{fullName}</p>
+                          <p className="text-on-surface-variant text-xs truncate" dir="ltr">
+                            {trainee.email}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleLinkFromDirectory(trainee)}
+                          disabled={assigningUid !== null}
+                          className="shrink-0 btn-primary px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-50"
+                        >
+                          {assigningUid === trainee.uid ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <UserPlus className="w-4 h-4" />
+                          )}
+                          בחר
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </>
+            )}
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Error */}
           {error && (
@@ -568,6 +785,7 @@ export function TraineeRegistrationModal({
             )}
           </button>
         </form>
+        )}
       </div>
     </div>
   )

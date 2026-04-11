@@ -24,6 +24,7 @@ const registerSchema = z.object({
   confirmPassword: z.string(),
   firstName: z.string().min(2, 'שם פרטי נדרש'),
   lastName: z.string().min(2, 'שם משפחה נדרש'),
+  city: z.string().trim().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'הסיסמאות אינן תואמות',
   path: ['confirmPassword'],
@@ -60,7 +61,7 @@ export default function LoginPage() {
   // Register form
   const registerForm = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { email: '', password: '', confirmPassword: '', firstName: '', lastName: '' },
+    defaultValues: { email: '', password: '', confirmPassword: '', firstName: '', lastName: '', city: '' },
   })
 
   // Reset password form
@@ -92,6 +93,7 @@ export default function LoginPage() {
         password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
+        city: data.city?.trim() || undefined,
       })
       toast.success('ברוך הבא ל-GymIQ!')
     } catch (err: any) {
@@ -357,6 +359,24 @@ export default function LoginPage() {
                       </p>
                     )}
                   </div>
+                </div>
+
+                {/* City */}
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
+                    עיר
+                  </label>
+                  <input
+                    {...registerForm.register('city')}
+                    type="text"
+                    placeholder="לדוגמה: תל אביב"
+                    className="input-neon w-full"
+                  />
+                  {registerForm.formState.errors.city && (
+                    <p className="text-red-400 text-xs mt-1">
+                      {registerForm.formState.errors.city.message}
+                    </p>
+                  )}
                 </div>
 
                 {/* Email */}

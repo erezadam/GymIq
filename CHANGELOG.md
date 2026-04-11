@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-04-11
+
+### Added
+- **בחירת מאמן ע״י המתאמן** — מתאמן שנכנס ל-dashboard ללא מאמן משויך רואה באנר "בחר מאמן" (עם דילוג session-only). בלחיצה נפתח מסך ייעודי חדש `/trainers` שמציג רשימת כל המאמנים במערכת. בחירה → אישור → `users.trainerId` + `trainerRelationships` נכתבים אוטומטית, והמאמן רואה את המתאמן מיידית ב-TrainerDashboard. (`src/domains/trainee-onboarding/components/TrainerSelectionScreen.tsx`, `SelectTrainerPrompt.tsx`, `trainerService.getAvailableTrainers`, `trainerService.selfAssignTrainer`)
+- **שדה "עיר" בהרשמה עצמית** — טופס ההרשמה ב-LoginPage כולל שדה עיר חדש (אופציונלי). הערך נשמר ב-`users.city` (`AppUser.city`, `registerUser` מקבל `city`, `RegisterDto.city`).
+- **מאמן — "בחירה מרשימת מתאמנים" לפי עיר** — מודל הוספת מתאמן (`TraineeRegistrationModal`) קיבל טאבים: "רישום חדש" (התנהגות קיימת) ו-"בחירה מרשימה". הטאב החדש מציג את כל המתאמנים הלא-משויכים (`role=='user' && trainerId==null`) מקובצים לפי עיר, כאשר קטגוריית **"ללא עיר"** מופיעה ראשונה. בחירה → שיוך אוטומטי עם כל שדות המתאמן הקיימים (`trainerService.getUnassignedTrainees`).
+- **`scripts/backfillTrainerIdNull.ts`** — סקריפט migration חד-פעמי שמשלים `trainerId: null` לכל משתמש `role=='user'` שאין לו את השדה (נדרש כדי שה-Firestore query `where('trainerId', '==', null)` יתפוס אותם). מאומת אל מול admin login.
+
+### Changed
+- **`users` collection: trainerId נרשם אוטומטית כ-null** עבור משתמשי `role=='user'` חדשים (`createAppUser`) — תנאי הכרחי ל-query של המתאמנים הלא-משויכים.
+- **firestore.rules** — הרשאות קריאה הורחבו:
+  - כל משתמש מאומת יכול לקרוא פרופילי מאמנים (`role == 'trainer'`) לשימוש מסך `/trainers`.
+  - מאמנים יכולים לקרוא פרופילי מתאמנים לא-משויכים (`role == 'user' && trainerId == null`) לשימוש המסך "בחירה מרשימה".
+  - מתאמן יכול ליצור `trainerRelationships` על עצמו (בעבר — רק מאמנים יכלו).
+
 ## 2026-04-08
 
 ### Fixed
