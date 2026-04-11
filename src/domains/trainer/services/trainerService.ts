@@ -35,22 +35,24 @@ export const trainerService = {
 
   // Get all trainees (role='user') that have no trainer assigned.
   // Used by the trainer "add trainee from directory" flow.
+  //
+  // We query all role='user' docs and filter client-side because Firestore
+  // cannot query for a missing field — legacy docs created before the
+  // `trainerId: null` convention would otherwise be invisible.
   async getUnassignedTrainees(): Promise<AppUser[]> {
-    const q = query(
-      collection(db, 'users'),
-      where('role', '==', 'user'),
-      where('trainerId', '==', null)
-    )
+    const q = query(collection(db, 'users'), where('role', '==', 'user'))
     const snapshot = await getDocs(q)
-    return snapshot.docs.map(d => {
-      const data = d.data()
-      return {
-        ...data,
-        uid: d.id,
-        createdAt: data.createdAt?.toDate?.() || data.createdAt || new Date(),
-        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt || new Date(),
-      } as AppUser
-    })
+    return snapshot.docs
+      .map(d => {
+        const data = d.data()
+        return {
+          ...data,
+          uid: d.id,
+          createdAt: data.createdAt?.toDate?.() || data.createdAt || new Date(),
+          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt || new Date(),
+        } as AppUser
+      })
+      .filter(u => u.trainerId == null)
   },
 
   // Trainee self-assigns to a trainer: updates user doc + creates relationship
