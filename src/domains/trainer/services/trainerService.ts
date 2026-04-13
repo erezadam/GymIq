@@ -7,8 +7,10 @@ import {
   updateDoc,
   query,
   where,
+  orderBy,
   serverTimestamp,
   limit,
+  Timestamp,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase/config'
 import type { TrainerRelationship, TraineeWithStats, TraineeStats } from '../types'
@@ -287,4 +289,69 @@ export const trainerService = {
     const snapshot = await getDocs(q)
     return !snapshot.empty
   },
+
+  // Get recently completed workouts for all trainer's trainees since a given date
+  async getRecentTraineeCompletions(
+    trainerId: string,
+    since: Date
+  ): Promise<TraineeWorkoutCompletion[]> {
+    const relationships = await this.getTrainerTrainees(trainerId)
+    if (relationships.length === 0) return []
+
+    const completions: TraineeWorkoutCompletion[] = []
+
+    await Promise.all(
+      relationships.map(async (rel) => {
+        try {
+          const q = query(
+            collection(db, 'workoutHistory'),
+            where('userId', '==', rel.traineeId),
+            where('status', '==', 'completed'),
+            where('date', '>', Timestamp.fromDate(since)),
+            orderBy('date', 'desc'),
+            limit(10)
+          )
+          const snapshot = await getDocs(q)
+
+          // Also fetch trainee profile for phone number
+          const profile = await this.getTraineeProfile(rel.traineeId)
+
+          for (const d of snapshot.docs) {
+            const data = d.data()
+            completions.push({
+              traineeId: rel.traineeId,
+              traineeName: rel.traineeName,
+              traineePhone: profile?.phoneNumber,
+              workoutId: d.id,
+              workoutName: data.name || 'אימון',
+              date: data.date?.toDate() || new Date(),
+              duration: data.duration || 0,
+              completedExercises: data.completedExercises || 0,
+              totalExercises: data.totalExercises || 0,
+              totalVolume: data.totalVolume || 0,
+            })
+          }
+        } catch (error) {
+          console.error(`Error fetching completions for trainee ${rel.traineeId}:`, error)
+        }
+      })
+    )
+
+    // Sort by date descending
+    completions.sort((a, b) => b.date.getTime() - a.date.getTime())
+    return completions
+  },
+}
+
+export interface TraineeWorkoutCompletion {
+  traineeId: string
+  traineeName: string
+  traineePhone?: string
+  workoutId: string
+  workoutName: string
+  date: Date
+  duration: number
+  completedExercises: number
+  totalExercises: number
+  totalVolume: number
 }
