@@ -244,20 +244,12 @@ export function ExerciseCard({
           {/* Last workout data - shown in red below image */}
           {exercise.lastWorkoutData && (
             <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                padding: '8px 12px',
-                marginBottom: (exercise.aiRecommendation || exercise.weightRecommendation) ? '4px' : '12px',
-                background: 'rgba(239, 68, 68, 0.1)',
-                borderRadius: '8px',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-              }}
+              className={`flex items-center justify-center gap-1.5 py-2 px-3 ${(exercise.aiRecommendation || exercise.weightRecommendation) ? 'mb-1' : 'mb-3'} bg-red-500/10 rounded-lg border border-red-500/30`}
             >
-              <span style={{ color: '#EF4444', fontSize: '14px', fontWeight: 600 }}>
-                {workoutLabels.lastWorkout} {exercise.lastWorkoutData.reps} חזרות @ {exercise.lastWorkoutData.weight}kg
+              <span className="text-red-500 text-sm font-semibold">
+                {workoutLabels.lastWorkout} {exercise.lastWorkoutData.reps} חזרות{exercise.lastWorkoutData.time && exercise.lastWorkoutData.time > 0
+                  ? ` ${String(Math.floor(exercise.lastWorkoutData.time / 60)).padStart(2, '0')}:${String(exercise.lastWorkoutData.time % 60).padStart(2, '0')}`
+                  : ''} @ {exercise.lastWorkoutData.weight}kg
               </span>
             </div>
           )}

@@ -530,7 +530,7 @@ export async function getLastWorkoutForExercises(
 export async function getBestPerformanceForExercises(
   userId: string,
   exerciseIds: string[]
-): Promise<Record<string, { weight: number; reps: number; date: Date }>> {
+): Promise<Record<string, { weight: number; reps: number; time?: number; date: Date }>> {
   const historyRef = collection(db, COLLECTION_NAME)
 
   const q = query(
@@ -540,7 +540,7 @@ export async function getBestPerformanceForExercises(
   )
 
   const snapshot = await getDocs(q)
-  const result: Record<string, { weight: number; reps: number; date: Date }> = {}
+  const result: Record<string, { weight: number; reps: number; time?: number; date: Date }> = {}
   const exerciseIdSet = new Set(exerciseIds)
 
   for (const doc of snapshot.docs) {
@@ -557,7 +557,7 @@ export async function getBestPerformanceForExercises(
 
       const validSets = exercise.sets.filter((set: any) =>
         set.type !== 'warmup' &&
-        ((set.actualReps && set.actualReps > 0) || set.completed)
+        ((set.actualReps && set.actualReps > 0) || (set.time && set.time > 0) || set.completed)
       )
 
       if (validSets.length === 0) continue
@@ -582,17 +582,23 @@ export async function getBestPerformanceForExercises(
 
       const bestWeight = bestSet.actualWeight || bestSet.targetWeight || 0
       const bestReps = bestSet.actualReps || bestSet.targetReps || 0
+      const bestTime = bestSet.time || 0
       const existing = result[exercise.exerciseId]
 
+      const entry: { weight: number; reps: number; time?: number; date: Date } = {
+        weight: bestWeight, reps: bestReps, date: workoutDate
+      }
+      if (bestTime > 0) entry.time = bestTime
+
       if (!existing) {
-        result[exercise.exerciseId] = { weight: bestWeight, reps: bestReps, date: workoutDate }
+        result[exercise.exerciseId] = entry
       } else if (allWeightsZero) {
         if (bestReps > existing.reps) {
-          result[exercise.exerciseId] = { weight: bestWeight, reps: bestReps, date: workoutDate }
+          result[exercise.exerciseId] = entry
         }
       } else {
         if (bestWeight > existing.weight || (bestWeight === existing.weight && bestReps > existing.reps)) {
-          result[exercise.exerciseId] = { weight: bestWeight, reps: bestReps, date: workoutDate }
+          result[exercise.exerciseId] = entry
         }
       }
     }
