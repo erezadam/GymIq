@@ -392,6 +392,7 @@ export default function ProgramBuilder() {
       const programData: Record<string, unknown> = {
         trainerId: user.uid,
         originalTrainerId: user.uid,
+        trainerName: user.displayName || user.firstName || '',
         traineeId,
         name,
         status: 'draft',
@@ -437,6 +438,7 @@ export default function ProgramBuilder() {
       const programData: Record<string, unknown> = {
         trainerId: user.uid,
         originalTrainerId: user.uid,
+        trainerName: user.displayName || user.firstName || '',
         traineeId,
         name,
         status: activate ? 'active' : 'draft',

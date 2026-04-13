@@ -111,6 +111,7 @@ export function StandaloneWorkoutEditor({
         trainerId: user.uid,
         traineeId,
         originalTrainerId: user.uid,
+        trainerName: user.displayName || user.firstName || '',
         name: workoutName,
         type: 'standalone',
         status: 'active',
