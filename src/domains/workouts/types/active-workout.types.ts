@@ -9,6 +9,7 @@ import type { MuscleGroup } from '@/domains/exercises/types'
 export interface LastWorkoutData {
   weight: number
   reps: number
+  time?: number  // Time in seconds (for time_only and reps_time exercises)
   date: Date
 }
 

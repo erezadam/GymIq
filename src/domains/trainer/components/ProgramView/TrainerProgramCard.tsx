@@ -76,7 +76,7 @@ export function TrainerProgramCard({ program, onDisconnected }: TrainerProgramCa
                   {program.name}
                 </p>
                 <span className="text-accent-orange bg-accent-orange/20 px-2 py-0.5 rounded-full text-xs font-bold">
-                  מאמן
+                  {program.trainerName ? `מאמן: ${program.trainerName}` : 'מאמן'}
                 </span>
               </div>
               <p className="text-accent-orange/70 text-sm mt-1">

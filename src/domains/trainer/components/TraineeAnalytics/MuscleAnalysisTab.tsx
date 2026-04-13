@@ -110,6 +110,7 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
         trainerId: user.uid,
         traineeId,
         originalTrainerId: user.uid,
+        trainerName: user.displayName || user.firstName || '',
         name: workoutName.trim(),
         type: 'standalone',
         status: 'active',

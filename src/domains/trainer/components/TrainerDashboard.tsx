@@ -1,21 +1,51 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { UserPlus, Users, RefreshCw, Dumbbell, TrendingUp, MessageSquare } from 'lucide-react'
 import { useTrainerData } from '../hooks/useTrainerData'
 import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { messageService } from '../services/messageService'
+import { trainerService } from '../services/trainerService'
+import type { TraineeWorkoutCompletion } from '../services/trainerService'
 import { TraineeCard } from './TraineeCard'
 import { TraineeRegistrationModal } from './TraineeRegistrationModal'
+import { CompletedWorkoutsPopup } from './CompletedWorkoutsPopup'
+
+const LAST_SEEN_KEY = 'trainer_completions_last_seen'
 
 export default function TrainerDashboard() {
   const { trainees, isLoading, error, refreshTrainees } = useTrainerData()
   const user = useEffectiveUser()
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
   const [totalMessages, setTotalMessages] = useState(0)
+  const [completions, setCompletions] = useState<TraineeWorkoutCompletion[]>([])
+  const [showCompletionsPopup, setShowCompletionsPopup] = useState(false)
+  const completionsCheckedRef = useRef(false)
 
   useEffect(() => {
     if (!user?.uid) return
     messageService.getTrainerMessages(user.uid, 100)
       .then((msgs) => setTotalMessages(msgs.length))
+      .catch(console.error)
+  }, [user?.uid])
+
+  // Check for new workout completions (once per session)
+  useEffect(() => {
+    if (!user?.uid || completionsCheckedRef.current) return
+    completionsCheckedRef.current = true
+
+    const storageKey = `${LAST_SEEN_KEY}_${user.uid}`
+    const lastSeenStr = localStorage.getItem(storageKey)
+    // Default to 7 days ago if never visited
+    const since = lastSeenStr ? new Date(lastSeenStr) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+
+    trainerService.getRecentTraineeCompletions(user.uid, since)
+      .then((results) => {
+        if (results.length > 0) {
+          setCompletions(results)
+          setShowCompletionsPopup(true)
+        }
+        // Update last seen to now
+        localStorage.setItem(storageKey, new Date().toISOString())
+      })
       .catch(console.error)
   }, [user?.uid])
 
@@ -141,6 +171,14 @@ export default function TrainerDashboard() {
             setShowRegistrationModal(false)
             refreshTrainees()
           }}
+        />
+      )}
+
+      {/* Completed Workouts Popup */}
+      {showCompletionsPopup && completions.length > 0 && (
+        <CompletedWorkoutsPopup
+          completions={completions}
+          onClose={() => setShowCompletionsPopup(false)}
         />
       )}
     </div>
