@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Save, Loader2 } from 'lucide-react'
+import { X, Save, Loader2, UserX } from 'lucide-react'
 import { trainerService } from '../services/trainerService'
 import type { TraineeWithStats, TrainingGoal } from '../types'
 import { TRAINING_GOAL_LABELS } from '../types'
@@ -42,6 +42,8 @@ interface FormData {
 export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalProps) {
   const profile = trainee.traineeProfile
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDisconnecting, setIsDisconnecting] = useState(false)
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const [formData, setFormData] = useState<FormData>({
@@ -119,6 +121,27 @@ export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalP
 
   const updateField = <K extends keyof FormData>(key: K, value: FormData[K]) => {
     setFormData((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const handleDisconnect = async () => {
+    if (!profile?.uid) return
+    setIsDisconnecting(true)
+    setError(null)
+    try {
+      await trainerService.disconnectTrainee(
+        trainee.relationship.id,
+        profile.uid,
+        'trainer',
+        'נותק ע"י המאמן'
+      )
+      onSave()
+    } catch (err: any) {
+      console.error('Error disconnecting trainee:', err)
+      setError(err.message || 'שגיאה בניתוק המתאמן')
+    } finally {
+      setIsDisconnecting(false)
+      setShowDisconnectConfirm(false)
+    }
   }
 
   return (
@@ -329,7 +352,7 @@ export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalP
           {/* Submit */}
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isDisconnecting}
             className="btn-primary w-full flex items-center justify-center gap-2 py-3"
           >
             {isSubmitting ? (
@@ -344,6 +367,53 @@ export function TraineeEditModal({ trainee, onClose, onSave }: TraineeEditModalP
               </>
             )}
           </button>
+
+          {/* Disconnect action — trigger confirmation */}
+          <div className="pt-4 mt-4 border-t border-dark-border">
+            {!showDisconnectConfirm ? (
+              <button
+                type="button"
+                onClick={() => setShowDisconnectConfirm(true)}
+                disabled={isSubmitting || isDisconnecting}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-status-error border border-status-error/30 hover:bg-status-error/10 transition text-sm"
+              >
+                <UserX className="w-4 h-4" />
+                <span>נתק מתאמן</span>
+              </button>
+            ) : (
+              <div className="bg-status-error/10 border border-status-error/30 rounded-xl p-4 space-y-3">
+                <p className="text-sm text-text-primary text-center font-medium">
+                  האם לנתק את {profile?.firstName} {profile?.lastName} ממאמנות?
+                </p>
+                <p className="text-xs text-on-surface-variant text-center">
+                  הקשר ייסגר והמתאמן יוכל לבחור מאמן אחר
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDisconnectConfirm(false)}
+                    disabled={isDisconnecting}
+                    className="flex-1 py-2 rounded-lg bg-dark-card border border-dark-border text-text-primary text-sm"
+                  >
+                    ביטול
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDisconnect}
+                    disabled={isDisconnecting}
+                    className="flex-1 py-2 rounded-lg bg-status-error text-white text-sm flex items-center justify-center gap-1.5"
+                  >
+                    {isDisconnecting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <UserX className="w-4 h-4" />
+                    )}
+                    <span>נתק</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </form>
       </div>
     </div>
