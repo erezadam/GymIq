@@ -80,7 +80,7 @@ export function useActiveWorkout() {
   const navigate = useNavigate()
   const user = useEffectiveUser()
   const isImpersonating = useIsImpersonating()
-  const { selectedExercises, clearWorkout, removeExercise: removeFromStore, programId, programDayLabel, programSource, workoutName: builderWorkoutName, targetUserId, reportedBy, reportedByName } = useWorkoutBuilderStore()
+  const { selectedExercises, clearWorkout, removeExercise: removeFromStore, programId, programDayLabel, programSource, workoutName: builderWorkoutName, targetUserId } = useWorkoutBuilderStore()
 
   // Effective userId: trainee (if trainer reporting) or current user
   const effectiveUserId = targetUserId || user?.uid || 'anonymous'
