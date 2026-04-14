@@ -526,11 +526,76 @@ export async function getLastWorkoutForExercises(
   return result
 }
 
-// Get personal best (PR) for multiple exercises — highest weight across ALL workouts
+// Normalize exercise name (trim, collapse whitespace, lowercase)
+function normalizeExerciseName(name: string | undefined | null): string {
+  if (!name) return ''
+  return name.trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
+// Tokenize a Hebrew/English exercise name for fuzzy matching.
+// Splits on whitespace + punctuation, drops 1-char tokens, and adds a
+// prefix-stripped variant so "במכונה" matches "מכונה".
+const HEB_PREFIXES = new Set(['ב', 'ל', 'ה', 'ו', 'מ', 'ש', 'כ'])
+function tokenizeExerciseName(name: string | undefined | null): Set<string> {
+  const norm = normalizeExerciseName(name).replace(/[(),.\-_/]/g, ' ')
+  const out = new Set<string>()
+  for (const w of norm.split(' ')) {
+    if (w.length < 2) continue
+    out.add(w)
+    if (w.length >= 4 && HEB_PREFIXES.has(w[0])) out.add(w.substring(1))
+  }
+  return out
+}
+
+function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0
+  let inter = 0
+  for (const x of a) if (b.has(x)) inter++
+  const union = a.size + b.size - inter
+  return union === 0 ? 0 : inter / union
+}
+
+// First significant word in the name (the action: "חתירה", "סקוואט", "לחיצת").
+// Used as a guard in fuzzy matching so squat≠lunge despite high token overlap.
+function firstActionToken(name: string | undefined | null): string {
+  const norm = normalizeExerciseName(name).replace(/[(),.\-_/]/g, ' ')
+  for (const w of norm.split(' ')) {
+    if (w.length >= 3) return w
+  }
+  return ''
+}
+
+const FUZZY_THRESHOLD = 0.5
+
+type PRBestEntry = { weight: number; reps: number; time?: number; date: Date }
+type ExerciseDetails = { nameHe?: string; primaryMuscle?: string; equipment?: string; category?: string }
+
+function pickBetterEntry(existing: PRBestEntry | undefined, candidate: PRBestEntry, candidateAllWeightsZero: boolean): PRBestEntry {
+  if (!existing) return candidate
+  if (candidateAllWeightsZero) {
+    return candidate.reps > existing.reps ? candidate : existing
+  }
+  if (candidate.weight > existing.weight) return candidate
+  if (candidate.weight === existing.weight && candidate.reps > existing.reps) return candidate
+  return existing
+}
+
+// Get personal best (PR) for multiple exercises — highest weight across ALL workouts.
+// Three-tier matching:
+//   1. exerciseId exact match
+//   2. normalized-name exact match (handles same-name-different-ID duplicates)
+//   3. fuzzy match: same `category` + same first action-word + Jaccard token overlap
+//      >= threshold. Handles word-order / phrasing duplicates like
+//      "חתירה בישיבה במכונה" vs "חתירה עם מכונה, בישיבה".
+//      `category` is used (not primaryMuscle/equipment) because that is what the
+//      embedded history record stores. The first-action-word gate prevents
+//      false matches like squat↔lunge that share most other tokens.
+// Pass `exerciseDetailsById` (with at least nameHe + category) to enable tiers 2 & 3.
 export async function getBestPerformanceForExercises(
   userId: string,
-  exerciseIds: string[]
-): Promise<Record<string, { weight: number; reps: number; time?: number; date: Date }>> {
+  exerciseIds: string[],
+  exerciseDetailsById?: Record<string, ExerciseDetails>
+): Promise<Record<string, PRBestEntry>> {
   const historyRef = collection(db, COLLECTION_NAME)
 
   const q = query(
@@ -540,8 +605,29 @@ export async function getBestPerformanceForExercises(
   )
 
   const snapshot = await getDocs(q)
-  const result: Record<string, { weight: number; reps: number; time?: number; date: Date }> = {}
+  const result: Record<string, PRBestEntry> = {}
   const exerciseIdSet = new Set(exerciseIds)
+
+  // Tier-2/3 setup: precompute target lookups
+  const targetNames = new Set<string>()
+  type FuzzyTarget = { id: string; category: string; firstToken: string; tokens: Set<string> }
+  const fuzzyTargets: FuzzyTarget[] = []
+  if (exerciseDetailsById) {
+    for (const id of exerciseIds) {
+      const det = exerciseDetailsById[id]
+      if (!det) continue
+      const norm = normalizeExerciseName(det.nameHe)
+      if (norm) targetNames.add(norm)
+      const tokens = tokenizeExerciseName(det.nameHe)
+      const ft = firstActionToken(det.nameHe)
+      if (tokens.size > 0 && det.category && ft) {
+        fuzzyTargets.push({ id, category: det.category, firstToken: ft, tokens })
+      }
+    }
+  }
+  const resultByName: Record<string, PRBestEntry> = {}
+  // For tier 3: per-input-id we track the best PR found via fuzzy match.
+  const fuzzyBestById: Record<string, PRBestEntry> = {}
 
   for (const doc of snapshot.docs) {
     const data = doc.data()
@@ -552,14 +638,34 @@ export async function getBestPerformanceForExercises(
     const workoutDate = data.date?.toDate() || new Date()
 
     for (const exercise of exercises) {
-      if (!exerciseIdSet.has(exercise.exerciseId)) continue
+      const normName = normalizeExerciseName(exercise.exerciseNameHe || exercise.exerciseName)
+      const matchById = exerciseIdSet.has(exercise.exerciseId)
+      const matchByName = targetNames.size > 0 && normName !== '' && targetNames.has(normName)
+
+      // Pre-compute fuzzy candidates (input ids that match this history exercise)
+      const fuzzyMatchIds: string[] = []
+      if (fuzzyTargets.length > 0 && !matchById && exercise.category) {
+        const histName = exercise.exerciseNameHe || exercise.exerciseName
+        const histTokens = tokenizeExerciseName(histName)
+        const histFirst = firstActionToken(histName)
+        if (histTokens.size > 0 && histFirst) {
+          for (const t of fuzzyTargets) {
+            if (t.category !== exercise.category) continue
+            if (t.firstToken !== histFirst) continue
+            if (jaccardSimilarity(t.tokens, histTokens) >= FUZZY_THRESHOLD) {
+              fuzzyMatchIds.push(t.id)
+            }
+          }
+        }
+      }
+
+      if (!matchById && !matchByName && fuzzyMatchIds.length === 0) continue
       if (!exercise.sets || exercise.sets.length === 0) continue
 
       const validSets = exercise.sets.filter((set: any) =>
         set.type !== 'warmup' &&
         ((set.actualReps && set.actualReps > 0) || (set.time && set.time > 0) || set.completed)
       )
-
       if (validSets.length === 0) continue
 
       const allWeightsZero = validSets.every((set: any) => !set.actualWeight || set.actualWeight === 0)
@@ -583,23 +689,36 @@ export async function getBestPerformanceForExercises(
       const bestWeight = bestSet.actualWeight || bestSet.targetWeight || 0
       const bestReps = bestSet.actualReps || bestSet.targetReps || 0
       const bestTime = bestSet.time || 0
-      const existing = result[exercise.exerciseId]
 
-      const entry: { weight: number; reps: number; time?: number; date: Date } = {
-        weight: bestWeight, reps: bestReps, date: workoutDate
-      }
+      const entry: PRBestEntry = { weight: bestWeight, reps: bestReps, date: workoutDate }
       if (bestTime > 0) entry.time = bestTime
 
-      if (!existing) {
-        result[exercise.exerciseId] = entry
-      } else if (allWeightsZero) {
-        if (bestReps > existing.reps) {
-          result[exercise.exerciseId] = entry
-        }
-      } else {
-        if (bestWeight > existing.weight || (bestWeight === existing.weight && bestReps > existing.reps)) {
-          result[exercise.exerciseId] = entry
-        }
+      if (matchById) {
+        result[exercise.exerciseId] = pickBetterEntry(result[exercise.exerciseId], entry, allWeightsZero)
+      }
+      if (matchByName) {
+        resultByName[normName] = pickBetterEntry(resultByName[normName], entry, allWeightsZero)
+      }
+      for (const fid of fuzzyMatchIds) {
+        fuzzyBestById[fid] = pickBetterEntry(fuzzyBestById[fid], entry, allWeightsZero)
+      }
+    }
+  }
+
+  // Tier 2 fallback (exact normalized name)
+  if (exerciseDetailsById) {
+    for (const id of exerciseIds) {
+      if (result[id]) continue
+      const norm = normalizeExerciseName(exerciseDetailsById[id]?.nameHe)
+      if (norm && resultByName[norm]) {
+        result[id] = resultByName[norm]
+      }
+    }
+    // Tier 3 fallback (fuzzy by primaryMuscle+equipment+tokens)
+    for (const id of exerciseIds) {
+      if (result[id]) continue
+      if (fuzzyBestById[id]) {
+        result[id] = fuzzyBestById[id]
       }
     }
   }
