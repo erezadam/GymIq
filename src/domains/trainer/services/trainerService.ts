@@ -127,6 +127,20 @@ export const trainerService = {
     })
   },
 
+  // Fully disconnect a trainee from their trainer:
+  // ends the relationship AND clears trainerId on the user doc so the
+  // trainee can pick a new trainer via the self-select flow.
+  async disconnectTrainee(
+    relationshipId: string,
+    traineeId: string,
+    endedBy: 'trainer' | 'trainee' | 'admin',
+    reason?: string
+  ): Promise<void> {
+    await this.endRelationship(relationshipId, endedBy, reason)
+    // Clear trainerId on the user's profile (set to null so `where('trainerId', '==', null)` finds them)
+    await updateUserProfile(traineeId, { trainerId: null as unknown as string })
+  },
+
   // Pause a relationship
   async pauseRelationship(relationshipId: string): Promise<void> {
     const docRef = doc(db, 'trainerRelationships', relationshipId)

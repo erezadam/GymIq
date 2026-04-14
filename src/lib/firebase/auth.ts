@@ -314,10 +314,15 @@ export const updateUserProfile = async (
   data: Partial<AppUser>
 ): Promise<void> => {
   const userRef = doc(db, 'users', uid)
+  // Firestore setDoc() rejects undefined values. Strip them so with merge:true,
+  // unset fields keep their existing value (or stay missing if never set).
+  const clean = Object.fromEntries(
+    Object.entries(data).filter(([, v]) => v !== undefined)
+  )
   await setDoc(
     userRef,
     {
-      ...data,
+      ...clean,
       updatedAt: serverTimestamp(),
     },
     { merge: true }
