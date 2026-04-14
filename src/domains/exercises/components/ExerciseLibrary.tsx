@@ -707,11 +707,12 @@ export function ExerciseLibrary({
       }
 
       // Create standalone program via the existing trainer module path
-      await programService.createProgram({
+      const trainerName = user.displayName || user.firstName || 'מאמן'
+      const newProgramId = await programService.createProgram({
         trainerId: user.uid,
         traineeId,
         originalTrainerId: user.uid,
-        trainerName: user.displayName || user.firstName || '',
+        trainerName,
         name: workoutName,
         type: 'standalone',
         status: 'active',
@@ -719,6 +720,48 @@ export function ExerciseLibrary({
         weeklyStructure: [cleanDay],
         startDate: new Date(),
         currentWeek: 1,
+      })
+
+      // Also create a planned workoutHistory entry for the trainee,
+      // so the workout shows up in their "recent workouts" screen and in
+      // the trainer's "standalone workouts" section as a pending item.
+      const now = new Date()
+      await saveWorkoutHistory({
+        userId: traineeId,
+        reportedBy: user.uid,
+        reportedByName: trainerName,
+        name: workoutName,
+        date: now,
+        startTime: now,
+        endTime: now,
+        duration: 0,
+        status: 'planned',
+        exercises: selectedExercises.map((ex) => ({
+          exerciseId: ex.exerciseId,
+          exerciseName: ex.exerciseName || '',
+          exerciseNameHe: ex.exerciseNameHe,
+          imageUrl: ex.imageUrl || '',
+          category: ex.category || '',
+          isCompleted: false,
+          sets: [
+            {
+              type: 'working' as const,
+              targetReps: 10,
+              targetWeight: 0,
+              actualReps: 0,
+              actualWeight: 0,
+              completed: false,
+            },
+          ],
+        })),
+        completedExercises: 0,
+        totalExercises: selectedExercises.length,
+        completedSets: 0,
+        totalSets: selectedExercises.length,
+        totalVolume: 0,
+        personalRecords: 0,
+        source: 'trainer_program',
+        programId: newProgramId,
       })
 
       toast.success(`האימון שויך ל${traineeName}`)
