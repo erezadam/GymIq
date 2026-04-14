@@ -45,11 +45,11 @@ export function TraineeAssignmentModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg bg-surface-container rounded-t-2xl p-5 pb-8 animate-slide-up"
+        className="w-full max-w-lg bg-surface-container rounded-2xl p-5 pb-6 animate-slide-up max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -86,7 +86,7 @@ export function TraineeAssignmentModal({
             אין מתאמנים פעילים
           </p>
         ) : (
-          <div className="space-y-2 max-h-64 overflow-y-auto">
+          <div className="space-y-2 overflow-y-auto flex-1 min-h-[280px]">
             {trainees.map((rel) => (
               <button
                 key={rel.id}

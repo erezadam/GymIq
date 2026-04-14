@@ -2,6 +2,8 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { Dumbbell, LayoutDashboard, Users, Settings, LogOut, Menu, X, ArrowRight, Activity, Wrench, ClipboardList, Ribbon, Layers } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '@/domains/authentication/store'
+import { MobilePreviewFrame } from '@/shared/components/MobilePreviewFrame'
+import { MobilePreviewToggle } from '@/shared/components/MobilePreviewToggle'
 
 const navigation = [
   { name: 'דשבורד', href: '/admin', icon: LayoutDashboard, end: true },
@@ -116,20 +118,25 @@ export default function AdminLayout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="h-16 bg-dark-surface border-b border-dark-border flex items-center px-6">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden p-2 -mr-2 text-text-muted hover:text-text-primary"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          <h1 className="text-lg font-semibold text-text-primary mr-4">ממשק ניהול</h1>
+        <header className="h-16 bg-dark-surface border-b border-dark-border flex items-center justify-between px-6">
+          <div className="flex items-center">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-2 -mr-2 text-text-muted hover:text-text-primary"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <h1 className="text-lg font-semibold text-text-primary mr-4">ממשק ניהול</h1>
+          </div>
+          <MobilePreviewToggle />
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-6 overflow-y-auto overflow-x-hidden">
-          <Outlet />
-        </main>
+        <MobilePreviewFrame>
+          <main className="flex-1 p-6 overflow-y-auto overflow-x-hidden">
+            <Outlet />
+          </main>
+        </MobilePreviewFrame>
       </div>
     </div>
   )
