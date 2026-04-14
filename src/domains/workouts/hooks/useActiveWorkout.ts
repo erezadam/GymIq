@@ -682,8 +682,16 @@ export function useActiveWorkout() {
             if (user?.uid) {
               try {
                 const exerciseIds = newExercises.map((ex) => ex.exerciseId)
+                const detailsById = Object.fromEntries(
+                  newExercises.map((ex) => [ex.exerciseId, {
+                    nameHe: ex.exerciseNameHe || ex.exerciseName || '',
+                    primaryMuscle: ex.primaryMuscle,
+                    equipment: ex.equipment,
+                    category: ex.category,
+                  }])
+                )
                 const [lastWorkoutData, historicalNotes] = await Promise.all([
-                  getBestPerformanceForExercises(user.uid, exerciseIds),
+                  getBestPerformanceForExercises(user.uid, exerciseIds, detailsById),
                   getExerciseNotesForExercises(user.uid, exerciseIds),
                 ])
                 newExercises.forEach((ex) => {
@@ -818,8 +826,16 @@ export function useActiveWorkout() {
         if (user?.uid) {
           try {
             const exerciseIds = exercises.map((ex) => ex.exerciseId)
+            const detailsById = Object.fromEntries(
+              exercises.map((ex) => [ex.exerciseId, {
+                nameHe: ex.exerciseNameHe || ex.exerciseName || '',
+                primaryMuscle: ex.primaryMuscle,
+                equipment: ex.equipment,
+                category: ex.category,
+              }])
+            )
             const [lastWorkoutData, historicalNotes] = await Promise.all([
-              getBestPerformanceForExercises(user.uid, exerciseIds),
+              getBestPerformanceForExercises(user.uid, exerciseIds, detailsById),
               getExerciseNotesForExercises(user.uid, exerciseIds),
             ])
 
