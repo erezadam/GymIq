@@ -87,6 +87,27 @@ self.addEventListener('fetch', (event) => {
         if (cached) return cached;
 
         return fetch(request).then((response) => {
+          // Stale-deploy recovery: if the server returns HTML for a hashed
+          // asset, it means the file was removed in a newer deploy and the
+          // SPA rewrite is falling back to index.html. The client is stuck
+          // with a stale HTML referencing obsolete chunks. Purge caches and
+          // tell all clients to reload so they pick up the new deploy.
+          const contentType = response.headers.get('content-type') || '';
+          if (response.ok && contentType.includes('text/html')) {
+            console.warn('[SW] Stale asset detected (' + url.pathname + '): got HTML, forcing client reload');
+            event.waitUntil(
+              caches.keys()
+                .then((names) => Promise.all(names.map((n) => caches.delete(n))))
+                .then(() => self.clients.matchAll({ type: 'window' }))
+                .then((clients) => {
+                  for (const client of clients) {
+                    client.postMessage({ type: 'STALE_DEPLOY_RELOAD' });
+                  }
+                })
+            );
+            return response;
+          }
+
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(request, responseClone);
