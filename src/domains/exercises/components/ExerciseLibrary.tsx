@@ -668,120 +668,128 @@ export function ExerciseLibrary({
     navigate('/workout/session')
   }
 
-  // Trainer assignment: user chose to assign to a trainee
-  const handleTraineeAssigned = async (traineeId: string, traineeName: string) => {
+  // Save the current exercise selection as a standalone program + planned
+  // workoutHistory entry for a trainee (used when trainer picks a trainee).
+  const saveWorkoutForTrainee = async (traineeId: string, traineeName: string) => {
+    if (!user) return
+    const programExercises = toProgramExercisesPayload()
+    const cleanExercises = programExercises.map((ex) => {
+      const clean: Record<string, unknown> = {
+        exerciseId: ex.exerciseId,
+        exerciseName: ex.exerciseName,
+        exerciseNameHe: ex.exerciseNameHe,
+        order: ex.order,
+        targetSets: ex.targetSets,
+        targetReps: ex.targetReps,
+        restTime: ex.restTime,
+      }
+      if (ex.imageUrl) clean.imageUrl = ex.imageUrl
+      if (ex.category) clean.category = ex.category
+      if (ex.primaryMuscle) clean.primaryMuscle = ex.primaryMuscle
+      if (ex.equipment) clean.equipment = ex.equipment
+      if (ex.reportType) clean.reportType = ex.reportType
+      if (ex.assistanceTypes && ex.assistanceTypes.length > 0) clean.assistanceTypes = ex.assistanceTypes
+      if (ex.sectionTitle) clean.sectionTitle = ex.sectionTitle
+      return clean
+    })
+
+    const workoutName = builderWorkoutName || buildDefaultWorkoutName()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cleanDay: any = {
+      dayLabel: workoutName,
+      name: workoutName,
+      exercises: cleanExercises,
+      restDay: false,
+    }
+
+    const trainerName = user.displayName || user.firstName || 'מאמן'
+    const newProgramId = await programService.createProgram({
+      trainerId: user.uid,
+      traineeId,
+      originalTrainerId: user.uid,
+      trainerName,
+      name: workoutName,
+      type: 'standalone',
+      status: 'active',
+      isModifiedByTrainee: false,
+      weeklyStructure: [cleanDay],
+      startDate: new Date(),
+      currentWeek: 1,
+    })
+
+    const now = new Date()
+    await saveWorkoutHistory({
+      userId: traineeId,
+      reportedBy: user.uid,
+      reportedByName: trainerName,
+      name: workoutName,
+      date: now,
+      startTime: now,
+      endTime: now,
+      duration: 0,
+      status: 'planned',
+      exercises: selectedExercises.map((ex) => ({
+        exerciseId: ex.exerciseId,
+        exerciseName: ex.exerciseName || '',
+        exerciseNameHe: ex.exerciseNameHe,
+        imageUrl: ex.imageUrl || '',
+        category: ex.category || '',
+        isCompleted: false,
+        sets: [
+          {
+            type: 'working' as const,
+            targetReps: 10,
+            targetWeight: 0,
+            actualReps: 0,
+            actualWeight: 0,
+            completed: false,
+          },
+        ],
+      })),
+      completedExercises: 0,
+      totalExercises: selectedExercises.length,
+      completedSets: 0,
+      totalSets: selectedExercises.length,
+      totalVolume: 0,
+      personalRecords: 0,
+      source: 'trainer_program',
+      programId: newProgramId,
+    })
+
+    toast.success(`האימון שויך ל${traineeName}`)
+  }
+
+  // Trainer assignment: user confirmed a combination (self / trainee / both)
+  const handleAssignmentConfirm = async (choice: {
+    assignToSelf: boolean
+    trainee?: { id: string; name: string }
+  }) => {
     setShowTraineeAssignment(false)
     if (!user) return
 
-    setSaving(true)
-    try {
-      // Build the day structure from selected exercises (same as StandaloneWorkoutEditor)
-      const programExercises = toProgramExercisesPayload()
-      const cleanExercises = programExercises.map((ex) => {
-        const clean: Record<string, unknown> = {
-          exerciseId: ex.exerciseId,
-          exerciseName: ex.exerciseName,
-          exerciseNameHe: ex.exerciseNameHe,
-          order: ex.order,
-          targetSets: ex.targetSets,
-          targetReps: ex.targetReps,
-          restTime: ex.restTime,
-        }
-        if (ex.imageUrl) clean.imageUrl = ex.imageUrl
-        if (ex.category) clean.category = ex.category
-        if (ex.primaryMuscle) clean.primaryMuscle = ex.primaryMuscle
-        if (ex.equipment) clean.equipment = ex.equipment
-        if (ex.reportType) clean.reportType = ex.reportType
-        if (ex.assistanceTypes && ex.assistanceTypes.length > 0) clean.assistanceTypes = ex.assistanceTypes
-        if (ex.sectionTitle) clean.sectionTitle = ex.sectionTitle
-        return clean
-      })
-
-      const workoutName = builderWorkoutName || buildDefaultWorkoutName()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const cleanDay: any = {
-        dayLabel: workoutName,
-        name: workoutName,
-        exercises: cleanExercises,
-        restDay: false,
+    // Save for trainee if chosen
+    if (choice.trainee) {
+      setSaving(true)
+      try {
+        await saveWorkoutForTrainee(choice.trainee.id, choice.trainee.name)
+      } catch (err) {
+        console.error('Failed to assign workout to trainee:', err)
+        toast.error('שגיאה בשיוך האימון למתאמן')
+      } finally {
+        setSaving(false)
       }
-
-      // Create standalone program via the existing trainer module path
-      const trainerName = user.displayName || user.firstName || 'מאמן'
-      const newProgramId = await programService.createProgram({
-        trainerId: user.uid,
-        traineeId,
-        originalTrainerId: user.uid,
-        trainerName,
-        name: workoutName,
-        type: 'standalone',
-        status: 'active',
-        isModifiedByTrainee: false,
-        weeklyStructure: [cleanDay],
-        startDate: new Date(),
-        currentWeek: 1,
-      })
-
-      // Also create a planned workoutHistory entry for the trainee,
-      // so the workout shows up in their "recent workouts" screen and in
-      // the trainer's "standalone workouts" section as a pending item.
-      const now = new Date()
-      await saveWorkoutHistory({
-        userId: traineeId,
-        reportedBy: user.uid,
-        reportedByName: trainerName,
-        name: workoutName,
-        date: now,
-        startTime: now,
-        endTime: now,
-        duration: 0,
-        status: 'planned',
-        exercises: selectedExercises.map((ex) => ({
-          exerciseId: ex.exerciseId,
-          exerciseName: ex.exerciseName || '',
-          exerciseNameHe: ex.exerciseNameHe,
-          imageUrl: ex.imageUrl || '',
-          category: ex.category || '',
-          isCompleted: false,
-          sets: [
-            {
-              type: 'working' as const,
-              targetReps: 10,
-              targetWeight: 0,
-              actualReps: 0,
-              actualWeight: 0,
-              completed: false,
-            },
-          ],
-        })),
-        completedExercises: 0,
-        totalExercises: selectedExercises.length,
-        completedSets: 0,
-        totalSets: selectedExercises.length,
-        totalVolume: 0,
-        personalRecords: 0,
-        source: 'trainer_program',
-        programId: newProgramId,
-      })
-
-      toast.success(`האימון שויך ל${traineeName}`)
-    } catch (err) {
-      console.error('Failed to assign workout to trainee:', err)
-      toast.error('שגיאה בשיוך האימון למתאמן')
-    } finally {
-      setSaving(false)
     }
 
-    // Now continue with the trainer's own workout flow
+    // Now branch on self:
+    // - If self → continue to trainer's own workout (handleStartWorkout)
+    // - If only trainee → clear selection and navigate to that trainee's detail
     assignmentDecisionMade.current = true
-    handleStartWorkout()
-  }
-
-  // Trainer assignment: user chose to skip (workout for themselves only)
-  const handleTraineeAssignmentSkip = () => {
-    setShowTraineeAssignment(false)
-    assignmentDecisionMade.current = true
-    handleStartWorkout()
+    if (choice.assignToSelf) {
+      handleStartWorkout()
+    } else if (choice.trainee) {
+      clearWorkout()
+      navigate(`/trainer/trainee/${choice.trainee.id}`)
+    }
   }
 
   const handleImageClick = (e: React.MouseEvent, exercise: Exercise) => {
@@ -1522,8 +1530,7 @@ export function ExerciseLibrary({
             setShowTraineeAssignment(false)
             assignmentDecisionMade.current = false
           }}
-          onAssign={handleTraineeAssigned}
-          onSkip={handleTraineeAssignmentSkip}
+          onConfirm={handleAssignmentConfirm}
           trainerId={user.uid}
         />
       )}
