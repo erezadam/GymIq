@@ -806,25 +806,35 @@ export default function WorkoutHistory() {
         </div>
       )}
 
-      {/* Standalone Workouts from trainer */}
-      {!trainerProgramLoading && standaloneWorkouts.length > 0 && (
-        <div>
-          <h2 className="text-sm font-medium text-text-muted mb-2 flex items-center gap-2">
-            <ClipboardEdit className="w-4 h-4 text-accent-orange" />
-            אימונים בודדים מהמאמן ({standaloneWorkouts.length})
-          </h2>
-          <div className="space-y-2">
-            {standaloneWorkouts.map((sw) => (
-              <TrainerProgramCard key={sw.id} program={sw} onDisconnected={refreshProgram} />
-            ))}
+      {/* Standalone Workouts from trainer — shown only to actual trainees.
+          A trainer viewing their own /workout/history should not see this section:
+          the title "מהמאמן" implies a coach sending workouts to their trainee,
+          which doesn't apply when the viewer IS the trainer. */}
+      {!trainerProgramLoading &&
+        standaloneWorkouts.length > 0 &&
+        user?.role !== 'trainer' &&
+        user?.role !== 'admin' && (
+          <div>
+            <h2 className="text-sm font-medium text-text-muted mb-2 flex items-center gap-2">
+              <ClipboardEdit className="w-4 h-4 text-accent-orange" />
+              אימונים בודדים מהמאמן ({standaloneWorkouts.length})
+            </h2>
+            <div className="space-y-2">
+              {standaloneWorkouts.map((sw) => (
+                <TrainerProgramCard key={sw.id} program={sw} onDisconnected={refreshProgram} />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Separator if trainer program and AI sections exist */}
-      {(trainerProgram || standaloneWorkouts.length > 0) && (aiBundles.length > 0 || singleAIWorkouts.length > 0) && (
-        <div className="border-t border-dark-border" />
-      )}
+      {(trainerProgram ||
+        (standaloneWorkouts.length > 0 &&
+          user?.role !== 'trainer' &&
+          user?.role !== 'admin')) &&
+        (aiBundles.length > 0 || singleAIWorkouts.length > 0) && (
+          <div className="border-t border-dark-border" />
+        )}
 
       {/* AI Bundles section */}
       {(aiBundles.length > 0 || singleAIWorkouts.length > 0) && (
