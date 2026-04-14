@@ -421,6 +421,23 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 - להריץ `npx playwright test` (Suite מלא) אחרי שינוי קטן/ממוקד — **בזבוז זמן מיותר!**
 - **להריץ טסטי Playwright בלי אישור מפורש מהמשתמש** — תמיד לשאול קודם!
 
+### 🚀 שתי דרכים לפריסה:
+
+**אופציה 1 — פריסה מקומית (המסלול הרגיל):**
+```bash
+firebase deploy --only hosting
+# או: firebase deploy --only hosting,functions,firestore
+```
+
+**אופציה 2 — GitHub Actions (כשיש בעיית build מקומי):**
+- GitHub → Actions → "Deploy to Firebase" → Run workflow → בחירת target
+- הrun מתבצע ב-Ubuntu נקי, ללא בעיות filesystem/מק
+- דורש secrets מוגדרים: FIREBASE_TOKEN + 6 VITE_FIREBASE_*
+- קובץ: `.github/workflows/deploy.yml`
+- **שימושי במיוחד** כשיש I/O hangs מקומיים ב-tsc/vite
+
+**שתי הדרכים דורשות:** בדיקות לפי רמה + אישור משתמש לפני הפריסה.
+
 ---
 
 ## 🧪 רמות בדיקה — בחר לפי גודל השינוי
@@ -594,6 +611,7 @@ npx playwright test
 | 02/04/2026 | פיצ'רים פותחו רק למתאמן בלי לכסות מודול מאמן | נוסף חוק ברזל: כיסוי מלא — משתמש ומאמן. חובה לשאול לפני קידוד אם השינוי חל גם על ProgramBuilder ו-TraineeProgramView |
 | 14/04/2026 | מאמן לא יכל לשייך אימון למתאמן מהדשבורד הרגיל | נוסף TraineeAssignmentModal ב-ExerciseLibrary: בלחיצה על "התחל/שמור" עולה modal אופציונלי לבחירת מתאמן. אם נבחר — נוצר standalone trainingProgram דרך programService.createProgram() הקיים (אמת אחת, בלי הכפלת קוד) |
 | 14/04/2026 | אימוני מאמן → מתאמן נשמרו כפול (גם אצל המאמן וגם אצל המתאמן) | תוקן race condition ב-handleReportWorkout: setTrainerReport() חייב לרוץ לפני loadFromProgram() כי loadFromProgram משנה selectedExercises ומפעיל את ה-effect ב-useActiveWorkout לפני שה-targetUserId מעודכן. בנוסף: defense-in-depth ב-initWorkout — קריאת targetUserId/reportedBy העדכני מה-store במקום closure |
+| 14/04/2026 | בעיית filesystem I/O במק חסמה build מקומי (tsc/vite תקועים ללא CPU) | נוסף GitHub Actions workflow `.github/workflows/deploy.yml` — פריסה ידנית (`workflow_dispatch`) מסביבת Ubuntu נקייה. Secrets נדרשים: FIREBASE_TOKEN + 6 VITE_FIREBASE_*. שימוש: Actions → "Deploy to Firebase" → Run workflow → בחירת target (hosting / hosting,functions / hosting,functions,firestore) |
 
 ---
 
@@ -627,6 +645,6 @@ npm run test:e2e:headed   # הרצה עם דפדפן נראה
 
 ```
 ══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 14/04/2026 | תוקן באג אימונים כפולים בדיווח מאמן → מתאמן
+עדכון אחרון: 14/04/2026 | נוסף GitHub Actions deploy workflow + תיעוד
 ══════════════════════════════════════════════════════════════════════════════
 ```
