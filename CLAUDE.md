@@ -593,6 +593,7 @@ npx playwright test
 | 31/03/2026 | מאמן לא יכל לערוך אימונים מופצים למתאמנים | נוסף WorkoutHistoryEditor — מאמן יכול לערוך/למחוק תרגילים באימון שלא פעיל, עם optimistic locking, audit trail, והגנה על סטים שבוצעו |
 | 02/04/2026 | פיצ'רים פותחו רק למתאמן בלי לכסות מודול מאמן | נוסף חוק ברזל: כיסוי מלא — משתמש ומאמן. חובה לשאול לפני קידוד אם השינוי חל גם על ProgramBuilder ו-TraineeProgramView |
 | 14/04/2026 | מאמן לא יכל לשייך אימון למתאמן מהדשבורד הרגיל | נוסף TraineeAssignmentModal ב-ExerciseLibrary: בלחיצה על "התחל/שמור" עולה modal אופציונלי לבחירת מתאמן. אם נבחר — נוצר standalone trainingProgram דרך programService.createProgram() הקיים (אמת אחת, בלי הכפלת קוד) |
+| 14/04/2026 | אימוני מאמן → מתאמן נשמרו כפול (גם אצל המאמן וגם אצל המתאמן) | תוקן race condition ב-handleReportWorkout: setTrainerReport() חייב לרוץ לפני loadFromProgram() כי loadFromProgram משנה selectedExercises ומפעיל את ה-effect ב-useActiveWorkout לפני שה-targetUserId מעודכן. בנוסף: defense-in-depth ב-initWorkout — קריאת targetUserId/reportedBy העדכני מה-store במקום closure |
 
 ---
 
@@ -626,6 +627,6 @@ npm run test:e2e:headed   # הרצה עם דפדפן נראה
 
 ```
 ══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 14/04/2026 | מאמן יכול לשייך אימון למתאמן מהדשבורד הרגיל
+עדכון אחרון: 14/04/2026 | תוקן באג אימונים כפולים בדיווח מאמן → מתאמן
 ══════════════════════════════════════════════════════════════════════════════
 ```
