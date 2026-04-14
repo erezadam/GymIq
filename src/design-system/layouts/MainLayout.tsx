@@ -11,13 +11,12 @@ import {
   TrendingUp,
   Shield,
   Mail,
-  Smartphone,
-  Monitor,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '@/domains/authentication/store'
 import { useEffectiveUser, useIsImpersonating } from '@/domains/authentication/hooks/useEffectiveUser'
-import { useUIStore } from '@/shared/store/uiStore'
+import { MobilePreviewFrame } from '@/shared/components/MobilePreviewFrame'
+import { MobilePreviewToggle } from '@/shared/components/MobilePreviewToggle'
 import {
   colors,
   spacing,
@@ -41,8 +40,6 @@ export default function MainLayout() {
   const effectiveUser = useEffectiveUser()
   const isImpersonating = useIsImpersonating()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const mobilePreview = useUIStore((s) => s.mobilePreview)
-  const toggleMobilePreview = useUIStore((s) => s.toggleMobilePreview)
 
   // Use effective user for role-based navigation
   const user = effectiveUser
@@ -284,28 +281,7 @@ export default function MainLayout() {
               GymIQ
             </span>
           </div>
-          <button
-            type="button"
-            onClick={toggleMobilePreview}
-            title={mobilePreview ? 'תצוגה מלאה' : 'תצוגת טלפון'}
-            aria-label={mobilePreview ? 'תצוגה מלאה' : 'תצוגת טלפון'}
-            aria-pressed={mobilePreview}
-            style={{
-              width: 36,
-              height: 36,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: borderRadius.md,
-              border: `1px solid ${colors.border.default}`,
-              background: mobilePreview ? colors.primary.main : 'transparent',
-              color: mobilePreview ? colors.text.inverse : colors.text.secondary,
-              cursor: 'pointer',
-              transition: '0.2s ease',
-            }}
-          >
-            {mobilePreview ? <Monitor size={18} /> : <Smartphone size={18} />}
-          </button>
+          <MobilePreviewToggle />
         </div>
 
         {/* Navigation */}
@@ -486,45 +462,7 @@ export default function MainLayout() {
           overflow: 'hidden',
         }}
       >
-        {mobilePreview ? (
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'stretch',
-              justifyContent: 'center',
-              padding: spacing.lg,
-              background: colors.background.main,
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                width: '100%',
-                maxWidth: 390,
-                display: 'flex',
-                flexDirection: 'column',
-                borderRadius: 32,
-                border: `1px solid ${colors.border.default}`,
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
-                background: colors.background.card,
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  flex: 1,
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
-                  padding: `${spacing.lg}px`,
-                  WebkitOverflowScrolling: 'touch',
-                }}
-              >
-                <Outlet />
-              </div>
-            </div>
-          </div>
-        ) : (
+        <MobilePreviewFrame>
           <div
             className="lg:p-6 lg:pb-6"
             style={{
@@ -537,7 +475,7 @@ export default function MainLayout() {
           >
             <Outlet />
           </div>
-        )}
+        </MobilePreviewFrame>
       </main>
 
     </div>

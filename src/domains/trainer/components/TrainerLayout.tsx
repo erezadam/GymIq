@@ -7,6 +7,8 @@ import {
   Settings,
 } from 'lucide-react'
 import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
+import { MobilePreviewFrame } from '@/shared/components/MobilePreviewFrame'
+import { MobilePreviewToggle } from '@/shared/components/MobilePreviewToggle'
 
 const bottomNav = [
   { name: 'דאשבורד', href: '/trainer', icon: LayoutDashboard, end: true },
@@ -27,8 +29,9 @@ export default function TrainerLayout() {
           {/* Right side (RTL): Title */}
           <h1 className="text-lg font-bold text-primary-main tracking-tight">ממשק מאמן</h1>
 
-          {/* Left side (RTL): Avatar + Back to dashboard */}
+          {/* Left side (RTL): Avatar + Back to dashboard + Mobile preview */}
           <div className="flex items-center gap-3">
+            <MobilePreviewToggle />
             <button
               onClick={() => navigate('/dashboard')}
               className="p-2 text-on-surface-variant hover:text-primary-main transition-colors rounded-xl"
@@ -46,9 +49,11 @@ export default function TrainerLayout() {
       </header>
 
       {/* Main Content */}
-      <main className="px-5 py-6 pb-28 overflow-y-auto overflow-x-hidden">
-        <Outlet />
-      </main>
+      <MobilePreviewFrame>
+        <main className="px-5 py-6 pb-28 overflow-y-auto overflow-x-hidden flex-1">
+          <Outlet />
+        </main>
+      </MobilePreviewFrame>
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-surface-container/90 backdrop-blur-2xl rounded-t-3xl border-t border-white/5 shadow-[0_-10px_30px_rgba(0,0,0,0.3)]">
