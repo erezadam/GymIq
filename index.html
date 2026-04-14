@@ -59,6 +59,18 @@
             .catch((error) => {
               console.error('[App] SW registration failed:', error);
             });
+
+          // Stale-deploy recovery: SW detected that a hashed JS/CSS asset no
+          // longer exists on the server (SPA rewrite returned HTML). The
+          // browser has an obsolete page loaded — force a full reload once.
+          let reloadedForStaleDeploy = false;
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'STALE_DEPLOY_RELOAD' && !reloadedForStaleDeploy) {
+              reloadedForStaleDeploy = true;
+              console.warn('[App] Stale deploy detected — reloading');
+              window.location.reload();
+            }
+          });
         });
       }
     </script>
