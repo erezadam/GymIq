@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronRight, Check, Home, Calendar } from 'lucide-react'
+import toast from 'react-hot-toast'
 import type { Exercise, MuscleGroup } from '../types'
 import type { PrimaryMuscle } from '../types/muscles'
 import { defaultMuscleMapping } from '../types/muscles'
@@ -20,6 +21,7 @@ import { programService } from '@/domains/trainer/services/programService'
 import type { ProgramExercise } from '@/domains/trainer/types'
 import { getMuscleNameHe } from '@/utils/muscleTranslations'
 import { autoFixEquipmentMismatch } from '@/lib/firebase/exercises'
+import { TraineeAssignmentModal } from '@/domains/trainer/components/TraineeAssignmentModal'
 
 // Helper functions
 function getEquipmentHe(equipment: string): string {
@@ -102,6 +104,11 @@ export function ExerciseLibrary({
   const { selectedExercises, addExercise, addExercisesFromSet, removeExercise, clearWorkout, scheduledDate, setScheduledDate, sortExercises, setExerciseSetCount, quickPlanSections, activeQuickPlanSectionId, addQuickPlanSection, updateQuickPlanSectionTitle, removeQuickPlanSection, setActiveQuickPlanSection, setSelfStandaloneProgram, workoutName: builderWorkoutName } = useWorkoutBuilderStore()
   const [exerciseOrder, setExerciseOrder] = useState<Record<string, number>>({})
   const [activeTab, setActiveTab] = useState<'library' | 'quickPlan'>('library')
+
+  // Trainer assignment modal state
+  const isTrainer = user?.role === 'trainer' || user?.role === 'admin'
+  const [showTraineeAssignment, setShowTraineeAssignment] = useState(false)
+  const assignmentDecisionMade = useRef(false)
 
   // Program mode: computed selection state
   const effectiveSelectedIds = useMemo(() => {
@@ -583,6 +590,12 @@ export function ExerciseLibrary({
       return
     }
 
+    // Trainer interception: show assignment modal before proceeding
+    if (isTrainer && !programMode && !assignmentDecisionMade.current) {
+      setShowTraineeAssignment(true)
+      return
+    }
+
     // Check if this is a planned workout (future date OR "plan for today" selected)
     if (isPlannedWorkout && user) {
       setSaving(true)
@@ -653,6 +666,79 @@ export function ExerciseLibrary({
     // Starting fresh workout today - clear any existing saved workout
     localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY)
     navigate('/workout/session')
+  }
+
+  // Trainer assignment: user chose to assign to a trainee
+  const handleTraineeAssigned = async (traineeId: string, traineeName: string) => {
+    setShowTraineeAssignment(false)
+    if (!user) return
+
+    setSaving(true)
+    try {
+      // Build the day structure from selected exercises (same as StandaloneWorkoutEditor)
+      const programExercises = toProgramExercisesPayload()
+      const cleanExercises = programExercises.map((ex) => {
+        const clean: Record<string, unknown> = {
+          exerciseId: ex.exerciseId,
+          exerciseName: ex.exerciseName,
+          exerciseNameHe: ex.exerciseNameHe,
+          order: ex.order,
+          targetSets: ex.targetSets,
+          targetReps: ex.targetReps,
+          restTime: ex.restTime,
+        }
+        if (ex.imageUrl) clean.imageUrl = ex.imageUrl
+        if (ex.category) clean.category = ex.category
+        if (ex.primaryMuscle) clean.primaryMuscle = ex.primaryMuscle
+        if (ex.equipment) clean.equipment = ex.equipment
+        if (ex.reportType) clean.reportType = ex.reportType
+        if (ex.assistanceTypes && ex.assistanceTypes.length > 0) clean.assistanceTypes = ex.assistanceTypes
+        if (ex.sectionTitle) clean.sectionTitle = ex.sectionTitle
+        return clean
+      })
+
+      const workoutName = builderWorkoutName || buildDefaultWorkoutName()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cleanDay: any = {
+        dayLabel: workoutName,
+        name: workoutName,
+        exercises: cleanExercises,
+        restDay: false,
+      }
+
+      // Create standalone program via the existing trainer module path
+      await programService.createProgram({
+        trainerId: user.uid,
+        traineeId,
+        originalTrainerId: user.uid,
+        trainerName: user.displayName || user.firstName || '',
+        name: workoutName,
+        type: 'standalone',
+        status: 'active',
+        isModifiedByTrainee: false,
+        weeklyStructure: [cleanDay],
+        startDate: new Date(),
+        currentWeek: 1,
+      })
+
+      toast.success(`האימון שויך ל${traineeName}`)
+    } catch (err) {
+      console.error('Failed to assign workout to trainee:', err)
+      toast.error('שגיאה בשיוך האימון למתאמן')
+    } finally {
+      setSaving(false)
+    }
+
+    // Now continue with the trainer's own workout flow
+    assignmentDecisionMade.current = true
+    handleStartWorkout()
+  }
+
+  // Trainer assignment: user chose to skip (workout for themselves only)
+  const handleTraineeAssignmentSkip = () => {
+    setShowTraineeAssignment(false)
+    assignmentDecisionMade.current = true
+    handleStartWorkout()
   }
 
   const handleImageClick = (e: React.MouseEvent, exercise: Exercise) => {
@@ -1383,6 +1469,20 @@ export function ExerciseLibrary({
             )}
           </div>
         </div>
+      )}
+
+      {/* Trainer: Assign workout to trainee modal */}
+      {showTraineeAssignment && user && (
+        <TraineeAssignmentModal
+          isOpen={showTraineeAssignment}
+          onClose={() => {
+            setShowTraineeAssignment(false)
+            assignmentDecisionMade.current = false
+          }}
+          onAssign={handleTraineeAssigned}
+          onSkip={handleTraineeAssignmentSkip}
+          trainerId={user.uid}
+        />
       )}
     </div>
   )

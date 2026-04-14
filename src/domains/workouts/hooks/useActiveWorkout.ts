@@ -80,7 +80,7 @@ export function useActiveWorkout() {
   const navigate = useNavigate()
   const user = useEffectiveUser()
   const isImpersonating = useIsImpersonating()
-  const { selectedExercises, clearWorkout, removeExercise: removeFromStore, programId, programDayLabel, programSource, workoutName: builderWorkoutName, targetUserId, reportedBy, reportedByName } = useWorkoutBuilderStore()
+  const { selectedExercises, clearWorkout, removeExercise: removeFromStore, programId, programDayLabel, programSource, workoutName: builderWorkoutName, targetUserId } = useWorkoutBuilderStore()
 
   // Effective userId: trainee (if trainer reporting) or current user
   const effectiveUserId = targetUserId || user?.uid || 'anonymous'
@@ -860,12 +860,21 @@ export function useActiveWorkout() {
           }
         }
 
+        // Defense-in-depth: re-read trainer report fields from store to avoid
+        // stale closure values (prevents duplicate workouts when store was updated
+        // between component mount and effect execution).
+        const freshBuilderState = useWorkoutBuilderStore.getState()
+        const freshTargetUserId = freshBuilderState.targetUserId
+        const freshReportedBy = freshBuilderState.reportedBy
+        const freshReportedByName = freshBuilderState.reportedByName
+        const finalUserId = freshTargetUserId || user?.uid || 'anonymous'
+
         const newWorkout: ActiveWorkout = {
           id: `workout_${Date.now()}`,
           startedAt: new Date(),
-          userId: effectiveUserId,
-          ...(reportedBy && { reportedBy }),
-          ...(reportedByName && { reportedByName }),
+          userId: finalUserId,
+          ...(freshReportedBy && { reportedBy: freshReportedBy }),
+          ...(freshReportedByName && { reportedByName: freshReportedByName }),
           exercises,
           stats: computeStats(exercises),
         }
@@ -910,8 +919,8 @@ export function useActiveWorkout() {
           const endTime = new Date()
           const savedId = await autoSaveWorkout(existingId, {
             userId: newWorkout.userId,
-            ...(reportedBy && { reportedBy }),
-            ...(reportedByName && { reportedByName }),
+            ...(freshReportedBy && { reportedBy: freshReportedBy }),
+            ...(freshReportedByName && { reportedByName: freshReportedByName }),
             name: builderWorkoutName || `אימון ${newWorkout.startedAt.toLocaleDateString('he-IL')}`,
             date: newWorkout.startedAt,
             startTime: newWorkout.startedAt,

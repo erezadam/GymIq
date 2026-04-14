@@ -213,9 +213,13 @@ export default function TraineeDetail() {
     const day = program.weeklyStructure[dayIndex]
     if (!day || !traineeId || !user) return
 
+    // CRITICAL ORDER: clear → setTrainerReport → loadFromProgram → navigate
+    // loadFromProgram sets selectedExercises which triggers useActiveWorkout's effect.
+    // targetUserId MUST be set before that, otherwise the workout is saved with the
+    // trainer's own userId instead of the trainee's (causes duplicate workouts).
     clearWorkout()
-    loadFromProgram(day, program.id, program.name)
     setTrainerReport(traineeId, user.uid, user.displayName || user.email || 'מאמן')
+    loadFromProgram(day, program.id, program.name)
     navigate('/workout/session')
   }
 
