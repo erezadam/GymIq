@@ -37,7 +37,7 @@ export default function WorkoutHistory() {
   const navigate = useNavigate()
   const user = useEffectiveUser()
   const isImpersonating = useIsImpersonating()
-  const { addExercise, clearWorkout } = useWorkoutBuilderStore()
+  const { addExercise, clearWorkout, setPlannedWorkoutDocId } = useWorkoutBuilderStore()
   const { program: trainerProgram, standaloneWorkouts, isLoading: trainerProgramLoading, refreshProgram } = useTraineeProgram()
   const [workouts, setWorkouts] = useState<WorkoutHistorySummary[]>([])
   const [loading, setLoading] = useState(true)
@@ -483,6 +483,7 @@ export default function WorkoutHistory() {
           // Store the workout ID so we can update the same record when finishing
           localStorage.setItem('continueWorkoutId', workoutSummary.id)
           localStorage.setItem('continueWorkoutMode', 'planned')
+          setPlannedWorkoutDocId(workoutSummary.id)
 
           // Store exercise data with target sets
           const exercisesWithSets = fullWorkout.exercises.map(exercise => {

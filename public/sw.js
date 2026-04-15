@@ -1,6 +1,6 @@
 // Service Worker for GymIQ PWA
 // Version-based cache busting - increment to force update
-const CACHE_VERSION = 'vv2026.04.115';
+const CACHE_VERSION = 'vv2026.04.126';
 const CACHE_NAME = `gymiq-cache-${CACHE_VERSION}`;
 
 // Files to cache for offline use (minimal - just shell)
@@ -47,6 +47,64 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Guard so we only fire one reload per SW session, even if many assets fail.
+let staleReloadSent = false;
+
+// Map file extensions to expected Content-Type substring.
+// Returns null when we don't have a strong expectation (skip the check).
+function getExpectedMimePrefix(pathname) {
+  const m = pathname.match(/\.([a-z0-9]+)(?:\?.*)?$/i);
+  if (!m) return null;
+  switch (m[1].toLowerCase()) {
+    case 'js':
+    case 'mjs':
+      return 'javascript';
+    case 'css':
+      return 'css';
+    case 'json':
+      return 'json';
+    case 'svg':
+      return 'svg';
+    case 'woff':
+    case 'woff2':
+    case 'ttf':
+    case 'otf':
+      return 'font';
+    case 'png':
+    case 'jpg':
+    case 'jpeg':
+    case 'webp':
+    case 'gif':
+    case 'ico':
+      return 'image';
+    default:
+      return null;
+  }
+}
+
+function isMimeMismatch(response, pathname) {
+  if (!response.ok) return false;
+  const expected = getExpectedMimePrefix(pathname);
+  if (!expected) return false;
+  const contentType = (response.headers.get('content-type') || '').toLowerCase();
+  if (!contentType) return false;
+  return !contentType.includes(expected);
+}
+
+function triggerStaleDeployReload(reason) {
+  if (staleReloadSent) return Promise.resolve();
+  staleReloadSent = true;
+  console.warn('[SW] Stale deploy detected:', reason, '— purging caches and reloading clients');
+  return caches.keys()
+    .then((names) => Promise.all(names.map((n) => caches.delete(n))))
+    .then(() => self.clients.matchAll({ type: 'window' }))
+    .then((clients) => {
+      for (const client of clients) {
+        client.postMessage({ type: 'STALE_DEPLOY_RELOAD' });
+      }
+    });
+}
+
 // Fetch event - Network First strategy for HTML, Cache First for assets
 self.addEventListener('fetch', (event) => {
   const request = event.request;
@@ -87,24 +145,12 @@ self.addEventListener('fetch', (event) => {
         if (cached) return cached;
 
         return fetch(request).then((response) => {
-          // Stale-deploy recovery: if the server returns HTML for a hashed
-          // asset, it means the file was removed in a newer deploy and the
-          // SPA rewrite is falling back to index.html. The client is stuck
-          // with a stale HTML referencing obsolete chunks. Purge caches and
-          // tell all clients to reload so they pick up the new deploy.
-          const contentType = response.headers.get('content-type') || '';
-          if (response.ok && contentType.includes('text/html')) {
-            console.warn('[SW] Stale asset detected (' + url.pathname + '): got HTML, forcing client reload');
-            event.waitUntil(
-              caches.keys()
-                .then((names) => Promise.all(names.map((n) => caches.delete(n))))
-                .then(() => self.clients.matchAll({ type: 'window' }))
-                .then((clients) => {
-                  for (const client of clients) {
-                    client.postMessage({ type: 'STALE_DEPLOY_RELOAD' });
-                  }
-                })
-            );
+          // Stale-deploy recovery: if the server returns the wrong MIME type
+          // for a hashed asset (e.g. HTML via SPA fallback, or text/plain),
+          // the file was removed in a newer deploy and the client is stuck
+          // with stale HTML referencing obsolete chunks. Force a reload.
+          if (isMimeMismatch(response, url.pathname)) {
+            event.waitUntil(triggerStaleDeployReload('hashed asset ' + url.pathname + ' has wrong MIME'));
             return response;
           }
 
@@ -123,6 +169,13 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
+        // Same stale-deploy guard for non-hashed assets (e.g. /manifest.json,
+        // /icons/*.svg). If MIME doesn't match the extension, don't cache it
+        // and trigger a client reload.
+        if (isMimeMismatch(response, url.pathname)) {
+          event.waitUntil(triggerStaleDeployReload('asset ' + url.pathname + ' has wrong MIME'));
+          return response;
+        }
         const responseClone = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(request, responseClone);

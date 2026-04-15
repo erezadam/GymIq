@@ -80,7 +80,7 @@ export function useActiveWorkout() {
   const navigate = useNavigate()
   const user = useEffectiveUser()
   const isImpersonating = useIsImpersonating()
-  const { selectedExercises, clearWorkout, removeExercise: removeFromStore, programId, programDayLabel, programSource, workoutName: builderWorkoutName, targetUserId } = useWorkoutBuilderStore()
+  const { selectedExercises, clearWorkout, removeExercise: removeFromStore, programId, programDayLabel, programSource, workoutName: builderWorkoutName, targetUserId, plannedWorkoutDocId } = useWorkoutBuilderStore()
 
   // Effective userId: trainee (if trainer reporting) or current user
   const effectiveUserId = targetUserId || user?.uid || 'anonymous'
@@ -370,6 +370,17 @@ export function useActiveWorkout() {
       isInitializing.current = true
       setIsLoading(true)
 
+      // Seed firebaseWorkoutId from the store's plannedWorkoutDocId if set.
+      // Why: when trainee starts an assigned workout from TraineeProgramView, there's
+      // no continueWorkoutData in localStorage (that path is only for WorkoutHistory
+      // continue), so without this the finish flow would create a duplicate doc
+      // instead of updating the planned one. Store is the single source of truth.
+      if (plannedWorkoutDocId && !localStorage.getItem('continueWorkoutId')) {
+        continueWorkoutIdRef.current = plannedWorkoutDocId
+        localStorage.setItem(firebaseIdKey, plannedWorkoutDocId)
+        setFirebaseWorkoutId(plannedWorkoutDocId)
+      }
+
       // Retry helper for validation — auth timing issues can cause transient failures
       const validateWithRetry = async (id: string, uid: string, maxAttempts = 3): Promise<{ valid: boolean; reason?: string }> => {
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -464,6 +475,48 @@ export function useActiveWorkout() {
               })
             } catch (e) {
               console.error('Failed to fetch exercise volumes during recovery (non-critical):', e)
+            }
+
+            // Fetch PR (lastWorkoutData) + historical notes for restored exercises.
+            // Without this, the red "previous best" row is missing after a refresh /
+            // app restart, because Firebase recovery rebuilds exercises from the
+            // persisted workout doc which intentionally omits derived fields.
+            try {
+              const exerciseIds = restoredExercises.map((ex) => ex.exerciseId)
+              const detailsById = Object.fromEntries(
+                restoredExercises.map((ex) => [ex.exerciseId, {
+                  nameHe: ex.exerciseNameHe || ex.exerciseName || '',
+                  primaryMuscle: ex.primaryMuscle,
+                  equipment: ex.equipment,
+                  category: ex.category,
+                }])
+              )
+              const [lastWorkoutData, historicalNotes] = await Promise.all([
+                getBestPerformanceForExercises(user.uid, exerciseIds, detailsById),
+                getExerciseNotesForExercises(user.uid, exerciseIds),
+              ])
+              restoredExercises.forEach((ex) => {
+                if (lastWorkoutData[ex.exerciseId]) {
+                  ex.lastWorkoutData = lastWorkoutData[ex.exerciseId]
+                }
+                if (historicalNotes[ex.exerciseId]?.length > 0) {
+                  ex.historicalNotes = historicalNotes[ex.exerciseId]
+                }
+              })
+            } catch (e) {
+              console.error('Failed to fetch last workout data during recovery:', e)
+            }
+
+            // Weight recommendations - separate try/catch (non-critical)
+            try {
+              const weightRecs = await getWeightRecommendations(effectiveUserId)
+              restoredExercises.forEach((ex) => {
+                if (weightRecs[ex.exerciseId]) {
+                  ex.weightRecommendation = true
+                }
+              })
+            } catch (e) {
+              console.error('Failed to fetch weight recommendations during recovery (non-critical):', e)
             }
 
             const restoredWorkout: ActiveWorkout = {
