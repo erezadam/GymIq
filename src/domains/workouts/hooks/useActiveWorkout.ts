@@ -80,7 +80,7 @@ export function useActiveWorkout() {
   const navigate = useNavigate()
   const user = useEffectiveUser()
   const isImpersonating = useIsImpersonating()
-  const { selectedExercises, clearWorkout, removeExercise: removeFromStore, programId, programDayLabel, programSource, workoutName: builderWorkoutName, targetUserId } = useWorkoutBuilderStore()
+  const { selectedExercises, clearWorkout, removeExercise: removeFromStore, programId, programDayLabel, programSource, workoutName: builderWorkoutName, targetUserId, plannedWorkoutDocId } = useWorkoutBuilderStore()
 
   // Effective userId: trainee (if trainer reporting) or current user
   const effectiveUserId = targetUserId || user?.uid || 'anonymous'
@@ -369,6 +369,17 @@ export function useActiveWorkout() {
       // Set initializing lock
       isInitializing.current = true
       setIsLoading(true)
+
+      // Seed firebaseWorkoutId from the store's plannedWorkoutDocId if set.
+      // Why: when trainee starts an assigned workout from TraineeProgramView, there's
+      // no continueWorkoutData in localStorage (that path is only for WorkoutHistory
+      // continue), so without this the finish flow would create a duplicate doc
+      // instead of updating the planned one. Store is the single source of truth.
+      if (plannedWorkoutDocId && !localStorage.getItem('continueWorkoutId')) {
+        continueWorkoutIdRef.current = plannedWorkoutDocId
+        localStorage.setItem(firebaseIdKey, plannedWorkoutDocId)
+        setFirebaseWorkoutId(plannedWorkoutDocId)
+      }
 
       // Retry helper for validation — auth timing issues can cause transient failures
       const validateWithRetry = async (id: string, uid: string, maxAttempts = 3): Promise<{ valid: boolean; reason?: string }> => {

@@ -1191,6 +1191,37 @@ export async function getInProgressWorkout(userId: string): Promise<WorkoutHisto
   }
 }
 
+// Find the planned workoutHistory doc for a given program day (if any).
+// Used when a trainee starts an assigned workout from TraineeProgramView — we need
+// to resume the existing planned doc instead of creating a duplicate completed one.
+export async function findPlannedWorkoutForProgramDay(
+  userId: string,
+  programId: string,
+  programDayLabel: string
+): Promise<WorkoutHistoryEntry | null> {
+  try {
+    const historyRef = collection(db, COLLECTION_NAME)
+    const q = query(
+      historyRef,
+      where('userId', '==', userId),
+      where('programId', '==', programId),
+      where('programDayLabel', '==', programDayLabel),
+      where('status', '==', 'planned'),
+      orderBy('date', 'asc'),
+      limit(1)
+    )
+    const snapshot = await getDocs(q)
+    if (snapshot.empty) return null
+    const validDocs = snapshot.docs.filter(d => isNotSoftDeleted(d.data()))
+    if (validDocs.length === 0) return null
+    const d = validDocs[0]
+    return toWorkoutHistory(d.id, d.data())
+  } catch (error) {
+    console.error('❌ Failed to find planned workout for program day:', error)
+    return null
+  }
+}
+
 // Auto-save workout in progress (create or update)
 export async function autoSaveWorkout(
   workoutId: string | null,

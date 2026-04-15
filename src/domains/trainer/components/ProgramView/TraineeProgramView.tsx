@@ -3,13 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronDown, Dumbbell, Moon, Clock, Play } from 'lucide-react'
 import { useTraineeProgram } from '../../hooks/useTraineeProgram'
 import { useWorkoutBuilderStore } from '@/domains/workouts/store/workoutBuilderStore'
+import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
+import { findPlannedWorkoutForProgramDay, updateWorkoutHistory } from '@/lib/firebase/workoutHistory'
 import { ProgramExerciseCard } from './ProgramExerciseCard'
 import type { ProgramDay } from '../../types'
 
 export default function TraineeProgramView() {
   const navigate = useNavigate()
+  const user = useEffectiveUser()
   const { program, isLoading, getTodayDay, getTrainingDays } = useTraineeProgram()
-  const { loadFromProgram } = useWorkoutBuilderStore()
+  const { loadFromProgram, setPlannedWorkoutDocId } = useWorkoutBuilderStore()
   const [expandedDay, setExpandedDay] = useState<number | null>(null)
 
   if (isLoading) {
@@ -27,7 +30,23 @@ export default function TraineeProgramView() {
   const todayDay = getTodayDay()
   const trainingDays = getTrainingDays()
 
-  const handleStartWorkout = (day: ProgramDay) => {
+  const handleStartWorkout = async (day: ProgramDay) => {
+    // Resume the planned workoutHistory doc for this program day if one exists
+    // (created when the trainer assigned the workout). Without this, finishing
+    // the workout creates a duplicate "completed" doc and leaves the planned one
+    // orphaned — the single source of truth is plannedWorkoutDocId in the store.
+    setPlannedWorkoutDocId(undefined)
+    if (user?.uid) {
+      const planned = await findPlannedWorkoutForProgramDay(user.uid, program.id, day.dayLabel)
+      if (planned) {
+        await updateWorkoutHistory(planned.id, {
+          status: 'in_progress',
+          startTime: new Date(),
+          date: new Date(),
+        })
+        setPlannedWorkoutDocId(planned.id)
+      }
+    }
     loadFromProgram(day, program.id, program.name)
     navigate('/workout/builder')
   }

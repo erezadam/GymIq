@@ -44,6 +44,12 @@ interface WorkoutBuilderState {
   programDayLabel?: string
   // Source of the linked program — distinguishes trainer-assigned from trainee self-built
   programSource?: 'trainer_program' | 'self_standalone'
+  // Single source of truth for the planned workoutHistory doc being continued.
+  // Why: both trainer-on-behalf and trainee self-report paths must update the same
+  // planned doc on finish — otherwise a duplicate "completed" doc is created and
+  // the planned one is orphaned. Set by whoever initiates continuation; read by
+  // useActiveWorkout.initWorkout.
+  plannedWorkoutDocId?: string
   // Trainer report fields (when trainer reports on behalf of trainee)
   targetUserId?: string
   reportedBy?: string
@@ -64,6 +70,7 @@ interface WorkoutBuilderActions {
   loadFromProgram: (day: ProgramDay, programId: string, programName: string) => void
   setSelfStandaloneProgram: (programId: string, programDayLabel?: string) => void
   setTrainerReport: (targetUserId: string, reportedBy: string, reportedByName: string) => void
+  setPlannedWorkoutDocId: (id: string | undefined) => void
   setExerciseSetCount: (exerciseId: string, count: number) => void
   addQuickPlanSection: (title: string) => string
   updateQuickPlanSectionTitle: (sectionId: string, title: string) => void
@@ -129,6 +136,7 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
   programId: undefined,
   programDayLabel: undefined,
   programSource: undefined,
+  plannedWorkoutDocId: undefined,
   targetUserId: undefined,
   reportedBy: undefined,
   reportedByName: undefined,
@@ -305,6 +313,10 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
     set({ targetUserId, reportedBy, reportedByName })
   },
 
+  setPlannedWorkoutDocId: (id) => {
+    set({ plannedWorkoutDocId: id })
+  },
+
   setExerciseSetCount: (exerciseId, count) => {
     const clamped = Math.max(1, Math.min(20, count))
     set((state) => ({
@@ -383,6 +395,7 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
       programId: undefined,
       programDayLabel: undefined,
       programSource: undefined,
+      plannedWorkoutDocId: undefined,
       targetUserId: undefined,
       reportedBy: undefined,
       reportedByName: undefined,
