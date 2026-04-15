@@ -466,6 +466,48 @@ export function useActiveWorkout() {
               console.error('Failed to fetch exercise volumes during recovery (non-critical):', e)
             }
 
+            // Fetch PR (lastWorkoutData) + historical notes for restored exercises.
+            // Without this, the red "previous best" row is missing after a refresh /
+            // app restart, because Firebase recovery rebuilds exercises from the
+            // persisted workout doc which intentionally omits derived fields.
+            try {
+              const exerciseIds = restoredExercises.map((ex) => ex.exerciseId)
+              const detailsById = Object.fromEntries(
+                restoredExercises.map((ex) => [ex.exerciseId, {
+                  nameHe: ex.exerciseNameHe || ex.exerciseName || '',
+                  primaryMuscle: ex.primaryMuscle,
+                  equipment: ex.equipment,
+                  category: ex.category,
+                }])
+              )
+              const [lastWorkoutData, historicalNotes] = await Promise.all([
+                getBestPerformanceForExercises(user.uid, exerciseIds, detailsById),
+                getExerciseNotesForExercises(user.uid, exerciseIds),
+              ])
+              restoredExercises.forEach((ex) => {
+                if (lastWorkoutData[ex.exerciseId]) {
+                  ex.lastWorkoutData = lastWorkoutData[ex.exerciseId]
+                }
+                if (historicalNotes[ex.exerciseId]?.length > 0) {
+                  ex.historicalNotes = historicalNotes[ex.exerciseId]
+                }
+              })
+            } catch (e) {
+              console.error('Failed to fetch last workout data during recovery:', e)
+            }
+
+            // Weight recommendations - separate try/catch (non-critical)
+            try {
+              const weightRecs = await getWeightRecommendations(effectiveUserId)
+              restoredExercises.forEach((ex) => {
+                if (weightRecs[ex.exerciseId]) {
+                  ex.weightRecommendation = true
+                }
+              })
+            } catch (e) {
+              console.error('Failed to fetch weight recommendations during recovery (non-critical):', e)
+            }
+
             const restoredWorkout: ActiveWorkout = {
               id: firebaseWorkout.id,
               startedAt: firebaseWorkout.startTime,
