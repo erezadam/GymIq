@@ -25,11 +25,18 @@ import {
   components,
 } from '@/styles/theme'
 
-const navigation = [
+interface NavItem {
+  name: string
+  href: string
+  icon: typeof Home
+  adminOnly?: boolean
+}
+
+const navigation: NavItem[] = [
   { name: 'דשבורד', href: '/dashboard', icon: Home },
-  { name: 'ספריה', href: '/exercises', icon: Library },
-  { name: 'היסטוריה', href: '/workout/history', icon: History },
-  { name: 'התקדמות', href: '/progress', icon: TrendingUp },
+  { name: 'ספריה', href: '/exercises', icon: Library, adminOnly: true },
+  { name: 'היסטוריה', href: '/workout/history', icon: History, adminOnly: true },
+  { name: 'התקדמות', href: '/progress', icon: TrendingUp, adminOnly: true },
   { name: 'פרופיל', href: '/profile', icon: User },
 ]
 
@@ -129,7 +136,7 @@ export default function MainLayout() {
           }}
         >
           <nav style={{ padding: spacing.lg, display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-            {navigation.map((item) => (
+            {navigation.filter((item) => !item.adminOnly || isAdmin).map((item) => (
               <NavLink
                 key={item.href}
                 to={item.href}
@@ -286,7 +293,7 @@ export default function MainLayout() {
 
         {/* Navigation */}
         <nav style={{ flex: 1, padding: spacing.lg, display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-          {navigation.map((item) => (
+          {navigation.filter((item) => !item.adminOnly || isAdmin).map((item) => (
             <NavLink
               key={item.href}
               to={item.href}

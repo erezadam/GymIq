@@ -6,6 +6,7 @@ import {
   logoutUser,
   onAuthChange,
   resetPassword,
+  updateUserProfile,
   type AppUser,
 } from '@/lib/firebase'
 
@@ -27,6 +28,7 @@ interface AuthStore {
   register: (data: RegisterDto) => Promise<void>
   logout: () => Promise<void>
   sendPasswordReset: (email: string) => Promise<void>
+  updateProfile: (data: Partial<AppUser>) => Promise<void>
   clearError: () => void
 }
 
@@ -145,6 +147,25 @@ export const useAuthStore = create<AuthStore>()(
           set({ isLoading: false })
         } catch (error: any) {
           const errorMessage = getFirebaseErrorMessage(error.code)
+          set({ error: errorMessage, isLoading: false })
+          throw new Error(errorMessage)
+        }
+      },
+
+      updateProfile: async (data: Partial<AppUser>) => {
+        const state = useAuthStore.getState()
+        const currentUser = state.user
+        if (!currentUser) throw new Error('לא מחובר')
+
+        set({ isLoading: true, error: null })
+        try {
+          await updateUserProfile(currentUser.uid, data)
+          set({
+            user: { ...currentUser, ...data, updatedAt: new Date() },
+            isLoading: false,
+          })
+        } catch (error: any) {
+          const errorMessage = error?.message || 'שגיאה בעדכון הפרופיל'
           set({ error: errorMessage, isLoading: false })
           throw new Error(errorMessage)
         }

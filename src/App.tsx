@@ -10,6 +10,7 @@ import { ImpersonationBanner } from '@/shared/components/ImpersonationBanner'
 // Lazy load pages
 // Auth
 const LoginPage = lazy(() => import('@/domains/authentication/components/LoginPage'))
+const ProfilePage = lazy(() => import('@/domains/authentication/components/ProfilePage'))
 
 // Trainer
 const TrainerLayout = lazy(() => import('@/domains/trainer/components/TrainerLayout'))
@@ -99,7 +100,7 @@ function App() {
           <Route path="inbox" element={<TraineeInbox />} />
           <Route path="trainers" element={<TrainerSelectionScreen />} />
           <Route path="progress" element={<UserDashboard />} /> {/* TODO: Progress page */}
-          <Route path="profile" element={<UserDashboard />} /> {/* TODO: Profile page */}
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
 
         {/* Trainer Routes (Protected - Trainer and Admin) */}
