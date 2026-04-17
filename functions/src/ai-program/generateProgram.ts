@@ -33,9 +33,9 @@ async function getOpenAIClient(): Promise<any> {
   return openaiClient
 }
 
-// ============ Rate Limiter (3 per day per trainer) ============
+// ============ Rate Limiter (1 per day per trainer) ============
 
-const PROGRAM_DAILY_LIMIT = 3
+const PROGRAM_DAILY_LIMIT = 1
 const PROGRAM_USAGE_COLLECTION = 'aiProgramUsage'
 
 function getDb(): admin.firestore.Firestore {

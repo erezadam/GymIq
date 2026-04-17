@@ -60,12 +60,9 @@ service cloud.firestore {
       // Any authenticated user can read trainer profiles (for trainee self-select flow)
       allow read: if isAuthenticated() && resource.data.role == 'trainer';
 
-      // Trainers can read all trainee profiles (role=='user') for the
-      // trainee-directory / city-browse flow. The directory filters unassigned
-      // trainees client-side — Firestore cannot query for a missing field,
-      // so the broad read + client filter is required to catch legacy docs
-      // where `trainerId` was never written.
-      allow read: if isTrainer() && resource.data.role == 'user';
+      // Trainer reads of trainee profiles are restricted to their own trainees
+      // via `trainerId == request.auth.uid` (rule above). Broader discovery
+      // of unassigned trainees must go through an explicit invite flow.
 
       // ---- AI Data subcollection (written by Cloud Functions only) ----
       match /aiData/{docId} {
