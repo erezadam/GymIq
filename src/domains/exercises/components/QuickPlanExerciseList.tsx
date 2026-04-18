@@ -88,6 +88,15 @@ export default function QuickPlanExerciseList({
               }`}
               onClick={() => onSetActiveSection(section.id)}
             >
+              <span
+                className={`flex-shrink-0 flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-md text-xs font-bold tabular-nums ${
+                  isActive ? 'bg-primary text-background-main' : 'bg-surface-elevated text-on-surface-variant'
+                }`}
+                aria-hidden="true"
+              >
+                {sectionIdx + 1}
+              </span>
+
               {editingSectionId === section.id ? (
                 <input
                   type="text"
@@ -205,6 +214,13 @@ export default function QuickPlanExerciseList({
                         <ChevronDown className="w-3.5 h-3.5" />
                       </button>
                     </div>
+
+                    <span
+                      className="flex-shrink-0 flex items-center justify-center min-w-[22px] h-5 px-1 rounded text-[11px] font-bold tabular-nums bg-surface-elevated text-on-surface-variant"
+                      aria-hidden="true"
+                    >
+                      {exIdx + 1}
+                    </span>
 
                     <span className="flex-1 text-sm font-medium text-on-surface truncate">
                       {exercise.exerciseNameHe || exercise.exerciseName}
