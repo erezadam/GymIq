@@ -1490,13 +1490,13 @@ export function ExerciseLibrary({
       {/* Image Modal */}
       {imageModal && (
         <div
-          className="fixed inset-0 z-[60] flex items-start justify-center bg-black/80 p-4 pt-20 overflow-y-auto"
+          className="fixed inset-0 z-[110] flex items-start justify-center bg-black/80 p-4 pt-20 overflow-y-auto"
           onClick={() => setImageModal(null)}
         >
           {/* Fixed close button — always reachable regardless of scroll (RTL: left side) */}
           <button
             onClick={() => setImageModal(null)}
-            className="fixed top-4 left-4 z-[70] w-11 h-11 flex items-center justify-center rounded-full bg-black/80 text-white text-xl shadow-lg"
+            className="fixed top-4 left-4 z-[120] w-11 h-11 flex items-center justify-center rounded-full bg-black/80 text-white text-xl shadow-lg"
             aria-label="סגור תמונה"
           >
             ✕
@@ -1508,16 +1508,6 @@ export function ExerciseLibrary({
               className="w-full max-h-[60vh] object-contain rounded-xl"
             />
             <p className="text-white text-center mt-3 font-semibold">{imageModal.name}</p>
-            {imageModal.instructionsHe.length > 0 && (
-              <div className="mt-4 bg-dark-surface/90 rounded-xl p-4 border border-dark-border" dir="rtl">
-                <p className="text-primary-400 text-sm font-semibold mb-3">הוראות ביצוע</p>
-                <ol className="space-y-2 list-decimal list-inside">
-                  {imageModal.instructionsHe.map((instruction, i) => (
-                    <li key={i} className="text-text-secondary text-sm leading-relaxed">{instruction}</li>
-                  ))}
-                </ol>
-              </div>
-            )}
             <button
               onClick={() => setImageModal(null)}
               className="mt-4 w-full py-3 rounded-xl bg-dark-surface border border-dark-border text-white font-semibold active:bg-dark-surface/70"
