@@ -10,6 +10,7 @@ import type { ProgramDay } from '@/domains/trainer/types'
 export interface QuickPlanSection {
   id: string
   title: string
+  order: number
 }
 
 export interface SelectedExercise {
@@ -78,6 +79,8 @@ interface WorkoutBuilderActions {
   updateQuickPlanSectionTitle: (sectionId: string, title: string) => void
   removeQuickPlanSection: (sectionId: string) => void
   setActiveQuickPlanSection: (sectionId: string | null) => void
+  moveQuickPlanSection: (sectionId: string, direction: 'up' | 'down') => void
+  moveQuickPlanExercise: (exerciseId: string, direction: 'up' | 'down') => void
   sortExercises: (orderedIds: string[]) => void
   clearWorkout: () => void
   getWorkoutExercises: () => WorkoutExercise[]
@@ -349,7 +352,10 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
   addQuickPlanSection: (title) => {
     const id = `qps_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
     set((state) => ({
-      quickPlanSections: [...state.quickPlanSections, { id, title }],
+      quickPlanSections: [
+        ...state.quickPlanSections,
+        { id, title, order: state.quickPlanSections.length + 1 },
+      ],
       activeQuickPlanSectionId: id,
     }))
     return id
@@ -378,6 +384,42 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
 
   setActiveQuickPlanSection: (sectionId) => {
     set({ activeQuickPlanSectionId: sectionId })
+  },
+
+  moveQuickPlanSection: (sectionId, direction) => {
+    set((state) => {
+      const sorted = [...state.quickPlanSections].sort((a, b) => a.order - b.order)
+      const idx = sorted.findIndex((s) => s.id === sectionId)
+      if (idx === -1) return state
+      const swapWith = direction === 'up' ? idx - 1 : idx + 1
+      if (swapWith < 0 || swapWith >= sorted.length) return state
+      ;[sorted[idx], sorted[swapWith]] = [sorted[swapWith], sorted[idx]]
+      return {
+        quickPlanSections: sorted.map((s, i) => ({ ...s, order: i + 1 })),
+      }
+    })
+  },
+
+  moveQuickPlanExercise: (exerciseId, direction) => {
+    set((state) => {
+      const target = state.selectedExercises.find((e) => e.exerciseId === exerciseId)
+      if (!target) return state
+      const sameSection = state.selectedExercises
+        .filter((e) => e.quickPlanSectionId === target.quickPlanSectionId)
+        .sort((a, b) => a.order - b.order)
+      const idx = sameSection.findIndex((e) => e.exerciseId === exerciseId)
+      const swapWith = direction === 'up' ? idx - 1 : idx + 1
+      if (swapWith < 0 || swapWith >= sameSection.length) return state
+      const neighbor = sameSection[swapWith]
+      // Swap the two orders in the full list, then reindex for stable 1..N ordering.
+      const swapped = state.selectedExercises.map((e) => {
+        if (e.exerciseId === target.exerciseId) return { ...e, order: neighbor.order }
+        if (e.exerciseId === neighbor.exerciseId) return { ...e, order: target.order }
+        return e
+      })
+      const sortedFull = [...swapped].sort((a, b) => a.order - b.order)
+      return { selectedExercises: reindexExercises(sortedFull) }
+    })
   },
 
   sortExercises: (orderedIds) => {
