@@ -1490,18 +1490,18 @@ export function ExerciseLibrary({
       {/* Image Modal */}
       {imageModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 overflow-y-auto"
+          className="fixed inset-0 z-[60] flex items-start justify-center bg-black/80 p-4 pt-20 overflow-y-auto"
           onClick={() => setImageModal(null)}
         >
+          {/* Fixed close button — always reachable regardless of scroll (RTL: left side) */}
+          <button
+            onClick={() => setImageModal(null)}
+            className="fixed top-4 left-4 z-[70] w-11 h-11 flex items-center justify-center rounded-full bg-black/80 text-white text-xl shadow-lg"
+            aria-label="סגור תמונה"
+          >
+            ✕
+          </button>
           <div className="relative max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
-            {/* Close button - top left for RTL, min 44x44 touch target */}
-            <button
-              onClick={() => setImageModal(null)}
-              className="absolute top-2 left-2 z-10 w-11 h-11 flex items-center justify-center rounded-full bg-black/60 text-white text-xl"
-              aria-label="סגור תמונה"
-            >
-              ✕
-            </button>
             <img
               src={imageModal.url}
               alt={imageModal.name}
@@ -1518,6 +1518,12 @@ export function ExerciseLibrary({
                 </ol>
               </div>
             )}
+            <button
+              onClick={() => setImageModal(null)}
+              className="mt-4 w-full py-3 rounded-xl bg-dark-surface border border-dark-border text-white font-semibold active:bg-dark-surface/70"
+            >
+              סגור
+            </button>
           </div>
         </div>
       )}
