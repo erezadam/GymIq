@@ -186,7 +186,7 @@ export function TraineeRegistrationModal({
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop !z-[60]" onClick={onClose}>
       <div
         className="bg-dark-surface rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
@@ -408,20 +408,6 @@ export function TraineeRegistrationModal({
               className="input-primary min-h-[80px] resize-none"
               placeholder="פרט מגבלות פיזיות או פציעות..."
               rows={3}
-            />
-          </div>
-
-          {/* Notes */}
-          <div>
-            <label className="block text-sm font-medium text-on-surface-variant mb-1.5">
-              הערות מאמן
-            </label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => updateField('notes', e.target.value)}
-              className="input-primary min-h-[60px] resize-none"
-              placeholder="הערות נוספות..."
-              rows={2}
             />
           </div>
 
