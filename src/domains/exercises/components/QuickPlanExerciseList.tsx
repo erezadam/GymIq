@@ -1,4 +1,4 @@
-import { Minus, Plus, X, PlusCircle, Pencil } from 'lucide-react'
+import { Minus, Plus, X, PlusCircle, Pencil, MessageSquare } from 'lucide-react'
 import { useState } from 'react'
 import type { SelectedExercise, QuickPlanSection } from '@/domains/workouts/store/workoutBuilderStore'
 
@@ -12,6 +12,7 @@ interface QuickPlanExerciseListProps {
   onSetActiveSection: (sectionId: string) => void
   onSetCountChange: (exerciseId: string, count: number) => void
   onRemoveExercise: (exerciseId: string) => void
+  onUpdateNotes: (exerciseId: string, notes: string) => void
 }
 
 export default function QuickPlanExerciseList({
@@ -24,11 +25,13 @@ export default function QuickPlanExerciseList({
   onSetActiveSection,
   onSetCountChange,
   onRemoveExercise,
+  onUpdateNotes,
 }: QuickPlanExerciseListProps) {
   const [newSectionTitle, setNewSectionTitle] = useState('')
   const [isAddingSection, setIsAddingSection] = useState(false)
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
+  const [editingNotesExerciseId, setEditingNotesExerciseId] = useState<string | null>(null)
 
   const handleAddSection = () => {
     if (newSectionTitle.trim()) {
@@ -132,49 +135,92 @@ export default function QuickPlanExerciseList({
             {/* Section exercises */}
             {sectionExercises.map((exercise) => {
               const setCount = exercise.customSetCount ?? 3
+              const hasNotes = !!exercise.notes && exercise.notes.trim().length > 0
+              const isEditingNotes = editingNotesExerciseId === exercise.exerciseId
 
               return (
-                <div
-                  key={exercise.exerciseId}
-                  className="flex items-center gap-2 rounded-xl bg-surface-container/60 px-3 py-2 mr-3"
-                >
-                  <button
-                    type="button"
-                    onClick={() => onRemoveExercise(exercise.exerciseId)}
-                    className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-on-surface-variant hover:text-status-error hover:bg-status-error/10 transition-colors"
-                    aria-label={`הסר ${exercise.exerciseNameHe}`}
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-
-                  <span className="flex-1 text-sm font-medium text-on-surface truncate">
-                    {exercise.exerciseNameHe || exercise.exerciseName}
-                  </span>
-
-                  {/* Set count stepper */}
-                  <div className="flex-shrink-0 flex items-center gap-1">
+                <div key={exercise.exerciseId} className="flex flex-col gap-1.5 mr-3">
+                  <div className="flex items-center gap-2 rounded-xl bg-surface-container/60 px-3 py-2">
                     <button
                       type="button"
-                      onClick={() => onSetCountChange(exercise.exerciseId, setCount - 1)}
-                      disabled={setCount <= 1}
-                      className="flex items-center justify-center w-7 h-7 rounded-lg bg-surface-elevated text-on-surface-variant hover:text-on-surface disabled:opacity-30 transition-colors"
-                      aria-label="הפחת סט"
+                      onClick={() => onRemoveExercise(exercise.exerciseId)}
+                      className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-on-surface-variant hover:text-status-error hover:bg-status-error/10 transition-colors"
+                      aria-label={`הסר ${exercise.exerciseNameHe}`}
                     >
-                      <Minus className="w-3.5 h-3.5" />
+                      <X className="w-4 h-4" />
                     </button>
-                    <span className="w-6 text-center text-sm font-semibold text-on-surface tabular-nums">
-                      {setCount}
+
+                    <span className="flex-1 text-sm font-medium text-on-surface truncate">
+                      {exercise.exerciseNameHe || exercise.exerciseName}
                     </span>
+
+                    {/* Notes toggle */}
                     <button
                       type="button"
-                      onClick={() => onSetCountChange(exercise.exerciseId, setCount + 1)}
-                      disabled={setCount >= 20}
-                      className="flex items-center justify-center w-7 h-7 rounded-lg bg-surface-elevated text-on-surface-variant hover:text-on-surface disabled:opacity-30 transition-colors"
-                      aria-label="הוסף סט"
+                      onClick={() =>
+                        setEditingNotesExerciseId(isEditingNotes ? null : exercise.exerciseId)
+                      }
+                      className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
+                        hasNotes
+                          ? 'bg-primary/20 text-primary'
+                          : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-elevated'
+                      }`}
+                      aria-label={hasNotes ? 'ערוך הערה' : 'הוסף הערה'}
+                      title={hasNotes ? exercise.notes : 'הוסף הערה לתרגיל'}
                     >
-                      <Plus className="w-3.5 h-3.5" />
+                      <MessageSquare className="w-4 h-4" />
                     </button>
+
+                    {/* Set count stepper */}
+                    <div className="flex-shrink-0 flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => onSetCountChange(exercise.exerciseId, setCount - 1)}
+                        disabled={setCount <= 1}
+                        className="flex items-center justify-center w-7 h-7 rounded-lg bg-surface-elevated text-on-surface-variant hover:text-on-surface disabled:opacity-30 transition-colors"
+                        aria-label="הפחת סט"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="w-6 text-center text-sm font-semibold text-on-surface tabular-nums">
+                        {setCount}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onSetCountChange(exercise.exerciseId, setCount + 1)}
+                        disabled={setCount >= 20}
+                        className="flex items-center justify-center w-7 h-7 rounded-lg bg-surface-elevated text-on-surface-variant hover:text-on-surface disabled:opacity-30 transition-colors"
+                        aria-label="הוסף סט"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Notes editor (inline, expanded on demand) */}
+                  {isEditingNotes && (
+                    <textarea
+                      value={exercise.notes || ''}
+                      onChange={(e) => onUpdateNotes(exercise.exerciseId, e.target.value)}
+                      onBlur={() => setEditingNotesExerciseId(null)}
+                      placeholder="הוראות לתרגיל (למשל: פרמידה הפוכה, טמפו 3-1-1...)"
+                      rows={2}
+                      className="w-full px-3 py-2 rounded-xl bg-surface-container text-on-surface text-sm placeholder:text-on-surface-variant border border-primary/30 outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+                      autoFocus
+                    />
+                  )}
+
+                  {/* Notes preview (collapsed) */}
+                  {!isEditingNotes && hasNotes && (
+                    <button
+                      type="button"
+                      onClick={() => setEditingNotesExerciseId(exercise.exerciseId)}
+                      className="text-right text-xs text-primary/80 hover:text-primary bg-primary/5 border border-primary/20 rounded-lg px-3 py-1.5 truncate"
+                      aria-label="ערוך הערה"
+                    >
+                      💬 {exercise.notes}
+                    </button>
+                  )}
                 </div>
               )
             })}
