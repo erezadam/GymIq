@@ -27,6 +27,7 @@ export interface SelectedExercise {
   customSetCount?: number             // User-specified set count (Quick Plan)
   quickPlanSectionId?: string         // Which Quick Plan section this exercise belongs to
   sectionTitle?: string               // Section title (set on first exercise of each section before workout start)
+  notes?: string                      // Planning notes / instructions (e.g. "פרמידה הפוכה") — shown to trainee in active workout
   sets: WorkoutSet[]
   restTime: number
   order: number
@@ -72,6 +73,7 @@ interface WorkoutBuilderActions {
   setTrainerReport: (targetUserId: string, reportedBy: string, reportedByName: string) => void
   setPlannedWorkoutDocId: (id: string | undefined) => void
   setExerciseSetCount: (exerciseId: string, count: number) => void
+  updateExerciseNotes: (exerciseId: string, notes: string) => void
   addQuickPlanSection: (title: string) => string
   updateQuickPlanSectionTitle: (sectionId: string, title: string) => void
   removeQuickPlanSection: (sectionId: string) => void
@@ -289,6 +291,7 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
           assistanceTypes: ex.assistanceTypes as AssistanceType[] | undefined,
           customSetCount: ex.targetSets,
           sectionTitle: ex.sectionTitle,
+          notes: ex.notes,
           sets,
           restTime: ex.restTime || DEFAULT_REST_TIME,
           order: ex.order || index + 1,
@@ -328,6 +331,17 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
           customSetCount: clamped,
           sets: Array.from({ length: clamped }, () => createDefaultSet('working', 10, 0)),
         })
+      ),
+    }))
+  },
+
+  updateExerciseNotes: (exerciseId, notes) => {
+    const trimmed = notes.trim()
+    set((state) => ({
+      selectedExercises: updateExerciseInList(
+        state.selectedExercises,
+        exerciseId,
+        (e) => ({ ...e, notes: trimmed.length > 0 ? trimmed : undefined })
       ),
     }))
   },
@@ -412,6 +426,7 @@ export const useWorkoutBuilderStore = create<WorkoutBuilderStore>((set, get) => 
       order: e.order,
       sets: e.sets,
       restTime: e.restTime,
+      notes: e.notes,
     }))
   },
 }))

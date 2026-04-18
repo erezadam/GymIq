@@ -446,6 +446,8 @@ export function useActiveWorkout() {
                   ...(ex.reportType && { reportType: ex.reportType }),
                   // Restore assistance type
                   ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
+                  // Restore planning notes (trainer/self-built)
+                  ...(ex.notes && { notes: ex.notes }),
                   reportedSets: ex.sets.map((set: any, setIndex: number) => ({
                     id: `set_${Date.now()}_${setIndex}`,
                     setNumber: setIndex + 1,
@@ -718,6 +720,7 @@ export function useActiveWorkout() {
                 assistanceTypes: ex.assistanceTypes,    // Pass assistance options
                 availableBands: ex.availableBands,      // Pass available bands
                 assistanceType: autoSelectedAssistanceType, // Auto-select if only one option
+                notes: ex.notes,                        // Planning notes from builder
                 isExpanded: false, // New exercises start collapsed
                 isCompleted: false,
                 reportedSets: [
@@ -865,6 +868,7 @@ export function useActiveWorkout() {
             availableBands: ex.availableBands,      // Pass available bands
             assistanceType: autoSelectedAssistanceType, // Auto-select if only one option
             sectionTitle: ex.sectionTitle,              // Quick Plan section header
+            notes: ex.notes,                            // Planning notes from builder
             isExpanded: false, // All exercises start collapsed
             isCompleted: continueExercise?.isCompleted || false,
             reportedSets,

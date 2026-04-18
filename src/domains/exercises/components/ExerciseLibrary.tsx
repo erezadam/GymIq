@@ -101,7 +101,7 @@ export function ExerciseLibrary({
   const dateInputRef = useRef<HTMLInputElement>(null)
   const isFirstRender = useRef(true)
 
-  const { selectedExercises, addExercise, addExercisesFromSet, removeExercise, clearWorkout, scheduledDate, setScheduledDate, sortExercises, setExerciseSetCount, quickPlanSections, activeQuickPlanSectionId, addQuickPlanSection, updateQuickPlanSectionTitle, removeQuickPlanSection, setActiveQuickPlanSection, setSelfStandaloneProgram, workoutName: builderWorkoutName } = useWorkoutBuilderStore()
+  const { selectedExercises, addExercise, addExercisesFromSet, removeExercise, clearWorkout, scheduledDate, setScheduledDate, sortExercises, setExerciseSetCount, updateExerciseNotes, quickPlanSections, activeQuickPlanSectionId, addQuickPlanSection, updateQuickPlanSectionTitle, removeQuickPlanSection, setActiveQuickPlanSection, setSelfStandaloneProgram, workoutName: builderWorkoutName } = useWorkoutBuilderStore()
   const [exerciseOrder, setExerciseOrder] = useState<Record<string, number>>({})
   const [activeTab, setActiveTab] = useState<'library' | 'quickPlan'>('library')
 
@@ -498,6 +498,7 @@ export function ExerciseLibrary({
         reportType: ex.reportType,
         assistanceTypes: ex.assistanceTypes as string[] | undefined,
         sectionTitle: ex.sectionTitle,
+        notes: ex.notes,
       }
       return programEx
     })
@@ -623,6 +624,7 @@ export function ExerciseLibrary({
             imageUrl: ex.imageUrl || '',
             category: ex.category || '',
             isCompleted: false,
+            ...(ex.notes && { notes: ex.notes }),
             sets: [
               {
                 type: 'working' as const,
@@ -690,6 +692,7 @@ export function ExerciseLibrary({
       if (ex.reportType) clean.reportType = ex.reportType
       if (ex.assistanceTypes && ex.assistanceTypes.length > 0) clean.assistanceTypes = ex.assistanceTypes
       if (ex.sectionTitle) clean.sectionTitle = ex.sectionTitle
+      if (ex.notes) clean.notes = ex.notes
       return clean
     })
 
@@ -735,6 +738,7 @@ export function ExerciseLibrary({
         imageUrl: ex.imageUrl || '',
         category: ex.category || '',
         isCompleted: false,
+        ...(ex.notes && { notes: ex.notes }),
         sets: [
           {
             type: 'working' as const,
@@ -1049,6 +1053,7 @@ export function ExerciseLibrary({
                 onSetActiveSection={setActiveQuickPlanSection}
                 onSetCountChange={setExerciseSetCount}
                 onRemoveExercise={removeExercise}
+                onUpdateNotes={updateExerciseNotes}
               />
             </div>
           )}
