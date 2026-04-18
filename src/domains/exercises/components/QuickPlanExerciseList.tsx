@@ -1,4 +1,4 @@
-import { Minus, Plus, X, PlusCircle, Pencil, MessageSquare } from 'lucide-react'
+import { Minus, Plus, X, PlusCircle, Pencil, MessageSquare, ChevronUp, ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 import type { SelectedExercise, QuickPlanSection } from '@/domains/workouts/store/workoutBuilderStore'
 
@@ -13,6 +13,8 @@ interface QuickPlanExerciseListProps {
   onSetCountChange: (exerciseId: string, count: number) => void
   onRemoveExercise: (exerciseId: string) => void
   onUpdateNotes: (exerciseId: string, notes: string) => void
+  onMoveSection: (sectionId: string, direction: 'up' | 'down') => void
+  onMoveExercise: (exerciseId: string, direction: 'up' | 'down') => void
 }
 
 export default function QuickPlanExerciseList({
@@ -26,6 +28,8 @@ export default function QuickPlanExerciseList({
   onSetCountChange,
   onRemoveExercise,
   onUpdateNotes,
+  onMoveSection,
+  onMoveExercise,
 }: QuickPlanExerciseListProps) {
   const [newSectionTitle, setNewSectionTitle] = useState('')
   const [isAddingSection, setIsAddingSection] = useState(false)
@@ -65,11 +69,13 @@ export default function QuickPlanExerciseList({
       )}
 
       {/* Sections with their exercises */}
-      {sections.map((section) => {
-        const sectionExercises = exercises.filter(
-          (e) => e.quickPlanSectionId === section.id
-        )
+      {[...sections].sort((a, b) => a.order - b.order).map((section, sectionIdx, sortedSections) => {
+        const sectionExercises = exercises
+          .filter((e) => e.quickPlanSectionId === section.id)
+          .sort((a, b) => a.order - b.order)
         const isActive = activeSectionId === section.id
+        const isFirstSection = sectionIdx === 0
+        const isLastSection = sectionIdx === sortedSections.length - 1
 
         return (
           <div key={section.id} className="flex flex-col gap-1.5">
@@ -111,6 +117,32 @@ export default function QuickPlanExerciseList({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation()
+                  if (!isFirstSection) onMoveSection(section.id, 'up')
+                }}
+                disabled={isFirstSection}
+                className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full text-on-surface-variant hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                aria-label="הזז למעלה"
+              >
+                <ChevronUp className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (!isLastSection) onMoveSection(section.id, 'down')
+                }}
+                disabled={isLastSection}
+                className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full text-on-surface-variant hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                aria-label="הזז למטה"
+              >
+                <ChevronDown className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
                   handleStartEdit(section)
                 }}
                 className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full text-on-surface-variant hover:text-on-surface transition-colors"
@@ -133,10 +165,12 @@ export default function QuickPlanExerciseList({
             </div>
 
             {/* Section exercises */}
-            {sectionExercises.map((exercise) => {
+            {sectionExercises.map((exercise, exIdx) => {
               const setCount = exercise.customSetCount ?? 3
               const hasNotes = !!exercise.notes && exercise.notes.trim().length > 0
               const isEditingNotes = editingNotesExerciseId === exercise.exerciseId
+              const isFirstEx = exIdx === 0
+              const isLastEx = exIdx === sectionExercises.length - 1
 
               return (
                 <div key={exercise.exerciseId} className="flex flex-col gap-1.5 mr-3">
@@ -149,6 +183,28 @@ export default function QuickPlanExerciseList({
                     >
                       <X className="w-4 h-4" />
                     </button>
+
+                    {/* Move up/down within section */}
+                    <div className="flex-shrink-0 flex flex-col gap-0.5">
+                      <button
+                        type="button"
+                        onClick={() => !isFirstEx && onMoveExercise(exercise.exerciseId, 'up')}
+                        disabled={isFirstEx}
+                        className="flex items-center justify-center w-6 h-5 rounded text-on-surface-variant hover:text-on-surface disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                        aria-label="הזז תרגיל למעלה"
+                      >
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => !isLastEx && onMoveExercise(exercise.exerciseId, 'down')}
+                        disabled={isLastEx}
+                        className="flex items-center justify-center w-6 h-5 rounded text-on-surface-variant hover:text-on-surface disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                        aria-label="הזז תרגיל למטה"
+                      >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
 
                     <span className="flex-1 text-sm font-medium text-on-surface truncate">
                       {exercise.exerciseNameHe || exercise.exerciseName}

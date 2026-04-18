@@ -101,7 +101,7 @@ export function ExerciseLibrary({
   const dateInputRef = useRef<HTMLInputElement>(null)
   const isFirstRender = useRef(true)
 
-  const { selectedExercises, addExercise, addExercisesFromSet, removeExercise, clearWorkout, scheduledDate, setScheduledDate, sortExercises, setExerciseSetCount, updateExerciseNotes, quickPlanSections, activeQuickPlanSectionId, addQuickPlanSection, updateQuickPlanSectionTitle, removeQuickPlanSection, setActiveQuickPlanSection, setSelfStandaloneProgram, workoutName: builderWorkoutName } = useWorkoutBuilderStore()
+  const { selectedExercises, addExercise, addExercisesFromSet, removeExercise, clearWorkout, scheduledDate, setScheduledDate, sortExercises, setExerciseSetCount, updateExerciseNotes, quickPlanSections, activeQuickPlanSectionId, addQuickPlanSection, updateQuickPlanSectionTitle, removeQuickPlanSection, setActiveQuickPlanSection, moveQuickPlanSection, moveQuickPlanExercise, setSelfStandaloneProgram, workoutName: builderWorkoutName } = useWorkoutBuilderStore()
   const [exerciseOrder, setExerciseOrder] = useState<Record<string, number>>({})
   const [activeTab, setActiveTab] = useState<'library' | 'quickPlan'>('library')
 
@@ -352,6 +352,61 @@ export function ExerciseLibrary({
       .sort((a, b) => (a.nameHe || '').trim().localeCompare((b.nameHe || '').trim(), 'he'))
   }, [exercises, selectedPrimaryMuscle, selectedSubMuscle, selectedEquipment])
 
+  // Pre-filter exercises by primary + equipment only, for per-sub-muscle availability counts.
+  const availableCountsBySubMuscle = useMemo(() => {
+    const counts = new Map<string, number>()
+    const base = exercises.filter((ex) => {
+      if (selectedPrimaryMuscle !== 'all') {
+        const primary = ex.primaryMuscle || ex.category
+        const matchesPrimary = primary === selectedPrimaryMuscle || ex.category === selectedPrimaryMuscle
+        const matchesSecondary = ex.secondaryMuscles?.includes(selectedPrimaryMuscle as MuscleGroup)
+        if (!matchesPrimary && !matchesSecondary) return false
+      }
+      if (selectedEquipment !== 'all') {
+        if (selectedEquipment === 'graviton') {
+          if (!ex.assistanceTypes?.includes('graviton')) return false
+        } else if (ex.equipment !== selectedEquipment) {
+          return false
+        }
+      }
+      return true
+    })
+    for (const ex of base) {
+      const ids = new Set<string>()
+      if (ex.primaryMuscle) ids.add(ex.primaryMuscle)
+      for (const sm of ex.secondaryMuscles || []) ids.add(sm)
+      for (const id of ids) counts.set(id, (counts.get(id) || 0) + 1)
+    }
+    return counts
+  }, [exercises, selectedPrimaryMuscle, selectedEquipment])
+
+  // Pre-filter exercises by primary + sub-muscle only, for per-equipment availability counts.
+  const availableCountsByEquipment = useMemo(() => {
+    const counts = new Map<string, number>()
+    const base = exercises.filter((ex) => {
+      if (selectedPrimaryMuscle !== 'all') {
+        const primary = ex.primaryMuscle || ex.category
+        const matchesPrimary = primary === selectedPrimaryMuscle || ex.category === selectedPrimaryMuscle
+        const matchesSecondary = ex.secondaryMuscles?.includes(selectedPrimaryMuscle as MuscleGroup)
+        if (!matchesPrimary && !matchesSecondary) return false
+      }
+      if (selectedSubMuscle !== 'all') {
+        if (ex.primaryMuscle !== selectedSubMuscle && !ex.secondaryMuscles.includes(selectedSubMuscle as MuscleGroup)) {
+          return false
+        }
+      }
+      return true
+    })
+    counts.set('all', base.length)
+    for (const ex of base) {
+      if (ex.equipment) counts.set(ex.equipment, (counts.get(ex.equipment) || 0) + 1)
+      if (ex.assistanceTypes?.includes('graviton')) {
+        counts.set('graviton', (counts.get('graviton') || 0) + 1)
+      }
+    }
+    return counts
+  }, [exercises, selectedPrimaryMuscle, selectedSubMuscle])
+
   // Selected exercises grouped by muscle for the top section
   const selectedExercisesGrouped = useMemo(() => {
     if (effectiveSelectedIds.size === 0) return []
@@ -545,18 +600,20 @@ export function ExerciseLibrary({
   const handleStartWorkout = async () => {
     if (selectedExercises.length === 0) return
 
-    // Quick Plan: sort exercises by section order, then by primaryMuscle within section
-    // Also assign section titles to the first exercise of each section
+    // Quick Plan: sort exercises by user-controlled section order, then by user-controlled exercise order within section.
+    // Section titles are assigned to the first exercise of each section.
     if (activeTab === 'quickPlan' && quickPlanSections.length > 0) {
-      const sectionOrder = new Map(quickPlanSections.map((s, i) => [s.id, i]))
+      const sectionOrder = new Map(
+        [...quickPlanSections].sort((a, b) => a.order - b.order).map((s, i) => [s.id, i])
+      )
       const sectionTitleMap = new Map(quickPlanSections.map((s) => [s.id, s.title]))
       const sorted = [...selectedExercises]
         .sort((a, b) => {
           const sectionA = sectionOrder.get(a.quickPlanSectionId || '') ?? 999
           const sectionB = sectionOrder.get(b.quickPlanSectionId || '') ?? 999
           if (sectionA !== sectionB) return sectionA - sectionB
-          // Within same section, sort by primaryMuscle
-          return (a.primaryMuscle || '').localeCompare(b.primaryMuscle || '')
+          // Within same section, preserve the user-set order (moveQuickPlanExercise).
+          return (a.order ?? 0) - (b.order ?? 0)
         })
       // Assign section title to first exercise of each section
       const seenSections = new Set<string>()
@@ -1054,6 +1111,8 @@ export function ExerciseLibrary({
                 onSetCountChange={setExerciseSetCount}
                 onRemoveExercise={removeExercise}
                 onUpdateNotes={updateExerciseNotes}
+                onMoveSection={moveQuickPlanSection}
+                onMoveExercise={moveQuickPlanExercise}
               />
             </div>
           )}
@@ -1097,18 +1156,23 @@ export function ExerciseLibrary({
                 >
                   הכל
                 </button>
-                {availableSubMuscles.map((subMuscle) => (
-                  <button
-                    key={subMuscle.id}
-                    onClick={() => setSelectedSubMuscle(subMuscle.id)}
-                    className={`${selectedSubMuscle === subMuscle.id ? 'pill-active' : 'pill-default'} flex flex-col items-center`}
-                  >
-                    <span>{subMuscle.nameHe}</span>
-                    {subMuscle.nameEn && (
-                      <span className="text-[10px] opacity-60">{subMuscle.nameEn}</span>
-                    )}
-                  </button>
-                ))}
+                {availableSubMuscles.map((subMuscle) => {
+                  const isSelected = selectedSubMuscle === subMuscle.id
+                  const isEmpty = !isSelected && (availableCountsBySubMuscle.get(subMuscle.id) || 0) === 0
+                  return (
+                    <button
+                      key={subMuscle.id}
+                      onClick={() => setSelectedSubMuscle(subMuscle.id)}
+                      className={`${isSelected ? 'pill-active' : 'pill-default'} flex flex-col items-center ${isEmpty ? 'opacity-40' : ''}`}
+                      aria-disabled={isEmpty}
+                    >
+                      <span>{subMuscle.nameHe}</span>
+                      {subMuscle.nameEn && (
+                        <span className="text-[10px] opacity-60">{subMuscle.nameEn}</span>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -1116,19 +1180,24 @@ export function ExerciseLibrary({
           {/* Equipment Filter - Smaller font */}
           <div className="mb-4">
             <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-hide">
-              {equipmentOptions.map((eq) => (
+              {equipmentOptions.map((eq) => {
+                const isSelected = selectedEquipment === eq.id
+                const isEmpty = !isSelected && eq.id !== 'all' && (availableCountsByEquipment.get(eq.id) || 0) === 0
+                return (
                 <button
                   key={eq.id}
                   onClick={() => setSelectedEquipment(eq.id)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                    selectedEquipment === eq.id
+                    isSelected
                       ? 'bg-primary-main text-background-main'
                       : 'bg-background-card border border-border-default text-text-secondary hover:text-white'
-                  }`}
+                  } ${isEmpty ? 'opacity-40' : ''}`}
+                  aria-disabled={isEmpty}
                 >
                   {eq.label}
                 </button>
-              ))}
+                )
+              })}
             </div>
           </div>
 
@@ -1302,7 +1371,7 @@ export function ExerciseLibrary({
                       <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
                         isSelected
                           ? 'bg-primary-main'
-                          : 'border-2 border-border-light'
+                          : 'border-2 border-on-surface-variant/60 bg-surface-container/40'
                       }`}>
                         {isSelected && <Check className="w-4 h-4 text-background-main" strokeWidth={3} />}
                       </div>
