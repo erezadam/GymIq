@@ -60,6 +60,7 @@ export interface ActiveWorkoutExercise {
   reportedSets: ReportedSet[]         // Sets that have been reported
 
   // Last workout data (from Firebase)
+  // TODO: rename lastWorkoutData → it actually holds best performance data (PR), not last workout
   lastWorkoutData?: LastWorkoutData
 
   // Historical notes from previous workouts
