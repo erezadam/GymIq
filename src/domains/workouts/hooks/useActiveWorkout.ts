@@ -471,7 +471,7 @@ export function useActiveWorkout() {
             // Fetch previous exercise volumes (non-critical)
             try {
               const volExerciseIds = restoredExercises.map((ex) => ex.exerciseId)
-              const volumes = await getLastExerciseVolumes(user.uid, volExerciseIds)
+              const volumes = await getLastExerciseVolumes(effectiveUserId, volExerciseIds)
               restoredExercises.forEach((ex) => {
                 ex.previousExerciseVolume = volumes[ex.exerciseId] ?? null
               })
@@ -494,8 +494,8 @@ export function useActiveWorkout() {
                 }])
               )
               const [lastWorkoutData, historicalNotes] = await Promise.all([
-                getBestPerformanceForExercises(user.uid, exerciseIds, detailsById),
-                getExerciseNotesForExercises(user.uid, exerciseIds),
+                getBestPerformanceForExercises(effectiveUserId, exerciseIds, detailsById),
+                getExerciseNotesForExercises(effectiveUserId, exerciseIds),
               ])
               restoredExercises.forEach((ex) => {
                 if (lastWorkoutData[ex.exerciseId]) {
@@ -747,8 +747,8 @@ export function useActiveWorkout() {
                   }])
                 )
                 const [lastWorkoutData, historicalNotes] = await Promise.all([
-                  getBestPerformanceForExercises(user.uid, exerciseIds, detailsById),
-                  getExerciseNotesForExercises(user.uid, exerciseIds),
+                  getBestPerformanceForExercises(effectiveUserId, exerciseIds, detailsById),
+                  getExerciseNotesForExercises(effectiveUserId, exerciseIds),
                 ])
                 newExercises.forEach((ex) => {
                   if (lastWorkoutData[ex.exerciseId]) {
@@ -777,7 +777,7 @@ export function useActiveWorkout() {
               // Exercise volumes - separate try/catch (non-critical)
               try {
                 const volExerciseIds = newExercises.map((ex) => ex.exerciseId)
-                const volumes = await getLastExerciseVolumes(user.uid, volExerciseIds)
+                const volumes = await getLastExerciseVolumes(effectiveUserId, volExerciseIds)
                 newExercises.forEach((ex) => {
                   ex.previousExerciseVolume = volumes[ex.exerciseId] ?? null
                 })
@@ -892,8 +892,8 @@ export function useActiveWorkout() {
               }])
             )
             const [lastWorkoutData, historicalNotes] = await Promise.all([
-              getBestPerformanceForExercises(user.uid, exerciseIds, detailsById),
-              getExerciseNotesForExercises(user.uid, exerciseIds),
+              getBestPerformanceForExercises(effectiveUserId, exerciseIds, detailsById),
+              getExerciseNotesForExercises(effectiveUserId, exerciseIds),
             ])
 
             // Update exercises with last workout data and historical notes
@@ -924,7 +924,7 @@ export function useActiveWorkout() {
           // Exercise volumes - separate try/catch (non-critical)
           try {
             const volExerciseIds = exercises.map((ex) => ex.exerciseId)
-            const volumes = await getLastExerciseVolumes(user.uid, volExerciseIds)
+            const volumes = await getLastExerciseVolumes(effectiveUserId, volExerciseIds)
             exercises.forEach((ex) => {
               ex.previousExerciseVolume = volumes[ex.exerciseId] ?? null
             })
