@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased] - 2026-04-23
+
+### Added
+- **Personal record row in exercise card** (PR #89): Each exercise during active workout now displays best historical performance (purple row) below last workout (red row). Uses existing `getBestPerformanceForExercises` query. Tailwind tokens only.
+
+### Fixed
+- **Trainer-mode historical data queries** (PR #89): Fixed pre-existing bug where trainer reporting for trainee saw their own historical data instead of trainee's. Affects 9 queries in `useActiveWorkout.ts`: last performance, best performance, exercise notes, and volumes. Affected red "last workout" row since inception; fix also applies to new purple PR row.
+- **Trainer-mode workout ID validation** (PR #89): Fixed bug where `validateWorkoutId` always failed with `wrong_user` in trainer-mode because it received the trainer's `user.uid` instead of the trainee's `targetUserId`. This caused fallback paths (line 578 comment) and potential localStorage wipe of trainee data (line 631 logic). Both band-aids preserved as last-resort guards.
+
+### Notes
+- Naming debt documented: `lastWorkoutData` actually holds best performance data. TODO added in `active-workout.types.ts` line 63. Rename deferred to separate task.
+
 ## 2026-04-11
 
 ### Added

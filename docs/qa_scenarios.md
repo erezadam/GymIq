@@ -582,3 +582,25 @@
 גרסה: 1.12.1
 ═══════════════════════════════════════════════════════════════════════════════
 ```
+
+## Personal Record Row in Exercise Card (PR #89)
+
+### Trainee solo mode
+- Exercise with multi-workout history: both red (last) + purple (PR) rows show, with different values
+- Exercise with single workout in history: both rows show identical values (per product decision)
+- Exercise with no history: no rows (unchanged behavior)
+- reps_time exercises (e.g. plank): both rows in MM:SS format
+- 375px viewport (iPhone SE): no line breaks
+
+### Trainer reporting for trainee (CRITICAL)
+- Rows display TRAINEE's historical data, NOT trainer's
+- **Verification steps**:
+  1. Login as trainer, navigate to trainee with rich workout history
+  2. Start reporting a workout for that trainee
+  3. Pick an exercise where you (trainer) have different history than trainee
+  4. Verify: red row = trainee's last value, purple row = trainee's best value
+  5. Cross-check against Firestore `workoutHistory` filtered by `traineeId` to confirm
+
+### Recovery scenarios
+- Close app mid-workout → reopen → both rows persist
+- Refresh browser during active workout → rows restore from localStorage
