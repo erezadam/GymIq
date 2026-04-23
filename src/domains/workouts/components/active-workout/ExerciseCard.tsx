@@ -241,13 +241,26 @@ export function ExerciseCard({
             </div>
           )}
 
-          {/* Last workout data - shown in red below image */}
+          {/* Best performance (all-time PR) - shown in red below image */}
           {exercise.lastWorkoutData && (
             <div
-              className={`flex items-center justify-center gap-1.5 py-2 px-3 ${(exercise.aiRecommendation || exercise.weightRecommendation) ? 'mb-1' : 'mb-3'} bg-red-500/10 rounded-lg border border-red-500/30`}
+              className="flex items-center justify-center gap-1.5 py-2 px-3 mb-1 bg-red-500/10 rounded-lg border border-red-500/30"
             >
               <span className="text-red-500 text-sm font-semibold">
                 {workoutLabels.lastWorkout} {exercise.lastWorkoutData.reps} חזרות{exercise.lastWorkoutData.time && exercise.lastWorkoutData.time > 0
+                  ? ` ${String(Math.floor(exercise.lastWorkoutData.time / 60)).padStart(2, '0')}:${String(exercise.lastWorkoutData.time % 60).padStart(2, '0')}`
+                  : ''} @ {exercise.lastWorkoutData.weight}kg
+              </span>
+            </div>
+          )}
+
+          {/* Personal record - shown in purple below the red "best" row */}
+          {exercise.lastWorkoutData && (
+            <div
+              className={`flex items-center justify-center gap-1.5 py-2 px-3 ${(exercise.aiRecommendation || exercise.weightRecommendation) ? 'mb-1' : 'mb-3'} bg-accent-purple/10 rounded-lg border border-accent-purple/30`}
+            >
+              <span className="text-accent-purple text-sm font-semibold">
+                {workoutLabels.personalRecord} {exercise.lastWorkoutData.reps} חזרות{exercise.lastWorkoutData.time && exercise.lastWorkoutData.time > 0
                   ? ` ${String(Math.floor(exercise.lastWorkoutData.time / 60)).padStart(2, '0')}:${String(exercise.lastWorkoutData.time % 60).padStart(2, '0')}`
                   : ''} @ {exercise.lastWorkoutData.weight}kg
               </span>
