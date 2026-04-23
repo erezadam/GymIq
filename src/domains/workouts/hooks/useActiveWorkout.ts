@@ -567,13 +567,14 @@ export function useActiveWorkout() {
           }
           if (existingWorkoutId && user?.uid) {
             // Validate with retry — auth timing issues can cause transient failures
-            const validation = await validateWithRetry(existingWorkoutId, user.uid)
+            const validation = await validateWithRetry(existingWorkoutId, effectiveUserId)
             if (validation.valid) {
               console.log('📋 Found existing workout ID (validated):', existingWorkoutId)
               setFirebaseWorkoutId(existingWorkoutId)
               localStorage.setItem(firebaseIdKey, existingWorkoutId)
             } else {
               // Validation failed after retries but this is a continuation — still use the ID
+              // NOTE: validation should now pass after targetUserId fix — monitor for regressions
               console.warn('⚠️ continueWorkoutId validation failed after retries, using anyway (continuation):', existingWorkoutId, 'reason:', validation.reason)
               setFirebaseWorkoutId(existingWorkoutId)
               localStorage.setItem(firebaseIdKey, existingWorkoutId)
@@ -587,7 +588,7 @@ export function useActiveWorkout() {
             // Check if we already have a Firebase workout ID (from previous initialization)
             const existingFirebaseId = localStorage.getItem(firebaseIdKey)
             if (existingFirebaseId && user?.uid) {
-              const validation = await validateWorkoutId(existingFirebaseId, user.uid)
+              const validation = await validateWorkoutId(existingFirebaseId, effectiveUserId)
               if (validation.valid) {
                 console.log('📋 Keeping existing Firebase workout ID (validated):', existingFirebaseId)
                 setFirebaseWorkoutId(existingFirebaseId)
@@ -620,7 +621,7 @@ export function useActiveWorkout() {
       const savedFirebaseId = localStorage.getItem(firebaseIdKey)
       if (savedFirebaseId && user?.uid) {
         // Validate saved Firebase ID before restoring it
-        const validation = await validateWorkoutId(savedFirebaseId, user.uid)
+        const validation = await validateWorkoutId(savedFirebaseId, effectiveUserId)
         if (validation.valid) {
           setFirebaseWorkoutId(savedFirebaseId)
         } else {
@@ -964,8 +965,8 @@ export function useActiveWorkout() {
         if (existingId && user?.uid) {
           // Use retry for continuation (auth timing), single attempt otherwise
           const validation = isContinuingFromHistory
-            ? await validateWithRetry(existingId, user.uid)
-            : await validateWorkoutId(existingId, user.uid)
+            ? await validateWithRetry(existingId, effectiveUserId)
+            : await validateWorkoutId(existingId, effectiveUserId)
           if (!validation.valid) {
             if (isContinuingFromHistory) {
               // During continuation: NEVER null the ID — use it anyway
