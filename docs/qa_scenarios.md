@@ -604,3 +604,51 @@
 ### Recovery scenarios
 - Close app mid-workout → reopen → both rows persist
 - Refresh browser during active workout → rows restore from localStorage
+
+---
+
+## Release Notes — Phase 1 (Data Layer)
+
+פיצ'ר "מה חדש" שלב 1 — שכבת נתונים בלבד, אין UI. הבדיקות עד שיהיה Admin UI דורשות יצירה ידנית של מסמכים ב-Firebase Console.
+
+### Firestore Security Rules — `releaseNotes` collection
+
+| # | תרחיש | ציפייה |
+|---|-------|--------|
+| RN-1 | משתמש רגיל (role='user') קורא `getPublishedReleaseNotes()` | ✅ מקבל את כל ה-notes עם `status='published'` בלבד, ממוינים `publishedAt desc, createdAt desc` |
+| RN-2 | משתמש רגיל מנסה לקרוא מסמך עם `status='draft'` ישירות | ❌ permission-denied |
+| RN-3 | משתמש רגיל מנסה `getDraftsCount()` | ❌ permission-denied (query על `status='draft'` נדחה) |
+| RN-4 | משתמש רגיל מנסה `createReleaseNote(...)` | ❌ permission-denied |
+| RN-5 | משתמש רגיל מנסה `publishReleaseNote(id)` | ❌ permission-denied |
+| RN-6 | משתמש לא מאומת (מחובר-לא) קורא published | ❌ permission-denied |
+| RN-7 | מאמן (role='trainer') קורא `getPublishedReleaseNotes()` | ✅ מקבל את הרשימה (זהה למשתמש רגיל) |
+| RN-8 | מאמן מנסה `createReleaseNote(...)` | ❌ permission-denied (רק admin יכול לכתוב) |
+| RN-9 | אדמין (role='admin') מריץ `getAllReleaseNotes()` | ✅ מקבל את כל הסטטוסים (drafts + published + archived) |
+| RN-10 | אדמין מריץ `getDraftsCount()` | ✅ מקבל מספר ה-drafts |
+| RN-11 | אדמין מריץ `createReleaseNote({...})` | ✅ נוצר מסמך עם `status='draft'`, `publishedAt=null`, `createdAt/updatedAt=serverTimestamp` |
+| RN-12 | אדמין מריץ `publishReleaseNote(id)` | ✅ המסמך מעודכן ל-`status='published'` ו-`publishedAt=serverTimestamp` |
+| RN-13 | אדמין מריץ `archiveReleaseNote(id)` | ✅ `status='archived'` אך `publishedAt` נשמר |
+| RN-14 | אדמין מריץ `deleteReleaseNote(id)` | ✅ המסמך נמחק |
+
+### משתמש חדש — `lastSeenReleaseNotesAt` ברישום (קריטי)
+
+| # | תרחיש | ציפייה |
+|---|-------|--------|
+| RN-15 | הרשמת משתמש חדש דרך `registerUser(...)` (LoginPage — הרשמה עצמית) | ✅ המסמך ב-`users/{uid}` מכיל שדה `lastSeenReleaseNotesAt` עם Timestamp שרת, ללא שצריך פעולה נוספת |
+| RN-15a | אדמין יוצר משתמש ידנית דרך Admin UI (`UsersList.tsx` → "משתמש חדש") | ✅ המסמך שנוצר מכיל `lastSeenReleaseNotesAt` עם Timestamp שרת |
+| RN-15b | מאמן יוצר חשבון מתאמן דרך TrainerDashboard (`traineeAccountService.createTraineeAccount`) | ✅ המסמך שנוצר עבור המתאמן מכיל `lastSeenReleaseNotesAt` עם Timestamp שרת |
+| RN-16 | משתמש חדש שנרשם כשיש 5 notes published קודמים | ✅ במסך "מה חדש" שייבנה בשלב 3 — לא יראה את ההיסטוריה כ"חדשה". (בשלב 1 נבדק רק ששדה `lastSeenReleaseNotesAt >= publishedAt` של כל הנייטס הקיימים) |
+| RN-17 | משתמש קיים (שנרשם לפני הפיצ'ר) בלי `lastSeenReleaseNotesAt` | בשלב 3 תבוצע מיגרציה. בשלב 1 — לא נבדק. |
+
+### `markReleaseNotesAsSeen(uid)`
+
+| # | תרחיש | ציפייה |
+|---|-------|--------|
+| RN-18 | משתמש מאומת מעדכן `lastSeenReleaseNotesAt` לעצמו | ✅ מצליח (מכוסה ע״י ה-rule הקיים של `/users/{userId}` — self-update בלי שינוי role) |
+| RN-19 | משתמש A מנסה לעדכן `lastSeenReleaseNotesAt` של משתמש B | ❌ permission-denied |
+
+### Composite Index
+
+| # | תרחיש | ציפייה |
+|---|-------|--------|
+| RN-20 | ריצת `getPublishedReleaseNotes()` לראשונה אחרי deploy | ✅ ה-query רץ ללא שגיאת "missing index" (ה-index על `status ASC, publishedAt DESC, createdAt DESC` הוגדר ב-`firestore.indexes.json`) |

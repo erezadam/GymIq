@@ -63,6 +63,9 @@ export const traineeAccountService = {
         injuriesOrLimitations: data.injuries || '',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        // Stamped at creation so a trainer-created trainee doesn't see the
+        // entire release-notes history as "new" on first login.
+        lastSeenReleaseNotesAt: serverTimestamp(),
       }
 
       // Only add optional fields if defined (Firestore doesn't accept undefined)

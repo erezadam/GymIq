@@ -43,6 +43,19 @@ export const deleteUserFromFirestore = async (userId: string): Promise<void> => 
   await deleteDoc(userRef)
 }
 
+/**
+ * Stamps the current moment on the user's profile as the last time they viewed
+ * the Release Notes. Used by the "What's New" modal/screen flow to hide notes
+ * the user has already seen.
+ */
+export const markReleaseNotesAsSeen = async (uid: string): Promise<void> => {
+  const userRef = doc(db, 'users', uid)
+  await updateDoc(userRef, {
+    lastSeenReleaseNotesAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+}
+
 // Get user stats
 export const getUserStats = async (): Promise<{
   total: number

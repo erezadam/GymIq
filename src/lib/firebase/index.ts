@@ -46,7 +46,22 @@ export {
   updateUserRole,
   deleteUserFromFirestore,
   getUserStats,
+  markReleaseNotesAsSeen,
 } from './users'
+
+// Release Notes ("What's New")
+export {
+  getPublishedReleaseNotes,
+  getAllReleaseNotes,
+  getDraftsCount,
+  checkExistsByHash,
+  createReleaseNote,
+  updateReleaseNote,
+  publishReleaseNote,
+  archiveReleaseNote,
+  deleteReleaseNote,
+  getReleaseNoteById,
+} from './releaseNotes'
 
 // Equipment
 export {

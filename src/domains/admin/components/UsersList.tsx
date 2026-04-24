@@ -175,6 +175,9 @@ export default function UsersList() {
         role: newUser.role,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        // Stamped at creation so the new user doesn't see the entire
+        // release-notes history as "new" on first login.
+        lastSeenReleaseNotesAt: serverTimestamp(),
       })
 
       toast.success(`משתמש ${newUser.email} נוצר בהצלחה!`)

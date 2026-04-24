@@ -164,6 +164,7 @@ All Firestore/Auth operations. No component ever talks to Firebase directly.
 | `exerciseSets.ts` | **The Curated Sets Service** | CRUD for pre-built exercise packages. |
 | `exerciseSetStorage.ts` | **The Set Storage Helper** | Local/remote storage for exercise set data. |
 | `appSettings.ts` | **The App Settings Reader** | Reads global app settings from Firestore. |
+| `releaseNotes.ts` | **The Release Notes Service** | CRUD for the "What's New" feed. Publish/archive transitions, hash-based dedup, admin-only writes. Published notes ordered by `publishedAt desc, createdAt desc`. |
 
 ---
 
@@ -424,6 +425,16 @@ All Firestore/Auth operations. No component ever talks to Firebase directly.
 | `components/ExerciseSetExercisePicker.tsx` | **The Package Picker** | Choose exercises for a set package. |
 | `components/UsersList.tsx` | **The User Directory** | All users with role management. |
 | `components/AdminSettings.tsx` | **The App Settings** | Global app configuration. |
+
+---
+
+## `src/domains/whatsnew/` - The Release Notes Domain
+
+"מה חדש" feed — phase 1 (data layer) is wired; admin UI, user-facing modal/badge, and the CHANGELOG sync script are planned for phases 2-4.
+
+| File | Conceptual Name | What it does |
+|------|----------------|-------------|
+| `types/releaseNote.types.ts` | **The Release Note DNA** | Core types: `ReleaseNote` (version, changelogHash, titleHe, bodyHe, iconEmoji, status, publishedAt, order, audience), `ReleaseNoteStatus` ('draft'\|'published'\|'archived'), `CreateReleaseNoteInput`, `UpdateReleaseNoteInput`. |
 
 ---
 
