@@ -6,6 +6,8 @@ import { useAuthStore } from '@/domains/authentication/store'
 import { MobilePreviewFrame } from '@/shared/components/MobilePreviewFrame'
 import { MobilePreviewToggle } from '@/shared/components/MobilePreviewToggle'
 import { getDraftsCount } from '@/lib/firebase'
+import { WhatsNewBadge } from '@/domains/whatsnew/components/WhatsNewBadge'
+import { WhatsNewModal } from '@/domains/whatsnew/components/WhatsNewModal'
 
 const navigation = [
   { name: 'דשבורד', href: '/admin', icon: LayoutDashboard, end: true },
@@ -144,7 +146,10 @@ export default function AdminLayout() {
             </button>
             <h1 className="text-lg font-semibold text-text-primary mr-4">ממשק ניהול</h1>
           </div>
-          <MobilePreviewToggle />
+          <div className="flex items-center gap-2">
+            <WhatsNewBadge />
+            <MobilePreviewToggle />
+          </div>
         </header>
 
         {/* Page content */}
@@ -154,6 +159,8 @@ export default function AdminLayout() {
           </main>
         </MobilePreviewFrame>
       </div>
+
+      <WhatsNewModal />
     </div>
   )
 }
