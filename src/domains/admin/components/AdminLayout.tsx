@@ -1,9 +1,13 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { Dumbbell, LayoutDashboard, Users, Settings, LogOut, Menu, X, ArrowRight, Activity, Wrench, ClipboardList, Ribbon, Layers } from 'lucide-react'
+import { Dumbbell, LayoutDashboard, Users, Settings, LogOut, Menu, X, ArrowRight, Activity, Wrench, ClipboardList, Ribbon, Layers, FileText } from 'lucide-react'
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/domains/authentication/store'
 import { MobilePreviewFrame } from '@/shared/components/MobilePreviewFrame'
 import { MobilePreviewToggle } from '@/shared/components/MobilePreviewToggle'
+import { getDraftsCount } from '@/lib/firebase'
+import { WhatsNewBadge } from '@/domains/whatsnew/components/WhatsNewBadge'
+import { WhatsNewModal } from '@/domains/whatsnew/components/WhatsNewModal'
 
 const navigation = [
   { name: 'דשבורד', href: '/admin', icon: LayoutDashboard, end: true },
@@ -14,6 +18,7 @@ const navigation = [
   { name: 'גומיות', href: '/admin/band-types', icon: Ribbon },
   { name: 'סוגי דיווח', href: '/admin/report-types', icon: ClipboardList },
   { name: 'משתמשים', href: '/admin/users', icon: Users },
+  { name: 'הודעות עדכון', href: '/admin/release-notes', icon: FileText, draftsBadge: true },
   { name: 'הגדרות', href: '/admin/settings', icon: Settings },
 ]
 
@@ -21,6 +26,14 @@ export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
+
+  const { data: draftsCount = 0 } = useQuery({
+    queryKey: ['admin', 'releaseNotes', 'draftsCount'],
+    queryFn: getDraftsCount,
+    staleTime: 60_000,
+    refetchOnWindowFocus: true,
+    refetchInterval: false,
+  })
 
   const handleLogout = () => {
     logout()
@@ -86,7 +99,12 @@ export default function AdminLayout() {
               onClick={() => setSidebarOpen(false)}
             >
               <item.icon className="w-5 h-5" />
-              <span>{item.name}</span>
+              <span className="flex-1">{item.name}</span>
+              {item.draftsBadge && draftsCount > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-status-error text-white text-[11px] font-bold">
+                  {draftsCount > 99 ? '99+' : draftsCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -128,7 +146,10 @@ export default function AdminLayout() {
             </button>
             <h1 className="text-lg font-semibold text-text-primary mr-4">ממשק ניהול</h1>
           </div>
-          <MobilePreviewToggle />
+          <div className="flex items-center gap-2">
+            <WhatsNewBadge />
+            <MobilePreviewToggle />
+          </div>
         </header>
 
         {/* Page content */}
@@ -138,6 +159,8 @@ export default function AdminLayout() {
           </main>
         </MobilePreviewFrame>
       </div>
+
+      <WhatsNewModal />
     </div>
   )
 }

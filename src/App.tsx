@@ -49,6 +49,10 @@ const TrainingAnalysis = lazy(() => import('@/domains/workouts/components/Traini
 // Exercises
 const ExerciseLibrary = lazy(() => import('@/domains/exercises/components/ExerciseLibrary'))
 
+// What's New
+const WhatsNewScreen = lazy(() => import('@/domains/whatsnew/components/WhatsNewScreen'))
+const ReleaseNotesManager = lazy(() => import('@/domains/admin/components/ReleaseNotesManager'))
+
 function App() {
   const { updateAvailable, newVersion, performUpdate, dismissUpdate } = useVersionCheck()
 
@@ -101,6 +105,7 @@ function App() {
           <Route path="trainers" element={<TrainerSelectionScreen />} />
           <Route path="progress" element={<UserDashboard />} /> {/* TODO: Progress page */}
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="whats-new" element={<WhatsNewScreen />} />
         </Route>
 
         {/* Trainer Routes (Protected - Trainer and Admin) */}
@@ -141,6 +146,7 @@ function App() {
           <Route path="exercise-sets" element={<ExerciseSetManager />} />
           <Route path="report-types" element={<ReportTypeManager />} />
           <Route path="users" element={<UsersList />} />
+          <Route path="release-notes" element={<ReleaseNotesManager />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
 

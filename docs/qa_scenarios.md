@@ -652,3 +652,78 @@
 | # | תרחיש | ציפייה |
 |---|-------|--------|
 | RN-20 | ריצת `getPublishedReleaseNotes()` לראשונה אחרי deploy | ✅ ה-query רץ ללא שגיאת "missing index" (ה-index על `status ASC, publishedAt DESC, createdAt DESC` הוגדר ב-`firestore.indexes.json`) |
+
+---
+
+## Release Notes — Phase 2+3+4 (Admin UI + User UI + Migration + Sync)
+
+### Admin UI (`/admin/release-notes`)
+
+| # | תרחיש | ציפייה |
+|---|-------|--------|
+| RN-21 | משתמש רגיל (role='user') ניגש ישירות ל-`/admin/release-notes` | ❌ נחסם ע״י AuthGuard (מפנה) |
+| RN-22 | מאמן (role='trainer', לא admin) ניגש ישירות ל-`/admin/release-notes` | ❌ נחסם ע״י AuthGuard |
+| RN-23 | אדמין נכנס ל-`/admin/release-notes` | ✅ טבלה של כל ה-notes + סינון + "צור חדש" |
+| RN-24 | אדמין לוחץ "➕ צור חדש" → ממלא titleHe (מקס׳ 100 תווים), bodyHe, iconEmoji → "צור טיוטה" | ✅ נוצר מסמך חדש ב-`releaseNotes` עם `status='draft'`, `publishedAt=null` |
+| RN-25 | אדמין לוחץ "תצוגה מקדימה" בטופס היצירה | ✅ תוכן bodyHe מוצג כ-Markdown מרונדר (bold, italic, רשימות, headings) |
+| RN-26 | אדמין לוחץ "פרסם" על draft | ✅ `status` עובר ל-`published`, `publishedAt=serverTimestamp` |
+| RN-27 | אדמין לוחץ "העבר לארכיון" על published | ✅ `status='archived'` + `publishedAt` נשמר |
+| RN-28 | אדמין לוחץ "מחק" → מאשר ב-modal | ✅ המסמך נמחק |
+| RN-29 | סינון "Drafts" מציג רק drafts; "Published" רק published; וכו׳ | ✅ טבלה מתעדכנת |
+| RN-30 | ב-sidebar של AdminLayout: באדג' אדום ליד "הודעות עדכון" עם drafts count | ✅ מופיע כשיש drafts; נעלם כשאין |
+
+### Markdown Security
+
+| # | תרחיש | ציפייה |
+|---|-------|--------|
+| RN-31 | bodyHe מכיל `<script>alert('xss')</script>` | ✅ ה-tag לא מוצג ולא מבוצע (unwrapDisallowed) |
+| RN-32 | bodyHe מכיל `<iframe>` או `<img src="http://...">` | ✅ לא מרונדרים — אין פלט |
+| RN-33 | bodyHe מכיל קישור markdown `[text](url)` | ✅ מרונדר כ-`<a href="url" target="_blank" rel="noopener noreferrer">` |
+| RN-34 | bodyHe מכיל `# Heading` / `## Heading` | ✅ מרונדרים כ-h1/h2 בסגנון מובנה |
+| RN-35 | bodyHe מכיל code \`inline\` | ✅ מרונדר עם רקע וצבע primary-main |
+
+### User Badge & Modal
+
+| # | תרחיש | ציפייה |
+|---|-------|--------|
+| RN-36 | משתמש נכנס עם unseen notes (publishedAt > lastSeenReleaseNotesAt) | ✅ Modal קופץ אוטומטית אחרי 1 שנייה עם הכותרות של כל ה-unseen |
+| RN-37 | Modal לא נפתח בנתיב `/workout/session` | ✅ המשתמש לא יוסח באמצע אימון. לא מוצג גם אם יש unseen |
+| RN-38 | Modal לא נפתח בנתיב `/login` | ✅ |
+| RN-39 | משתמש סוגר modal (X, backdrop, או "הבנתי, תודה!") | ✅ Modal נסגר, `markReleaseNotesAsSeen` נקרא, Firestore מתעדכן, Badge נעלם מיידית (אופטימי) |
+| RN-40 | באותו סשן: admin מפרסם note חדש בזמן שהמשתמש מחובר | ✅ Modal **לא** קופץ שוב (once-per-session), **אבל** Badge חוזר להציג עם count עדכני |
+| RN-41 | המשתמש מרענן את הדף → יש unseen חדשים | ✅ Modal קופץ שוב (סשן חדש) |
+| RN-42 | Badge נטבע ללא unseen | ✅ `return null` — לא מוצג כלל (לא אפור, לא מעומעם) |
+| RN-43 | Badge יש unseen | ✅ 🎁 עם `animate-pulse` + נקודה אדומה עם count |
+| RN-44 | לחיצה על Badge | ✅ ניווט ל-`/whats-new` |
+
+### User Full Screen (`/whats-new`)
+
+| # | תרחיש | ציפייה |
+|---|-------|--------|
+| RN-45 | משתמש נכנס ל-`/whats-new` | ✅ רשימה מלאה של published notes, החדש ביותר בראש |
+| RN-46 | המסך נטען ללא notes published | ✅ הודעה "אין עדיין עדכונים לצפייה" |
+| RN-47 | כרטיס "🎁 מה חדש באפליקציה?" בתחתית UserDashboard | ✅ לחיצה מנווטת ל-`/whats-new` גם אחרי שה-badge נעלם |
+
+### Trainer Layout Sync
+
+| # | תרחיש | ציפייה |
+|---|-------|--------|
+| RN-48 | מאמן נכנס ל-`/trainer` עם unseen notes | ✅ WhatsNewBadge מופיע ב-top app bar ליד ה-avatar; WhatsNewModal קופץ באותה לוגיקה כמו למשתמש רגיל |
+
+### Migration (`scripts/migrateLastSeenReleaseNotes.ts`)
+
+| # | תרחיש | ציפייה |
+|---|-------|--------|
+| RN-49 | `npm run migrate:release-notes -- --dry-run` | ✅ מתחבר כאדמין, סופר ומדפיס UIDs של משתמשים שחסר להם השדה, **לא כותב כלום**, מסיים |
+| RN-50 | `npm run migrate:release-notes` (real) | ✅ מציג count ושואל `y/n`. על `n` — עצור בלי שינוי. על `y` — writeBatch של 500 docs בכל ריצה, מדפיס progress, מסיים עם סיכום |
+| RN-51 | ריצה חוזרת אחרי שהמיגרציה כבר רצה | ✅ "Nothing to do — all users are up to date" + exit 0 |
+| RN-52 | משתמש קיים (לפני PR #91) אחרי שהמיגרציה רצה | ✅ המשתמש **לא** רואה Modal עם היסטוריה ישנה (`lastSeenReleaseNotesAt >= publishedAt` של כל הנוטס הקיימים) |
+
+### Changelog Sync (`scripts/syncChangelogToReleaseNotes.ts`)
+
+| # | תרחיש | ציפייה |
+|---|-------|--------|
+| RN-53 | `npm run sync:release-notes` בפעם הראשונה | ✅ פרסר מזהה bullets תחת `## [version]`, כל אחד נוצר כ-draft עם SHA-256 hash |
+| RN-54 | ריצה חוזרת ללא שינויים ב-CHANGELOG | ✅ "Skipped N existing" — אף draft חדש לא נוצר (hash dedup) |
+| RN-55 | הוספת bullet חדש ל-CHANGELOG + ריצה | ✅ רק ה-bullet החדש נוצר כ-draft |
+| RN-56 | drafts שנוצרו ע״י הסקריפט | ✅ מופיעים ב-`/admin/release-notes` כ-drafts (לא מפורסמים אוטומטית) |

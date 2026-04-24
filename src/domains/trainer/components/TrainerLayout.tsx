@@ -9,6 +9,8 @@ import {
 import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { MobilePreviewFrame } from '@/shared/components/MobilePreviewFrame'
 import { MobilePreviewToggle } from '@/shared/components/MobilePreviewToggle'
+import { WhatsNewBadge } from '@/domains/whatsnew/components/WhatsNewBadge'
+import { WhatsNewModal } from '@/domains/whatsnew/components/WhatsNewModal'
 
 const bottomNav = [
   { name: 'דאשבורד', href: '/trainer', icon: LayoutDashboard, end: true },
@@ -32,6 +34,7 @@ export default function TrainerLayout() {
           {/* Left side (RTL): Avatar + Back to dashboard + Mobile preview */}
           <div className="flex items-center gap-3">
             <MobilePreviewToggle />
+            <WhatsNewBadge />
             <button
               onClick={() => navigate('/dashboard')}
               className="p-2 text-on-surface-variant hover:text-primary-main transition-colors rounded-xl"
@@ -47,6 +50,8 @@ export default function TrainerLayout() {
           </div>
         </div>
       </header>
+
+      <WhatsNewModal />
 
       {/* Main Content */}
       <MobilePreviewFrame>
