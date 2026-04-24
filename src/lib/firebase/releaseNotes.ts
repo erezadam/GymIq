@@ -118,8 +118,14 @@ export const updateReleaseNote = async (
   updates: UpdateReleaseNoteInput
 ): Promise<void> => {
   const ref = doc(db, COLLECTION_NAME, id)
+  // Firestore rejects undefined values. Strip them before sending — matches
+  // the pattern from auth.ts:updateUserProfile. With updateDoc(), omitted
+  // keys preserve their existing value in the document.
+  const clean = Object.fromEntries(
+    Object.entries(updates).filter(([, v]) => v !== undefined)
+  )
   await updateDoc(ref, {
-    ...updates,
+    ...clean,
     updatedAt: serverTimestamp(),
   })
 }

@@ -17,12 +17,19 @@ import type { AppUser } from './auth'
 export const getAllUsers = async (): Promise<AppUser[]> => {
   const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'))
   const snapshot = await getDocs(usersQuery)
-  return snapshot.docs.map((doc) => ({
-    ...doc.data(),
-    uid: doc.id,
-    createdAt: doc.data().createdAt?.toDate() || new Date(),
-    updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-  })) as AppUser[]
+  return snapshot.docs.map((doc) => {
+    const data = doc.data()
+    return {
+      ...data,
+      uid: doc.id,
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate() || new Date(),
+      lastSeenReleaseNotesAt:
+        data.lastSeenReleaseNotesAt?.toDate?.() ||
+        data.lastSeenReleaseNotesAt ||
+        null,
+    }
+  }) as AppUser[]
 }
 
 // Update user role
