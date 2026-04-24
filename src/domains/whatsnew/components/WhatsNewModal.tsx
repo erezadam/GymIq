@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { X } from 'lucide-react'
-import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
+import {
+  useEffectiveUser,
+  useIsImpersonating,
+} from '@/domains/authentication/hooks/useEffectiveUser'
 import { useAuthStore } from '@/domains/authentication/store'
 import { useUnseenNotes } from '../hooks/useUnseenNotes'
 import { useMarkReleaseNotesSeen } from '../hooks/useMarkReleaseNotesSeen'
@@ -42,6 +45,7 @@ const formatNoteDate = (note: ReleaseNote): string => {
 export function WhatsNewModal() {
   const location = useLocation()
   const user = useEffectiveUser()
+  const isImpersonating = useIsImpersonating()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const { hasUnseen, unseenNotes, isReady } = useUnseenNotes()
   const { mutate: markSeen } = useMarkReleaseNotesSeen()
@@ -68,6 +72,12 @@ export function WhatsNewModal() {
 
   const handleClose = () => {
     setOpen(false)
+    // Impersonation guard: when admin is viewing as another user, do NOT
+    // write to that user's `lastSeenReleaseNotesAt` — otherwise the real
+    // user wouldn't see the modal on their next login. Same pattern as
+    // WorkoutHistory.tsx and useActiveWorkout.ts (iron rule 14/04/2026,
+    // PR #89 trainer-mode fixes).
+    if (isImpersonating) return
     if (user && unseenNotes.length > 0) {
       markSeen({ uid: user.uid, unseenNotes })
     }
