@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { X } from 'lucide-react'
 import {
@@ -14,6 +14,15 @@ import type { ReleaseNote } from '../types/releaseNote.types'
 const AUTO_OPEN_DELAY_MS = 1000
 
 const BLOCKED_PATHS = ['/workout/session', '/login']
+
+/**
+ * Module-level guard so the auto-popup fires at most once per app session,
+ * even across unmounts. The component mounts/unmounts when navigating to
+ * `/workout/session` (layout conditionally renders it); a component-local
+ * `useRef` would reset on remount and let the modal fire again. A full
+ * page reload clears this flag, which is the intended "new session" signal.
+ */
+let shownThisSession = false
 
 const formatNoteDate = (note: ReleaseNote): string => {
   const value = note.publishedAt
@@ -34,13 +43,15 @@ const formatNoteDate = (note: ReleaseNote): string => {
  * Opens at most once per app session, and only when ALL hold:
  * - The user is authenticated
  * - `useUnseenNotes` reports unseen notes
- * - Current path is not `/workout/session` or `/login`
+ * - Current path is not in `BLOCKED_PATHS`
  * - At least `AUTO_OPEN_DELAY_MS` has passed since mount (avoids flicker during bootstrap)
  *
  * When dismissed, calls `markReleaseNotesAsSeen(uid)` (server write) plus
- * optimistic store update. The `shownRef` ensures it does not reopen in the
- * same session even if admin publishes a new note while the user is online —
- * badge still updates to indicate new content.
+ * optimistic store update. The module-level `shownThisSession` flag ensures
+ * it does not reopen in the same session — even if admin publishes a new
+ * note while the user is online, or the user navigates through
+ * /workout/session (which unmounts this component). Badge still updates to
+ * indicate new content.
  */
 export function WhatsNewModal() {
   const location = useLocation()
@@ -52,7 +63,6 @@ export function WhatsNewModal() {
 
   const [open, setOpen] = useState(false)
   const [readyToAutoOpen, setReadyToAutoOpen] = useState(false)
-  const shownRef = useRef(false)
 
   useEffect(() => {
     const t = setTimeout(() => setReadyToAutoOpen(true), AUTO_OPEN_DELAY_MS)
@@ -60,13 +70,13 @@ export function WhatsNewModal() {
   }, [])
 
   useEffect(() => {
-    if (shownRef.current) return
+    if (shownThisSession) return
     if (!readyToAutoOpen) return
     if (!isAuthenticated || !user || !isReady) return
     if (!hasUnseen) return
     if (BLOCKED_PATHS.some((p) => location.pathname.startsWith(p))) return
 
-    shownRef.current = true
+    shownThisSession = true
     setOpen(true)
   }, [readyToAutoOpen, isAuthenticated, user, isReady, hasUnseen, location.pathname])
 
