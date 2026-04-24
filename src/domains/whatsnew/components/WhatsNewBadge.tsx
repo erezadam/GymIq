@@ -16,7 +16,7 @@ export function WhatsNewBadge() {
     <button
       type="button"
       onClick={() => navigate('/whats-new')}
-      className="relative inline-flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-container transition-colors animate-pulse"
+      className="relative inline-flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-container transition-colors motion-safe:animate-pulse"
       aria-label={`מה חדש — ${unseenCount} הודעות חדשות`}
     >
       <span className="text-2xl leading-none">🎁</span>

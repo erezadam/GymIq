@@ -13,7 +13,9 @@ import type { ReleaseNote } from '../types/releaseNote.types'
 
 const AUTO_OPEN_DELAY_MS = 1000
 
-const BLOCKED_PATHS = ['/workout/session', '/login']
+// `/whats-new` is excluded because the full-history screen already shows
+// the same content the modal would pop over.
+const BLOCKED_PATHS = ['/workout/session', '/login', '/whats-new']
 
 /**
  * Module-level guard so the auto-popup fires at most once per app session,

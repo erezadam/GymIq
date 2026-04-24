@@ -110,7 +110,7 @@ export default function MainLayout() {
                 GymIQ
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+            <div className="flex items-center gap-1">
               <WhatsNewBadge />
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

@@ -121,7 +121,7 @@ export default function ReleaseNotesManager() {
     <div className="space-y-6" dir="rtl">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">📝 הודעות עדכון</h1>
+          <h1 className="text-2xl font-bold text-on-surface">📝 הודעות עדכון</h1>
           <p className="text-sm text-on-surface-variant mt-1">
             ניהול "מה חדש" — טיוטות, פרסום וארכוב.
           </p>
