@@ -1,8 +1,26 @@
 # Changelog
 
-## [Unreleased] - 2026-04-23
+## [Unreleased] - 2026-04-24
 
 ### Added
+- **תשתית Release Notes ("מה חדש") — שלב 1 / 4 (שכבת נתונים בלבד, ללא UI)**:
+  - Collection חדש `releaseNotes` ב-Firestore: `version`, `changelogHash`, `titleHe`, `bodyHe` (Markdown בסיסי), `iconEmoji` (ברירת מחדל 🎁), `status` ('draft' | 'published' | 'archived'), `publishedAt`, `createdAt`, `updatedAt`, `audience` ('all' — שמור לעתיד), `order`.
+  - שדה חדש ב-`users`: `lastSeenReleaseNotesAt` — מוטבע אוטומטית כ-`serverTimestamp()` בכל **שלושת** נתיבי יצירת המשתמש (כיסוי מלא למניעת הצצה של היסטוריה כ"חדשה"):
+    1. `registerUser` (הרשמה עצמית דרך LoginPage) ב-`src/lib/firebase/auth.ts`
+    2. `handleCreateUser` (יצירת משתמש ידנית ע״י אדמין) ב-`src/domains/admin/components/UsersList.tsx`
+    3. `traineeAccountService.createTraineeAccount` (מאמן יוצר מתאמן) ב-`src/domains/trainer/services/traineeAccountService.ts`
+  - **Defense-in-depth ב-`createAppUser`:** השדה נוסף **אחרי** בלוק ה-`.filter(... !== undefined)` ולא בתוכו, כדי שרפקטור עתידי של ה-filter לא יוריד אותו בשקט.
+  - שירות חדש `src/lib/firebase/releaseNotes.ts` עם 10 פונקציות: `getPublishedReleaseNotes` (ממוין `publishedAt desc, createdAt desc`), `getAllReleaseNotes(statusFilter?)`, `getDraftsCount`, `checkExistsByHash` (לסקריפט הסנכרון בשלב 4), `createReleaseNote`, `updateReleaseNote`, `publishReleaseNote`, `archiveReleaseNote`, `deleteReleaseNote`, `getReleaseNoteById`.
+  - `markReleaseNotesAsSeen(uid)` ב-`src/lib/firebase/users.ts`.
+  - טיפוסים ייעודיים תחת `src/domains/whatsnew/types/releaseNote.types.ts` (`ReleaseNote`, `ReleaseNoteStatus`, `CreateReleaseNoteInput`, `UpdateReleaseNoteInput`).
+  - `firestore.rules` — בלוק חדש: קריאה ל-`published` לכל משתמש מאומת + קריאה מלאה לאדמין (drafts/archived); כתיבה רק לאדמין. עדכון עצמי של `lastSeenReleaseNotesAt` מכוסה ע״י ה-rule הקיים של `/users/{userId}` (self-update, חסימת `role` בלבד).
+  - `firestore.indexes.json` — composite index חדש על `releaseNotes`: `status ASC, publishedAt DESC, createdAt DESC`.
+  - **לא נכלל בשלב 1**: Admin UI, Modal/Badge למשתמש, מיגרציה למשתמשים קיימים, סקריפט סנכרון מ-CHANGELOG. אלה מתוכננים לשלבים 2-4.
+
+### Known Issues / Technical Debt (לא קשור למשימה הנוכחית — לא טופל בכוונה)
+
+- **`UsersList.tsx` (יצירת משתמש ידנית ע״י אדמין) לא כותב `trainerId: null` למשתמשי `role='user'`** — בניגוד ל-`registerUser` וה-migration script `backfillTrainerIdNull.ts` שכן עושים את זה. התוצאה: משתמשים שנוצרו דרך Admin UI לא יופיעו ב-query של "מתאמנים לא-משויכים" (`where('trainerId', '==', null)`) עד שירוץ ה-backfill. לא טופל בתיקון הנוכחי כדי לא לערבב scope עם שלב 1 של Release Notes. יש לפתוח issue ייעודי.
+
 - **Personal record row in exercise card** (PR #89): Each exercise during active workout now displays best historical performance (purple row) below last workout (red row). Uses existing `getBestPerformanceForExercises` query. Tailwind tokens only.
 
 ### Fixed

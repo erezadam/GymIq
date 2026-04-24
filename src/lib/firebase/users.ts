@@ -17,12 +17,19 @@ import type { AppUser } from './auth'
 export const getAllUsers = async (): Promise<AppUser[]> => {
   const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'))
   const snapshot = await getDocs(usersQuery)
-  return snapshot.docs.map((doc) => ({
-    ...doc.data(),
-    uid: doc.id,
-    createdAt: doc.data().createdAt?.toDate() || new Date(),
-    updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-  })) as AppUser[]
+  return snapshot.docs.map((doc) => {
+    const data = doc.data()
+    return {
+      ...data,
+      uid: doc.id,
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate() || new Date(),
+      lastSeenReleaseNotesAt:
+        data.lastSeenReleaseNotesAt?.toDate?.() ||
+        data.lastSeenReleaseNotesAt ||
+        null,
+    }
+  }) as AppUser[]
 }
 
 // Update user role
@@ -41,6 +48,19 @@ export const updateUserRole = async (
 export const deleteUserFromFirestore = async (userId: string): Promise<void> => {
   const userRef = doc(db, 'users', userId)
   await deleteDoc(userRef)
+}
+
+/**
+ * Stamps the current moment on the user's profile as the last time they viewed
+ * the Release Notes. Used by the "What's New" modal/screen flow to hide notes
+ * the user has already seen.
+ */
+export const markReleaseNotesAsSeen = async (uid: string): Promise<void> => {
+  const userRef = doc(db, 'users', uid)
+  await updateDoc(userRef, {
+    lastSeenReleaseNotesAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
 }
 
 // Get user stats

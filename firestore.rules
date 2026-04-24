@@ -342,6 +342,20 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ============ RELEASE NOTES ("What's New") ============
+    // Published notes are readable by any authenticated user.
+    // Admins can additionally read drafts/archived (needed for the admin UI
+    // list, drafts count, and hash-based dedup lookups).
+    // Write access is restricted to admins.
+    // Note: users can update their own `lastSeenReleaseNotesAt` via the
+    // existing /users/{userId} update rule (self-update with no role change).
+    match /releaseNotes/{noteId} {
+      allow read: if isAuthenticated() &&
+        (resource.data.status == 'published' || isAdmin());
+
+      allow create, update, delete: if isAdmin();
+    }
+
     // ============ APP SETTINGS ============
     match /settings/{settingId} {
       // Any authenticated user can read settings

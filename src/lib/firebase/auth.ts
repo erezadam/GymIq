@@ -40,6 +40,8 @@ export interface AppUser {
   bodyFatPercentage?: number
   // Profile photo
   photoURL?: string
+  // Release notes — updated when user sees the "What's New" modal/screen
+  lastSeenReleaseNotesAt?: Date | null
 }
 
 // Convert Firebase user to App user
@@ -59,6 +61,10 @@ const createAppUser = async (
       ...data,
       createdAt: data.createdAt?.toDate?.() || data.createdAt || new Date(),
       updatedAt: data.updatedAt?.toDate?.() || data.updatedAt || new Date(),
+      lastSeenReleaseNotesAt:
+        data.lastSeenReleaseNotesAt?.toDate?.() ||
+        data.lastSeenReleaseNotesAt ||
+        null,
     } as AppUser
   }
 
@@ -94,13 +100,18 @@ const createAppUser = async (
   }
 
   // Prepare Firestore document (remove undefined but KEEP null for trainerId)
-  const firestoreData = Object.fromEntries(
+  const firestoreData: Record<string, unknown> = Object.fromEntries(
     Object.entries({
       ...newUser,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }).filter(([_, value]) => value !== undefined)
   )
+
+  // Stamped at registration so a new user doesn't see the entire release-notes
+  // history as "new" on first login. Set AFTER the undefined-filter above so a
+  // future refactor of that filter can't silently drop this field.
+  firestoreData.lastSeenReleaseNotesAt = serverTimestamp()
 
   await setDoc(userRef, firestoreData)
 

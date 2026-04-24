@@ -601,8 +601,18 @@ Firestore
 ├── aiAnalysisUsage/{userId}_latest      ← Cached analysis result
 ├── aiProgramUsage/{trainerId}_{date}    ← Rate limit: AI programs (3/day)
 │
+├── releaseNotes/{id}                   ← "What's New" feed (admin-managed)
+│     Fields: version, changelogHash, titleHe, bodyHe (Markdown),
+│             iconEmoji, status (draft|published|archived),
+│             publishedAt, order, audience ('all')
+│     Read: published → any authenticated user; drafts/archived → admin only
+│     Write: admin only
+│
 └── settings/{id}                        ← App-wide settings
 ```
+
+> **Note:** `users/{uid}` also carries `lastSeenReleaseNotesAt` — stamped at
+> registration so a new user never sees the entire Release Notes history as new.
 
 ---
 
