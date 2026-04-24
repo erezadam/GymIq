@@ -578,6 +578,15 @@ export default function UserDashboard() {
         </div>
       )}
 
+      {/* What's New link — always available, even after the auto-popup has been dismissed */}
+      <Link
+        to="/whats-new"
+        className="mt-8 mx-auto flex items-center justify-center gap-2 w-full max-w-xs px-4 h-11 rounded-xl bg-surface-container text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-colors text-sm"
+      >
+        <span className="text-lg leading-none">🎁</span>
+        <span>מה חדש באפליקציה?</span>
+      </Link>
+
       {/* Version & Refresh Section */}
       <div
         style={{

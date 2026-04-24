@@ -29,6 +29,13 @@ interface AuthStore {
   logout: () => Promise<void>
   sendPasswordReset: (email: string) => Promise<void>
   updateProfile: (data: Partial<AppUser>) => Promise<void>
+  /**
+   * In-memory optimistic sync of `user.lastSeenReleaseNotesAt`. The actual
+   * Firestore write is done by `markReleaseNotesAsSeen()` (serverTimestamp);
+   * this action only keeps the local store aligned so the "🎁" badge hides
+   * immediately when the user dismisses the What's New modal.
+   */
+  updateLastSeenReleaseNotes: (date: Date) => void
   clearError: () => void
 }
 
@@ -169,6 +176,12 @@ export const useAuthStore = create<AuthStore>()(
           set({ error: errorMessage, isLoading: false })
           throw new Error(errorMessage)
         }
+      },
+
+      updateLastSeenReleaseNotes: (date: Date) => {
+        const currentUser = useAuthStore.getState().user
+        if (!currentUser) return
+        set({ user: { ...currentUser, lastSeenReleaseNotesAt: date } })
       },
 
       clearError: () => set({ error: null }),

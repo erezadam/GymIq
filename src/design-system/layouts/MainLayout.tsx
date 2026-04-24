@@ -17,6 +17,8 @@ import { useAuthStore } from '@/domains/authentication/store'
 import { useEffectiveUser, useIsImpersonating } from '@/domains/authentication/hooks/useEffectiveUser'
 import { MobilePreviewFrame } from '@/shared/components/MobilePreviewFrame'
 import { MobilePreviewToggle } from '@/shared/components/MobilePreviewToggle'
+import { WhatsNewBadge } from '@/domains/whatsnew/components/WhatsNewBadge'
+import { WhatsNewModal } from '@/domains/whatsnew/components/WhatsNewModal'
 import {
   colors,
   spacing,
@@ -108,23 +110,28 @@ export default function MainLayout() {
                 GymIQ
               </span>
             </div>
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              style={{
-                ...components.layout.header.menuButton,
-                border: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              {mobileMenuOpen ? (
-                <X size={24} color={colors.text.secondary} />
-              ) : (
-                <Menu size={24} color={colors.text.secondary} />
-              )}
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+              <WhatsNewBadge />
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                style={{
+                  ...components.layout.header.menuButton,
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                {mobileMenuOpen ? (
+                  <X size={24} color={colors.text.secondary} />
+                ) : (
+                  <Menu size={24} color={colors.text.secondary} />
+                )}
+              </button>
+            </div>
           </div>
         </header>
       )}
+
+      {!hideMobileHeader && <WhatsNewModal />}
 
       {/* Mobile menu */}
       {mobileMenuOpen && (

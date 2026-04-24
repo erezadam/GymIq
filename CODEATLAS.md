@@ -59,6 +59,7 @@ initializeApp(env vars) → getAuth() → getFirestore() → getStorage()
 ├── /analysis           → TrainingAnalysis      ← AI report card
 ├── /inbox              → TraineeInbox          ← Messages from trainer
 ├── /progress           → UserDashboard         ← (placeholder)
+├── /whats-new          → WhatsNewScreen        ← Release notes history
 └── /profile            → UserDashboard         ← (placeholder)
 ```
 
@@ -88,6 +89,7 @@ initializeApp(env vars) → getAuth() → getFirestore() → getStorage()
 ├── /admin/exercise-sets → ExerciseSetManager ← Curated packages CRUD
 ├── /admin/report-types → ReportTypeManager   ← Measurement types CRUD
 ├── /admin/users        → UsersList           ← Role management
+├── /admin/release-notes → ReleaseNotesManager ← "What's New" CMS (drafts/publish/archive)
 └── /admin/settings     → AdminSettings       ← App config
 ```
 

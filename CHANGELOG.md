@@ -3,6 +3,19 @@
 ## [Unreleased] - 2026-04-24
 
 ### Added
+- **פיצ'ר "מה חדש" — שלבים 2+3+4 (השלמת המעגל; שלב 1 כבר merged ב-PR #91)**:
+  - **Admin UI (`ReleaseNotesManager`, route `/admin/release-notes`):** טבלה של כל ה-notes עם סינון לפי status (All/Drafts/Published/Archived) + כפתור "צור חדש" + מודל CRUD עם Markdown preview + פעולות publish/archive/delete. AdminLayout קיבל פריט ניווט "📝 הודעות עדכון" עם badge אדום של drafts count (`useQuery` עם staleTime 60s, refetchOnWindowFocus, ללא polling פעיל).
+  - **UI למשתמש (Badge + Modal + Screen):** אייקון 🎁 ב-MainLayout וב-TrainerLayout עם `animate-pulse` + badge count; Modal אוטומטי שקופץ פעם אחת בסשן (`useRef` ברמת הקומפוננטה) אחרי 1 שנייה מה-mount, רק אם המשתמש מחובר + יש unseen notes + הנתיב אינו `/workout/session` או `/login`; מסך מלא `/whats-new` לכל ההיסטוריה. סגירת Modal מפעילה `markReleaseNotesAsSeen` + optimistic update של authStore מחושב מ-`max(unseenNotes.publishedAt) + 1ms` (לא `Date.now()`) כדי להתחמק מ-clock-skew race.
+  - **סנכרון trainer + trainee:** TrainerLayout הוא standalone (לא wrapper של MainLayout), לכן קיבל Badge + Modal עצמאיים. כיסוי מלא לכל המשתמשים.
+  - **MarkdownContent (`src/domains/whatsnew/components/MarkdownContent.tsx`):** wrapper סביב `react-markdown@9` עם whitelist מחמיר: `p, strong, em, ul, ol, li, br, a, h1-h4, code, blockquote`. אין `rehype-raw`, אין plugins המאפשרים HTML גולמי; קישורים נפתחים ב-`target="_blank"` עם `rel="noopener noreferrer"`.
+  - **כרטיס "מה חדש?" בתחתית UserDashboard:** Link קבוע למסך `/whats-new` — משמש אחרי שה-Modal נסגר והבאדג' נעלם.
+  - **מיגרציה `scripts/migrateLastSeenReleaseNotes.ts`:** חד-פעמית למשתמשים שקיימים לפני PR #91 וחסר להם השדה. תומכת `--dry-run` (מדפיסה UIDs בלי לכתוב) ובמצב real דורשת אישור `y/n` אינטראקטיבי. Batched writes של 500 documents. **חובה להריץ אחרי ה-deploy** — אחרת כל משתמש קיים יראה את כל ההיסטוריה כ"חדשה".
+  - **סקריפט סנכרון `scripts/syncChangelogToReleaseNotes.ts`:** מנתח `CHANGELOG.md` לפי `## [version]` headings וכל bullet הופך ל-draft עם SHA-256 hash. `checkExistsByHash` מונע כפילויות בין ריצות. נוצרים רק drafts — admin חייב לפרסם ידנית מה-UI.
+  - **תלויות חדשות:** `react-markdown@^9` (ללא plugins נוספים).
+  - **scripts חדשים ב-package.json:** `migrate:release-notes`, `sync:release-notes` — שניהם דרך `npx tsx`.
+  - **authStore:** פעולה חדשה `updateLastSeenReleaseNotes(date: Date)` לעדכון אופטימי של `user.lastSeenReleaseNotesAt` ב-in-memory state (הכתיבה ל-Firestore נעשית בנפרד ע״י `markReleaseNotesAsSeen` עם serverTimestamp).
+
+### Added
 - **תשתית Release Notes ("מה חדש") — שלב 1 / 4 (שכבת נתונים בלבד, ללא UI)**:
   - Collection חדש `releaseNotes` ב-Firestore: `version`, `changelogHash`, `titleHe`, `bodyHe` (Markdown בסיסי), `iconEmoji` (ברירת מחדל 🎁), `status` ('draft' | 'published' | 'archived'), `publishedAt`, `createdAt`, `updatedAt`, `audience` ('all' — שמור לעתיד), `order`.
   - שדה חדש ב-`users`: `lastSeenReleaseNotesAt` — מוטבע אוטומטית כ-`serverTimestamp()` בכל **שלושת** נתיבי יצירת המשתמש (כיסוי מלא למניעת הצצה של היסטוריה כ"חדשה"):

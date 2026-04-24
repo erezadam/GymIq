@@ -425,16 +425,24 @@ All Firestore/Auth operations. No component ever talks to Firebase directly.
 | `components/ExerciseSetExercisePicker.tsx` | **The Package Picker** | Choose exercises for a set package. |
 | `components/UsersList.tsx` | **The User Directory** | All users with role management. |
 | `components/AdminSettings.tsx` | **The App Settings** | Global app configuration. |
+| `components/ReleaseNotesManager.tsx` | **The Release Notes Editor** | Admin CMS for "What's New": list + filter + CRUD + publish/archive transitions. Embedded Markdown preview via `MarkdownContent`. Mounted at `/admin/release-notes`. |
 
 ---
 
 ## `src/domains/whatsnew/` - The Release Notes Domain
 
-"מה חדש" feed — phase 1 (data layer) is wired; admin UI, user-facing modal/badge, and the CHANGELOG sync script are planned for phases 2-4.
+"מה חדש" feed — data layer (phase 1), Admin CMS, user-facing badge/modal/screen, migration script, and CHANGELOG sync are all wired. Published notes auto-popup once per session for each user, then remain accessible at `/whats-new`.
 
 | File | Conceptual Name | What it does |
 |------|----------------|-------------|
-| `types/releaseNote.types.ts` | **The Release Note DNA** | Core types: `ReleaseNote` (version, changelogHash, titleHe, bodyHe, iconEmoji, status, publishedAt, order, audience), `ReleaseNoteStatus` ('draft'\|'published'\|'archived'), `CreateReleaseNoteInput`, `UpdateReleaseNoteInput`. |
+| `types/releaseNote.types.ts` | **The Release Note DNA** | Core types: `ReleaseNote` (version, changelogHash, titleHe, bodyHe, iconEmoji, status, publishedAt, order, audience), `ReleaseNoteStatus` ('draft'\|'published'\|'archived'), `CreateReleaseNoteInput`, `UpdateReleaseNoteInput` (status intentionally excluded — use dedicated transition functions). |
+| `hooks/useReleaseNotes.ts` | **The Notes Loader** | `useQuery` wrapper for `getPublishedReleaseNotes` with 5-minute staleTime. Cache key: `['releaseNotes','published']`. |
+| `hooks/useUnseenNotes.ts` | **The Badge Counter** | Computes `{ hasUnseen, unseenCount, unseenNotes }` by comparing `user.lastSeenReleaseNotesAt` against each published note's `publishedAt`. Robust to Firestore Timestamp / JS Date / null. |
+| `hooks/useMarkReleaseNotesSeen.ts` | **The Seen Mutation** | `useMutation` calling `markReleaseNotesAsSeen(uid)`. Optimistic store update uses `max(unseenNotes.publishedAt) + 1ms` (server time) to avoid client-clock-skew race; `onError` rolls back. |
+| `components/WhatsNewBadge.tsx` | **The Gift Icon** | 🎁 with `animate-pulse` + count badge. Returns `null` when `hasUnseen === false` (no dim/grey fallback). Clicking navigates to `/whats-new`. |
+| `components/WhatsNewModal.tsx` | **The Auto-Popup** | Opens at most once per session via `useRef`. Guards: authenticated + hasUnseen + path not in `/workout/session`/`/login` + ≥1s since mount. Dismissing fires the mark-seen mutation. |
+| `components/WhatsNewScreen.tsx` | **The Full History** | Route `/whats-new`. Always available; no dismiss logic — the canonical archive. |
+| `components/MarkdownContent.tsx` | **The Safe Renderer** | Wraps `react-markdown@9` with a strict `allowedElements` whitelist (no `rehype-raw`, no HTML passthrough). External links open in new tab with `rel="noopener noreferrer"`. Used by Modal, Screen, and the admin preview. |
 
 ---
 
@@ -500,6 +508,8 @@ All Firestore/Auth operations. No component ever talks to Firebase directly.
 | `firebase-config.ts` | **The Script Connector (TS)** | Shared Firebase config for TypeScript scripts. Reads `.env`. |
 | `firebase-config.cjs` | **The Script Connector (CJS)** | Same but CommonJS for `.cjs` scripts. |
 | `update-version.cjs` | **The Version Bumper** | Auto-increments patch version before every build. |
+| `migrateLastSeenReleaseNotes.ts` | **The Migration Script** | One-time: stamps `lastSeenReleaseNotesAt=serverTimestamp()` on users that lack the field (predate PR #91). Supports `--dry-run` and interactive `y/n` confirmation. Batched writes of 500. Run once post-deploy. |
+| `syncChangelogToReleaseNotes.ts` | **The Changelog Syncer** | Parses `CHANGELOG.md`, converts each bullet to a `releaseNotes` draft with SHA-256 `changelogHash` for dedup. Drafts only — admin must publish from `/admin/release-notes`. |
 | `importExercises.ts` | **The Exercise Importer** | One-time bulk import of exercises to Firestore. |
 | `seedEmulatorExercises.ts` | **The Emulator Seeder** | Seeds local emulator with sample data. |
 | `updateExerciseImages.ts` | **The Image Updater** | Bulk updates exercise image URLs. |
