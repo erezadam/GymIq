@@ -603,13 +603,16 @@ export default function TraineeDetail() {
           <div className="mt-4">
             <button
               onClick={() => setShowStandaloneWorkouts(prev => !prev)}
-              className="w-full flex justify-between items-center mb-2"
+              className="w-full flex justify-between items-center mb-3"
               aria-expanded={showStandaloneWorkouts}
             >
-              <h4 className="text-sm font-medium text-on-surface-variant flex items-center gap-2">
-                <ClipboardEdit className="w-4 h-4 text-accent-orange" />
-                אימונים בודדים ({totalCount})
-              </h4>
+              <h3 className="font-bold text-lg text-text-primary flex items-center gap-2">
+                <span className="w-1 h-5 bg-gradient-primary rounded-full" />
+                אימונים בודדים
+                {totalCount > 0 && (
+                  <span className="text-sm font-normal text-on-surface-variant">({totalCount})</span>
+                )}
+              </h3>
               <ChevronDown className={`w-4 h-4 text-on-surface-variant transition-transform ${showStandaloneWorkouts ? 'rotate-180' : ''}`} />
             </button>
             {showStandaloneWorkouts && (
