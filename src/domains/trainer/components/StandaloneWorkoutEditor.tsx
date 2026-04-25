@@ -73,7 +73,35 @@ export function StandaloneWorkoutEditor({
     setError(null)
 
     try {
-      const programExercises = toProgramExercises(selectedExercises)
+      // Quick Plan: order exercises by section, assign sectionTitle to the first
+      // exercise of each section. This is the same logic ExerciseLibrary applies
+      // in handleStartWorkout — it must also run here so the trainingProgram doc
+      // persists section headers, otherwise loadFromProgram falls back to muscle
+      // grouping when the workout is reported.
+      let exercisesToSave: SelectedExercise[] = selectedExercises
+      if (quickPlanSections.length > 0) {
+        const sectionOrder = new Map(
+          [...quickPlanSections].sort((a, b) => a.order - b.order).map((s, i) => [s.id, i])
+        )
+        const sectionTitleMap = new Map(quickPlanSections.map((s) => [s.id, s.title]))
+        const sorted = [...selectedExercises].sort((a, b) => {
+          const sa = sectionOrder.get(a.quickPlanSectionId || '') ?? 999
+          const sb = sectionOrder.get(b.quickPlanSectionId || '') ?? 999
+          if (sa !== sb) return sa - sb
+          return (a.order ?? 0) - (b.order ?? 0)
+        })
+        const seenSections = new Set<string>()
+        exercisesToSave = sorted.map((ex) => {
+          const sid = ex.quickPlanSectionId
+          if (sid && !seenSections.has(sid)) {
+            seenSections.add(sid)
+            return { ...ex, sectionTitle: sectionTitleMap.get(sid) || '' }
+          }
+          return { ...ex, sectionTitle: undefined }
+        })
+      }
+
+      const programExercises = toProgramExercises(exercisesToSave)
 
       // Clean exercises - remove undefined values (Firestore doesn't accept them)
       const cleanExercises = programExercises.map(ex => {
