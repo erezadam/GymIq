@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom'
+import { ArrowRight } from 'lucide-react'
 import { useReleaseNotes } from '../hooks/useReleaseNotes'
 import { MarkdownContent } from './MarkdownContent'
 import type { ReleaseNote } from '../types/releaseNote.types'
@@ -21,9 +23,19 @@ const formatNoteDate = (note: ReleaseNote): string => {
  */
 export default function WhatsNewScreen() {
   const { data: notes, isLoading, isError } = useReleaseNotes()
+  const navigate = useNavigate()
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6" dir="rtl">
+      <button
+        onClick={() => navigate('/dashboard')}
+        className="flex items-center gap-2 text-on-surface-variant hover:text-on-surface transition-colors -mx-2 px-2 py-1 rounded-lg"
+        aria-label="חזרה לדשבורד"
+      >
+        <ArrowRight className="w-6 h-6" />
+        <span className="text-base font-medium">חזרה למסך ראשי</span>
+      </button>
+
       <header className="flex items-center gap-3">
         <span className="text-4xl leading-none">🎁</span>
         <div>
