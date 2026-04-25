@@ -36,6 +36,7 @@ export default function TraineeDetail() {
   const [loadingWorkout, setLoadingWorkout] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showWorkouts, setShowWorkouts] = useState(false)
+  const [showStandaloneWorkouts, setShowStandaloneWorkouts] = useState(false)
   const [showStandaloneEditor, setShowStandaloneEditor] = useState(false)
   const [showMessageComposer, setShowMessageComposer] = useState(false)
   const [deleteStandaloneId, setDeleteStandaloneId] = useState<string | null>(null)
@@ -600,10 +601,18 @@ export default function TraineeDetail() {
 
           return (
           <div className="mt-4">
-            <h4 className="text-sm font-medium text-on-surface-variant mb-2 flex items-center gap-2">
-              <ClipboardEdit className="w-4 h-4 text-accent-orange" />
-              אימונים בודדים ({totalCount})
-            </h4>
+            <button
+              onClick={() => setShowStandaloneWorkouts(prev => !prev)}
+              className="w-full flex justify-between items-center mb-2"
+              aria-expanded={showStandaloneWorkouts}
+            >
+              <h4 className="text-sm font-medium text-on-surface-variant flex items-center gap-2">
+                <ClipboardEdit className="w-4 h-4 text-accent-orange" />
+                אימונים בודדים ({totalCount})
+              </h4>
+              <ChevronDown className={`w-4 h-4 text-on-surface-variant transition-transform ${showStandaloneWorkouts ? 'rotate-180' : ''}`} />
+            </button>
+            {showStandaloneWorkouts && (
             <div className="space-y-2">
               {items.map((item) => {
                   const isPerformed = item.kind === 'performed'
@@ -716,6 +725,7 @@ export default function TraineeDetail() {
                   )
                 })}
             </div>
+            )}
           </div>
           )
         })()}
