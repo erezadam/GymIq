@@ -513,6 +513,29 @@ npx playwright test
 # לאחר מכן: בקש אישור מפורש מהמשתמש לפריסה
 ```
 
+## 🔒 Deployment Workflow (Iron Rule)
+
+**Forbidden:** Direct deploy from local branch before merge to main.
+**Forbidden:** Manual deploy without an approved PR in main.
+
+**Required sequence - NO exceptions:**
+1. `git checkout -b <feature-branch>`
+2. Commit changes
+3. `git push origin <feature-branch>`
+4. Open PR via `gh pr create`
+5. Wait for GitHub Actions CI to pass (all green checks)
+6. Wait for user approval (explicit "merge approved")
+7. Merge PR to main
+8. Wait for user to trigger manual deploy workflow
+9. Only then - run manual verification on production
+
+**The agent does NOT:**
+- Run `firebase deploy` locally
+- Suggest deploy before PR merge
+- Merge PRs without explicit user approval
+
+**Rationale:** main↔production invariant. Production must always reflect merged main.
+
 **⚠️ כשלונות pre-existing:** אם טסטים נכשלים שאינם קשורים לשינוי שלך, **אל תתעלם!** דווח למשתמש:
 ```
 ⚠️ נמצאו X כשלונות pre-existing שאינם קשורים לשינוי הנוכחי:

@@ -155,6 +155,7 @@ export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'
       category: ex.category || '',
       isCompleted: ex.isCompleted,
       notes: ex.notes || '',
+      ...(ex.sectionTitle && { sectionTitle: ex.sectionTitle }),
       ...(ex.exerciseVolume !== undefined && ex.exerciseVolume > 0 && { exerciseVolume: ex.exerciseVolume }),
       sets: ex.sets.map(set => ({
         type: set.type,
@@ -1243,6 +1244,7 @@ export async function autoSaveWorkout(
       category: ex.category || '',
       isCompleted: ex.isCompleted,
       notes: ex.notes || '',
+      ...(ex.sectionTitle && { sectionTitle: ex.sectionTitle }),
       sets: ex.sets.map(set => ({
         type: set.type,
         targetReps: set.targetReps || 0,
@@ -1613,6 +1615,7 @@ export async function completeWorkout(
       category: ex.category || '',
       isCompleted: ex.isCompleted,
       notes: ex.notes || '',
+      ...(ex.sectionTitle && { sectionTitle: ex.sectionTitle }),
       ...(ex.exerciseVolume !== undefined && ex.exerciseVolume > 0 && { exerciseVolume: ex.exerciseVolume }),
       sets: ex.sets.map((set: any) => ({
         type: set.type,
