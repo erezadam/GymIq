@@ -412,6 +412,8 @@ export default function WorkoutHistory() {
               equipment: details?.equipment || '',
               complexity: details?.complexity,
               reportType: details?.reportType,
+              // Preserve Quick Plan section so order matches the planning, not muscle grouping
+              ...(exercise.sectionTitle && { sectionTitle: exercise.sectionTitle }),
             })
           })
 
@@ -462,6 +464,8 @@ export default function WorkoutHistory() {
               equipment: details?.equipment || '',
               complexity: details?.complexity,
               reportType: details?.reportType,
+              // Preserve Quick Plan section so order matches the planning, not muscle grouping
+              ...(exercise.sectionTitle && { sectionTitle: exercise.sectionTitle }),
             })
           })
 
@@ -516,6 +520,8 @@ export default function WorkoutHistory() {
               equipment: details?.equipment || '',
               complexity: details?.complexity,
               reportType: details?.reportType,
+              // Preserve Quick Plan section so trainer-assigned free plans keep planned order
+              ...(exercise.sectionTitle && { sectionTitle: exercise.sectionTitle }),
             })
           })
 
@@ -608,6 +614,8 @@ export default function WorkoutHistory() {
           equipment: details?.equipment || '',
           complexity: details?.complexity,
           reportType: details?.reportType,
+          // Preserve Quick Plan section so order matches the planning, not muscle grouping
+          ...(exercise.sectionTitle && { sectionTitle: exercise.sectionTitle }),
         })
       })
 

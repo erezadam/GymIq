@@ -682,6 +682,7 @@ export function ExerciseLibrary({
             category: ex.category || '',
             isCompleted: false,
             ...(ex.notes && { notes: ex.notes }),
+            ...(ex.sectionTitle && { sectionTitle: ex.sectionTitle }),
             sets: [
               {
                 type: 'working' as const,
@@ -796,6 +797,7 @@ export function ExerciseLibrary({
         category: ex.category || '',
         isCompleted: false,
         ...(ex.notes && { notes: ex.notes }),
+        ...(ex.sectionTitle && { sectionTitle: ex.sectionTitle }),
         sets: [
           {
             type: 'working' as const,

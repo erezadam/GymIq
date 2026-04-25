@@ -106,6 +106,7 @@ export interface WorkoutHistoryEntry {
     category?: string // Muscle group name in Hebrew
     isCompleted: boolean
     notes?: string // Exercise notes
+    sectionTitle?: string // Quick Plan section header — preserves planned-order grouping when set
     exerciseVolume?: number  // Total volume for this exercise (sum of weight × reps for completed sets)
     sets: {
       type: SetType

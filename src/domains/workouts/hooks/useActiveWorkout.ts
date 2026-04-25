@@ -210,6 +210,8 @@ export function useActiveWorkout() {
             category: ex.category || '',
             isCompleted: ex.isCompleted,
             notes: ex.notes,
+            // Quick Plan section header — preserves planned order across save/restore
+            ...(ex.sectionTitle && { sectionTitle: ex.sectionTitle }),
             // Report type (needed for Firebase recovery)
             ...(ex.reportType && { reportType: ex.reportType }),
             // Assistance configuration
@@ -292,6 +294,7 @@ export function useActiveWorkout() {
                 category: ex.category || '',
                 isCompleted: ex.isCompleted,
                 notes: ex.notes,
+                ...(ex.sectionTitle && { sectionTitle: ex.sectionTitle }),
                 ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
                 sets: ex.reportedSets.map((set) => ({
                   type: 'working',
@@ -448,6 +451,8 @@ export function useActiveWorkout() {
                   ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
                   // Restore planning notes (trainer/self-built)
                   ...(ex.notes && { notes: ex.notes }),
+                  // Restore Quick Plan section header so display stays in planned order
+                  ...(ex.sectionTitle && { sectionTitle: ex.sectionTitle }),
                   reportedSets: ex.sets.map((set: any, setIndex: number) => ({
                     id: `set_${Date.now()}_${setIndex}`,
                     setNumber: setIndex + 1,
@@ -1009,6 +1014,8 @@ export function useActiveWorkout() {
               category: ex.category || '',
               isCompleted: ex.isCompleted,
               notes: ex.notes,
+              // Quick Plan section header
+              ...(ex.sectionTitle && { sectionTitle: ex.sectionTitle }),
               // Assistance configuration
               ...(ex.assistanceType && { assistanceType: ex.assistanceType }),
               sets: ex.reportedSets.map((set) => ({
@@ -1446,6 +1453,8 @@ export function useActiveWorkout() {
               category: ex.category || '',
               isCompleted: ex.isCompleted,
               notes: ex.notes,
+              // Quick Plan section header — keeps order display consistent in history
+              ...(ex.sectionTitle && { sectionTitle: ex.sectionTitle }),
               // Report type (needed for history continuation and recovery)
               ...(ex.reportType && { reportType: ex.reportType }),
               // Assistance configuration
