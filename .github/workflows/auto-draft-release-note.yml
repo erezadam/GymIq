@@ -1,0 +1,61 @@
+name: Auto-draft release note
+
+# Triggered after a successful production deploy. Asks Claude Haiku 4.5 to
+# summarize the merged PR in 3 short Hebrew sentences and creates a `draft`
+# release note in Firestore. The admin reviews and publishes via the
+# /admin/release-notes UI. Drafts never appear in the user-facing WhatsNew
+# modal/screen — those read only `status='published'` notes.
+
+on:
+  workflow_run:
+    workflows: ["Deploy to Firebase"]
+    types: [completed]
+
+jobs:
+  draft:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve PR for deployed commit
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          number=$(gh pr list --state merged --search "${{ github.event.workflow_run.head_sha }}" --json number --jq '.[0].number // empty')
+          if [ -z "$number" ]; then
+            echo "No merged PR found for commit ${{ github.event.workflow_run.head_sha }} — re-deploy of an already-drafted PR. Skipping."
+          else
+            echo "Found PR #$number"
+          fi
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      - name: Generate draft
+        if: steps.pr.outputs.number != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: npm run draft:release-note -- --pr ${{ steps.pr.outputs.number }}
