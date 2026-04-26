@@ -15,7 +15,7 @@ test.describe('Authentication', () => {
   })
 
   test.describe('Login', () => {
-    test('admin user can login and is redirected to admin dashboard', async ({ page }) => {
+    test('admin user can login and is redirected to admin dashboard', { tag: '@smoke' }, async ({ page }) => {
       // Fill login form
       await page.locator('input[type="email"]').fill(adminUser.email)
       await page.locator('input[type="password"]').fill(adminUser.password)
@@ -30,7 +30,7 @@ test.describe('Authentication', () => {
       expect(page.url()).toContain('/admin')
     })
 
-    test('trainer user can login and is redirected to dashboard', async ({ page }) => {
+    test('trainer user can login and is redirected to dashboard', { tag: '@smoke' }, async ({ page }) => {
       // Fill login form
       await page.locator('input[type="email"]').fill(trainerUser.email)
       await page.locator('input[type="password"]').fill(trainerUser.password)
@@ -45,7 +45,7 @@ test.describe('Authentication', () => {
       expect(page.url()).toContain('/dashboard')
     })
 
-    test('regular user can login and is redirected to dashboard', async ({ page }) => {
+    test('regular user can login and is redirected to dashboard', { tag: '@smoke' }, async ({ page }) => {
       // Fill login form
       await page.locator('input[type="email"]').fill(regularUser.email)
       await page.locator('input[type="password"]').fill(regularUser.password)
@@ -60,7 +60,7 @@ test.describe('Authentication', () => {
       expect(page.url()).toContain('/dashboard')
     })
 
-    test('shows error message with incorrect password', async ({ page }) => {
+    test('shows error message with incorrect password', { tag: '@smoke' }, async ({ page }) => {
       // Fill login form with wrong password
       await page.locator('input[type="email"]').fill(adminUser.email)
       await page.locator('input[type="password"]').fill('WrongPassword123!')
@@ -78,7 +78,7 @@ test.describe('Authentication', () => {
       expect(page.url()).toContain('/login')
     })
 
-    test('shows error message with non-existent email', async ({ page }) => {
+    test('shows error message with non-existent email', { tag: '@smoke' }, async ({ page }) => {
       // Fill login form with non-existent email
       await page.locator('input[type="email"]').fill('nonexistent@test.gymiq.com')
       await page.locator('input[type="password"]').fill('SomePassword123!')
@@ -97,7 +97,7 @@ test.describe('Authentication', () => {
   })
 
   test.describe('Logout', () => {
-    test('user can logout and is redirected to login page', async ({ page }) => {
+    test('user can logout and is redirected to login page', { tag: '@smoke' }, async ({ page }) => {
       // First, login as regular user
       await page.locator('input[type="email"]').fill(regularUser.email)
       await page.locator('input[type="password"]').fill(regularUser.password)
@@ -141,7 +141,7 @@ test.describe('Authentication', () => {
   })
 
   test.describe('Session Persistence', () => {
-    test('authenticated user accessing /login is redirected to dashboard', async ({ page }) => {
+    test('authenticated user accessing /login is redirected to dashboard', { tag: '@smoke' }, async ({ page }) => {
       // First, login
       await page.locator('input[type="email"]').fill(regularUser.email)
       await page.locator('input[type="password"]').fill(regularUser.password)

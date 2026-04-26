@@ -40,7 +40,7 @@ test.describe('Workout Flow', () => {
 
   test.describe('Starting a Workout', () => {
 
-    test('user can navigate from dashboard to exercise library', async ({ page }) => {
+    test('user can navigate from dashboard to exercise library', { tag: '@smoke' }, async ({ page }) => {
       await login(page)
       await page.goto('/dashboard')
 
@@ -78,7 +78,7 @@ test.describe('Workout Flow', () => {
       expect(content).toMatch(/תרגיל|exercise|img/i)
     })
 
-    test('user can select exercises in exercise library', async ({ page }) => {
+    test('user can select exercises in exercise library', { tag: '@smoke' }, async ({ page }) => {
       await login(page)
       await page.goto('/exercises')
 
@@ -99,7 +99,7 @@ test.describe('Workout Flow', () => {
       expect(await selectionBadge.count()).toBeGreaterThan(0)
     })
 
-    test('user can start workout after selecting exercises', async ({ page }) => {
+    test('user can start workout after selecting exercises', { tag: '@smoke' }, async ({ page }) => {
       await login(page)
       await page.goto('/exercises')
 
@@ -129,7 +129,7 @@ test.describe('Workout Flow', () => {
 
   test.describe('Workout Session', () => {
 
-    test('workout session displays selected exercises', async ({ page }) => {
+    test('workout session displays selected exercises', { tag: '@smoke' }, async ({ page }) => {
       await login(page)
       await page.goto('/exercises')
       await waitForExercisesToLoad(page)
@@ -192,7 +192,7 @@ test.describe('Workout Flow', () => {
 
   test.describe('Completing a Workout', () => {
 
-    test('finish workout button exists and is clickable', async ({ page }) => {
+    test('finish workout button exists and is clickable', { tag: '@smoke' }, async ({ page }) => {
       await login(page)
       await page.goto('/exercises')
       await waitForExercisesToLoad(page)

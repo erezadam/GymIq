@@ -31,7 +31,7 @@ async function login(page: any, user: TestUser) {
 test.describe('Route Guards', () => {
 
   test.describe('Unauthenticated Access', () => {
-    test('unauthenticated user is redirected to /login when accessing /dashboard', async ({ page }) => {
+    test('unauthenticated user is redirected to /login when accessing /dashboard', { tag: '@smoke' }, async ({ page }) => {
       await page.goto('/dashboard')
       await page.waitForURL('**/login**', { timeout: 5000 })
       expect(page.url()).toContain('/login')
@@ -43,7 +43,7 @@ test.describe('Route Guards', () => {
       expect(page.url()).toContain('/login')
     })
 
-    test('unauthenticated user is redirected to /login when accessing /admin', async ({ page }) => {
+    test('unauthenticated user is redirected to /login when accessing /admin', { tag: '@smoke' }, async ({ page }) => {
       await page.goto('/admin')
       await page.waitForURL('**/login**', { timeout: 5000 })
       expect(page.url()).toContain('/login')
@@ -74,7 +74,7 @@ test.describe('Route Guards', () => {
       expect(page.url()).toContain('/workout/history')
     })
 
-    test('cannot access /trainer - redirected to /dashboard', async ({ page }) => {
+    test('cannot access /trainer - redirected to /dashboard', { tag: '@smoke' }, async ({ page }) => {
       await page.goto('/trainer')
       // Should be redirected to dashboard (unauthorized)
       await page.waitForURL('**/dashboard**', { timeout: 5000 })
@@ -87,7 +87,7 @@ test.describe('Route Guards', () => {
       expect(page.url()).toContain('/dashboard')
     })
 
-    test('cannot access /admin - redirected to /dashboard', async ({ page }) => {
+    test('cannot access /admin - redirected to /dashboard', { tag: '@smoke' }, async ({ page }) => {
       await page.goto('/admin')
       await page.waitForURL('**/dashboard**', { timeout: 5000 })
       expect(page.url()).toContain('/dashboard')
@@ -123,7 +123,7 @@ test.describe('Route Guards', () => {
       expect(page.url()).toContain('/trainer/messages')
     })
 
-    test('cannot access /admin - redirected to /dashboard', async ({ page }) => {
+    test('cannot access /admin - redirected to /dashboard', { tag: '@smoke' }, async ({ page }) => {
       await page.goto('/admin')
       await page.waitForURL('**/dashboard**', { timeout: 5000 })
       expect(page.url()).toContain('/dashboard')
@@ -186,7 +186,7 @@ test.describe('Route Guards', () => {
   })
 
   test.describe('Direct URL Access After Login', () => {
-    test('regular user trying to bookmark /admin gets redirected', async ({ page }) => {
+    test('regular user trying to bookmark /admin gets redirected', { tag: '@smoke' }, async ({ page }) => {
       // Login first
       await login(page, regularUser)
 
@@ -198,7 +198,7 @@ test.describe('Route Guards', () => {
       expect(page.url()).toContain('/dashboard')
     })
 
-    test('trainer user trying to bookmark /admin gets redirected', async ({ page }) => {
+    test('trainer user trying to bookmark /admin gets redirected', { tag: '@smoke' }, async ({ page }) => {
       await login(page, trainerUser)
       await page.goto('/admin/users')
       await page.waitForURL('**/dashboard**', { timeout: 5000 })
