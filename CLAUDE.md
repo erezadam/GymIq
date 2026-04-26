@@ -635,6 +635,7 @@ npx playwright test
 | 14/04/2026 | מאמן לא יכל לשייך אימון למתאמן מהדשבורד הרגיל | נוסף TraineeAssignmentModal ב-ExerciseLibrary: בלחיצה על "התחל/שמור" עולה modal אופציונלי לבחירת מתאמן. אם נבחר — נוצר standalone trainingProgram דרך programService.createProgram() הקיים (אמת אחת, בלי הכפלת קוד) |
 | 14/04/2026 | אימוני מאמן → מתאמן נשמרו כפול (גם אצל המאמן וגם אצל המתאמן) | תוקן race condition ב-handleReportWorkout: setTrainerReport() חייב לרוץ לפני loadFromProgram() כי loadFromProgram משנה selectedExercises ומפעיל את ה-effect ב-useActiveWorkout לפני שה-targetUserId מעודכן. בנוסף: defense-in-depth ב-initWorkout — קריאת targetUserId/reportedBy העדכני מה-store במקום closure |
 | 14/04/2026 | בעיית filesystem I/O במק חסמה build מקומי (tsc/vite תקועים ללא CPU) | נוסף GitHub Actions workflow `.github/workflows/deploy.yml` — פריסה ידנית (`workflow_dispatch`) מסביבת Ubuntu נקייה. Secrets נדרשים: FIREBASE_TOKEN + 6 VITE_FIREBASE_*. שימוש: Actions → "Deploy to Firebase" → Run workflow → בחירת target (hosting / hosting,functions / hosting,functions,firestore) |
+| 26/04/2026 | כתיבת טיוטות "מה חדש" ידנית בכל deploy בזבזה זמן | נוסף workflow `auto-draft-release-note.yml` שנדלק על `workflow_run` של Deploy + הצלחה. סקריפט `scripts/draftReleaseNoteFromPR.ts` קורא ל-Claude Haiku 4.5 (prompt caching), כותב טיוטה ל-`releaseNotes`. Idempotent לפי `changelogHash="pr:<n>"`. Secrets חדשים: `ANTHROPIC_API_KEY`, `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD`. Drafts נשמרים בלבד — admin עורך ומפרסם ב-`/admin/release-notes`. |
 
 ---
 
@@ -668,6 +669,6 @@ npm run test:e2e:headed   # הרצה עם דפדפן נראה
 
 ```
 ══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 14/04/2026 | נוסף GitHub Actions deploy workflow + תיעוד
+עדכון אחרון: 26/04/2026 | נוסף auto-draft של "מה חדש" אחרי deploy
 ══════════════════════════════════════════════════════════════════════════════
 ```
