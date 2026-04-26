@@ -24,8 +24,8 @@ export const workoutLabels = {
   finishWorkout: 'סיים אימון',
 
   // Personal best
-  lastWorkout: 'שיא:',
-  personalRecord: 'אימון אחרון:',
+  personalRecord: 'שיא:',
+  lastWorkout: 'אימון אחרון:',
 
   // Modals
   confirmFinishTitle: 'סיום אימון',

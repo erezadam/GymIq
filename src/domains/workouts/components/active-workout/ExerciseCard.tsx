@@ -13,6 +13,7 @@ import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '@/domains/exerc
 import { workoutLabels } from '@/styles/design-tokens'
 import { getActiveBandTypes } from '@/lib/firebase/bandTypes'
 import { calculateExerciseVolume } from '@/lib/firebase/workoutHistory'
+import { formatReportedFields } from '@/utils/reportTypeFields'
 import type { BandType } from '@/domains/exercises/types/bands'
 
 interface ExerciseCardProps {
@@ -241,31 +242,39 @@ export function ExerciseCard({
             </div>
           )}
 
-          {/* Best performance (all-time PR) - shown in red below image */}
-          {exercise.lastWorkoutData && (
-            <div
-              className="flex items-center justify-center gap-1.5 py-2 px-3 mb-1 bg-red-500/10 rounded-lg border border-red-500/30"
-            >
-              <span className="text-red-500 text-sm font-semibold">
-                {workoutLabels.lastWorkout} {exercise.lastWorkoutData.reps} חזרות{exercise.lastWorkoutData.time && exercise.lastWorkoutData.time > 0
-                  ? ` ${String(Math.floor(exercise.lastWorkoutData.time / 60)).padStart(2, '0')}:${String(exercise.lastWorkoutData.time % 60).padStart(2, '0')}`
-                  : ''} @ {exercise.lastWorkoutData.weight}kg
-              </span>
-            </div>
-          )}
+          {/* Personal record (all-time best) — shown in red below image.
+              Format respects the exercise's reportType, and only fields that
+              were actually reported are displayed (no fabricated zeros). */}
+          {(() => {
+            const pr = exercise.personalRecordData
+            if (!pr) return null
+            const text = formatReportedFields(pr, pr.reportType || exercise.reportType)
+            if (!text) return null
+            return (
+              <div className="flex items-center justify-center gap-1.5 py-2 px-3 mb-1 bg-red-500/10 rounded-lg border border-red-500/30">
+                <span className="text-red-500 text-sm font-semibold">
+                  {workoutLabels.personalRecord} {text}
+                </span>
+              </div>
+            )
+          })()}
 
-          {/* Personal record - shown in purple below the red "best" row */}
-          {exercise.lastWorkoutData && (
-            <div
-              className={`flex items-center justify-center gap-1.5 py-2 px-3 ${(exercise.aiRecommendation || exercise.weightRecommendation) ? 'mb-1' : 'mb-3'} bg-accent-purple/10 rounded-lg border border-accent-purple/30`}
-            >
-              <span className="text-accent-purple text-sm font-semibold">
-                {workoutLabels.personalRecord} {exercise.lastWorkoutData.reps} חזרות{exercise.lastWorkoutData.time && exercise.lastWorkoutData.time > 0
-                  ? ` ${String(Math.floor(exercise.lastWorkoutData.time / 60)).padStart(2, '0')}:${String(exercise.lastWorkoutData.time % 60).padStart(2, '0')}`
-                  : ''} @ {exercise.lastWorkoutData.weight}kg
-              </span>
-            </div>
-          )}
+          {/* Last workout — shown in purple below the red "PR" row. Sourced
+              from the most recent completed workout for this exercise. */}
+          {(() => {
+            const last = exercise.lastWorkoutData
+            if (!last) return null
+            const text = formatReportedFields(last, last.reportType || exercise.reportType)
+            if (!text) return null
+            const trailingClass = (exercise.aiRecommendation || exercise.weightRecommendation) ? 'mb-1' : 'mb-3'
+            return (
+              <div className={`flex items-center justify-center gap-1.5 py-2 px-3 ${trailingClass} bg-accent-purple/10 rounded-lg border border-accent-purple/30`}>
+                <span className="text-accent-purple text-sm font-semibold">
+                  {workoutLabels.lastWorkout} {text}
+                </span>
+              </div>
+            )
+          })()}
 
           {/* Weight increase recommendation - shown in purple below last workout data */}
           {exercise.weightRecommendation && (
