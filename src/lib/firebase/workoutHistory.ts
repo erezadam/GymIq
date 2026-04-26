@@ -20,6 +20,10 @@ import {
 } from 'firebase/firestore'
 import { db } from './config'
 import type { WorkoutHistoryEntry, WorkoutHistorySummary } from '@/domains/workouts/types'
+import {
+  getPRAxisForReportType,
+  type ReportField,
+} from '@/utils/reportTypeFields'
 
 const COLLECTION_NAME = 'workoutHistory'
 
@@ -465,68 +469,6 @@ export async function getExerciseNotesForExercises(
   return result
 }
 
-// Get last workout data for multiple exercises at once
-export async function getLastWorkoutForExercises(
-  userId: string,
-  exerciseIds: string[]
-): Promise<Record<string, { weight: number; reps: number; date: Date }>> {
-  const historyRef = collection(db, COLLECTION_NAME)
-
-  // Get user's recent workouts
-  const q = query(
-    historyRef,
-    where('userId', '==', userId),
-    orderBy('date', 'desc'),
-    limit(50)
-  )
-
-  const snapshot = await getDocs(q)
-  const result: Record<string, { weight: number; reps: number; date: Date }> = {}
-  const foundExercises = new Set<string>()
-
-  // Search through workouts to find each exercise (skip soft-deleted)
-  for (const doc of snapshot.docs) {
-    // Stop if we found all exercises
-    if (foundExercises.size === exerciseIds.length) break
-
-    const data = doc.data()
-    if (!isNotSoftDeleted(data)) continue
-
-    const exercises = data.exercises || []
-
-    for (const exerciseId of exerciseIds) {
-      // Skip if already found
-      if (foundExercises.has(exerciseId)) continue
-
-      const exercise = exercises.find((ex: any) => ex.exerciseId === exerciseId)
-
-      if (exercise && exercise.sets && exercise.sets.length > 0) {
-        const validSets = exercise.sets.filter((set: any) =>
-          set.actualReps > 0 || set.completed
-        )
-
-        if (validSets.length > 0) {
-          const bestSet = validSets.reduce((best: any, current: any) => {
-            const currentWeight = current.actualWeight || current.targetWeight || 0
-            const bestWeight = best.actualWeight || best.targetWeight || 0
-            return currentWeight > bestWeight ? current : best
-          }, validSets[0])
-
-          result[exerciseId] = {
-            weight: bestSet.actualWeight || bestSet.targetWeight || 0,
-            reps: bestSet.actualReps || bestSet.targetReps || 0,
-            date: data.date?.toDate() || new Date(),
-          }
-
-          foundExercises.add(exerciseId)
-        }
-      }
-    }
-  }
-
-  return result
-}
-
 // Normalize exercise name (trim, collapse whitespace, lowercase)
 function normalizeExerciseName(name: string | undefined | null): string {
   if (!name) return ''
@@ -568,57 +510,180 @@ function firstActionToken(name: string | undefined | null): string {
 
 const FUZZY_THRESHOLD = 0.5
 
-type PRBestEntry = { weight: number; reps: number; time?: number; date: Date }
+// PR / last-workout entry — carries every reported field plus the reportType
+// the underlying set used. Consumers display only fields that were reported.
+export type PRBestEntry = {
+  reportType?: string
+  weight?: number
+  reps?: number
+  time?: number
+  intensity?: number
+  speed?: number
+  distance?: number
+  incline?: number
+  zone?: number
+  date: Date
+}
+
 type ExerciseDetails = { nameHe?: string; primaryMuscle?: string; equipment?: string; category?: string }
 
-function pickBetterEntry(existing: PRBestEntry | undefined, candidate: PRBestEntry, candidateAllWeightsZero: boolean): PRBestEntry {
-  if (!existing) return candidate
-  if (candidateAllWeightsZero) {
-    return candidate.reps > existing.reps ? candidate : existing
+// Internal candidate — entry plus the axis used to score it. `axisValue` is
+// what we compare when picking the better of two candidates.
+type ScoredEntry = { entry: PRBestEntry; axis: ReportField; axisValue: number }
+
+// Read a single field off a stored history set, taking actual* fields when
+// available and falling back to legacy / target fields where appropriate.
+function readSetField(set: any, field: ReportField): number {
+  switch (field) {
+    case 'weight':
+      return Number(set?.actualWeight ?? set?.weight ?? 0) || 0
+    case 'reps':
+      return Number(set?.actualReps ?? set?.reps ?? 0) || 0
+    case 'time':
+      return Number(set?.time ?? 0) || 0
+    case 'intensity':
+      return Number(set?.intensity ?? 0) || 0
+    case 'speed':
+      return Number(set?.speed ?? 0) || 0
+    case 'distance':
+      return Number(set?.distance ?? 0) || 0
+    case 'incline':
+      return Number(set?.incline ?? 0) || 0
+    case 'zone':
+      return Number(set?.zone ?? 0) || 0
   }
-  if (candidate.weight > existing.weight) return candidate
-  if (candidate.weight === existing.weight && candidate.reps > existing.reps) return candidate
+}
+
+// Build a PRBestEntry from a stored history set, copying only fields that
+// were actually reported (>0). Never fabricates zeros.
+function entryFromSet(set: any, workoutDate: Date, reportType: string | undefined): PRBestEntry {
+  const entry: PRBestEntry = { date: workoutDate }
+  if (reportType) entry.reportType = reportType
+  const weight = readSetField(set, 'weight')
+  if (weight > 0) entry.weight = weight
+  const reps = readSetField(set, 'reps')
+  if (reps > 0) entry.reps = reps
+  const time = readSetField(set, 'time')
+  if (time > 0) entry.time = time
+  const intensity = readSetField(set, 'intensity')
+  if (intensity > 0) entry.intensity = intensity
+  const speed = readSetField(set, 'speed')
+  if (speed > 0) entry.speed = speed
+  const distance = readSetField(set, 'distance')
+  if (distance > 0) entry.distance = distance
+  const incline = readSetField(set, 'incline')
+  if (incline > 0) entry.incline = incline
+  const zone = readSetField(set, 'zone')
+  if (zone > 0) entry.zone = zone
+  return entry
+}
+
+// Pick the best set of an exercise (within one workout) by the given axis.
+// Returns the chosen scored candidate, or null if no valid set exists.
+function bestSetForAxis(
+  sets: any[],
+  axis: ReportField,
+  reportType: string | undefined,
+  workoutDate: Date
+): ScoredEntry | null {
+  const validSets = sets.filter((set: any) =>
+    set?.type !== 'warmup' &&
+    (
+      (typeof set?.actualReps === 'number' && set.actualReps > 0) ||
+      (typeof set?.time === 'number' && set.time > 0) ||
+      (typeof set?.speed === 'number' && set.speed > 0) ||
+      (typeof set?.distance === 'number' && set.distance > 0) ||
+      (typeof set?.intensity === 'number' && set.intensity > 0) ||
+      set?.completed
+    )
+  )
+  if (validSets.length === 0) return null
+
+  // Try the requested axis first. If no set reports it (>0), fall back through
+  // a sensible priority so we still surface something meaningful.
+  const fallbackAxes: ReportField[] = [axis, 'speed', 'weight', 'time', 'intensity', 'distance', 'reps']
+  const seen = new Set<ReportField>()
+  for (const candidate of fallbackAxes) {
+    if (seen.has(candidate)) continue
+    seen.add(candidate)
+    let bestSet: any = null
+    let bestValue = 0
+    for (const set of validSets) {
+      const value = readSetField(set, candidate)
+      if (value > bestValue) {
+        bestValue = value
+        bestSet = set
+      } else if (value === bestValue && value > 0 && bestSet) {
+        // Tiebreak: prefer the set with more reps (matches legacy behaviour).
+        if (readSetField(set, 'reps') > readSetField(bestSet, 'reps')) {
+          bestSet = set
+        }
+      }
+    }
+    if (bestSet && bestValue > 0) {
+      return {
+        entry: entryFromSet(bestSet, workoutDate, reportType),
+        axis: candidate,
+        axisValue: bestValue,
+      }
+    }
+  }
+
+  // Last resort: nothing measurable was reported. Use the first valid set so
+  // we don't drop the row entirely (caller may still surface notes/date).
+  return {
+    entry: entryFromSet(validSets[0], workoutDate, reportType),
+    axis,
+    axisValue: 0,
+  }
+}
+
+function pickBetterScored(existing: ScoredEntry | undefined, candidate: ScoredEntry): ScoredEntry {
+  if (!existing) return candidate
+  // If candidate uses a different axis than existing, prefer the one matching
+  // the requested axis (existing wins ties since it came first).
+  if (candidate.axisValue > existing.axisValue) return candidate
+  if (candidate.axisValue === existing.axisValue) {
+    // Tiebreak: prefer higher reps if both have reps; else keep existing.
+    const cReps = candidate.entry.reps || 0
+    const eReps = existing.entry.reps || 0
+    if (cReps > eReps) return candidate
+  }
   return existing
 }
 
-// Get personal best (PR) for multiple exercises — highest weight across ALL workouts.
-// Three-tier matching:
-//   1. exerciseId exact match
-//   2. normalized-name exact match (handles same-name-different-ID duplicates)
-//   3. fuzzy match: same `category` + same first action-word + Jaccard token overlap
-//      >= threshold. Handles word-order / phrasing duplicates like
-//      "חתירה בישיבה במכונה" vs "חתירה עם מכונה, בישיבה".
-//      `category` is used (not primaryMuscle/equipment) because that is what the
-//      embedded history record stores. The first-action-word gate prevents
-//      false matches like squat↔lunge that share most other tokens.
-// Pass `exerciseDetailsById` (with at least nameHe + category) to enable tiers 2 & 3.
-export async function getBestPerformanceForExercises(
+// Shared scanner: walks workout history once, applying 3-tier matching, and
+// invokes `onMatch` with each (input-id, scored-candidate) pair found.
+async function scanHistoryForExercises(
   userId: string,
   exerciseIds: string[],
-  exerciseDetailsById?: Record<string, ExerciseDetails>
-): Promise<Record<string, PRBestEntry>> {
+  exerciseDetailsById: Record<string, ExerciseDetails> | undefined,
+  axisForId: (id: string) => ReportField,
+  reportTypeForId: (id: string) => string | undefined,
+  onMatch: (id: string, scored: ScoredEntry, matchTier: 1 | 2 | 3) => void,
+  // If true, stop processing an exercise once we've already produced a match
+  // (used by "last workout" — we only want the most recent).
+  oncePerId = false
+): Promise<void> {
   const historyRef = collection(db, COLLECTION_NAME)
-
-  const q = query(
-    historyRef,
-    where('userId', '==', userId),
-    orderBy('date', 'desc')
-  )
-
+  const q = query(historyRef, where('userId', '==', userId), orderBy('date', 'desc'))
   const snapshot = await getDocs(q)
-  const result: Record<string, PRBestEntry> = {}
-  const exerciseIdSet = new Set(exerciseIds)
 
-  // Tier-2/3 setup: precompute target lookups
+  const exerciseIdSet = new Set(exerciseIds)
   const targetNames = new Set<string>()
   type FuzzyTarget = { id: string; category: string; firstToken: string; tokens: Set<string> }
   const fuzzyTargets: FuzzyTarget[] = []
+  // tier 2 lookup: normalized name → list of ids that share it
+  const idsByName: Record<string, string[]> = {}
   if (exerciseDetailsById) {
     for (const id of exerciseIds) {
       const det = exerciseDetailsById[id]
       if (!det) continue
       const norm = normalizeExerciseName(det.nameHe)
-      if (norm) targetNames.add(norm)
+      if (norm) {
+        targetNames.add(norm)
+        ;(idsByName[norm] ||= []).push(id)
+      }
       const tokens = tokenizeExerciseName(det.nameHe)
       const ft = firstActionToken(det.nameHe)
       if (tokens.size > 0 && det.category && ft) {
@@ -626,9 +691,8 @@ export async function getBestPerformanceForExercises(
       }
     }
   }
-  const resultByName: Record<string, PRBestEntry> = {}
-  // For tier 3: per-input-id we track the best PR found via fuzzy match.
-  const fuzzyBestById: Record<string, PRBestEntry> = {}
+
+  const matched = new Set<string>() // for oncePerId mode
 
   for (const doc of snapshot.docs) {
     const data = doc.data()
@@ -639,11 +703,11 @@ export async function getBestPerformanceForExercises(
     const workoutDate = data.date?.toDate() || new Date()
 
     for (const exercise of exercises) {
+      if (!exercise.sets || exercise.sets.length === 0) continue
       const normName = normalizeExerciseName(exercise.exerciseNameHe || exercise.exerciseName)
       const matchById = exerciseIdSet.has(exercise.exerciseId)
       const matchByName = targetNames.size > 0 && normName !== '' && targetNames.has(normName)
 
-      // Pre-compute fuzzy candidates (input ids that match this history exercise)
       const fuzzyMatchIds: string[] = []
       if (fuzzyTargets.length > 0 && !matchById && exercise.category) {
         const histName = exercise.exerciseNameHe || exercise.exerciseName
@@ -659,71 +723,115 @@ export async function getBestPerformanceForExercises(
           }
         }
       }
-
       if (!matchById && !matchByName && fuzzyMatchIds.length === 0) continue
-      if (!exercise.sets || exercise.sets.length === 0) continue
 
-      const validSets = exercise.sets.filter((set: any) =>
-        set.type !== 'warmup' &&
-        ((set.actualReps && set.actualReps > 0) || (set.time && set.time > 0) || set.completed)
-      )
-      if (validSets.length === 0) continue
-
-      const allWeightsZero = validSets.every((set: any) => !set.actualWeight || set.actualWeight === 0)
-
-      const bestSet = validSets.reduce((best: any, current: any) => {
-        if (allWeightsZero) {
-          const currentReps = current.actualReps || 0
-          const bestReps = best.actualReps || 0
-          return currentReps > bestReps ? current : best
-        } else {
-          const currentWeight = current.actualWeight || 0
-          const bestWeight = best.actualWeight || 0
-          if (currentWeight > bestWeight) return current
-          if (currentWeight === bestWeight) {
-            return (current.actualReps || 0) > (best.actualReps || 0) ? current : best
-          }
-          return best
-        }
-      }, validSets[0])
-
-      const bestWeight = bestSet.actualWeight || bestSet.targetWeight || 0
-      const bestReps = bestSet.actualReps || bestSet.targetReps || 0
-      const bestTime = bestSet.time || 0
-
-      const entry: PRBestEntry = { weight: bestWeight, reps: bestReps, date: workoutDate }
-      if (bestTime > 0) entry.time = bestTime
+      // Build candidate per matched input-id (axis may differ between ids).
+      const dispatch = (id: string, tier: 1 | 2 | 3) => {
+        if (oncePerId && matched.has(id)) return
+        const axis = axisForId(id)
+        const scored = bestSetForAxis(exercise.sets, axis, reportTypeForId(id), workoutDate)
+        if (!scored) return
+        onMatch(id, scored, tier)
+        if (oncePerId) matched.add(id)
+      }
 
       if (matchById) {
-        result[exercise.exerciseId] = pickBetterEntry(result[exercise.exerciseId], entry, allWeightsZero)
+        dispatch(exercise.exerciseId, 1)
       }
       if (matchByName) {
-        resultByName[normName] = pickBetterEntry(resultByName[normName], entry, allWeightsZero)
+        for (const id of idsByName[normName] || []) {
+          // skip if exact-id match already handled this exercise (same input id)
+          if (matchById && id === exercise.exerciseId) continue
+          dispatch(id, 2)
+        }
       }
       for (const fid of fuzzyMatchIds) {
-        fuzzyBestById[fid] = pickBetterEntry(fuzzyBestById[fid], entry, allWeightsZero)
+        if (matchById && fid === exercise.exerciseId) continue
+        dispatch(fid, 3)
       }
     }
   }
+}
 
-  // Tier 2 fallback (exact normalized name)
-  if (exerciseDetailsById) {
-    for (const id of exerciseIds) {
-      if (result[id]) continue
-      const norm = normalizeExerciseName(exerciseDetailsById[id]?.nameHe)
-      if (norm && resultByName[norm]) {
-        result[id] = resultByName[norm]
-      }
+// Get personal best (PR) for multiple exercises across ALL workouts, scored by
+// the report-type's PR axis (highest weight for strength, fastest speed for
+// cardio, etc — see getPRAxisForReportType).
+//
+// Three-tier matching:
+//   1. exerciseId exact match
+//   2. normalized-name exact match (handles same-name-different-ID duplicates)
+//   3. fuzzy match: same `category` + same first action-word + Jaccard token
+//      overlap >= threshold. Handles word-order / phrasing duplicates.
+//
+// Pass `exerciseDetailsById` (with at least nameHe + category) to enable tiers
+// 2 & 3. Pass `reportTypeById` so each exercise is scored on its own axis —
+// without it, all fall back to weight (legacy behavior).
+export async function getBestPerformanceForExercises(
+  userId: string,
+  exerciseIds: string[],
+  exerciseDetailsById?: Record<string, ExerciseDetails>,
+  reportTypeById?: Record<string, string>
+): Promise<Record<string, PRBestEntry>> {
+  const tier1: Record<string, ScoredEntry> = {}
+  const tier2: Record<string, ScoredEntry> = {}
+  const tier3: Record<string, ScoredEntry> = {}
+
+  await scanHistoryForExercises(
+    userId,
+    exerciseIds,
+    exerciseDetailsById,
+    (id) => getPRAxisForReportType(reportTypeById?.[id]),
+    (id) => reportTypeById?.[id],
+    (id, scored, tier) => {
+      const bucket = tier === 1 ? tier1 : tier === 2 ? tier2 : tier3
+      bucket[id] = pickBetterScored(bucket[id], scored)
     }
-    // Tier 3 fallback (fuzzy by primaryMuscle+equipment+tokens)
-    for (const id of exerciseIds) {
-      if (result[id]) continue
-      if (fuzzyBestById[id]) {
-        result[id] = fuzzyBestById[id]
-      }
-    }
+  )
+
+  // Prefer tier 1, fall back to tier 2, then tier 3 — preserves the previous
+  // matching priority where exact id wins over normalized name wins over fuzzy.
+  const result: Record<string, PRBestEntry> = {}
+  for (const id of exerciseIds) {
+    const chosen = tier1[id] || tier2[id] || tier3[id]
+    if (chosen) result[id] = chosen.entry
   }
+  return result
+}
 
+// Get the most recent completed-workout best set per exercise. Same matching
+// as getBestPerformanceForExercises, but stops at the first hit per input-id
+// (history is queried date-desc, so first hit = most recent workout).
+export async function getLastWorkoutForExercises(
+  userId: string,
+  exerciseIds: string[],
+  exerciseDetailsById?: Record<string, ExerciseDetails>,
+  reportTypeById?: Record<string, string>
+): Promise<Record<string, PRBestEntry>> {
+  const tier1: Record<string, ScoredEntry> = {}
+  const tier2: Record<string, ScoredEntry> = {}
+  const tier3: Record<string, ScoredEntry> = {}
+
+  await scanHistoryForExercises(
+    userId,
+    exerciseIds,
+    exerciseDetailsById,
+    (id) => getPRAxisForReportType(reportTypeById?.[id]),
+    (id) => reportTypeById?.[id],
+    (id, scored, tier) => {
+      // oncePerId=true means each id only matches the most recent workout —
+      // but we may see multiple match-tiers in that single workout. Keep the
+      // first one we wrote (tier doesn't matter once we've matched).
+      const bucket = tier === 1 ? tier1 : tier === 2 ? tier2 : tier3
+      if (!bucket[id]) bucket[id] = scored
+    },
+    true
+  )
+
+  const result: Record<string, PRBestEntry> = {}
+  for (const id of exerciseIds) {
+    const chosen = tier1[id] || tier2[id] || tier3[id]
+    if (chosen) result[id] = chosen.entry
+  }
   return result
 }
 

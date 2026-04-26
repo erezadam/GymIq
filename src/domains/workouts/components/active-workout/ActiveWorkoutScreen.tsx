@@ -88,7 +88,7 @@ export default function ActiveWorkoutScreen() {
     let popupOldWeight = 0
     let popupNewWeight = 0
     if (!shownWeightPopupFor.current.has(exerciseId) && exercise.lastWorkoutData) {
-      const lastWeight = exercise.lastWorkoutData.weight
+      const lastWeight = exercise.lastWorkoutData.weight ?? 0
       if (lastWeight > 0) {
         const maxSetWeight = Math.max(
           ...exercise.reportedSets

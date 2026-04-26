@@ -22,6 +22,7 @@ import { useEffectiveUser, useIsImpersonating } from '@/domains/authentication/h
 import {
   saveWorkoutHistory,
   getBestPerformanceForExercises,
+  getLastWorkoutForExercises,
   getExerciseNotesForExercises,
   autoSaveWorkout,
   getInProgressWorkout,
@@ -484,10 +485,11 @@ export function useActiveWorkout() {
               console.error('Failed to fetch exercise volumes during recovery (non-critical):', e)
             }
 
-            // Fetch PR (lastWorkoutData) + historical notes for restored exercises.
-            // Without this, the red "previous best" row is missing after a refresh /
-            // app restart, because Firebase recovery rebuilds exercises from the
-            // persisted workout doc which intentionally omits derived fields.
+            // Fetch PR + last-workout summaries + historical notes for restored
+            // exercises. Without this, the red/purple summary rows are missing
+            // after a refresh / app restart, because Firebase recovery rebuilds
+            // exercises from the persisted workout doc which intentionally omits
+            // derived fields.
             try {
               const exerciseIds = restoredExercises.map((ex) => ex.exerciseId)
               const detailsById = Object.fromEntries(
@@ -498,20 +500,29 @@ export function useActiveWorkout() {
                   category: ex.category,
                 }])
               )
-              const [lastWorkoutData, historicalNotes] = await Promise.all([
-                getBestPerformanceForExercises(effectiveUserId, exerciseIds, detailsById),
+              const reportTypeById = Object.fromEntries(
+                restoredExercises
+                  .filter((ex) => ex.reportType)
+                  .map((ex) => [ex.exerciseId, ex.reportType as string])
+              )
+              const [prData, lastData, historicalNotes] = await Promise.all([
+                getBestPerformanceForExercises(effectiveUserId, exerciseIds, detailsById, reportTypeById),
+                getLastWorkoutForExercises(effectiveUserId, exerciseIds, detailsById, reportTypeById),
                 getExerciseNotesForExercises(effectiveUserId, exerciseIds),
               ])
               restoredExercises.forEach((ex) => {
-                if (lastWorkoutData[ex.exerciseId]) {
-                  ex.lastWorkoutData = lastWorkoutData[ex.exerciseId]
+                if (prData[ex.exerciseId]) {
+                  ex.personalRecordData = prData[ex.exerciseId]
+                }
+                if (lastData[ex.exerciseId]) {
+                  ex.lastWorkoutData = lastData[ex.exerciseId]
                 }
                 if (historicalNotes[ex.exerciseId]?.length > 0) {
                   ex.historicalNotes = historicalNotes[ex.exerciseId]
                 }
               })
             } catch (e) {
-              console.error('Failed to fetch last workout data during recovery:', e)
+              console.error('Failed to fetch PR/last-workout data during recovery:', e)
             }
 
             // Weight recommendations - separate try/catch (non-critical)
@@ -657,6 +668,9 @@ export function useActiveWorkout() {
             lastWorkoutData: ex.lastWorkoutData
               ? { ...ex.lastWorkoutData, date: new Date(ex.lastWorkoutData.date) }
               : undefined,
+            personalRecordData: ex.personalRecordData
+              ? { ...ex.personalRecordData, date: new Date(ex.personalRecordData.date) }
+              : undefined,
           }))
 
           console.log('✅ Restored workout from localStorage')
@@ -740,7 +754,7 @@ export function useActiveWorkout() {
               }
             })
 
-            // Fetch last workout data and historical notes for new exercises
+            // Fetch PR + last-workout summaries + historical notes for new exercises
             if (user?.uid) {
               try {
                 const exerciseIds = newExercises.map((ex) => ex.exerciseId)
@@ -752,23 +766,32 @@ export function useActiveWorkout() {
                     category: ex.category,
                   }])
                 )
-                const [lastWorkoutData, historicalNotes] = await Promise.all([
-                  getBestPerformanceForExercises(effectiveUserId, exerciseIds, detailsById),
+                const reportTypeById = Object.fromEntries(
+                  newExercises
+                    .filter((ex) => ex.reportType)
+                    .map((ex) => [ex.exerciseId, ex.reportType as string])
+                )
+                const [prData, lastData, historicalNotes] = await Promise.all([
+                  getBestPerformanceForExercises(effectiveUserId, exerciseIds, detailsById, reportTypeById),
+                  getLastWorkoutForExercises(effectiveUserId, exerciseIds, detailsById, reportTypeById),
                   getExerciseNotesForExercises(effectiveUserId, exerciseIds),
                 ])
                 newExercises.forEach((ex) => {
-                  if (lastWorkoutData[ex.exerciseId]) {
-                    ex.lastWorkoutData = lastWorkoutData[ex.exerciseId]
+                  if (prData[ex.exerciseId]) {
+                    ex.personalRecordData = prData[ex.exerciseId]
+                  }
+                  if (lastData[ex.exerciseId]) {
+                    ex.lastWorkoutData = lastData[ex.exerciseId]
                   }
                   if (historicalNotes[ex.exerciseId]?.length > 0) {
                     ex.historicalNotes = historicalNotes[ex.exerciseId]
                   }
                 })
               } catch (e) {
-                console.error('Failed to fetch last workout data for new exercises:', e)
+                console.error('Failed to fetch PR/last-workout data for new exercises:', e)
               }
 
-              // Weight recommendations - separate try/catch to never affect lastWorkoutData
+              // Weight recommendations - separate try/catch to never affect summary rows
               try {
                 const weightRecs = await getWeightRecommendations(effectiveUserId)
                 newExercises.forEach((ex) => {
@@ -885,7 +908,7 @@ export function useActiveWorkout() {
           }
         })
 
-        // Fetch last workout data and historical notes for all exercises
+        // Fetch PR + last-workout summaries + historical notes for all exercises
         if (user?.uid) {
           try {
             const exerciseIds = exercises.map((ex) => ex.exerciseId)
@@ -897,25 +920,34 @@ export function useActiveWorkout() {
                 category: ex.category,
               }])
             )
-            const [lastWorkoutData, historicalNotes] = await Promise.all([
-              getBestPerformanceForExercises(effectiveUserId, exerciseIds, detailsById),
+            const reportTypeById = Object.fromEntries(
+              exercises
+                .filter((ex) => ex.reportType)
+                .map((ex) => [ex.exerciseId, ex.reportType as string])
+            )
+            const [prData, lastData, historicalNotes] = await Promise.all([
+              getBestPerformanceForExercises(effectiveUserId, exerciseIds, detailsById, reportTypeById),
+              getLastWorkoutForExercises(effectiveUserId, exerciseIds, detailsById, reportTypeById),
               getExerciseNotesForExercises(effectiveUserId, exerciseIds),
             ])
 
-            // Update exercises with last workout data and historical notes
+            // Update exercises with PR + last-workout summaries + historical notes
             exercises.forEach((ex) => {
-              if (lastWorkoutData[ex.exerciseId]) {
-                ex.lastWorkoutData = lastWorkoutData[ex.exerciseId]
+              if (prData[ex.exerciseId]) {
+                ex.personalRecordData = prData[ex.exerciseId]
+              }
+              if (lastData[ex.exerciseId]) {
+                ex.lastWorkoutData = lastData[ex.exerciseId]
               }
               if (historicalNotes[ex.exerciseId]?.length > 0) {
                 ex.historicalNotes = historicalNotes[ex.exerciseId]
               }
             })
           } catch (e) {
-            console.error('Failed to fetch last workout data:', e)
+            console.error('Failed to fetch PR/last-workout data:', e)
           }
 
-          // Weight recommendations - separate try/catch to never affect lastWorkoutData
+          // Weight recommendations - separate try/catch to never affect summary rows
           try {
             const weightRecs = await getWeightRecommendations(effectiveUserId)
             exercises.forEach((ex) => {

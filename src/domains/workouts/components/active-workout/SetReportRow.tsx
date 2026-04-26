@@ -9,6 +9,7 @@ import { useRef, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import type { ReportedSet } from '../../types/active-workout.types'
 import { workoutLabels } from '@/styles/design-tokens'
+import { getFieldsFromReportType } from '@/utils/reportTypeFields'
 
 interface SetReportRowProps {
   set: ReportedSet
@@ -369,37 +370,8 @@ export function SetReportRow({
     </div>
   )
 
-  // Parse reportType to determine which fields to show
-  // Supports both exact IDs (e.g., 'time_speed') and field-based parsing
-  const getFieldsFromReportType = (type: string): string[] => {
-    // Normalize: lowercase and split by common separators
-    const normalized = type.toLowerCase()
-
-    // Check for known field keywords in the reportType string
-    const fields: string[] = []
-
-    // Order matters for display - check in display order
-    if (normalized.includes('weight') || normalized.includes('משקל')) fields.push('weight')
-    if (normalized.includes('reps') || normalized.includes('חזרות')) fields.push('reps')
-    if (normalized.includes('time') || normalized.includes('זמן')) fields.push('time')
-    if (normalized.includes('intensity') || normalized.includes('עצימות')) fields.push('intensity')
-    // Support typos and variations for speed
-    if (normalized.includes('speed') || normalized.includes('spead') || normalized.includes('מהירות')) fields.push('speed')
-    if (normalized.includes('distance') || normalized.includes('מרחק')) fields.push('distance')
-    // Support variations for incline: incline, slope, slop, slot, שיפוע
-    if (normalized.includes('incline') || normalized.includes('slope') || normalized.includes('slop') || normalized.includes('slot') || normalized.includes('שיפוע')) fields.push('incline')
-    if (normalized.includes('zone') || normalized.includes('אזור')) fields.push('zone')
-
-    // If no fields detected, default to weight + reps
-    if (fields.length === 0) {
-      console.warn(`Unknown reportType: ${type}, defaulting to weight_reps`)
-      return ['weight', 'reps']
-    }
-
-    return fields
-  }
-
   // Render inputs based on reportType - dynamic field parsing
+  // (field parsing logic lives in src/utils/reportTypeFields.ts)
   const renderInputs = () => {
     // If assistance type is selected, show assistance-specific fields
     if (assistanceType === 'graviton') {

@@ -5,13 +5,28 @@
 
 import type { MuscleGroup } from '@/domains/exercises/types'
 
-// Last workout data for an exercise
-export interface LastWorkoutData {
-  weight: number
-  reps: number
-  time?: number  // Time in seconds (for time_only and reps_time exercises)
+// Best-set summary for an exercise — used for both "personal record" and
+// "last workout" rows. All performance fields are optional; only those
+// actually reported are populated.
+export interface ExerciseBestSet {
+  // The reportType under which this set was captured (informs how to display it).
+  reportType?: string
+  // Performance fields — populated only if the underlying set reported them.
+  weight?: number
+  reps?: number
+  time?: number       // seconds
+  intensity?: number  // cardio machine intensity scale
+  speed?: number      // km/h
+  distance?: number   // meters
+  incline?: number    // percentage
+  zone?: number       // heart-rate zone 1-5
   date: Date
 }
+
+// Backwards-compatible alias — the field has historically been named
+// `lastWorkoutData` even though it carried PR info. We keep the alias so
+// callers compile while the rename rolls out.
+export type LastWorkoutData = ExerciseBestSet
 
 // A reported set during workout
 export interface ReportedSet {
@@ -59,9 +74,15 @@ export interface ActiveWorkoutExercise {
   // Sets
   reportedSets: ReportedSet[]         // Sets that have been reported
 
-  // Last workout data (from Firebase)
-  // TODO: rename lastWorkoutData → it actually holds best performance data (PR), not last workout
-  lastWorkoutData?: LastWorkoutData
+  // Personal record across all completed history for this exercise (best set
+  // by the report-type's PR axis — e.g. heaviest weight for strength,
+  // fastest speed for cardio). Used for the red "שיא:" row.
+  personalRecordData?: ExerciseBestSet
+
+  // Best set from the most recent completed workout for this exercise.
+  // Used for the purple "אימון אחרון:" row — must be the actual last
+  // session, not the PR re-displayed.
+  lastWorkoutData?: ExerciseBestSet
 
   // Historical notes from previous workouts
   historicalNotes?: { note: string; date: Date }[]
