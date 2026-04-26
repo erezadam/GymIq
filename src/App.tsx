@@ -33,6 +33,13 @@ const BandTypeManager = lazy(() => import('@/domains/admin/components/BandTypeMa
 const ReportTypeManager = lazy(() => import('@/domains/admin/components/ReportTypeManager'))
 const ExerciseSetManager = lazy(() => import('@/domains/admin/components/ExerciseSetManager'))
 const AdminSettings = lazy(() => import('@/domains/admin/components/AdminSettings'))
+const UsageAnalytics = lazy(() => import('@/domains/admin/components/analytics/UsageAnalytics'))
+const AnalyticsTraineeDetail = lazy(
+  () => import('@/domains/admin/components/analytics/TraineeDetailScreen'),
+)
+const AnalyticsTrainerDetail = lazy(
+  () => import('@/domains/admin/components/analytics/TrainerDetailScreen'),
+)
 
 // User
 const MainLayout = lazy(() => import('@/design-system/layouts/MainLayout'))
@@ -148,6 +155,9 @@ function App() {
           <Route path="users" element={<UsersList />} />
           <Route path="release-notes" element={<ReleaseNotesManager />} />
           <Route path="settings" element={<AdminSettings />} />
+          <Route path="analytics" element={<UsageAnalytics />} />
+          <Route path="analytics/trainee/:id" element={<AnalyticsTraineeDetail />} />
+          <Route path="analytics/trainer/:id" element={<AnalyticsTrainerDetail />} />
         </Route>
 
         {/* Fallback */}

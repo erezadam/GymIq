@@ -636,6 +636,7 @@ npx playwright test
 | 14/04/2026 | אימוני מאמן → מתאמן נשמרו כפול (גם אצל המאמן וגם אצל המתאמן) | תוקן race condition ב-handleReportWorkout: setTrainerReport() חייב לרוץ לפני loadFromProgram() כי loadFromProgram משנה selectedExercises ומפעיל את ה-effect ב-useActiveWorkout לפני שה-targetUserId מעודכן. בנוסף: defense-in-depth ב-initWorkout — קריאת targetUserId/reportedBy העדכני מה-store במקום closure |
 | 14/04/2026 | בעיית filesystem I/O במק חסמה build מקומי (tsc/vite תקועים ללא CPU) | נוסף GitHub Actions workflow `.github/workflows/deploy.yml` — פריסה ידנית (`workflow_dispatch`) מסביבת Ubuntu נקייה. Secrets נדרשים: FIREBASE_TOKEN + 6 VITE_FIREBASE_*. שימוש: Actions → "Deploy to Firebase" → Run workflow → בחירת target (hosting / hosting,functions / hosting,functions,firestore) |
 | 26/04/2026 | כתיבת טיוטות "מה חדש" ידנית בכל deploy בזבזה זמן | נוסף workflow `auto-draft-release-note.yml` שנדלק על `workflow_run` של Deploy + הצלחה. סקריפט `scripts/draftReleaseNoteFromPR.ts` קורא ל-Claude Haiku 4.5 (prompt caching), כותב טיוטה ל-`releaseNotes`. Idempotent לפי `changelogHash="pr:<n>"`. Secrets חדשים: `ANTHROPIC_API_KEY`, `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD`. Drafts נשמרים בלבד — admin עורך ומפרסם ב-`/admin/release-notes`. |
+| 26/04/2026 | חסר דאשבורד אדמין לשימוש במערכת | נוסף `/admin/analytics` — 4 טאבים (סקירה כללית/מאמנים/מתאמנים/תרגילים) + 2 מסכי פירוט (trainee/trainer). Stack: recharts + TanStack Query. Aggregation client-side מ-`workoutHistory`/`users`, מבודד ב-hook יחיד `useAnalyticsData` — החלפה ל-`analytics_daily` בעתיד = שינוי קובץ יחיד `src/lib/firebase/analyticsQueries.ts`. Retention 30d מבחין בין "0%" אמיתי ל-"—" (קוהורט ריק). Delta של "סה"כ אימונים" מוסתר אם previous<5 (`MIN_PREV_FOR_DELTA`) למניעת רעש "1→2=+100%". טיפוגרפיה הוגדלה ב-30% מקומית בלבד לדאשבורד (xs→sm, sm→base, base→lg). |
 
 ---
 
@@ -669,6 +670,6 @@ npm run test:e2e:headed   # הרצה עם דפדפן נראה
 
 ```
 ══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 26/04/2026 | נוסף auto-draft של "מה חדש" אחרי deploy
+עדכון אחרון: 26/04/2026 | נוסף דאשבורד "ניתוח שימוש" באדמין
 ══════════════════════════════════════════════════════════════════════════════
 ```
