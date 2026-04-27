@@ -240,14 +240,23 @@ export function ExerciseLibrary({
     setSelectedSubMuscle('all')
   }, [selectedPrimaryMuscle])
 
-  // Auto-open date picker when modal shows (desktop fix)
+  // Auto-open native date picker only on devices with a fine pointer (desktop).
+  // On touch devices (iOS/Android) the native picker opens on tap; calling
+  // showPicker() programmatically without a user gesture throws on iOS Safari
+  // and interferes with the tap that follows, dismissing the modal.
   useEffect(() => {
-    if (showDatePicker && dateInputRef.current) {
-      // Small delay to ensure the input is rendered
-      setTimeout(() => {
+    if (!showDatePicker || !dateInputRef.current) return
+    const isFinePointer = typeof window !== 'undefined'
+      && window.matchMedia?.('(pointer: fine)').matches
+    if (!isFinePointer) return
+    const id = setTimeout(() => {
+      try {
         dateInputRef.current?.showPicker?.()
-      }, 100)
-    }
+      } catch {
+        // showPicker may fail on some browsers — ignore
+      }
+    }, 100)
+    return () => clearTimeout(id)
   }, [showDatePicker])
 
   // Load recently done exercises and last month exercises in background (non-blocking)
@@ -1069,8 +1078,6 @@ export function ExerciseLibrary({
                   onChange={(e) => {
                     if (e.target.value) {
                       const selectedDate = new Date(e.target.value)
-                      const today = new Date()
-                      today.setHours(0, 0, 0, 0)
                       selectedDate.setHours(0, 0, 0, 0)
                       setScheduledDate(selectedDate)
                       setIsScheduleForLater(false)
@@ -1078,8 +1085,16 @@ export function ExerciseLibrary({
                     }
                   }}
                   onClick={() => {
-                    // Open native date picker on click (for desktop)
-                    dateInputRef.current?.showPicker?.()
+                    // Open native date picker on desktop only — on touch devices
+                    // tapping the input opens the native picker automatically.
+                    const isFinePointer = typeof window !== 'undefined'
+                      && window.matchMedia?.('(pointer: fine)').matches
+                    if (!isFinePointer) return
+                    try {
+                      dateInputRef.current?.showPicker?.()
+                    } catch {
+                      // ignore — some browsers throw if picker is already open
+                    }
                   }}
                   className="w-full p-3 rounded-lg bg-background-elevated text-white border border-border-default cursor-pointer"
                   style={{ colorScheme: 'dark' }}
