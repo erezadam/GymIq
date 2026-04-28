@@ -97,7 +97,6 @@ export function ExerciseLibrary({
   const [recentlyDoneExerciseIds, setRecentlyDoneExerciseIds] = useState<Set<string>>(new Set())
   const [weeklyMuscleSets, setWeeklyMuscleSets] = useState<Map<string, number>>(new Map())
   const [isScheduleForLater, setIsScheduleForLater] = useState(false)
-  const [showDatePicker, setShowDatePicker] = useState(false)
   const dateInputRef = useRef<HTMLInputElement>(null)
   const isFirstRender = useRef(true)
 
@@ -239,25 +238,6 @@ export function ExerciseLibrary({
     }
     setSelectedSubMuscle('all')
   }, [selectedPrimaryMuscle])
-
-  // Auto-open native date picker only on devices with a fine pointer (desktop).
-  // On touch devices (iOS/Android) the native picker opens on tap; calling
-  // showPicker() programmatically without a user gesture throws on iOS Safari
-  // and interferes with the tap that follows, dismissing the modal.
-  useEffect(() => {
-    if (!showDatePicker || !dateInputRef.current) return
-    const isFinePointer = typeof window !== 'undefined'
-      && window.matchMedia?.('(pointer: fine)').matches
-    if (!isFinePointer) return
-    const id = setTimeout(() => {
-      try {
-        dateInputRef.current?.showPicker?.()
-      } catch {
-        // showPicker may fail on some browsers — ignore
-      }
-    }, 100)
-    return () => clearTimeout(id)
-  }, [showDatePicker])
 
   // Load recently done exercises and last month exercises in background (non-blocking)
   // When targetUserId is provided (e.g., building program for trainee), use that instead of current user
@@ -1013,9 +993,11 @@ export function ExerciseLibrary({
                 <span>להיום</span>
               </button>
 
-              {/* תאריך */}
-              <button
-                onClick={() => setShowDatePicker(true)}
+              {/* תאריך — label wraps a visually-hidden native date input.
+                  Tapping the label delegates the click to the input, which
+                  opens the OS-native date picker in a single tap on every
+                  device (iOS, Android, desktop). No intermediate modal. */}
+              <label
                 style={{
                   flex: 1,
                   minWidth: 0,
@@ -1029,6 +1011,7 @@ export function ExerciseLibrary({
                   justifyContent: 'center',
                   gap: '4px',
                   cursor: 'pointer',
+                  position: 'relative',
                   background: workoutMode === 'date' ? 'rgba(167,139,250,0.15)' : 'transparent',
                   color: workoutMode === 'date' ? '#a78bfa' : 'rgba(255,255,255,0.6)',
                 }}
@@ -1055,21 +1038,6 @@ export function ExerciseLibrary({
                     : '📅 תאריך'
                   }
                 </span>
-              </button>
-            </div>
-          )}
-
-          {/* Hidden Date Picker Modal */}
-          {showDatePicker && (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-              onClick={() => setShowDatePicker(false)}
-            >
-              <div
-                className="bg-background-card rounded-xl p-4 max-w-xs w-full"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <h3 className="text-white text-lg font-semibold mb-4 text-center">בחר תאריך</h3>
                 <input
                   ref={dateInputRef}
                   type="date"
@@ -1081,31 +1049,12 @@ export function ExerciseLibrary({
                       selectedDate.setHours(0, 0, 0, 0)
                       setScheduledDate(selectedDate)
                       setIsScheduleForLater(false)
-                      setShowDatePicker(false)
                     }
                   }}
-                  onClick={() => {
-                    // Open native date picker on desktop only — on touch devices
-                    // tapping the input opens the native picker automatically.
-                    const isFinePointer = typeof window !== 'undefined'
-                      && window.matchMedia?.('(pointer: fine)').matches
-                    if (!isFinePointer) return
-                    try {
-                      dateInputRef.current?.showPicker?.()
-                    } catch {
-                      // ignore — some browsers throw if picker is already open
-                    }
-                  }}
-                  className="w-full p-3 rounded-lg bg-background-elevated text-white border border-border-default cursor-pointer"
-                  style={{ colorScheme: 'dark' }}
+                  aria-label="בחר תאריך"
+                  className="sr-only"
                 />
-                <button
-                  onClick={() => setShowDatePicker(false)}
-                  className="w-full mt-3 p-3 rounded-lg bg-background-elevated text-text-secondary hover:text-white transition-colors"
-                >
-                  ביטול
-                </button>
-              </div>
+              </label>
             </div>
           )}
         </div>
