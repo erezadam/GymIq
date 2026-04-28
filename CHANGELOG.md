@@ -2,6 +2,9 @@
 
 ## [Unreleased] - 2026-04-24
 
+### Documented
+- **Lessons learned from date picker fix incident (2026-04-28)** — added bug verification policy to global `~/.claude/CLAUDE.md` and project-specific notes in `CLAUDE.md`. The policy codifies six iron rules: build green ≠ bug fixed; mobile bugs require mobile verification; symptom shift is not a fix; diagnosis before code; honest reporting; the mobile/desktop divide is a frequent source of bugs. Project `CLAUDE.md` testing section was rewritten to mandate device verification **before** merge (replacing the prior "verify on production after deploy" mandate, which was the policy that caused the incident). New "Mobile Date Picker — Lesson Learned" section added before the events history table.
+
 ### Removed
 - **Playwright E2E test infrastructure (2026-04-28)**: deleted `playwright.config.ts`, the entire `e2e/` directory (8 spec files, 2 helpers, README, 9 screenshots), `.github/workflows/playwright.yml`, `.mcp.json` (which only registered Playwright MCP), the `@playwright/test` devDependency, and 5 `test:e2e*` scripts from `package.json`. Documentation across 12 markdown files cleaned up (CLAUDE.md, CHANGELOG.md, GymIQ-System-Spec.md, CODEATLAS.md, VIBEVIEW.md, ULTIMATE-PROJECT-SETUP-GUIDE.md, docs/architecture.md, docs/qa_scenarios.md, .claude/qa-testing-SKILL.md, תיעוד מערכת/*, e2e/README.md). The 3-tier testing policy (Build / Spec / Suite) was simplified to **Build + Vitest** only. Project verification: `npm run build` and `npm test`. No replacement framework was added — if E2E browser checks are needed, run them outside the project.
 
