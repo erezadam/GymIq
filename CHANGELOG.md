@@ -2,6 +2,9 @@
 
 ## [Unreleased] - 2026-04-24
 
+### Investigation (no code changes)
+- **Dead_Hang reportType — false alarm (2026-04-28)**: דווח על שדות שגויים בתרגילים עם reportType non-standard (Dead_Hang הציג חזרות+ק"ג במקום חזרות+זמן). מסקנה: לא באג בקוד. שרשרת הקוד אומתה דרך console logs קיימים ב-`SetReportRow.tsx` (שורות 378/388/399 — `🏋️ SetReportRow: ...`). הסיבה: cache ישן בדפדפן/Service Worker. תוקן עם hard reload. **לקח:** hard reload + בדיקת `version.json` צריכים להיות הצעד הראשון בכל תחקיר UI לפני ניתוח קוד. ה-console.logs ב-SetReportRow נשמרו בכוונה כנכס דיאגנוסטי לעתיד.
+
 ### Changed
 - **Auto-deploy on push to `main` (2026-04-28)** — `.github/workflows/deploy.yml` now triggers automatically on every push to `main`. Manual `gh workflow run` remains available as a fallback for emergencies. Concurrency group `deploy-firebase` (with `cancel-in-progress: false`) ensures no overlapping deploys but never aborts an in-flight one. Merge to main = production deploy.
 
