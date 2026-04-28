@@ -440,11 +440,11 @@ firebase deploy --only hosting
 
 ---
 
-## 🧪 בדיקות — Build + Vitest
+## 🧪 בדיקות — Build + Vitest + אימות במכשיר
 
-> **כלל אצבע:** Build בודק שהקוד מתקמפל. Vitest בודק רגרסיות בפונקציות הקריטיות. שניהם חייבים לעבור לפני deploy.
+> **כלל אצבע:** Build בודק שהקוד מתקמפל. Vitest בודק רגרסיות בפונקציות הקריטיות. שניהם חייבים לעבור לפני merge — אבל הם **לא** מספיקים לבאגים שנוגעים לפלטפורמה ספציפית (במיוחד מובייל).
 
-### לפני כל deploy:
+### לפני כל merge ל-main:
 ```bash
 npm run build 2>&1 | tail -5   # TypeScript + Vite build
 npm test                        # Vitest unit/regression tests
@@ -452,7 +452,17 @@ npm test                        # Vitest unit/regression tests
 
 **שני הצעדים חייבים לעבור ירוקים. אם משהו נכשל — עצור, דווח למשתמש, תקן את הסיבה השורשית.**
 
-> **הערה:** אין E2E browser tests בפרויקט. אם צריך לאמת זרימה במכשיר — בדיקה ידנית על production אחרי deploy, או הרצת בדיקה חיצונית מחוץ לפרויקט.
+### 📱 אימות במכשיר — לפני merge, לא אחרי deploy
+
+- **production אינה סביבת בדיקה.** אסור להסתמך על "נבדוק בפרודקשן אחרי deploy" כעל מנגנון אימות. הזרימה הזו כשלה ב-27-28/04/2026 (ראה סעיף "Mobile Date Picker — Lesson Learned" למטה).
+- **כל תיקון באג שדווח על מכשיר ספציפי** (iOS, Android, iPad וכו') חייב להיבדק על אותו סוג מכשיר על ידי המשתמש **לפני** merge ל-main. DevTools mobile emulation אינו מספיק להתנהגויות חריגות של iOS Safari (event propagation, showPicker, native input rendering).
+- **אם אין preview channel זמין**, ההרצה הלוקאלית עם גישה ממכשיר על אותה רשת:
+  ```bash
+  npm run dev -- --host
+  # פתח את ה-URL המודפס (למשל http://192.168.1.42:3000) מהדפדפן של המכשיר באותה רשת WiFi
+  ```
+- **merge ל-main = פריסה לפרודקשן** (היום דרך deploy ידני; כש-auto-deploy יוטמע — באופן ישיר). לכן אימות מכשיר חייב לקרות לפני merge.
+- **כשאי אפשר לבקש בדיקה במכשיר** — הסוכן מסמן את המשימה כ-**"fix candidate, awaiting device verification"** ולא כ-"מתוקן". ממתין לאישור משתמש לפני סגירת המשימה.
 
 ---
 
@@ -540,6 +550,28 @@ npm test                        # Vitest unit/regression tests
 
 ---
 
+## Mobile Date Picker — Lesson Learned (2026-04-27/28)
+
+Bug: iOS Safari closed the date-selection modal on first tap.
+PR #102 attempted to fix it by removing showPicker() calls on mobile.
+The fix appeared to work (build green) but moved the symptom:
+clicking the empty input field still closed the modal due to event propagation
+between the native input and the modal backdrop.
+
+Real fix (PR #104) — removed the modal entirely (both mobile and desktop),
+replacing the trigger button with a <label> wrapping a visually hidden
+<input type="date">. This way, clicking the trigger area is, from the DOM's
+perspective, clicking the input — which opens the OS native picker on a
+single tap on every device, with no intermediate modal layer.
+
+Rule for this codebase: any modal that wraps a native form control
+(date, time, color, file) must be reconsidered. The OS-provided picker
+overlay already handles the UX a custom modal tries to recreate, and the
+wrapping modal introduces event-propagation bugs that are hard to debug remotely.
+The label + hidden input pattern is the standard, accessible solution.
+
+---
+
 ## 📜 היסטוריית אירועים
 
 | תאריך | אירוע | לקח |
@@ -565,11 +597,12 @@ npm test                        # Vitest unit/regression tests
 | 26/04/2026 | כתיבת טיוטות "מה חדש" ידנית בכל deploy בזבזה זמן | נוסף workflow `auto-draft-release-note.yml` שנדלק על `workflow_run` של Deploy + הצלחה. סקריפט `scripts/draftReleaseNoteFromPR.ts` קורא ל-Claude Haiku 4.5 (prompt caching), כותב טיוטה ל-`releaseNotes`. Idempotent לפי `changelogHash="pr:<n>"`. Secrets חדשים: `ANTHROPIC_API_KEY`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Drafts נשמרים בלבד — admin עורך ומפרסם ב-`/admin/release-notes`. |
 | 26/04/2026 | חסר דאשבורד אדמין לשימוש במערכת | נוסף `/admin/analytics` — 4 טאבים (סקירה כללית/מאמנים/מתאמנים/תרגילים) + 2 מסכי פירוט (trainee/trainer). Stack: recharts + TanStack Query. Aggregation client-side מ-`workoutHistory`/`users`, מבודד ב-hook יחיד `useAnalyticsData` — החלפה ל-`analytics_daily` בעתיד = שינוי קובץ יחיד `src/lib/firebase/analyticsQueries.ts`. Retention 30d מבחין בין "0%" אמיתי ל-"—" (קוהורט ריק). Delta של "סה"כ אימונים" מוסתר אם previous<5 (`MIN_PREV_FOR_DELTA`) למניעת רעש "1→2=+100%". טיפוגרפיה הוגדלה ב-30% מקומית בלבד לדאשבורד (xs→sm, sm→base, base→lg). |
 | 28/04/2026 | הוסרה תשתית Playwright מהפרויקט | נמחקו `playwright.config.ts`, `e2e/`, `.github/workflows/playwright.yml`, `.mcp.json` (Playwright MCP), והתלות `@playwright/test` מ-package.json. בנוסף שונה שם `E2E_ADMIN_*` → `ADMIN_*` בכל הפרויקט (workflow, release-note script, ו-14 סקריפטי תחזוקה/מיגרציה) כי השם היה מטעה — הקרדיטים מעולם לא היו של framework טסטים. בדיקות הפרויקט: `npm run build` + `npm test` (Vitest) בלבד. |
+| 27-28/04/2026 | באג date picker מובייל דווח כ"מתוקן" אחרי PR #102 — התברר שהתיקון העביר סימפטום, לא טיפל בשורש (event propagation במודל). PR #104 הסיר את ה-modal לחלוטין | נוסף סעיף "Mobile Date Picker — Lesson Learned" + עודכן סעיף "🧪 בדיקות" עם מנדט אימות-במכשיר-לפני-merge + Bug Verification Policy גלובלי ב-`~/.claude/CLAUDE.md` |
 
 ---
 
 ```
 ══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 28/04/2026 | הוסרה תשתית Playwright + rename E2E_ADMIN_* → ADMIN_*
+עדכון אחרון: 28/04/2026 | Bug Verification Policy + Lesson Learned (date picker)
 ══════════════════════════════════════════════════════════════════════════════
 ```

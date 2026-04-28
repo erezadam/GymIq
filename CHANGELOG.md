@@ -2,6 +2,8 @@
 
 ## [Unreleased] - 2026-04-24
 
+### Documented
+- **Lessons learned from date picker fix incident (2026-04-28)** — added bug verification policy to global `~/.claude/CLAUDE.md` and project-specific notes in `CLAUDE.md`. The policy codifies six iron rules: build green ≠ bug fixed; mobile bugs require mobile verification; symptom shift is not a fix; diagnosis before code; honest reporting; the mobile/desktop divide is a frequent source of bugs. Project `CLAUDE.md` testing section was rewritten to mandate device verification **before** merge (replacing the prior "verify on production after deploy" mandate, which was the policy that caused the incident). New "Mobile Date Picker — Lesson Learned" section added before the events history table.
 ### Changed
 - **Auto-deploy on push to `main` (2026-04-28)** — `.github/workflows/deploy.yml` now triggers automatically on every push to `main`. Manual `gh workflow run` remains available as a fallback for emergencies. Concurrency group `deploy-firebase` (with `cancel-in-progress: false`) ensures no overlapping deploys but never aborts an in-flight one. Merge to main = production deploy.
 
