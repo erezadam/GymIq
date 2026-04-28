@@ -1,6 +1,8 @@
 name: Deploy to Firebase
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       target:
@@ -12,6 +14,13 @@ on:
           - hosting
           - hosting,functions
           - hosting,functions,firestore
+
+# Prevent overlapping deploys: if a new push lands while one is mid-flight,
+# the in-flight one finishes; the new one queues. We never abort production
+# mid-deploy.
+concurrency:
+  group: deploy-firebase
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -46,4 +55,4 @@ jobs:
       - name: Deploy to Firebase
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: firebase deploy --only ${{ inputs.target }} --token "$FIREBASE_TOKEN" --non-interactive
+        run: firebase deploy --only ${{ inputs.target || 'hosting' }} --token "$FIREBASE_TOKEN" --non-interactive

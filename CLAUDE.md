@@ -416,6 +416,11 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 - לפרוס כשיש טסט שנכשל
 - לפרוס בלי אישור מפורש מהמשתמש
 
+> **Auto-deploy (28/04/2026):** every push to `main` triggers automatic deploy
+> to production via `.github/workflows/deploy.yml`. Manual `gh workflow run deploy.yml`
+> is a fallback for emergencies only. Merge to main = production deploy — see also
+> the "Deployment Workflow (Iron Rule)" section.
+
 ### 🚀 שתי דרכים לפריסה:
 
 **אופציה 1 — פריסה מקומית (המסלול הרגיל):**
