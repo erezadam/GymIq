@@ -10,10 +10,10 @@ import { config } from 'dotenv'
 config({ path: '.env.local' })
 
 async function readMuscles() {
-  const adminEmail = process.env.E2E_ADMIN_EMAIL
-  const adminPassword = process.env.E2E_ADMIN_PASSWORD
+  const adminEmail = process.env.ADMIN_EMAIL
+  const adminPassword = process.env.ADMIN_PASSWORD
   if (!adminEmail || !adminPassword) {
-    console.error('Missing E2E_ADMIN_EMAIL or E2E_ADMIN_PASSWORD in .env.local')
+    console.error('Missing ADMIN_EMAIL or ADMIN_PASSWORD in .env.local')
     process.exit(1)
   }
 

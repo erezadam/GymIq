@@ -15,7 +15,7 @@
  * Real run (prompts for y/n confirmation before writing):
  *   npm run migrate:release-notes
  *
- * Requires E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD in .env.local (admin creds,
+ * Requires ADMIN_EMAIL / ADMIN_PASSWORD in .env.local (admin creds,
  * because Firestore rules require admin role to list all users).
  */
 
@@ -53,10 +53,10 @@ async function main() {
   console.log(DRY_RUN ? '🔍 DRY RUN — no writes will be made' : '🚀 Running migration')
   console.log('')
 
-  const email = process.env.E2E_ADMIN_EMAIL
-  const password = process.env.E2E_ADMIN_PASSWORD
+  const email = process.env.ADMIN_EMAIL
+  const password = process.env.ADMIN_PASSWORD
   if (!email || !password) {
-    console.error('❌ Missing E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD in .env.local')
+    console.error('❌ Missing ADMIN_EMAIL / ADMIN_PASSWORD in .env.local')
     process.exit(1)
   }
 

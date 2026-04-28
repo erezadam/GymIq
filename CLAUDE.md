@@ -40,8 +40,7 @@
 ❌ **No hardcoded secrets** - מפתחות רק דרך environment variables  
 ❌ **No inline styles** - כל עיצוב דרך Tailwind classes בלבד, אסור `style={{}}`
 ❌ **No direct push to main** - תמיד עבודה בענף + PR + CI ירוק
-❌ **No deploy without tests** - לפני כל `firebase deploy` להריץ טסטים, לדווח תוצאות, לא לפרוס עם טסט שנכשל, ולא לפרוס בלי אישור מפורש מהמשתמש
-❌ **No Playwright without approval** - הרצת `npx playwright test` (בכל רמה) דורשת **אישור מפורש מהמשתמש** לפני ההרצה. לעולם לא להריץ טסטי Playwright באופן אוטונומי!
+❌ **No deploy without tests** - לפני כל `firebase deploy` להריץ build + Vitest, לדווח תוצאות, לא לפרוס עם טסט שנכשל, ולא לפרוס בלי אישור מפורש מהמשתמש
 ❌ **No modal without explicit close** - כל modal חייב כפתור X ייעודי (44x44px מינימום) + סגירה בלחיצה על backdrop
 ❌ **No silent AI filtering** - כל קריאה ל-AI חיצוני חייבת validation + fallback. אסור לסנן תוצאות בשקט בלי השלמה
 📖 **Database schema reference** - מבנה הנתונים מוגדר ב-`firestore.rules` (collections + הרשאות) וב-`src/domains/*/types/*.types.ts` (מבנה הנתונים). חובה לעיין בהם לפני כל שינוי במבנה הנתונים ב-Firestore
@@ -344,8 +343,7 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 | **ביצועים** | לא מוסיפים טעינות כבדות בלי הצדקה | יש Performance notes | `.claude/project-control-SKILL.md` |
 | **🔐 אבטחה סודות** | לא מכניסים מפתחות לקוד - בסקריפטים להשתמש ב-`scripts/firebase-config.ts` | יש Security check + בדיקת grep | ראה סעיף אבטחה למעלה |
 | **Firebase** | כל שינוי נתונים כולל בדיקת rules ו-migrations במידת הצורך | יש Data change notes | `.claude/firebase-data-SKILL.md` |
-| **🚀 פריסה** | 3 רמות בדיקה: שינוי קטן=Build בלבד, שינוי לוגיקה=Spec רלוונטי, לפני deploy=Suite מלא | הרמה הנכונה נבחרה + אישור מהמשתמש לפני deploy | ראה סעיף פריסה למעלה |
-| **🧪 Playwright** | כל הרצת Playwright (spec בודד או suite) דורשת אישור מפורש מהמשתמש | הסוכן שאל ואושר לפני הרצה | ראה סעיף פריסה למעלה |
+| **🚀 פריסה** | לפני כל deploy: `npm run build` + `npm test` (Vitest) ירוקים + אישור משתמש | Build + Vitest עברו ואושר | ראה סעיף פריסה למעלה |
 | **🔀 Git** | לא דוחפים ישירות ל-main, עובדים בענף נפרד, PR חובה | עובדים בענף feature/fix/work | `.claude/daily-workflow-SKILL.md` |
 | **🔄 תהליך יומי** | תחילת שיחה = בדיקת ענף, סגירת יום = עדכון+build+PR+merge+cleanup | הסוכן מדווח על כל שלב | `.claude/daily-workflow-SKILL.md` |
 | **סיום** | מסיימים בסיכום מה שונה איך נבדק ומה נשאר פתוח | יש Summary + Next | `.claude/project-control-SKILL.md` |
@@ -369,7 +367,6 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 | **סקריפטים ו-Firebase** | script, migration, import, export, firebase-admin | ראה סעיף אבטחה + `.claude/firebase-data-SKILL.md` |
 | **🔀 Git ו-GitHub** | git, branch, push, merge, pr, deploy to main | `.claude/daily-workflow-SKILL.md` |
 | **🔄 תהליך יומי** | בוקר טוב, התחלת עבודה, סגור יום, סיום יום, start day, end of day | `.claude/daily-workflow-SKILL.md` |
-| **🎭 בדיקה ויזואלית** | visual, screenshot, browser, mcp, playwright mcp, check visually | Playwright MCP (אוטומטי דרך `.mcp.json`) |
 
 ---
 
@@ -415,11 +412,9 @@ grep -r "style={{" src/ --include="*.tsx" | wc -l
 > **רקע:** ב-17/02/2026 בוצעו פריסות בלי הרצת טסטים, מה שגרם לרגרסיות שהגיעו לפרודקשן.
 
 ### ❌ אסור בתכלית האיסור:
-- לפרוס (`firebase deploy` / `firebase deploy --only functions` וכו') בלי להריץ טסטים קודם
+- לפרוס (`firebase deploy` / `firebase deploy --only functions` וכו') בלי להריץ build + Vitest קודם
 - לפרוס כשיש טסט שנכשל
 - לפרוס בלי אישור מפורש מהמשתמש
-- להריץ `npx playwright test` (Suite מלא) אחרי שינוי קטן/ממוקד — **בזבוז זמן מיותר!**
-- **להריץ טסטי Playwright בלי אישור מפורש מהמשתמש** — תמיד לשאול קודם!
 
 ### 🚀 שתי דרכים לפריסה:
 
@@ -440,78 +435,21 @@ firebase deploy --only hosting
 
 ---
 
-## 🧪 רמות בדיקה — בחר לפי גודל השינוי
+## 🧪 בדיקות — Build + Vitest
 
-> **כלל אצבע:** התאם את עומק הבדיקה להיקף השינוי. בדיקה יתרה = בזבוז זמן. בדיקה חסרה = רגרסיות.
+> **כלל אצבע:** Build בודק שהקוד מתקמפל. Vitest בודק רגרסיות בפונקציות הקריטיות. שניהם חייבים לעבור לפני deploy.
 
-### 🟢 רמה 1 — שינוי קטן/ממוקד (עד 3 קבצים, UI בלבד, ללא לוגיקת ליבה)
-
-**מתי:** שינוי עיצוב, טקסט, תצוגה, props קטנים — ללא נגיעה ב-hooks, stores, Firebase, auth, workout flow.
-
-**דוגמאות:** תיקון פדינג, שינוי צבע כפתור, הסרת `type="number"` משדה קלט, עדכון תווית.
-
+### לפני כל deploy:
 ```bash
-# בדיקה מינימלית — Build בלבד:
-npm run build 2>&1 | tail -5
-
-# + grep ידני על הקובץ שנגע:
-grep -n "שם_הפונקציה_או_הקומפוננטה" src/path/to/changed/file.tsx
+npm run build 2>&1 | tail -5   # TypeScript + Vite build
+npm test                        # Vitest unit/regression tests
 ```
 
-**אם Build עובר + אין שגיאות TypeScript → ✅ מותר לפרוס (עם אישור משתמש)**
+**שני הצעדים חייבים לעבור ירוקים. אם משהו נכשל — עצור, דווח למשתמש, תקן את הסיבה השורשית.**
+
+> **הערה:** אין E2E browser tests בפרויקט. אם צריך לאמת זרימה במכשיר — בדיקה ידנית על production אחרי deploy, או הרצת בדיקה חיצונית מחוץ לפרויקט.
 
 ---
-
-### 🟡 רמה 2 — שינוי משמעותי (לוגיקה, hooks, services, flows)
-
-**מתי:** שינוי ב-hooks, stores, Firebase services, AI flows, trainer/trainee logic, workout status.
-
-**דוגמאות:** שינוי ב-`useActiveWorkout`, `WorkoutHistory`, `workoutHistory.ts`, `trainerService`, לוגיקת המשך אימון.
-
-**⚠️ חוק ברזל: הרצת Playwright דורשת אישור מפורש מהמשתמש!**
-
-```bash
-# שלב 1: Build (אוטומטי — לא צריך אישור)
-npm run build 2>&1 | tail -5
-
-# שלב 2: ⚠️ לשאול את המשתמש לפני הרצת Playwright!
-# "האם להריץ טסט Playwright על [spec name]?"
-# רק אחרי אישור:
-npx playwright test e2e/workout-flow.spec.ts        # לשינויי workout
-npx playwright test e2e/auth.spec.ts                # לשינויי auth
-npx playwright test e2e/trainer-dashboard.spec.ts   # לשינויי trainer
-npx playwright test e2e/workout-history.spec.ts     # לשינויי history
-
-# שלב 3: דווח תוצאות למשתמש
-```
-
-**מיפוי קבצים → specs:**
-| קובץ שנגע | Spec להריץ |
-|-----------|-----------|
-| `useActiveWorkout`, `ActiveWorkoutScreen`, `SetReportRow` | `workout-flow.spec.ts` |
-| `WorkoutHistory`, `workoutHistory.ts` | `workout-history.spec.ts` |
-| `auth.ts`, `authStore`, `LoginPage`, `AuthGuard` | `auth.spec.ts` + `route-guards.spec.ts` |
-| `trainerService`, `TrainerDashboard`, `TraineeDetail` | `trainer-dashboard.spec.ts` |
-| `programService`, `ProgramBuilder`, `TraineeProgramView` | `trainer-trainee-flows.spec.ts` |
-| `messageService`, `MessageCenter`, `TraineeInbox` | `trainer-dashboard.spec.ts` |
-
----
-
-### 🔴 רמה 3 — לפני כל deploy לפרודקשן (Suite מלא)
-
-**מתי:** לפני `firebase deploy` (hosting או functions), ללא קשר לגודל השינוי.
-
-**⚠️ חוק ברזל: הרצת Suite מלא דורשת אישור מפורש מהמשתמש!**
-
-```bash
-# ⚠️ לשאול את המשתמש: "האם להריץ Suite מלא של Playwright לפני פריסה?"
-# רק אחרי אישור:
-npx playwright test
-
-# דווח תוצאות: X passed, Y failed
-# אם Y > 0 → עצור! תקן קודם.
-# לאחר מכן: בקש אישור מפורש מהמשתמש לפריסה
-```
 
 ## 🔒 Deployment Workflow (Iron Rule)
 
@@ -542,19 +480,6 @@ npx playwright test
 - [רשימת הכשלונות]
 האם להמשיך לפרוס? (המשתמש מחליט)
 ```
-
----
-
-### 📋 טבלת החלטה מהירה
-
-| שינוי | Build | Spec בודד | Suite מלא | אישור משתמש ל-Playwright |
-|-------|-------|-----------|-----------|--------------------------|
-| עיצוב/טקסט/props קטנים | ✅ | ❌ | ❌ | — |
-| לוגיקה/hooks/services | ✅ | ✅ | ❌ | **חובה** |
-| לפני firebase deploy | ✅ | ✅ | ✅ | **חובה** |
-
-**אין קיצורי דרך לפני deploy. הרמות 1 ו-2 הן לפיתוח בלבד, לא לפריסה.**
-**⚠️ כל הרצת Playwright (spec בודד או suite מלא) דורשת אישור מפורש מהמשתמש.**
 
 ---
 
@@ -622,10 +547,7 @@ npx playwright test
 | 17/02/2026 | modal תמונת תרגיל לא ניתן לסגירה - stopPropagation חסם backdrop click | נוסף חוק ברזל: כל modal חייב כפתור X ייעודי + backdrop close |
 | 17/02/2026 | AI Trainer סינן תרגילים בשקט (10→7) בגלל exerciseId לא תקינים מ-GPT | נוסף fallback + חוק ברזל: No silent AI filtering |
 | 17/02/2026 | המשך אימון in_progress יוצר מסמך כפול - validateWorkoutId מנל ID | נוסף continueWorkoutIdRef + retry (3 נסיונות) + הגנה בכל נקודות autoSave + זיהוי כפילויות בהיסטוריה |
-| 17/02/2026 | פריסות בוצעו בלי הרצת טסטים, רגרסיות הגיעו לפרודקשן | נוסף חוק ברזל: `npx playwright test` חובה לפני כל deploy + אישור מפורש מהמשתמש |
-| 23/02/2026 | Suite מלא רץ על כל שינוי כולל קטן — בזבוז זמן מיותר (חצי שעה על שינוי שורה) | נוספה מערכת 3 רמות בדיקה: Build בלבד / Spec רלוונטי / Suite מלא לפי גודל השינוי |
-| 08/03/2026 | נוסף Playwright MCP לשליטה בדפדפן מתוך Claude Code | קובץ `.mcp.json` בשורש הפרויקט, סקריפטי E2E ב-package.json |
-| 09/03/2026 | הסוכן הריץ Playwright באופן אוטונומי בלי אישור | נוסף חוק ברזל: כל הרצת Playwright דורשת אישור מפורש מהמשתמש |
+| 17/02/2026 | פריסות בוצעו בלי הרצת טסטים, רגרסיות הגיעו לפרודקשן | נוסף חוק ברזל: build + טסטים חובה לפני כל deploy + אישור מפורש מהמשתמש |
 | 10/03/2026 | נוסף code-review plugin | חובה להריץ /code-review לפני פתיחת PR |
 | 14/03/2026 | תת-שרירים חדשים מ-Firebase לא הופיעו בניתוח שבועי + דרופדאון ExerciseForm פולטר לפי Set קשיח | נוסף חוק ברזל: מקור אמת יחיד לשמות שרירים = Firebase. אסור רשימות סטטיות. auto-sync ב-getMuscles() |
 | 14/03/2026 | קרדיט חלקי לישבן הלך ל-longissimus במקום gluteus_maximus + חסר biceps_brachii | תוקן SECONDARY_MUSCLE_MULTIPLIERS: 3 שרירי עזר (triceps/biceps_brachii/gluteus_maximus), רשימות תרגילים עודכנו, UI שונה — סטים צבעוניים (ירוק≥10/אדום<10), ממוצע חזרות צבעוני (ירוק≥5/אדום<5), הוסר עמודת סטטוס |
@@ -635,41 +557,14 @@ npx playwright test
 | 14/04/2026 | מאמן לא יכל לשייך אימון למתאמן מהדשבורד הרגיל | נוסף TraineeAssignmentModal ב-ExerciseLibrary: בלחיצה על "התחל/שמור" עולה modal אופציונלי לבחירת מתאמן. אם נבחר — נוצר standalone trainingProgram דרך programService.createProgram() הקיים (אמת אחת, בלי הכפלת קוד) |
 | 14/04/2026 | אימוני מאמן → מתאמן נשמרו כפול (גם אצל המאמן וגם אצל המתאמן) | תוקן race condition ב-handleReportWorkout: setTrainerReport() חייב לרוץ לפני loadFromProgram() כי loadFromProgram משנה selectedExercises ומפעיל את ה-effect ב-useActiveWorkout לפני שה-targetUserId מעודכן. בנוסף: defense-in-depth ב-initWorkout — קריאת targetUserId/reportedBy העדכני מה-store במקום closure |
 | 14/04/2026 | בעיית filesystem I/O במק חסמה build מקומי (tsc/vite תקועים ללא CPU) | נוסף GitHub Actions workflow `.github/workflows/deploy.yml` — פריסה ידנית (`workflow_dispatch`) מסביבת Ubuntu נקייה. Secrets נדרשים: FIREBASE_TOKEN + 6 VITE_FIREBASE_*. שימוש: Actions → "Deploy to Firebase" → Run workflow → בחירת target (hosting / hosting,functions / hosting,functions,firestore) |
-| 26/04/2026 | כתיבת טיוטות "מה חדש" ידנית בכל deploy בזבזה זמן | נוסף workflow `auto-draft-release-note.yml` שנדלק על `workflow_run` של Deploy + הצלחה. סקריפט `scripts/draftReleaseNoteFromPR.ts` קורא ל-Claude Haiku 4.5 (prompt caching), כותב טיוטה ל-`releaseNotes`. Idempotent לפי `changelogHash="pr:<n>"`. Secrets חדשים: `ANTHROPIC_API_KEY`, `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD`. Drafts נשמרים בלבד — admin עורך ומפרסם ב-`/admin/release-notes`. |
+| 26/04/2026 | כתיבת טיוטות "מה חדש" ידנית בכל deploy בזבזה זמן | נוסף workflow `auto-draft-release-note.yml` שנדלק על `workflow_run` של Deploy + הצלחה. סקריפט `scripts/draftReleaseNoteFromPR.ts` קורא ל-Claude Haiku 4.5 (prompt caching), כותב טיוטה ל-`releaseNotes`. Idempotent לפי `changelogHash="pr:<n>"`. Secrets חדשים: `ANTHROPIC_API_KEY`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Drafts נשמרים בלבד — admin עורך ומפרסם ב-`/admin/release-notes`. |
 | 26/04/2026 | חסר דאשבורד אדמין לשימוש במערכת | נוסף `/admin/analytics` — 4 טאבים (סקירה כללית/מאמנים/מתאמנים/תרגילים) + 2 מסכי פירוט (trainee/trainer). Stack: recharts + TanStack Query. Aggregation client-side מ-`workoutHistory`/`users`, מבודד ב-hook יחיד `useAnalyticsData` — החלפה ל-`analytics_daily` בעתיד = שינוי קובץ יחיד `src/lib/firebase/analyticsQueries.ts`. Retention 30d מבחין בין "0%" אמיתי ל-"—" (קוהורט ריק). Delta של "סה"כ אימונים" מוסתר אם previous<5 (`MIN_PREV_FOR_DELTA`) למניעת רעש "1→2=+100%". טיפוגרפיה הוגדלה ב-30% מקומית בלבד לדאשבורד (xs→sm, sm→base, base→lg). |
-
----
-
-## 🎭 Playwright MCP — שליטה בדפדפן מתוך Claude Code
-
-> **רקע:** ב-08/03/2026 נוסף Playwright MCP לאפשר לסוכן לשלוט בדפדפן לבדיקה ויזואלית ודיבוג אינטראקטיבי.
-
-### מה זה:
-- שרת MCP שמאפשר ל-Claude Code לפתוח דפדפן, לנווט לדפים, ללחוץ על אלמנטים, לצלם screenshots ועוד
-- מוגדר ב-`.mcp.json` בשורש הפרויקט — Claude Code טוען אותו אוטומטית
-- רץ כ-instance נפרד מה-E2E tests — **לא משפיע על `playwright.config.ts` או על הטסטים הקיימים**
-
-### מתי להשתמש:
-- בדיקה ויזואלית של UI אחרי שינוי עיצובי
-- דיבוג אינטראקטיבי של בעיות שקשה לראות מהקוד
-- אימות RTL/מובייל ויזואלית
-
-### מתי לא להשתמש:
-- **לא מחליף** את מערכת 3 רמות הבדיקה (Build / Spec / Suite)
-- **לא מחליף** את הטסטים האוטומטיים (92 טסטים, 6 spec files)
-- לא לשימוש כ"הוכחה" שפיצ'ר עובד — רק טסטים אוטומטיים נחשבים
-
-### סקריפטי E2E ב-package.json:
-```bash
-npm run test:e2e          # הרצת כל הטסטים
-npm run test:e2e:ui       # ממשק UI אינטראקטיבי
-npm run test:e2e:headed   # הרצה עם דפדפן נראה
-```
+| 28/04/2026 | הוסרה תשתית Playwright מהפרויקט | נמחקו `playwright.config.ts`, `e2e/`, `.github/workflows/playwright.yml`, `.mcp.json` (Playwright MCP), והתלות `@playwright/test` מ-package.json. בנוסף שונה שם `E2E_ADMIN_*` → `ADMIN_*` בכל הפרויקט (workflow, release-note script, ו-14 סקריפטי תחזוקה/מיגרציה) כי השם היה מטעה — הקרדיטים מעולם לא היו של framework טסטים. בדיקות הפרויקט: `npm run build` + `npm test` (Vitest) בלבד. |
 
 ---
 
 ```
 ══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 26/04/2026 | נוסף דאשבורד "ניתוח שימוש" באדמין
+עדכון אחרון: 28/04/2026 | הוסרה תשתית Playwright + rename E2E_ADMIN_* → ADMIN_*
 ══════════════════════════════════════════════════════════════════════════════
 ```

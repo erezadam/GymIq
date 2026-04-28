@@ -778,5 +778,4 @@ src/domains/workouts/components/WorkoutHistory.tsx
 | Change how exercises are stored | `src/lib/firebase/exercises.ts` + `firestore.rules` |
 | Change workout status behavior | `src/domains/workouts/components/WorkoutHistory.tsx` |
 | Debug Firestore data | `scripts/` directory has many check/debug scripts |
-| Run E2E tests | `npx playwright test` (config: `playwright.config.ts`, tests: `e2e/`) |
 | Run unit tests | `npm test` (config: `vitest.config.ts`, tests: `tests/`) |

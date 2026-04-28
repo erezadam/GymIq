@@ -2,8 +2,14 @@
 
 ## [Unreleased] - 2026-04-24
 
+### Removed
+- **Playwright E2E test infrastructure (2026-04-28)**: deleted `playwright.config.ts`, the entire `e2e/` directory (8 spec files, 2 helpers, README, 9 screenshots), `.github/workflows/playwright.yml`, `.mcp.json` (which only registered Playwright MCP), the `@playwright/test` devDependency, and 5 `test:e2e*` scripts from `package.json`. Documentation across 12 markdown files cleaned up (CLAUDE.md, CHANGELOG.md, GymIQ-System-Spec.md, CODEATLAS.md, VIBEVIEW.md, ULTIMATE-PROJECT-SETUP-GUIDE.md, docs/architecture.md, docs/qa_scenarios.md, .claude/qa-testing-SKILL.md, תיעוד מערכת/*, e2e/README.md). The 3-tier testing policy (Build / Spec / Suite) was simplified to **Build + Vitest** only. Project verification: `npm run build` and `npm test`. No replacement framework was added — if E2E browser checks are needed, run them outside the project.
+
+### Changed
+- **Renamed `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD` → `ADMIN_EMAIL` / `ADMIN_PASSWORD` (2026-04-28)**: across the entire codebase — `.github/workflows/auto-draft-release-note.yml`, `scripts/draftReleaseNoteFromPR.ts`, and 14 maintenance/migration scripts (`scripts/fix-muscles-and-exercises.ts`, `inspect-zehava-trainer.ts`, `checkPrimaryMuscles.ts`, `migrateLastSeenReleaseNotes.ts`, `inspect-hang-workouts.ts`, `audit-exercise-report-types.ts`, `readMuscles.ts`, `backfillTrainerIdNull.ts`, `test-program-security.cjs`, `test-analysis-save.cjs`, `clearSecondaryMuscles.ts`, `test-program-generation.cjs`, `syncChangelogToReleaseNotes.ts`). The `E2E_` prefix was misleading — none of these credentials were related to Playwright; they have always been plain admin login creds for Firebase. `.env.local` and `.env.example` updated accordingly. **Action required before merge:** add `ADMIN_EMAIL` and `ADMIN_PASSWORD` as new GitHub Secrets in the repository settings, otherwise the auto-draft-release-note workflow will fail on the next successful deploy. Old `E2E_ADMIN_*` secrets can be deleted manually after verifying the new flow runs successfully.
+
 ### Added
-- **טיוטה אוטומטית של "מה חדש" אחרי כל deploy (2026-04-26)**: workflow חדש `.github/workflows/auto-draft-release-note.yml` שנדלק ב-`workflow_run` כש-`Deploy to Firebase` מסתיים בהצלחה. מאתר את ה-PR שתואם ל-SHA שנפרס, מריץ את הסקריפט החדש `scripts/draftReleaseNoteFromPR.ts` שקורא ל-Claude Haiku 4.5 (עם prompt caching על system prompt) ומקבל JSON של `{titleHe, bodyHe (3 משפטים), iconEmoji}`, מתחבר כ-admin, וכותב טיוטה ל-collection הקיים `releaseNotes`. **Idempotent** לפי `changelogHash = "pr:<number>"` — הרצה כפולה לאותו PR מעדכנת ולא משכפלת. **דילוג אוטומטי** ל-PR פנימי בלבד (CI/טסטים/refactor) — Claude מתודרך להחזיר `titleHe: ""` במקרה זה. אין שינויי UI / schema / rules — מסתמך לגמרי על התשתית מ-PRs #91/#92. תלות חדשה: `@anthropic-ai/sdk@^0.91.1` כ-dev dep. **Secrets חדשים נדרשים ב-GitHub:** `ANTHROPIC_API_KEY` (חדש), `E2E_ADMIN_EMAIL` ו-`E2E_ADMIN_PASSWORD` (היו רק ב-`.env.local` עד עכשיו).
+- **טיוטה אוטומטית של "מה חדש" אחרי כל deploy (2026-04-26)**: workflow חדש `.github/workflows/auto-draft-release-note.yml` שנדלק ב-`workflow_run` כש-`Deploy to Firebase` מסתיים בהצלחה. מאתר את ה-PR שתואם ל-SHA שנפרס, מריץ את הסקריפט החדש `scripts/draftReleaseNoteFromPR.ts` שקורא ל-Claude Haiku 4.5 (עם prompt caching על system prompt) ומקבל JSON של `{titleHe, bodyHe (3 משפטים), iconEmoji}`, מתחבר כ-admin, וכותב טיוטה ל-collection הקיים `releaseNotes`. **Idempotent** לפי `changelogHash = "pr:<number>"` — הרצה כפולה לאותו PR מעדכנת ולא משכפלת. **דילוג אוטומטי** ל-PR פנימי בלבד (CI/טסטים/refactor) — Claude מתודרך להחזיר `titleHe: ""` במקרה זה. אין שינויי UI / schema / rules — מסתמך לגמרי על התשתית מ-PRs #91/#92. תלות חדשה: `@anthropic-ai/sdk@^0.91.1` כ-dev dep. **Secrets חדשים נדרשים ב-GitHub:** `ANTHROPIC_API_KEY` (חדש), `ADMIN_EMAIL` ו-`ADMIN_PASSWORD` (היו רק ב-`.env.local` עד עכשיו; ראה גם הערת ה-rename ב-`### Changed`).
 - **פיצ'ר "מה חדש" — שלבים 2+3+4 (השלמת המעגל; שלב 1 כבר merged ב-PR #91)**:
   - **Admin UI (`ReleaseNotesManager`, route `/admin/release-notes`):** טבלה של כל ה-notes עם סינון לפי status (All/Drafts/Published/Archived) + כפתור "צור חדש" + מודל CRUD עם Markdown preview + פעולות publish/archive/delete. AdminLayout קיבל פריט ניווט "📝 הודעות עדכון" עם badge אדום של drafts count (`useQuery` עם staleTime 60s, refetchOnWindowFocus, ללא polling פעיל).
   - **UI למשתמש (Badge + Modal + Screen):** אייקון 🎁 ב-MainLayout וב-TrainerLayout עם `animate-pulse` + badge count; Modal אוטומטי שקופץ פעם אחת בסשן (`useRef` ברמת הקומפוננטה) אחרי 1 שנייה מה-mount, רק אם המשתמש מחובר + יש unseen notes + הנתיב אינו `/workout/session` או `/login`; מסך מלא `/whats-new` לכל ההיסטוריה. סגירת Modal מפעילה `markReleaseNotesAsSeen` + optimistic update של authStore מחושב מ-`max(unseenNotes.publishedAt) + 1ms` (לא `Date.now()`) כדי להתחמק מ-clock-skew race.
@@ -111,11 +117,6 @@
   - TraineeProgramView, ProgramDayDetail, TrainerProgramCard — ממיינים לפי `order` (backward compatible)
   - ProgramExerciseCard מציג `exercise.order` במקום אינדקס מערך
   - `loadFromProgram` — ממיין לפי `order` ומעביר ל-workoutBuilderStore
-- **בדיקת E2E — הוכחת סדר תרגילים**: `e2e/trainer-exercise-order-proof.spec.ts`
-  - מאמן יוצר תוכנית, מספר תרגילים ידנית (3→1→2), מפעיל
-  - מתאמן רואה את התוכנית בדשבורד
-  - 10 screenshots ויזואליים לתיעוד הזרימה
-  - 3 tests passed (33.4s)
 
 - **תכנון חופשי (Free Plan)**: מסלול חדש בתוך ExerciseLibrary לבניית אימון מבוסס סקציות
   - Tab חדש "תכנון חופשי" לצד "אימון" — toggle בין שני המצבים

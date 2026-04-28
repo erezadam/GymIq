@@ -812,8 +812,7 @@ Thumbs.db
 *-debug.log
 
 # Test results
-test-results/
-playwright-report/
+coverage/
 ```
 
 ### 7.4 Pre-commit Hook (אופציונלי)
@@ -845,70 +844,27 @@ echo "✅ בדיקת אבטחה עברה"
 - שהתצוגה מציגה את הנתונים
 - שהזרימה עובדת מתחילה לסוף
 
-### 8.2 מערכת 3 רמות
+### 8.2 בדיקות בפרויקט
 
 ```
-🟢 רמה 1 — שינוי קטן (UI בלבד, עד 3 קבצים)
+Build (TypeScript + Vite)
    → npm run build
-   → grep ידני על הקובץ שנגע
+   → ודא שהקוד מתקמפל
 
-🟡 רמה 2 — שינוי משמעותי (לוגיקה, hooks, services)
-   → npm run build
-   → npx playwright test [spec רלוונטי]
-   → דיווח תוצאות
+Vitest (unit + regression)
+   → npm test
+   → ודא שטסטי הרגרסיה הקריטיים עוברים
 
-🔴 רמה 3 — לפני deploy
-   → npm run build
-   → npx playwright test (suite מלא)
+לפני deploy
+   → npm run build && npm test
    → אישור מפורש מהמשתמש
 ```
 
-### 8.3 מיפוי קבצים → specs
+> **הערה:** לבדיקות ידניות במכשיר (UX, RTL, מובייל) — בדיקה ידנית על production
+> אחרי deploy, או הרצת בדיקה חיצונית מחוץ לפרויקט. בפרויקט עצמו אין framework
+> ל-E2E browser tests.
 
-צור טבלה כזו לפרויקט שלך:
-
-```markdown
-| קובץ שנגע | Spec להריץ |
-|-----------|-----------|
-| auth.ts, LoginPage | auth.spec.ts |
-| WorkoutSession | workout-flow.spec.ts |
-| WorkoutHistory | workout-history.spec.ts |
-| TrainerDashboard | trainer-dashboard.spec.ts |
-```
-
-### 8.4 Playwright Config מומלץ
-
-```typescript
-// playwright.config.ts
-import { defineConfig, devices } from '@playwright/test';
-
-export default defineConfig({
-  testDir: './e2e',
-  timeout: 60000,
-  retries: process.env.CI ? 2 : 1,
-  workers: 1,  // אם יש rate limiting
-
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'mobile',
-      use: { ...devices['iPhone 13'] },
-    },
-  ],
-
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    timeout: 120000,
-    reuseExistingServer: !process.env.CI,
-  },
-});
-```
-
-### 8.5 בדיקות רגרסיה מהירות (grep)
+### 8.3 בדיקות רגרסיה מהירות (grep)
 
 ```bash
 # צור script שבודק שרכיבים קריטיים קיימים:
@@ -919,7 +875,7 @@ grep -r "importantDataField" src/ | wc -l && \
 echo "All counts should be > 0"
 ```
 
-### 8.6 ההגדרה הנכונה של "בדיקה עוברת"
+### 8.4 ההגדרה הנכונה של "בדיקה עוברת"
 
 | מה | זה אומר | זה לא אומר |
 |----|---------|------------|
@@ -1385,10 +1341,8 @@ jobs:
 □ הוספת חוק אבטחה ל-CLAUDE.md
 
 שלב 6: בדיקות
-□ התקנת Playwright / Jest / Vitest
-□ הגדרת מערכת 3 רמות
-□ יצירת טבלת "קובץ → spec"
-□ הוספת חוק "No deploy without tests" ל-CLAUDE.md
+□ התקנת Vitest + הגדרת `tests/` עם רגרסיות קריטיות
+□ הוספת חוק "No deploy without build + tests" ל-CLAUDE.md
 
 שלב 7: lessons-learned
 □ יצירת תיקיית .claude/lessons-learned/

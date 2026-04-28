@@ -10,8 +10,13 @@
  * Usage: npm run draft:release-note -- --pr 123
  *
  * Required env (all set by the workflow from GitHub Secrets):
- *   ANTHROPIC_API_KEY, E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD,
+ *   ANTHROPIC_API_KEY, ADMIN_EMAIL, ADMIN_PASSWORD,
  *   VITE_FIREBASE_* (×6), GH_TOKEN, GITHUB_REPOSITORY
+ *
+ * Note on naming: ADMIN_EMAIL / ADMIN_PASSWORD were renamed from
+ * E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD when Playwright was removed from the
+ * project. The E2E_ prefix was historical and misleading — these credentials
+ * have always been plain admin login creds, never tied to any test framework.
  *
  * Idempotency: dedup is by `changelogHash = "pr:${PR}"`. Re-running for the
  * same PR updates the existing draft instead of creating a duplicate.
@@ -166,10 +171,10 @@ async function main() {
     console.error('❌ Missing ANTHROPIC_API_KEY')
     process.exit(1)
   }
-  const email = process.env.E2E_ADMIN_EMAIL
-  const password = process.env.E2E_ADMIN_PASSWORD
+  const email = process.env.ADMIN_EMAIL
+  const password = process.env.ADMIN_PASSWORD
   if (!email || !password) {
-    console.error('❌ Missing E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD')
+    console.error('❌ Missing ADMIN_EMAIL / ADMIN_PASSWORD')
     process.exit(1)
   }
 

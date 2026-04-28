@@ -5,7 +5,7 @@ import { config } from 'dotenv'
 config({ path: '.env.local' })
 
 async function check() {
-  const e = process.env.E2E_ADMIN_EMAIL, p = process.env.E2E_ADMIN_PASSWORD
+  const e = process.env.ADMIN_EMAIL, p = process.env.ADMIN_PASSWORD
   if (!e || !p) { process.exit(1) }
   await signInWithEmailAndPassword(auth, e, p)
 

@@ -20,10 +20,10 @@ const { getFunctions, httpsCallable } = require('firebase/functions');
 const { doc, getDoc, collection } = require('firebase/firestore');
 
 // Test config
-const TEST_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@test.gymiq.com';
-const TEST_PASSWORD = process.env.E2E_ADMIN_PASSWORD;
+const TEST_EMAIL = process.env.ADMIN_EMAIL || 'admin@test.gymiq.com';
+const TEST_PASSWORD = process.env.ADMIN_PASSWORD;
 if (!TEST_PASSWORD) {
-  console.error('❌ E2E_ADMIN_PASSWORD not found. Set it in .env.local');
+  console.error('❌ ADMIN_PASSWORD not found. Set it in .env.local');
   process.exit(1);
 }
 

@@ -1,5 +1,13 @@
 name: Auto-draft release note
 
+# Required GitHub Secrets:
+#   ANTHROPIC_API_KEY, ADMIN_EMAIL, ADMIN_PASSWORD, VITE_FIREBASE_* (×6)
+#
+# ADMIN_EMAIL / ADMIN_PASSWORD were renamed from E2E_ADMIN_EMAIL /
+# E2E_ADMIN_PASSWORD when Playwright was removed. The E2E_ prefix was
+# historical and misleading — these are plain admin Firebase login creds and
+# were never tied to any test framework.
+
 on:
   workflow_run:
     workflows: ["Deploy to Firebase"]
@@ -44,8 +52,8 @@ jobs:
         if: steps.pr.outputs.number != ''
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
-          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
           VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
