@@ -1,52 +1,70 @@
 #!/usr/bin/env node
 /**
- * Auto-increment version before build
- * Updates public/version.json with new version and build time
+ * Auto-derive version before build (runs as `prebuild` from package.json).
+ *
+ * Updates public/version.json with version + buildDate + buildTime,
+ * and public/sw.js CACHE_VERSION.
+ *
+ * Version format: v{YYYY}.{MM}.{DD}-{shortSha}
+ *   - In CI: shortSha = $GITHUB_SHA[:7]
+ *   - Locally: shortSha = `git rev-parse --short HEAD`, fallback "local"
+ *
+ * Why deterministic-from-source rather than read-and-bump:
+ * the previous bump-counter approach was ephemeral in CI — every deploy from
+ * the same commit produced the same v2026.04.151, because the bumped file
+ * never made it back to git. Now every build produces a unique, traceable
+ * version derived from the commit it was built from.
  */
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const versionFile = path.join(__dirname, '../public/version.json');
+const swFile = path.join(__dirname, '../public/sw.js');
 
-// Read current version
-let versionData = { version: '1.0.0', buildTime: new Date().toISOString() };
+const now = new Date();
+const yyyy = now.getUTCFullYear();
+const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
+const dd = String(now.getUTCDate()).padStart(2, '0');
 
-try {
-  if (fs.existsSync(versionFile)) {
-    versionData = JSON.parse(fs.readFileSync(versionFile, 'utf8'));
+let shortSha = 'local';
+if (process.env.GITHUB_SHA) {
+  shortSha = process.env.GITHUB_SHA.substring(0, 7);
+} else {
+  try {
+    shortSha = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+  } catch {
+    // not a git repo — keep "local"
   }
-} catch (e) {
-  console.log('[Version] Creating new version file');
 }
 
-// Increment patch version
-const parts = versionData.version.split('.');
-parts[2] = String(parseInt(parts[2], 10) + 1);
-const newVersion = parts.join('.');
+const newVersion = `v${yyyy}.${mm}.${dd}-${shortSha}`;
+const buildDate = `${yyyy}-${mm}-${dd}T00:00:00.000Z`;
+const buildTime = now.toISOString();
 
-// Update version data
-versionData.version = newVersion;
-versionData.buildTime = new Date().toISOString();
+const versionData = {
+  version: newVersion,
+  buildDate,
+  environment: 'production',
+  buildTime,
+};
 
-// Write back
 fs.writeFileSync(versionFile, JSON.stringify(versionData, null, 2) + '\n');
+console.log(`[Version] ${newVersion} (buildDate: ${buildDate})`);
 
-console.log(`[Version] Updated to ${newVersion}`);
-
-// Also update CACHE_VERSION in sw.js
-const swFile = path.join(__dirname, '../public/sw.js');
+// Update CACHE_VERSION in sw.js. The replacement uses the full new value,
+// so newVersion already begins with "v" and we don't prepend another one.
 try {
   if (fs.existsSync(swFile)) {
     let swContent = fs.readFileSync(swFile, 'utf8');
-    // Replace CACHE_VERSION value
     swContent = swContent.replace(
-      /const CACHE_VERSION = ['"]v[^'"]+['"]/,
-      `const CACHE_VERSION = 'v${newVersion}'`
+      /const CACHE_VERSION = ['"][^'"]+['"]/,
+      `const CACHE_VERSION = '${newVersion}'`
     );
     fs.writeFileSync(swFile, swContent);
-    console.log(`[Version] Updated sw.js CACHE_VERSION to v${newVersion}`);
+    console.log(`[Version] sw.js CACHE_VERSION = ${newVersion}`);
   }
 } catch (e) {
-  console.error('[Version] Failed to update sw.js:', e.message);
+  console.error('[Version] sw.js update failed:', e.message);
 }
