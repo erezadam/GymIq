@@ -23,10 +23,10 @@ const { signInWithEmailAndPassword, signOut } = require('firebase/auth');
 const { getFunctions, httpsCallable } = require('firebase/functions');
 
 // Test config
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@test.gymiq.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD;
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@test.gymiq.com';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 if (!ADMIN_PASSWORD) {
-  console.error('❌ E2E_ADMIN_PASSWORD not found. Set it in .env.local');
+  console.error('❌ ADMIN_PASSWORD not found. Set it in .env.local');
   process.exit(1);
 }
 

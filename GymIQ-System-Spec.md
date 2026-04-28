@@ -54,7 +54,6 @@
 | `typescript` | ~5.6.2 | Type checking |
 | `tailwindcss` | ^3.4.15 | CSS framework |
 | `vitest` | ^4.0.17 | Unit testing |
-| `@playwright/test` | ^1.58.1 | E2E testing |
 | `@testing-library/react` | ^16.3.1 | React testing |
 | `@testing-library/jest-dom` | ^6.9.1 | DOM matchers |
 | `@vitejs/plugin-react` | ^4.3.3 | React plugin for Vite |

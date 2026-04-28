@@ -13,7 +13,7 @@
  * The script creates DRAFTS only. An admin must review them in the
  * "הודעות עדכון" screen and explicitly publish each one.
  *
- * Requires E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD in .env.local.
+ * Requires ADMIN_EMAIL / ADMIN_PASSWORD in .env.local.
  */
 
 import { auth } from './firebase-config'
@@ -73,10 +73,10 @@ function truncateTitle(text: string, max = 100): string {
 }
 
 async function main() {
-  const email = process.env.E2E_ADMIN_EMAIL
-  const password = process.env.E2E_ADMIN_PASSWORD
+  const email = process.env.ADMIN_EMAIL
+  const password = process.env.ADMIN_PASSWORD
   if (!email || !password) {
-    console.error('❌ Missing E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD in .env.local')
+    console.error('❌ Missing ADMIN_EMAIL / ADMIN_PASSWORD in .env.local')
     process.exit(1)
   }
 

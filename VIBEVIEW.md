@@ -10,7 +10,7 @@
 A Hebrew gym tracking app (PWA) for trainees and their trainers.
 You log workouts, track progress, get AI-generated workout plans, and your trainer can build programs for you and send messages.
 
-**Stack:** React + TypeScript + Tailwind | Firebase (Auth, Firestore, Storage, Functions) | OpenAI GPT-4o | Vite | Playwright
+**Stack:** React + TypeScript + Tailwind | Firebase (Auth, Firestore, Storage, Functions) | OpenAI GPT-4o | Vite | Vitest
 
 ---
 
@@ -29,7 +29,6 @@ You log workouts, track progress, get AI-generated workout plans, and your train
 | `firestore.rules` | **The Bouncer** | Security rules - who can read/write which Firestore collections. |
 | `firestore.indexes.json` | **The Query Optimizer** | Composite indexes for fast Firestore queries. |
 | `index.html` | **The Shell** | The single HTML page where the entire React app mounts. |
-| `playwright.config.ts` | **The Test Director** | Configures end-to-end browser tests. |
 | `vitest.config.ts` | **The Unit Test Director** | Configures unit/integration tests. |
 | `.env` | **The Secret Vault** | Firebase API keys and config (never committed). |
 | `.env.example` | **The Secret Template** | Shows which env vars you need, without actual values. |
@@ -67,7 +66,6 @@ You log workouts, track progress, get AI-generated workout plans, and your train
 | File | Conceptual Name | What it does |
 |------|----------------|-------------|
 | `workflows/ci.yml` | **The Build Guard** | Runs `npm ci` + `npm run build` on every PR. Blocks merge if broken. |
-| `workflows/playwright.yml` | **The E2E Guard** | Runs Playwright browser tests on PRs. |
 | `PULL_REQUEST_TEMPLATE.md` | **The PR Form** | Template: what changed, how tested, what could break, rollback plan. |
 
 ---
@@ -478,19 +476,6 @@ All Firestore/Auth operations. No component ever talks to Firebase directly.
 | `types.ts` | **The Program Contract** | Types for program generation. |
 
 ---
-
-## `e2e/` - Browser Tests
-
-| File | Conceptual Name | What it does |
-|------|----------------|-------------|
-| `auth.spec.ts` | **The Login Test** | Tests login and registration flows. |
-| `route-guards.spec.ts` | **The Lock Test** | Tests that unauthorized users can't access protected pages. |
-| `workout-flow.spec.ts` | **The Workout Test** | Full flow: login, pick exercises, log sets, finish workout. |
-| `workout-history.spec.ts` | **The History Test** | Tests viewing, continuing, and deleting workouts. |
-| `trainer-dashboard.spec.ts` | **The Trainer Test** | Tests trainer dashboard and messaging. |
-| `trainer-trainee-flows.spec.ts` | **The Relationship Test** | Tests creating trainees, building programs, assigning them. |
-| `helpers/auth-helper.ts` | **The Test Login Helper** | Shared login/logout utilities for tests. |
-| `helpers/test-users.ts` | **The Test Accounts** | Credentials for test user, trainer, admin. |
 
 ## `tests/` - Unit Tests
 

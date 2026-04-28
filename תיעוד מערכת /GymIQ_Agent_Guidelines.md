@@ -205,18 +205,15 @@ interface AppState {
 
 ### מבנה בדיקות
 ```
-__tests__/
-├── unit/              # Unit tests לפונקציות
-├── integration/       # Integration tests לקומפוננטים
-├── e2e/              # End-to-end tests
-└── __mocks__/        # Mock files
+tests/
+├── critical.spec.ts   # Unit + regression tests
+└── setup.ts           # Test environment setup
 ```
 
 ### כלי בדיקה נדרשים
-- **Vitest** - Unit testing
-- **React Testing Library** - Component testing  
+- **Vitest** - Unit + regression testing
+- **React Testing Library** - Component testing
 - **MSW** - API mocking
-- **Playwright** - E2E testing
 
 ---
 

@@ -83,9 +83,7 @@ interface StateArchitecture {
     "stylelint": "stylelint"
   },
   "testing": {
-    "unit": "Vitest + React Testing Library",
-    "integration": "Playwright",
-    "e2e": "Playwright + Github Actions"
+    "unit": "Vitest + React Testing Library"
   },
   "bundleAnalysis": {
     "analyzer": "vite-bundle-analyzer",
@@ -364,17 +362,7 @@ interface TestingStack {
     userEvents: "@testing-library/user-event";
     apiMocking: "MSW (Mock Service Worker)";
   };
-  
-  // E2E Tests (10%)
-  e2eTesting: {
-    framework: "Playwright";
-    browsers: "Chromium, Firefox, Safari";
-    devices: "Desktop, Mobile, Tablet";
-  };
-  
-  // Visual Regression
-  visualTesting: "Playwright Screenshots";
-  
+
   // Load Testing
   loadTesting: "Artillery.js"; // API load testing
 }
@@ -395,8 +383,7 @@ stages:
   - test:
       - Unit tests (Vitest)
       - Integration tests (RTL)
-      - E2E tests (Playwright)
-  
+
   - security:
       - Dependency audit
       - Security scanning
@@ -479,8 +466,7 @@ interface ExternalIntegrations {
     "vite": "^4.1.0",
     "vitest": "^0.28.0",
     "@testing-library/react": "^13.4.0",
-    "playwright": "^1.30.0",
-    
+
     "@typescript-eslint/eslint-plugin": "^5.53.0",
     "prettier": "^2.8.0",
     "prettier-plugin-tailwindcss": "^0.2.0"

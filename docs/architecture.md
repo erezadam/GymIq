@@ -252,57 +252,32 @@ interface WorkoutBuilderStore {
 
 ---
 
-## 9. בדיקות E2E (Playwright)
+## 9. בדיקות (Vitest)
 
 ### תשתית
 
 | טכנולוגיה | שימוש |
 |-----------|-------|
-| Playwright | E2E Testing Framework |
-| Chromium only | מניעת rate limiting של Firebase |
-| Serial mode | הרצה סדרתית למניעת התנגשויות |
+| Vitest | Unit + regression tests |
+| jsdom | Test environment |
+| @testing-library/react | Component rendering |
 
 ### מבנה תיקיות
 
 ```
-e2e/
-├── README.md                      # תיעוד מלא בעברית
-├── helpers/
-│   └── test-users.ts              # משתמשי בדיקה (trainer, regular)
-├── auth.spec.ts                   # התחברות/התנתקות
-├── dashboard.spec.ts              # דשבורד וניווט
-├── workout-flow.spec.ts           # זרימת אימון מלאה
-├── workout-history.spec.ts        # היסטוריית אימונים
-├── trainer-dashboard.spec.ts      # דשבורד מאמן
-└── trainer-trainee-flows.spec.ts  # זרימות מאמן-מתאמן (הראשי)
+tests/
+├── critical.spec.ts   # רגרסיות קריטיות (29/01 exercise data fields וכו')
+└── setup.ts           # jsdom + jest-dom matchers
 ```
 
-### פקודות הרצה
+### פקודה
 
-| פקודה | תיאור |
-|-------|-------|
-| `npx playwright test` | הרצת כל הבדיקות |
-| `npx playwright test auth.spec.ts` | הרצת קובץ ספציפי |
-| `npx playwright test --headed` | הרצה עם דפדפן פתוח |
-| `npx playwright test --ui` | ממשק UI אינטראקטיבי |
-| `npx playwright show-report` | צפייה בדוח |
+```bash
+npm test   # vitest run — כל הטסטים, פעם אחת
+```
 
-### משתמשי בדיקה
-
-| משתמש | תפקיד | שימוש |
-|-------|-------|-------|
-| `trainerUser` | מאמן | בדיקות מאמן, יצירת תוכניות, הודעות |
-| `regularUser` | משתמש רגיל | בדיקות אימון, היסטוריה |
-
-### הנחיות חשובות
-
-- **Firebase Rate Limiting**: רק Chromium רץ למניעת rate limiting
-- **Serial Mode**: בדיקות רצות ברצף למניעת התנגשות בנתונים
-- **IndexedDB Clearing**: בהחלפת משתמשים יש לנקות IndexedDB (Firebase Auth state)
-- **Modal Selectors**: יש להשתמש ב-selectors הנכונים:
-  - סיום אימון: `button:has-text("סיים")`
-  - אישור תרגילים לא גמורים: `button:has-text("כן, סיים")`
-  - שמירת סיכום: `button:has-text("שמור וסיים")`
+> בפרויקט אין E2E browser tests. אם צריך לאמת זרימה מקצה-לקצה — בדיקה ידנית
+> על production אחרי deploy, או הרצה חיצונית מחוץ לפרויקט.
 
 ---
 
