@@ -18,6 +18,7 @@ export interface SelectedExercise {
   exerciseName: string
   exerciseNameHe: string
   imageUrl: string
+  videoWebpUrl?: string
   primaryMuscle: string
   category?: string
   equipment?: string

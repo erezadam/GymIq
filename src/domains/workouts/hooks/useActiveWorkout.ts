@@ -208,6 +208,7 @@ export function useActiveWorkout() {
             exerciseName: ex.exerciseName,
             exerciseNameHe: ex.exerciseNameHe,
             imageUrl: ex.imageUrl || '',
+            ...(ex.videoWebpUrl && { videoWebpUrl: ex.videoWebpUrl }),
             category: ex.category || '',
             isCompleted: ex.isCompleted,
             notes: ex.notes,
@@ -292,6 +293,7 @@ export function useActiveWorkout() {
                 exerciseName: ex.exerciseName,
                 exerciseNameHe: ex.exerciseNameHe,
                 imageUrl: ex.imageUrl || '',
+                ...(ex.videoWebpUrl && { videoWebpUrl: ex.videoWebpUrl }),
                 category: ex.category || '',
                 isCompleted: ex.isCompleted,
                 notes: ex.notes,
@@ -409,7 +411,7 @@ export function useActiveWorkout() {
             console.log('🔥 Found in_progress workout in Firebase:', firebaseWorkout.id)
 
             // Fetch exercise details (category, primaryMuscle, equipment) from exercise service
-            const exerciseDetailsMap = new Map<string, { primaryMuscle: string; category: string; equipment: string; complexity?: 'compound' | 'simple'; imageUrl: string; name: string; nameHe: string }>()
+            const exerciseDetailsMap = new Map<string, { primaryMuscle: string; category: string; equipment: string; complexity?: 'compound' | 'simple'; imageUrl: string; videoWebpUrl?: string; name: string; nameHe: string }>()
             await Promise.all(
               firebaseWorkout.exercises.map(async (ex: any) => {
                 try {
@@ -421,6 +423,7 @@ export function useActiveWorkout() {
                       equipment: details.equipment || '',
                       complexity: details.complexity,
                       imageUrl: details.imageUrl || '',
+                      videoWebpUrl: details.videoWebpUrl,
                       name: details.name || '',
                       nameHe: details.nameHe || '',
                     })
@@ -440,6 +443,8 @@ export function useActiveWorkout() {
                   exerciseName: details?.name || ex.exerciseName,
                   exerciseNameHe: details?.nameHe || ex.exerciseNameHe,
                   imageUrl: details?.imageUrl || ex.imageUrl,
+                  // Live exercise's videoWebpUrl wins over snapshot — admin updates apply on next recovery
+                  videoWebpUrl: details?.videoWebpUrl ?? ex.videoWebpUrl,
                   primaryMuscle: details?.primaryMuscle || 'other',
                   category: details?.category || undefined,
                   equipment: details?.equipment || undefined,
@@ -732,6 +737,7 @@ export function useActiveWorkout() {
                 exerciseName: ex.exerciseName,
                 exerciseNameHe: ex.exerciseNameHe,
                 imageUrl: ex.imageUrl,
+                videoWebpUrl: ex.videoWebpUrl,
                 primaryMuscle: ex.primaryMuscle || 'other',
                 category: ex.category,
                 equipment: ex.equipment,
@@ -888,6 +894,7 @@ export function useActiveWorkout() {
             exerciseName: ex.exerciseName,
             exerciseNameHe: ex.exerciseNameHe,
             imageUrl: ex.imageUrl,
+            videoWebpUrl: ex.videoWebpUrl,
             primaryMuscle: ex.primaryMuscle || 'other',
             category: ex.category,
             equipment: ex.equipment,
@@ -1043,6 +1050,7 @@ export function useActiveWorkout() {
               exerciseName: ex.exerciseName,
               exerciseNameHe: ex.exerciseNameHe,
               imageUrl: ex.imageUrl || '',
+              ...(ex.videoWebpUrl && { videoWebpUrl: ex.videoWebpUrl }),
               category: ex.category || '',
               isCompleted: ex.isCompleted,
               notes: ex.notes,
@@ -1482,6 +1490,7 @@ export function useActiveWorkout() {
               exerciseName: ex.exerciseName,
               exerciseNameHe: ex.exerciseNameHe,
               imageUrl: ex.imageUrl || '',
+              ...(ex.videoWebpUrl && { videoWebpUrl: ex.videoWebpUrl }),
               category: ex.category || '',
               isCompleted: ex.isCompleted,
               notes: ex.notes,
@@ -1695,6 +1704,7 @@ export function useActiveWorkout() {
           exerciseName: ex.exerciseName,
           exerciseNameHe: ex.exerciseNameHe,
           imageUrl: ex.imageUrl || '',
+          ...(ex.videoWebpUrl && { videoWebpUrl: ex.videoWebpUrl }),
           category: ex.category || '',
           isCompleted: ex.isCompleted,
           notes: ex.notes,

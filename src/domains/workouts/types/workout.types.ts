@@ -82,6 +82,7 @@ export interface ExerciseSessionState {
   exerciseName: string
   exerciseNameHe: string
   imageUrl?: string
+  videoWebpUrl?: string
   sets: WorkoutSet[]
   restTime: number
   isCompleted: boolean
@@ -103,6 +104,7 @@ export interface WorkoutHistoryEntry {
     exerciseName: string
     exerciseNameHe: string
     imageUrl?: string // Exercise image URL
+    videoWebpUrl?: string // Animated WebP — replaces image in hero contexts when set
     category?: string // Muscle group name in Hebrew
     isCompleted: boolean
     notes?: string // Exercise notes
