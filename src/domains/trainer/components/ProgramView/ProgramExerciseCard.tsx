@@ -1,4 +1,5 @@
 import { Dumbbell } from 'lucide-react'
+import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
 import type { ProgramExercise } from '../../types'
 
 interface ProgramExerciseCardProps {
@@ -14,18 +15,19 @@ export function ProgramExerciseCard({ exercise, index }: ProgramExerciseCardProp
         <span className="text-xs font-medium text-on-surface-variant">{exercise.order || index + 1}</span>
       </div>
 
-      {/* Exercise image */}
-      {exercise.imageUrl ? (
-        <img
-          src={exercise.imageUrl}
-          alt={exercise.exerciseNameHe}
-          className="w-10 h-10 rounded-lg object-cover bg-dark-card flex-shrink-0"
-        />
-      ) : (
-        <div className="w-10 h-10 rounded-lg bg-dark-card flex items-center justify-center flex-shrink-0">
-          <Dumbbell className="w-5 h-5 text-on-surface-variant" />
-        </div>
-      )}
+      {/* Exercise image (#13) */}
+      <ExerciseMedia
+        imageUrl={exercise.imageUrl}
+        videoWebpUrl={exercise.videoWebpUrl}
+        alt={exercise.exerciseNameHe}
+        className="w-10 h-10 rounded-lg object-cover bg-dark-card flex-shrink-0"
+        variant="thumbnail"
+        placeholder={
+          <div className="w-10 h-10 rounded-lg bg-dark-card flex items-center justify-center flex-shrink-0">
+            <Dumbbell className="w-5 h-5 text-on-surface-variant" />
+          </div>
+        }
+      />
 
       {/* Exercise info */}
       <div className="flex-1 min-w-0">

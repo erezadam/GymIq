@@ -111,6 +111,7 @@ export interface ProgramExercise {
   exerciseName: string
   exerciseNameHe: string
   imageUrl?: string
+  videoWebpUrl?: string
   category?: string
   primaryMuscle?: string
   equipment?: string

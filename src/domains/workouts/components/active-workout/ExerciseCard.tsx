@@ -9,7 +9,7 @@ import { ChevronDown, ChevronUp, Trash2, Check, Plus, MessageSquare } from 'luci
 import type { ActiveWorkoutExercise, ReportedSet } from '../../types/active-workout.types'
 import { SetReportRow } from './SetReportRow'
 import { NotesModal } from './NotesModal'
-import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '@/domains/exercises/utils'
+import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
 import { workoutLabels } from '@/styles/design-tokens'
 import { getActiveBandTypes } from '@/lib/firebase/bandTypes'
 import { calculateExerciseVolume } from '@/lib/firebase/workoutHistory'
@@ -117,33 +117,30 @@ export function ExerciseCard({
           <h3 className="exercise-card-name">{exercise.exerciseNameHe}</h3>
         </div>
 
-        {/* Exercise image */}
-        <img
-          src={getExerciseImageUrl({ imageUrl: exercise.imageUrl, name: exercise.exerciseName })}
+        {/* Exercise image (#5 — collapsed thumbnail, static even when WebP exists for perf) */}
+        <ExerciseMedia
+          imageUrl={exercise.imageUrl}
+          videoWebpUrl={exercise.videoWebpUrl}
+          exerciseName={exercise.exerciseName}
           alt={exercise.exerciseNameHe}
           className="exercise-card-image"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement
-            target.onerror = null
-            target.src = EXERCISE_PLACEHOLDER_IMAGE
-          }}
+          variant="thumbnail"
         />
       </div>
 
       {/* Card Content (expanded only) */}
       {exercise.isExpanded && (
         <div className="exercise-card-content">
-          {/* Large Exercise Image */}
+          {/* Large Exercise Image (#6 — hero, animates WebP if available) */}
           <div className="relative rounded-xl overflow-hidden bg-neon-gray-700 aspect-video mb-2">
-            <img
-              src={getExerciseImageUrl({ imageUrl: exercise.imageUrl, name: exercise.exerciseName })}
+            <ExerciseMedia
+              imageUrl={exercise.imageUrl}
+              videoWebpUrl={exercise.videoWebpUrl}
+              exerciseName={exercise.exerciseName}
               alt={exercise.exerciseNameHe}
               className="w-full h-full object-cover"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement
-                target.onerror = null
-                target.src = EXERCISE_PLACEHOLDER_IMAGE
-              }}
+              variant="hero"
+              loading="eager"
             />
             {/* Gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />

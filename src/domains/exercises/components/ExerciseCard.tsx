@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { Exercise } from '../types'
 import { useWorkoutBuilderStore } from '@/domains/workouts/store'
-import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '../utils'
+import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { getMuscleNameHe, getCategoryNameHe } from '@/utils/muscleTranslations'
 import { Check, Plus } from 'lucide-react'
@@ -50,6 +50,7 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
         exerciseName: exercise.name,
         exerciseNameHe: exercise.nameHe,
         imageUrl: exercise.imageUrl,
+        videoWebpUrl: exercise.videoWebpUrl,
         primaryMuscle: exercise.primaryMuscle || exercise.category,
         category: exercise.category,
         equipment: exercise.equipment,
@@ -81,17 +82,15 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
         </div>
       )}
 
-      {/* Exercise Image */}
+      {/* Exercise Image (#1 — hero, animates WebP if available) */}
       <div className="image-container h-36 sm:h-44">
-        <img
-          src={getExerciseImageUrl(exercise)}
+        <ExerciseMedia
+          imageUrl={exercise.imageUrl}
+          videoWebpUrl={exercise.videoWebpUrl}
+          exerciseName={exercise.name}
           alt={exercise.nameHe}
           className="w-full h-full object-cover"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement
-            target.onerror = null
-            target.src = EXERCISE_PLACEHOLDER_IMAGE
-          }}
+          variant="hero"
         />
 
         {/* Gradient overlay */}

@@ -1,3 +1,5 @@
+export { ExerciseMedia } from './ExerciseMedia'
+export type { ExerciseMediaProps, ExerciseMediaVariant } from './ExerciseMedia'
 export { LoadingSpinner } from './LoadingSpinner'
 export { UpdateBanner } from './UpdateBanner'
 export { WorkoutCard } from './WorkoutCard'

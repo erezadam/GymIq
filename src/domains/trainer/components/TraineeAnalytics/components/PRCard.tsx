@@ -1,5 +1,6 @@
 import type { PersonalRecord } from '@/lib/firebase/workoutHistory'
 import type { StuckExercise } from '@/domains/trainer/hooks/useTraineeAnalytics'
+import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
 
 interface PRCardProps {
   record: PersonalRecord | StuckExercise
@@ -39,11 +40,15 @@ export function PRCard({ record, variant }: PRCardProps) {
   return (
     <div className={`flex items-center gap-3 p-3.5 bg-dark-card/80 border rounded-xl ${borderClass}`}>
       <div className={`w-11 h-11 rounded-xl ${iconBg} flex items-center justify-center text-xl flex-shrink-0`}>
-        {record.imageUrl ? (
-          <img src={record.imageUrl} alt="" className="w-full h-full rounded-xl object-cover" />
-        ) : (
-          '🏋️'
-        )}
+        {/* #19 */}
+        <ExerciseMedia
+          imageUrl={record.imageUrl}
+          videoWebpUrl={record.videoWebpUrl}
+          alt=""
+          className="w-full h-full rounded-xl object-cover"
+          variant="thumbnail"
+          placeholder={'🏋️'}
+        />
       </div>
 
       <div className="flex-1 min-w-0">

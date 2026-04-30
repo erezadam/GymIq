@@ -215,6 +215,7 @@ export default function WorkoutSessionScreen() {
         {/* Exercise Media */}
         <ExerciseMedia
           imageUrl={currentExercise.imageUrl}
+          videoWebpUrl={currentExercise.videoWebpUrl}
           videoUrl={currentExercise.videoUrl}
           exerciseName={currentExercise.exerciseNameHe}
         />

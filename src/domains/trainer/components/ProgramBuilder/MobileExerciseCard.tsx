@@ -1,3 +1,4 @@
+import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
 import type { ProgramExercise } from '../../types'
 
 interface MobileExerciseCardProps {
@@ -39,17 +40,19 @@ export function MobileExerciseCard({
           }}
           className="w-10 h-10 text-center rounded-lg bg-background-elevated border border-border-default text-primary-main font-bold text-sm focus:border-primary-main focus:outline-none flex-shrink-0"
         />
-        {exercise.imageUrl ? (
-          <img
-            src={exercise.imageUrl}
-            alt=""
-            className="w-11 h-11 rounded-lg object-cover flex-shrink-0"
-          />
-        ) : (
-          <div className="w-11 h-11 rounded-lg bg-dark-surface flex items-center justify-center text-lg flex-shrink-0">
-            🏋️
-          </div>
-        )}
+        {/* #16 */}
+        <ExerciseMedia
+          imageUrl={exercise.imageUrl}
+          videoWebpUrl={exercise.videoWebpUrl}
+          alt=""
+          className="w-11 h-11 rounded-lg object-cover flex-shrink-0"
+          variant="thumbnail"
+          placeholder={
+            <div className="w-11 h-11 rounded-lg bg-dark-surface flex items-center justify-center text-lg flex-shrink-0">
+              🏋️
+            </div>
+          }
+        />
         <div className="flex-1 min-w-0">
           <h4 className="font-bold text-sm text-text-primary truncate">
             {exercise.exerciseNameHe}

@@ -45,6 +45,7 @@ export interface SessionExercise {
   exerciseName: string
   exerciseNameHe: string
   imageUrl?: string
+  videoWebpUrl?: string
   videoUrl?: string
   instructions?: string
 

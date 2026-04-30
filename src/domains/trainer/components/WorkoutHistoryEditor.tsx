@@ -6,6 +6,7 @@
 import { useState, useCallback } from 'react'
 import { X, Trash2, Plus, AlertTriangle, Check, Loader2, Pencil } from 'lucide-react'
 import { ExerciseLibrary } from '@/domains/exercises/components/ExerciseLibrary'
+import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
 import type { Exercise } from '@/domains/exercises/types'
 import type { WorkoutHistoryEntry } from '@/domains/workouts/types'
 import { trainerEditWorkout } from '@/lib/firebase/workoutHistory'
@@ -95,6 +96,7 @@ export function WorkoutHistoryEditor({
       exerciseName: exercise.name,
       exerciseNameHe: exercise.nameHe,
       imageUrl: exercise.imageUrl,
+      videoWebpUrl: exercise.videoWebpUrl,
       category: exercise.category,
       isCompleted: false,
       sets: [
@@ -216,13 +218,19 @@ export function WorkoutHistoryEditor({
               <div key={`${ex.exerciseId}-${exIdx}`} className="rounded-xl bg-dark-card overflow-hidden">
                 {/* Exercise header */}
                 <div className="flex items-center gap-3 p-3">
-                  {ex.imageUrl ? (
-                    <img src={ex.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-lg bg-dark-surface flex items-center justify-center text-sm flex-shrink-0">
-                      🏋️
-                    </div>
-                  )}
+                  {/* #20 */}
+                  <ExerciseMedia
+                    imageUrl={ex.imageUrl}
+                    videoWebpUrl={ex.videoWebpUrl}
+                    alt=""
+                    className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                    variant="thumbnail"
+                    placeholder={
+                      <div className="w-10 h-10 rounded-lg bg-dark-surface flex items-center justify-center text-sm flex-shrink-0">
+                        🏋️
+                      </div>
+                    }
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-on-surface truncate">
                       {ex.exerciseNameHe || ex.exerciseName}

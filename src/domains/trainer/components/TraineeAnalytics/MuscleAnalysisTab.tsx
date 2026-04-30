@@ -58,6 +58,7 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
         exerciseName: exercise.name,
         exerciseNameHe: exercise.nameHe,
         imageUrl: exercise.imageUrl,
+        videoWebpUrl: exercise.videoWebpUrl,
         category: exercise.category,
         primaryMuscle: exercise.primaryMuscle,
         equipment: exercise.equipment,

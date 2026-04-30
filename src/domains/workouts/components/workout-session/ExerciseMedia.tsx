@@ -1,33 +1,37 @@
 /**
- * ExerciseMedia Component
- * Video/Image display with play button overlay
+ * ExerciseMedia (workout-session)
+ * Thin wrapper around the shared ExerciseMedia component that adds
+ * a click-to-play mp4 modal for legacy videoUrl support. The inline
+ * display delegates to the shared component, so animated WebP appears
+ * automatically when videoWebpUrl is set on the exercise.
  */
 
 import { useState } from 'react'
 import { Play, X } from 'lucide-react'
-import { EXERCISE_PLACEHOLDER_IMAGE } from '@/domains/exercises/utils'
+import { ExerciseMedia as SharedExerciseMedia } from '@/shared/components/ExerciseMedia'
 
 interface ExerciseMediaProps {
   imageUrl?: string
+  videoWebpUrl?: string
   videoUrl?: string
   exerciseName: string
 }
 
-export function ExerciseMedia({ imageUrl, videoUrl, exerciseName }: ExerciseMediaProps) {
+export function ExerciseMedia({ imageUrl, videoWebpUrl, videoUrl, exerciseName }: ExerciseMediaProps) {
   const [showModal, setShowModal] = useState(false)
-  const [imageError, setImageError] = useState(false)
 
-  const hasMedia = imageUrl || videoUrl
   const hasVideo = !!videoUrl
+  const hasMedia = !!imageUrl || !!videoWebpUrl
 
-  if (!hasMedia || imageError) {
-    // Placeholder with fallback image
+  if (!hasMedia) {
+    // Placeholder via shared component (uses smart fallback / placeholder.svg)
     return (
       <div className="exercise-media-placeholder">
-        <img
-          src={EXERCISE_PLACEHOLDER_IMAGE}
+        <SharedExerciseMedia
           alt={exerciseName}
+          exerciseName={exerciseName}
           className="w-full h-full object-cover"
+          variant="thumbnail"
         />
       </div>
     )
@@ -35,19 +39,22 @@ export function ExerciseMedia({ imageUrl, videoUrl, exerciseName }: ExerciseMedi
 
   return (
     <>
-      {/* Thumbnail */}
+      {/* Thumbnail / hero — animates WebP if videoWebpUrl is set */}
       <div
         className="exercise-media-thumbnail"
-        onClick={() => setShowModal(true)}
+        onClick={() => hasVideo && setShowModal(true)}
       >
-        <img
-          src={imageUrl}
+        <SharedExerciseMedia
+          imageUrl={imageUrl}
+          videoWebpUrl={videoWebpUrl}
+          exerciseName={exerciseName}
           alt={exerciseName}
           className="w-full h-full object-cover"
-          onError={() => setImageError(true)}
+          variant="hero"
+          loading="eager"
         />
 
-        {/* Play button overlay (if video) */}
+        {/* Play button overlay (only when mp4 video is available) */}
         {hasVideo && (
           <div className="exercise-media-play-overlay">
             <div className="exercise-media-play-btn">
@@ -60,12 +67,13 @@ export function ExerciseMedia({ imageUrl, videoUrl, exerciseName }: ExerciseMedi
         <div className="exercise-media-gradient" />
       </div>
 
-      {/* Fullscreen Modal */}
-      {showModal && (
+      {/* Fullscreen mp4 modal — preserved legacy behavior */}
+      {showModal && hasVideo && (
         <div className="exercise-media-modal" onClick={() => setShowModal(false)}>
           <button
             className="exercise-media-modal-close"
             onClick={() => setShowModal(false)}
+            aria-label="סגור"
           >
             <X className="w-6 h-6" />
           </button>
@@ -74,24 +82,16 @@ export function ExerciseMedia({ imageUrl, videoUrl, exerciseName }: ExerciseMedi
             className="exercise-media-modal-content"
             onClick={(e) => e.stopPropagation()}
           >
-            {hasVideo ? (
-              <video
-                src={videoUrl}
-                controls
-                autoPlay
-                loop
-                playsInline
-                className="w-full h-auto rounded-lg"
-              >
-                <source src={videoUrl} type="video/mp4" />
-              </video>
-            ) : (
-              <img
-                src={imageUrl}
-                alt={exerciseName}
-                className="w-full h-auto rounded-lg"
-              />
-            )}
+            <video
+              src={videoUrl}
+              controls
+              autoPlay
+              loop
+              playsInline
+              className="w-full h-auto rounded-lg"
+            >
+              <source src={videoUrl} type="video/mp4" />
+            </video>
           </div>
         </div>
       )}

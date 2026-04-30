@@ -84,6 +84,7 @@ export interface Exercise {
   instructionsHe: string[]
   targetMuscles: string[]
   imageUrl: string
+  videoWebpUrl?: string  // Animated WebP URL — when set, replaces static image in 'hero'/'preview' contexts
   tips: string[]
   tipsHe: string[]
   createdAt?: Date
@@ -133,6 +134,7 @@ export interface CreateExerciseDto {
   instructionsHe: string[]
   targetMuscles: string[]
   imageUrl: string
+  videoWebpUrl?: string
   tips: string[]
   tipsHe: string[]
 }

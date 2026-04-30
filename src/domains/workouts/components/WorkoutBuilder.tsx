@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Play, Trash2, GripVertical, Plus, Minus, ChevronDown, ChevronUp, ArrowRight, Calendar, Save } from 'lucide-react'
 import { useWorkoutBuilderStore } from '../store'
-import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '@/domains/exercises/utils'
+import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
 import type { SetType } from '../types'
 
 export default function WorkoutBuilder() {
@@ -192,15 +192,13 @@ export default function WorkoutBuilder() {
               </div>
 
               <div className="w-12 h-12 rounded-lg bg-neon-gray-700 overflow-hidden flex-shrink-0">
-                <img
-                  src={getExerciseImageUrl({ imageUrl: exercise.imageUrl, name: exercise.exerciseName })}
+                <ExerciseMedia
+                  imageUrl={exercise.imageUrl}
+                  videoWebpUrl={exercise.videoWebpUrl}
+                  exerciseName={exercise.exerciseName}
                   alt={exercise.exerciseNameHe}
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement
-                    target.onerror = null
-                    target.src = EXERCISE_PLACEHOLDER_IMAGE
-                  }}
+                  variant="thumbnail"
                 />
               </div>
 

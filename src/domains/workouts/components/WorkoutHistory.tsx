@@ -360,7 +360,7 @@ export default function WorkoutHistory() {
       }
 
       // Fetch exercise details to get imageUrl, reportType, and English name for each exercise
-      const exerciseDetailsMap = new Map<string, { imageUrl: string; primaryMuscle: string; category: string; name: string; nameHe: string; equipment: string; complexity?: 'compound' | 'simple'; reportType?: string }>()
+      const exerciseDetailsMap = new Map<string, { imageUrl: string; videoWebpUrl?: string; primaryMuscle: string; category: string; name: string; nameHe: string; equipment: string; complexity?: 'compound' | 'simple'; reportType?: string }>()
       await Promise.all(
         fullWorkout.exercises.map(async (ex) => {
           try {
@@ -368,6 +368,7 @@ export default function WorkoutHistory() {
             if (exerciseDetails) {
               exerciseDetailsMap.set(ex.exerciseId, {
                 imageUrl: exerciseDetails.imageUrl || '',
+                videoWebpUrl: exerciseDetails.videoWebpUrl,
                 primaryMuscle: exerciseDetails.primaryMuscle || '',
                 category: exerciseDetails.category || '',
                 name: exerciseDetails.name || '',
@@ -407,6 +408,7 @@ export default function WorkoutHistory() {
               exerciseName: details?.name || exercise.exerciseName,
               exerciseNameHe: details?.nameHe || exercise.exerciseNameHe || '',
               imageUrl: details?.imageUrl || exercise.imageUrl || '',
+              videoWebpUrl: details?.videoWebpUrl ?? exercise.videoWebpUrl,
               primaryMuscle: details?.primaryMuscle || '',
               category: details?.category || '',
               equipment: details?.equipment || '',
@@ -436,6 +438,7 @@ export default function WorkoutHistory() {
               exerciseName: details?.name || exercise.exerciseName,
               exerciseNameHe: details?.nameHe || exercise.exerciseNameHe || '',
               imageUrl: details?.imageUrl || exercise.imageUrl || '',
+              videoWebpUrl: details?.videoWebpUrl ?? exercise.videoWebpUrl,
               primaryMuscle: details?.primaryMuscle || '',
               sets: exercise.sets || [],
               isCompleted: workoutSummary.status === 'cancelled' ? false : (exercise.isCompleted || false),  // cancelled = reset completion state
@@ -459,6 +462,7 @@ export default function WorkoutHistory() {
               exerciseName: details?.name || exercise.exerciseName,
               exerciseNameHe: details?.nameHe || exercise.exerciseNameHe || '',
               imageUrl: details?.imageUrl || exercise.imageUrl || '',
+              videoWebpUrl: details?.videoWebpUrl ?? exercise.videoWebpUrl,
               primaryMuscle: details?.primaryMuscle || '',
               category: details?.category || '',
               equipment: details?.equipment || '',
@@ -497,6 +501,7 @@ export default function WorkoutHistory() {
               exerciseName: details?.name || exercise.exerciseName,
               exerciseNameHe: details?.nameHe || exercise.exerciseNameHe || '',
               imageUrl: details?.imageUrl || exercise.imageUrl || '',
+              videoWebpUrl: details?.videoWebpUrl ?? exercise.videoWebpUrl,
               primaryMuscle: details?.primaryMuscle || '',
               sets: exercise.sets || [],
             }
@@ -515,6 +520,7 @@ export default function WorkoutHistory() {
               exerciseName: details?.name || exercise.exerciseName,
               exerciseNameHe: details?.nameHe || exercise.exerciseNameHe || '',
               imageUrl: details?.imageUrl || exercise.imageUrl || '',
+              videoWebpUrl: details?.videoWebpUrl ?? exercise.videoWebpUrl,
               primaryMuscle: details?.primaryMuscle || '',
               category: details?.category || '',
               equipment: details?.equipment || '',
@@ -555,7 +561,7 @@ export default function WorkoutHistory() {
       if (!fullWorkout || !fullWorkout.exercises) return
 
       // Fetch full exercise details (category, primaryMuscle, equipment, etc.)
-      const exerciseDetailsMap = new Map<string, { imageUrl: string; primaryMuscle: string; category: string; name: string; nameHe: string; equipment: string; complexity?: 'compound' | 'simple'; reportType?: string }>()
+      const exerciseDetailsMap = new Map<string, { imageUrl: string; videoWebpUrl?: string; primaryMuscle: string; category: string; name: string; nameHe: string; equipment: string; complexity?: 'compound' | 'simple'; reportType?: string }>()
       await Promise.all(
         fullWorkout.exercises.map(async (ex) => {
           try {
@@ -563,6 +569,7 @@ export default function WorkoutHistory() {
             if (exerciseDetails) {
               exerciseDetailsMap.set(ex.exerciseId, {
                 imageUrl: exerciseDetails.imageUrl || '',
+                videoWebpUrl: exerciseDetails.videoWebpUrl,
                 primaryMuscle: exerciseDetails.primaryMuscle || '',
                 category: exerciseDetails.category || '',
                 name: exerciseDetails.name || '',
@@ -589,6 +596,7 @@ export default function WorkoutHistory() {
           exerciseName: details?.name || exercise.exerciseName,
           exerciseNameHe: details?.nameHe || exercise.exerciseNameHe || '',
           imageUrl: details?.imageUrl || exercise.imageUrl || '',
+          videoWebpUrl: details?.videoWebpUrl ?? exercise.videoWebpUrl,
           primaryMuscle: details?.primaryMuscle || '',
           sets: exercise.sets || [],
         }
@@ -609,6 +617,7 @@ export default function WorkoutHistory() {
           exerciseName: details?.name || exercise.exerciseName,
           exerciseNameHe: details?.nameHe || exercise.exerciseNameHe || '',
           imageUrl: details?.imageUrl || exercise.imageUrl || '',
+          videoWebpUrl: details?.videoWebpUrl ?? exercise.videoWebpUrl,
           primaryMuscle: details?.primaryMuscle || '',
           category: details?.category || '',
           equipment: details?.equipment || '',

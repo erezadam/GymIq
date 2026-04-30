@@ -1,4 +1,5 @@
 import { Trash2 } from 'lucide-react'
+import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
 import type { ProgramExercise } from '../../types'
 
 interface ProgramExerciseEditorProps {
@@ -49,20 +50,21 @@ export function ProgramExerciseEditor({
             className="w-10 h-10 text-center rounded-lg bg-background-elevated border border-border-default text-primary-main font-bold text-sm focus:border-primary-main focus:outline-none flex-shrink-0"
           />
 
-          {/* Exercise image */}
-          {exercise.imageUrl ? (
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-dark-surface overflow-hidden flex-shrink-0">
-              <img
-                src={exercise.imageUrl}
-                alt={exercise.exerciseNameHe}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ) : (
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-dark-surface flex items-center justify-center text-2xl flex-shrink-0">
-              🏋️
-            </div>
-          )}
+          {/* Exercise image (#14) */}
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-dark-surface overflow-hidden flex-shrink-0">
+            <ExerciseMedia
+              imageUrl={exercise.imageUrl}
+              videoWebpUrl={exercise.videoWebpUrl}
+              alt={exercise.exerciseNameHe}
+              className="w-full h-full object-cover"
+              variant="thumbnail"
+              placeholder={
+                <div className="w-full h-full flex items-center justify-center text-2xl">
+                  🏋️
+                </div>
+              }
+            />
+          </div>
 
           {/* Name & info */}
           <div className="flex-1 min-w-0">

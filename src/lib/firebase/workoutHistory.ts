@@ -156,6 +156,7 @@ export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'
       exerciseName: ex.exerciseName,
       exerciseNameHe: ex.exerciseNameHe,
       imageUrl: ex.imageUrl || '',
+      ...(ex.videoWebpUrl && { videoWebpUrl: ex.videoWebpUrl }),
       category: ex.category || '',
       isCompleted: ex.isCompleted,
       notes: ex.notes || '',
@@ -992,6 +993,7 @@ export interface PersonalRecord {
   exerciseName: string
   exerciseNameHe: string
   imageUrl?: string
+  videoWebpUrl?: string
   bestWeight: number
   bestReps: number
   bestDate: Date
@@ -1026,6 +1028,7 @@ export async function getPersonalRecords(userId: string): Promise<PersonalRecord
     exerciseName: string
     exerciseNameHe: string
     imageUrl?: string
+    videoWebpUrl?: string
     records: { weight: number; reps: number; date: Date }[]
     workoutCount: number
     isBodyweight: boolean // All recorded weights are 0
@@ -1112,6 +1115,7 @@ export async function getPersonalRecords(userId: string): Promise<PersonalRecord
           exerciseName: exercise.exerciseName || '',
           exerciseNameHe: exercise.exerciseNameHe || '',
           imageUrl: exercise.imageUrl,
+          videoWebpUrl: exercise.videoWebpUrl,
           records: [{ weight, reps, date: workoutDate }],
           workoutCount: 1,
           isBodyweight: allWeightsZero, // Start with whether this workout had all 0 weights
@@ -1176,6 +1180,7 @@ export async function getPersonalRecords(userId: string): Promise<PersonalRecord
       exerciseName: data.exerciseName,
       exerciseNameHe: data.exerciseNameHe,
       imageUrl: data.imageUrl,
+      videoWebpUrl: data.videoWebpUrl,
       bestWeight: bestRecord.weight,
       bestReps: bestRecord.reps,
       bestDate: bestRecord.date,
@@ -1349,6 +1354,7 @@ export async function autoSaveWorkout(
       exerciseName: ex.exerciseName,
       exerciseNameHe: ex.exerciseNameHe,
       imageUrl: ex.imageUrl || '',
+      ...(ex.videoWebpUrl && { videoWebpUrl: ex.videoWebpUrl }),
       category: ex.category || '',
       isCompleted: ex.isCompleted,
       notes: ex.notes || '',
@@ -1720,6 +1726,7 @@ export async function completeWorkout(
       exerciseName: ex.exerciseName,
       exerciseNameHe: ex.exerciseNameHe,
       imageUrl: ex.imageUrl || '',
+      ...(ex.videoWebpUrl && { videoWebpUrl: ex.videoWebpUrl }),
       category: ex.category || '',
       isCompleted: ex.isCompleted,
       notes: ex.notes || '',

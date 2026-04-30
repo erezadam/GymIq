@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { exerciseService } from '@/domains/exercises/services'
+import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
 import { fixInvalidCategories, VALID_EXERCISE_CATEGORIES } from '@/lib/firebase/exercises'
 import type { ExerciseFilters, ExerciseDifficulty } from '@/domains/exercises/types'
 import { difficultyOptions } from '@/domains/exercises/data/mockExercises'
@@ -907,14 +908,13 @@ export default function ExerciseList() {
                   <tr key={exercise.id} className="group">
                     <td>
                       <div className="w-12 h-12 rounded-lg bg-dark-card overflow-hidden">
-                        <img
-                          src={exercise.imageUrl}
+                        {/* #21 — side fix: removes external via.placeholder.com dependency */}
+                        <ExerciseMedia
+                          imageUrl={exercise.imageUrl}
+                          videoWebpUrl={exercise.videoWebpUrl}
                           alt={exercise.nameHe}
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            ;(e.target as HTMLImageElement).src =
-                              'https://via.placeholder.com/48?text=🏋️'
-                          }}
+                          variant="thumbnail"
                         />
                       </div>
                     </td>
