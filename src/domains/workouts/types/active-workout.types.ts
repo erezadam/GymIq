@@ -54,6 +54,7 @@ export interface ActiveWorkoutExercise {
   exerciseName: string                // English name
   exerciseNameHe: string              // Hebrew name
   imageUrl?: string                   // Exercise image
+  videoWebpUrl?: string               // Animated WebP — replaces image in hero contexts when set
   primaryMuscle: MuscleGroup | string // Primary muscle group
   category?: string                   // Exercise category (for grouping)
   equipment?: string                  // Equipment type (for grouping by equipment)
