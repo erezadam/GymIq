@@ -50,6 +50,7 @@ export function ProgramDayEditor({ day, dayIndex, onUpdate, onBack, traineeId, p
         exerciseName: exercise.name,
         exerciseNameHe: exercise.nameHe,
         imageUrl: exercise.imageUrl,
+        videoWebpUrl: exercise.videoWebpUrl,
         category: exercise.category,
         primaryMuscle: exercise.primaryMuscle,
         equipment: exercise.equipment,

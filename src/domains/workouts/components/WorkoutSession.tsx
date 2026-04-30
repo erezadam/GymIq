@@ -218,6 +218,7 @@ export default function WorkoutSession() {
       exerciseName: exercise.name,
       exerciseNameHe: exercise.nameHe,
       imageUrl: exercise.imageUrl,
+      videoWebpUrl: exercise.videoWebpUrl,
       primaryMuscle: exercise.primaryMuscle,
       category: exercise.category,
       equipment: exercise.equipment,

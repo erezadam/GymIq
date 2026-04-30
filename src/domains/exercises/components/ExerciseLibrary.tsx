@@ -466,6 +466,7 @@ export function ExerciseLibrary({
         exerciseName: exercise.name,
         exerciseNameHe: exercise.nameHe,
         imageUrl: exercise.imageUrl,
+        videoWebpUrl: exercise.videoWebpUrl,
         primaryMuscle: exercise.primaryMuscle || exercise.category,
         category: exercise.category,
         equipment: exercise.equipment,
@@ -486,6 +487,7 @@ export function ExerciseLibrary({
       exerciseName: exercise.name,
       exerciseNameHe: exercise.nameHe,
       imageUrl: exercise.imageUrl,
+      videoWebpUrl: exercise.videoWebpUrl,
       primaryMuscle: exercise.primaryMuscle || exercise.category,
       category: exercise.category,
       equipment: exercise.equipment,
@@ -531,6 +533,7 @@ export function ExerciseLibrary({
         exerciseName: ex.exerciseName,
         exerciseNameHe: ex.exerciseNameHe,
         imageUrl: ex.imageUrl,
+        videoWebpUrl: ex.videoWebpUrl,
         category: ex.category,
         primaryMuscle: ex.primaryMuscle,
         equipment: ex.equipment,
@@ -668,6 +671,7 @@ export function ExerciseLibrary({
             exerciseName: ex.exerciseName || '',
             exerciseNameHe: ex.exerciseNameHe,
             imageUrl: ex.imageUrl || '',
+            ...(ex.videoWebpUrl && { videoWebpUrl: ex.videoWebpUrl }),
             category: ex.category || '',
             isCompleted: false,
             ...(ex.notes && { notes: ex.notes }),
@@ -733,6 +737,7 @@ export function ExerciseLibrary({
         restTime: ex.restTime,
       }
       if (ex.imageUrl) clean.imageUrl = ex.imageUrl
+      if (ex.videoWebpUrl) clean.videoWebpUrl = ex.videoWebpUrl
       if (ex.category) clean.category = ex.category
       if (ex.primaryMuscle) clean.primaryMuscle = ex.primaryMuscle
       if (ex.equipment) clean.equipment = ex.equipment
@@ -783,6 +788,7 @@ export function ExerciseLibrary({
         exerciseName: ex.exerciseName || '',
         exerciseNameHe: ex.exerciseNameHe,
         imageUrl: ex.imageUrl || '',
+        ...(ex.videoWebpUrl && { videoWebpUrl: ex.videoWebpUrl }),
         category: ex.category || '',
         isCompleted: false,
         ...(ex.notes && { notes: ex.notes }),

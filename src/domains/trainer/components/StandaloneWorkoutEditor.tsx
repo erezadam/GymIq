@@ -21,6 +21,7 @@ function toProgramExercises(exercises: SelectedExercise[]): ProgramExercise[] {
     exerciseName: ex.exerciseName,
     exerciseNameHe: ex.exerciseNameHe,
     imageUrl: ex.imageUrl,
+    videoWebpUrl: ex.videoWebpUrl,
     category: ex.category,
     primaryMuscle: ex.primaryMuscle,
     equipment: ex.equipment,

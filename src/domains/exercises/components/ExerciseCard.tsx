@@ -50,6 +50,7 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
         exerciseName: exercise.name,
         exerciseNameHe: exercise.nameHe,
         imageUrl: exercise.imageUrl,
+        videoWebpUrl: exercise.videoWebpUrl,
         primaryMuscle: exercise.primaryMuscle || exercise.category,
         category: exercise.category,
         equipment: exercise.equipment,

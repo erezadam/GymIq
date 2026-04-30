@@ -95,6 +95,7 @@ export function WorkoutHistoryEditor({
       exerciseName: exercise.name,
       exerciseNameHe: exercise.nameHe,
       imageUrl: exercise.imageUrl,
+      videoWebpUrl: exercise.videoWebpUrl,
       category: exercise.category,
       isCompleted: false,
       sets: [
