@@ -685,3 +685,65 @@ npm test
 | RN-54 | ריצה חוזרת ללא שינויים ב-CHANGELOG | ✅ "Skipped N existing" — אף draft חדש לא נוצר (hash dedup) |
 | RN-55 | הוספת bullet חדש ל-CHANGELOG + ריצה | ✅ רק ה-bullet החדש נוצר כ-draft |
 | RN-56 | drafts שנוצרו ע״י הסקריפט | ✅ מופיעים ב-`/admin/release-notes` כ-drafts (לא מפורסמים אוטומטית) |
+
+---
+
+## 🎬 WebP אנימציה לתרגילים — Phase 1 (30/04/2026)
+
+> **רקע:** שדה אופציונלי `videoWebpUrl` נוסף ל-Exercise. כל 24 נקודות הצגת תמונת תרגיל עברו לרכיב משותף `<ExerciseMedia>`. בדיקות אלה מאמתות שהאנימציה מתנגנת היכן שצפוי, שהתמונה הסטטית נשארת ב-thumbnails לחיסכון ברוחב פס, ושה-fallback עובד כש-WebP נכשל (CDN delay).
+>
+> **הכנה:** באדמין → ספריית תרגילים → ערוך תרגיל → מלא בשדה "כתובת אנימציה (WebP)" URL תקין. דוגמה: `https://raw.githubusercontent.com/erezadam/exercisegymiq_webp/main/back_squat.webp` עבור Back Squat.
+
+### Hero variants (אמורות להציג WebP מתנגן)
+
+| # | מסך | בדיקה | ציפייה |
+|---|-----|-------|--------|
+| WP-1 | ספריית תרגילים → כרטיס תרגיל בודד | מצא תרגיל עם WebP | ✅ אנימציה מתנגנת בתמונת ה-hero (h-36 sm:h-44) |
+| WP-4 | ספריית תרגילים → לחץ על thumbnail של תרגיל | מודל זום נפתח | ✅ אנימציה מתנגנת בתוך המודל (loading="eager") |
+| WP-6 | אימון פעיל → הרחב כרטיס תרגיל | aspect-video hero מתחת לכותרת | ✅ אנימציה מתנגנת. **הכי חשוב — זה המסך שהמתאמן מסתכל בו במהלך אימון** |
+| WP-8 | מסך session (אחד-אחר-אחד) → תרגיל עם WebP | התמונה הראשית | ✅ אנימציה מתנגנת. **לחיצה אם יש mp4 videoUrl → modal mp4 עדיין עובד (legacy preserved)** |
+| WP-24 | אדמין → ExerciseSetExercisePicker → grid בחירה | aspect-[4/3] cards | ✅ אנימציה מתנגנת ב-grid |
+| WP-Form | אדמין → טופס עריכת תרגיל → preview WebP | תיבת תצוגה מקדימה ימנית | ✅ אנימציה מתנגנת בפועל (לא תמונה סטטית של פריים אחד!) |
+
+### Thumbnail variants (אמורות להציג רק תמונה סטטית, גם כשיש WebP)
+
+> **למה?** thumbnail ≤ 80px — אנימציה לא נראית בו. טעינת WebP במצב הזה = רוחב פס מבוזבז על מובייל סלולרי.
+
+| # | מסך | בדיקה | ציפייה |
+|---|-----|-------|--------|
+| WP-2 | ספריית תרגילים → רשימת "תרגילים נבחרים" w-14 | thumb של תרגיל עם WebP | ✅ תמונה סטטית בלבד, **אין תנועה** |
+| WP-3 | ספריית תרגילים → רשימת "תרגילים נוספים" w-14 | thumb של תרגיל עם WebP | ✅ תמונה סטטית בלבד |
+| WP-5 | אימון פעיל → כרטיס מכווץ (header thumb) | thumb קטן | ✅ תמונה סטטית בלבד |
+| WP-7 | מסך אימון פעיל → modal "הוסף תרגיל" w-10 | thumb של תרגיל עם WebP | ✅ תמונה סטטית בלבד |
+| WP-9 | WorkoutBuilder → כרטיס תרגיל w-12 | thumb | ✅ תמונה סטטית בלבד |
+| WP-10 | מסך שיאים אישיים → recent records w-11 | thumb | ✅ תמונה סטטית בלבד |
+| WP-11 | מסך שיאים אישיים → all records w-14 | thumb | ✅ תמונה סטטית בלבד |
+| WP-12 | היסטוריה → AIBundleCard w-10 | thumb | ✅ תמונה סטטית בלבד; אם imageUrl + videoWebpUrl ריקים → אייקון Dumbbell |
+| WP-13 | מאמן → ProgramView → ProgramExerciseCard w-10 | thumb | ✅ תמונה סטטית בלבד; אם ריק → Dumbbell |
+| WP-14 | מאמן → ProgramBuilder/ExerciseEditor w-14/16 | thumb | ✅ תמונה סטטית בלבד; אם ריק → 🏋️ |
+| WP-15 | מאמן → ProgramBuilder/ProgramReview w-8 | thumb | ✅ תמונה סטטית בלבד; אם ריק → 🏋️ |
+| WP-16 | מאמן → ProgramBuilder/MobileExerciseCard w-11 | thumb | ✅ תמונה סטטית בלבד; אם ריק → 🏋️ |
+| WP-17 | מאמן → TraineeDetail → recent workouts w-9 | thumb | ✅ תמונה סטטית בלבד; אם ריק → 🏋️ |
+| WP-18 | משתמש → TraineeRecentWorkouts w-9 (אותו מסך מצד מאמן) | thumb | ✅ תמונה סטטית בלבד; אם ריק → 🏋️ |
+| WP-19 | מאמן → TraineeAnalytics → PRCard w-11 | thumb | ✅ תמונה סטטית בלבד; אם ריק → 🏋️ |
+| WP-20 | מאמן → WorkoutHistoryEditor w-10 | thumb | ✅ תמונה סטטית בלבד; אם ריק → 🏋️ |
+| WP-21 | אדמין → ExerciseList w-12 | thumb | ✅ תמונה סטטית בלבד; אם ריק → SVG placeholder מקומי (**לא** via.placeholder.com) |
+| WP-23 | אדמין → ExerciseSetExercisePicker → רשימת נבחרים w-8 | thumb | ✅ תמונה סטטית בלבד |
+
+### Fallback (CDN propagation delay / 404)
+
+| # | תרחיש | ציפייה |
+|---|-------|--------|
+| WP-CDN-1 | טופס אדמין → הזן URL מומצא לא קיים (כמו `https://example.com/fake.webp`) → שמור → צפה בכרטיס התרגיל בספריה | ✅ הראשונים נטענים, ה-WebP נכשל ב-`onError`, fallback אוטומטי לתמונה הסטטית. **משתמש לא רואה תמונה שבורה.** |
+| WP-CDN-2 | הזן URL לא בסיומת `.webp` (כמו `image.jpg`) ב-form | ✅ Zod validation דוחה: "הקובץ חייב להיות בסיומת .webp" |
+| WP-CDN-3 | תרגיל ללא `videoWebpUrl` כלל | ✅ מתנהג בדיוק כמו לפני השינוי — תמונה סטטית בכל המקומות, אין שינוי ויזואלי |
+| WP-CDN-4 | תרגיל עם videoWebpUrl תקין שמתחיל לטעון, מנותק רשת באמצע | ✅ תמונה סטטית מוצגת. ברגע שהרשת חוזרת — אם המשתמש מרענן, ה-WebP חוזר |
+
+### Iron-rule 29/01 propagation (חובה לוודא — אחרת אנימציה תיעלם בהמשך אימון)
+
+| # | תרחיש | ציפייה |
+|---|-------|--------|
+| WP-IR-1 | התחל אימון עם תרגיל שיש לו WebP → סגור אפליקציה → פתח שוב → המשך אימון | ✅ אימון משוחזר מ-Firebase. הרחב כרטיס → אנימציה ממשיכה לעבוד |
+| WP-IR-2 | סיים אימון → היסטוריה → המשך אותו אימון (cancelled או in_progress) | ✅ ה-WebP מופיע באימון החדש שנפתח |
+| WP-IR-3 | מאמן מדווח אימון למתאמן עם תרגיל שיש לו WebP → המתאמן צופה בהיסטוריה שלו | ✅ ה-WebP מופיע גם אצל המתאמן |
+| WP-IR-4 | התחלת אימון מתוכנית מאמן (TraineeProgramView) | ✅ ה-WebP זורם דרך ProgramExercise → SelectedExercise → ActiveWorkoutExercise |

@@ -215,3 +215,103 @@ describe('addExercise - category & primaryMuscle - Regression 29/01', () => {
     expect(call).toContain('primaryMuscle:');
   });
 });
+
+describe('videoWebpUrl propagates through workout lifecycle - Phase 1 (30/04/2026)', () => {
+  /**
+   * רגרסיה: השדה האופציונלי videoWebpUrl על Exercise חייב לזרום בכל
+   * נקודת save/restore של אימון פעיל. אחרת — אנימציה תיעלם בהמשך אימון
+   * (אותו פאטרן כמו רגרסיית ה-extended fields מ-29/01).
+   *
+   * הבדיקה רצה על מקור הקוד עצמו (לא על runtime) כי כל הנקודות הן בקוד
+   * של propagation בין מבני נתונים. אם כל המופעים נמצאים — ה-iron rule מקוים.
+   */
+
+  async function readFile(relPath: string): Promise<string> {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    return fs.readFile(path.join(process.cwd(), relPath), 'utf-8');
+  }
+
+  it('Exercise type declares videoWebpUrl', async () => {
+    const content = await readFile('src/domains/exercises/types/exercise.types.ts');
+    // בממשק Exercise ובממשק CreateExerciseDto
+    expect(content).toMatch(/videoWebpUrl\?:\s*string/);
+    const occurrences = content.match(/videoWebpUrl/g) || [];
+    expect(occurrences.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('useActiveWorkout propagates videoWebpUrl in all 9 save/restore points', async () => {
+    const content = await readFile('src/domains/workouts/hooks/useActiveWorkout.ts');
+    const occurrences = content.match(/videoWebpUrl/g) || [];
+    // 9 propagation points + Map type signature mention(s)
+    expect(occurrences.length).toBeGreaterThanOrEqual(9);
+
+    // Firebase recovery merges live exercise wins over snapshot via ?? fallback
+    expect(content).toMatch(/videoWebpUrl:\s*details\?\.videoWebpUrl\s*\?\?\s*ex\.videoWebpUrl/);
+  });
+
+  it('workoutHistory service includes videoWebpUrl in all 3 save points', async () => {
+    const content = await readFile('src/lib/firebase/workoutHistory.ts');
+    // saveWorkoutHistory + autoSaveWorkout + completeWorkout (trainerEditWorkout)
+    const conditionalSpread = content.match(/\.\.\.\(ex\.videoWebpUrl\s*&&\s*\{\s*videoWebpUrl:\s*ex\.videoWebpUrl\s*\}\)/g) || [];
+    expect(conditionalSpread.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('SelectedExercise + WorkoutHistoryEntry + ProgramExercise types include videoWebpUrl', async () => {
+    const store = await readFile('src/domains/workouts/store/workoutBuilderStore.ts');
+    const workoutTypes = await readFile('src/domains/workouts/types/workout.types.ts');
+    const activeTypes = await readFile('src/domains/workouts/types/active-workout.types.ts');
+    const sessionTypes = await readFile('src/domains/workouts/types/workout-session.types.ts');
+    const trainerTypes = await readFile('src/domains/trainer/types/trainer.types.ts');
+
+    expect(store).toMatch(/videoWebpUrl\?:\s*string/);
+    expect(workoutTypes).toMatch(/videoWebpUrl\?:\s*string/);
+    expect(activeTypes).toMatch(/videoWebpUrl\?:\s*string/);
+    expect(sessionTypes).toMatch(/videoWebpUrl\?:\s*string/);
+    expect(trainerTypes).toMatch(/videoWebpUrl\?:\s*string/);
+  });
+
+  it('WorkoutHistory continue handlers propagate videoWebpUrl', async () => {
+    const content = await readFile('src/domains/workouts/components/WorkoutHistory.tsx');
+    // exerciseDetailsMap declarations include videoWebpUrl
+    expect(content).toMatch(/videoWebpUrl\?:\s*string/);
+    // The ?? merge pattern (live wins, snapshot fallback) appears in continue handlers
+    expect(content).toMatch(/videoWebpUrl:\s*details\?\.videoWebpUrl\s*\?\?\s*exercise\.videoWebpUrl/);
+    // At least 4 occurrences (handleConfirmContinue completed/cancelled/planned + handleEmptyWorkoutContinue)
+    const occurrences = content.match(/videoWebpUrl/g) || [];
+    expect(occurrences.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('ExerciseLibrary propagates videoWebpUrl in all 6 payload builders', async () => {
+    const content = await readFile('src/domains/exercises/components/ExerciseLibrary.tsx');
+    const occurrences = content.match(/videoWebpUrl/g) || [];
+    // 6 payload sites + the imageModal state shape (declaration + handler write + JSX read)
+    expect(occurrences.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('PersonalRecord aggregator carries videoWebpUrl through to UI', async () => {
+    const content = await readFile('src/lib/firebase/workoutHistory.ts');
+    // PersonalRecord interface
+    expect(content).toMatch(/interface PersonalRecord[\s\S]*?videoWebpUrl\?:\s*string/);
+    // exerciseMap + getPersonalRecords result
+    const occurrences = content.match(/videoWebpUrl/g) || [];
+    expect(occurrences.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it('Shared ExerciseMedia component exists and exports the variant union', async () => {
+    const component = await readFile('src/shared/components/ExerciseMedia/ExerciseMedia.tsx');
+    expect(component).toMatch(/export type ExerciseMediaVariant\s*=\s*'hero'\s*\|\s*'thumbnail'\s*\|\s*'preview'/);
+    expect(component).toMatch(/export function ExerciseMedia/);
+
+    const index = await readFile('src/shared/components/ExerciseMedia/index.ts');
+    expect(index).toMatch(/export\s*\{\s*ExerciseMedia\s*\}/);
+  });
+
+  it('ExerciseForm zod schema validates videoWebpUrl as optional WebP URL', async () => {
+    const content = await readFile('src/domains/admin/components/ExerciseForm.tsx');
+    // Zod field with .webp regex + .or(z.literal('')).optional()
+    expect(content).toMatch(/videoWebpUrl:\s*z[\s\S]*?\.url\(/);
+    expect(content).toMatch(/\\\.webp/);
+    expect(content).toMatch(/\.optional\(\)/);
+  });
+});

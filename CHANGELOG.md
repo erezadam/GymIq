@@ -1,5 +1,19 @@
 # Changelog
 
+## [Unreleased] - 2026-04-30
+
+### Added
+- **תמיכה ב-WebP אנימציה לתרגילים — Phase 1 (תשתית, 2026-04-30)**: שדה אופציונלי חדש `videoWebpUrl?: string` על `Exercise` שמחליף את התמונה הסטטית במסכים גדולים כשהוא מוגדר. כל 24 נקודות הצגת תמונת תרגיל באפליקציה (משתמש + מאמן + אדמין) עברו ל-`<ExerciseMedia>` משותף חדש ב-`src/shared/components/ExerciseMedia/`. הרכיב מקבל `variant` שמכריע על מדיניות הטעינה: `hero` טוען WebP אנימטיבי כשקיים, `thumbnail` תמיד תמונה סטטית (חיסכון ברוחב פס במיניאטורות קטנות שבהן אנימציה לא נראית בכלל), `preview` ל-context של אדמין. `onError` בנוי בשתי שכבות — נכשל ה-WebP → סטטי, נכשל הסטטי → SVG placeholder מקומי. השדה אופציונלי לחלוטין: תרגילים קיימים בלי `videoWebpUrl` ממשיכים להציג תמונות סטטיות בדיוק כמו קודם. propagation מלא בכל ה-iron-rule save/restore points (29/01): 9 ב-`useActiveWorkout.ts`, 3 ב-`workoutHistory.ts` service, 6 ב-`ExerciseLibrary.tsx`, 6 ב-`WorkoutHistory.tsx` continue handlers, 5 ב-trainer ProgramExercise builders. בטופס האדמין נוסף שדה URL חדש עם validation ב-Zod (חייב סיומת `.webp` או ריק) + תצוגה מקדימה אנימטיבית בפועל. **כיסוי מלא — משתמש + מאמן**: כל 8 הנקודות בדומיין `trainer/` (ProgramView, ProgramBuilder, TraineeDetail, TraineeRecentWorkouts, PRCard analytics, WorkoutHistoryEditor) הוסבו לרכיב המשותף. test רגרסיה חדש ב-`tests/critical.spec.ts` ("videoWebpUrl propagates through workout lifecycle - Phase 1") — 9 בדיקות נוספות שמוודאות את ה-iron rule.
+
+### Fixed (Side fixes called out as part of WebP Phase 1)
+- **`PersonalRecords.tsx` placeholder fallback (2026-04-30)**: היה fallback ל-`/images/exercise-placeholder.png` (לא קיים בפרויקט — `.svg` הוא הרשמי). תוקן אוטומטית במעבר ל-`<ExerciseMedia>` שמשתמש ב-`EXERCISE_PLACEHOLDER_IMAGE` הסטנדרטי (SVG). שתי נקודות ב-PersonalRecords (recent + all records).
+- **`admin/ExerciseList.tsx` תלות חיצונית מבוטלת (2026-04-30)**: היתה תלות חיצונית ב-`https://via.placeholder.com/48?text=🏋️` כ-fallback ל-onError. תוקן אוטומטית במעבר ל-`<ExerciseMedia>` — fallback מקומי ב-100%.
+
+### TODO (Phase 2 — Future Cleanup)
+- **Bulk migration script `scripts/migrate-webp-urls.ts`**: סקריפט שיעבור על תרגילים קיימים, יבדוק קיום קובץ WebP בריפו `erezadam/exercisegymiq_webp` לפי basename match (e.g. `bench_press.png` → `bench_press.webp`), ויאכלס `videoWebpUrl` אוטומטית. אחרי הרצה: עשרות תרגילים יקבלו אנימציה בלי הזנה ידנית.
+- **`ExerciseSet` collage (4 תמונות 2×2)**: ב-`ExerciseSetCard`, `ExerciseSetManager`, `ExerciseSetForm` — כיום מציגים collage של 4 תמונות סטטיות. לא חלק מ-Phase 1. בעתיד: לשקול לעבור גם הם לאותו פאטרן (מצריך שינוי `exerciseImages: string[]` ל-array של אובייקטים, לא טריוויאלי).
+- **`active-workout/ExerciseCard.tsx` — 11 inline styles קיימים**: לא קשור ל-WebP. נמצאים בקוד של assistance type selector (graviton/bands buttons) שורות 154–243. חורגים מחוק הברזל מ-29/01. לא ניגעו במשימה הזו (בכוונה — מחוץ לסקופ).
+
 ## [Unreleased] - 2026-04-24
 
 ### Documented

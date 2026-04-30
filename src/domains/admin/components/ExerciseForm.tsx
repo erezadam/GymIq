@@ -12,6 +12,7 @@ import type { ExerciseCategory, MuscleGroup, EquipmentType, AssistanceType, Exer
 import { difficultyOptions, complexityOptions } from '@/domains/exercises/data/mockExercises'
 import { getEquipment, type Equipment } from '@/lib/firebase/equipment'
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
+import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
 import { getMuscles } from '@/lib/firebase/muscles'
 import { getActiveReportTypes } from '@/lib/firebase/reportTypes'
 import { getActiveBandTypes } from '@/lib/firebase/bandTypes'
@@ -41,6 +42,12 @@ const exerciseSchema = z.object({
   instructionsHe: z.array(z.object({ value: z.string() })).min(1, 'נדרשת לפחות הוראה אחת בעברית'),
   targetMuscles: z.array(z.string()),
   imageUrl: z.string().url('כתובת תמונה לא תקינה').or(z.literal('')),
+  videoWebpUrl: z
+    .string()
+    .url('כתובת WebP לא תקינה')
+    .regex(/\.webp(\?.*)?$/i, 'הקובץ חייב להיות בסיומת .webp')
+    .or(z.literal(''))
+    .optional(),
   tips: z.array(z.object({ value: z.string() })),
   tipsHe: z.array(z.object({ value: z.string() })),
 }).refine((data) => {
@@ -127,6 +134,7 @@ export default function ExerciseForm() {
       instructionsHe: [{ value: '' }],
       targetMuscles: [],
       imageUrl: '',
+      videoWebpUrl: '',
       tips: [{ value: '' }],
       tipsHe: [{ value: '' }],
     },
@@ -266,6 +274,7 @@ export default function ExerciseForm() {
           : [{ value: '' }],
         targetMuscles: existingExercise.targetMuscles || [],
         imageUrl: existingExercise.imageUrl || '',
+        videoWebpUrl: existingExercise.videoWebpUrl || '',
         tips: (existingExercise.tips || []).length > 0
           ? existingExercise.tips.map((v) => ({ value: v }))
           : [{ value: '' }],
@@ -332,6 +341,8 @@ export default function ExerciseForm() {
       assistanceTypes: data.assistanceTypes as AssistanceType[],
       // Only include availableBands if 'bands' is in assistanceTypes
       availableBands: data.assistanceTypes.includes('bands') ? data.availableBands : [],
+      // Drop empty videoWebpUrl — store undefined rather than '' (downstream consumers check truthiness)
+      videoWebpUrl: data.videoWebpUrl?.trim() ? data.videoWebpUrl.trim() : undefined,
       targetMuscles: data.targetMuscles as MuscleGroup[],
       instructions: data.instructions.map((i) => i.value).filter(Boolean),
       instructionsHe: data.instructionsHe.map((i) => i.value).filter(Boolean),
@@ -352,6 +363,7 @@ export default function ExerciseForm() {
   }
 
   const imageUrl = watch('imageUrl')
+  const videoWebpUrl = watch('videoWebpUrl')
   const selectedCategory = watch('category')
   const selectedAssistanceTypes = watch('assistanceTypes')
   const selectedBands = watch('availableBands')
@@ -771,13 +783,15 @@ export default function ExerciseForm() {
           </div>
         </section>
 
-        {/* Image */}
+        {/* Image + WebP animation */}
         <section className="card-neon">
-          <h2 className="text-lg font-semibold text-text-primary mb-6">תמונה</h2>
-          <div className="flex gap-6">
+          <h2 className="text-lg font-semibold text-text-primary mb-6">תמונה ואנימציה</h2>
+
+          {/* Static image */}
+          <div className="flex gap-6 mb-6">
             <div className="flex-1">
               <label className="block text-sm font-medium text-text-secondary mb-2">
-                כתובת תמונה (URL)
+                כתובת תמונה סטטית (URL)
               </label>
               <input
                 {...register('imageUrl')}
@@ -789,18 +803,54 @@ export default function ExerciseForm() {
                 <p className="text-red-400 text-sm mt-1">{errors.imageUrl.message}</p>
               )}
               <p className="text-text-muted text-sm mt-2">
-                דוגמה: https://raw.githubusercontent.com/erezadam/exercise-images-en/main/bench_press.jpg
+                דוגמה: https://raw.githubusercontent.com/erezadam/exercise-images-en/main/bench_press.png
               </p>
             </div>
-            <div className="w-40 h-40 rounded-xl bg-dark-card border-2 border-dashed border-dark-border flex items-center justify-center overflow-hidden">
+            <div className="w-40 h-40 rounded-xl bg-dark-card border-2 border-dashed border-dark-border flex items-center justify-center overflow-hidden flex-shrink-0">
               {imageUrl ? (
                 <img
                   src={imageUrl}
-                  alt="Preview"
+                  alt="תצוגה מקדימה — תמונה סטטית"
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     ;(e.target as HTMLImageElement).style.display = 'none'
                   }}
+                />
+              ) : (
+                <Image className="w-8 h-8 text-text-muted" />
+              )}
+            </div>
+          </div>
+
+          {/* Animated WebP — optional, replaces static in hero contexts when set */}
+          <div className="flex gap-6 pt-4 border-t border-dark-border">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                כתובת אנימציה (WebP) — אופציונלי
+              </label>
+              <input
+                {...register('videoWebpUrl')}
+                dir="ltr"
+                placeholder="https://example.com/back_squat.webp"
+                className={`input-neon w-full ${errors.videoWebpUrl ? 'border-red-500' : ''}`}
+              />
+              {errors.videoWebpUrl && (
+                <p className="text-red-400 text-sm mt-1">{errors.videoWebpUrl.message}</p>
+              )}
+              <p className="text-text-muted text-sm mt-2">
+                דוגמה: https://raw.githubusercontent.com/erezadam/exercisegymiq_webp/main/back_squat.webp
+                <br />
+                אם מולא, האנימציה תחליף את התמונה הסטטית במסכים גדולים. במיניאטורות תוצג תמיד תמונה סטטית.
+              </p>
+            </div>
+            <div className="w-40 h-40 rounded-xl bg-dark-card border-2 border-dashed border-dark-border flex items-center justify-center overflow-hidden flex-shrink-0">
+              {videoWebpUrl ? (
+                <ExerciseMedia
+                  videoWebpUrl={videoWebpUrl}
+                  alt="תצוגה מקדימה — אנימציה"
+                  className="w-full h-full object-cover"
+                  variant="preview"
+                  loading="eager"
                 />
               ) : (
                 <Image className="w-8 h-8 text-text-muted" />

@@ -97,7 +97,7 @@ GymIQ/
 | Collection | תיאור | שדות עיקריים |
 |------------|-------|--------------|
 | `users` | פרופילי משתמשים | uid, name, phone, role |
-| `exercises` | ספריית תרגילים | name, nameHe, category, primaryMuscle, equipment, imageUrl |
+| `exercises` | ספריית תרגילים | name, nameHe, category, primaryMuscle, equipment, imageUrl, videoWebpUrl? |
 | `muscles` | קטגוריות שרירים | id, nameHe, nameEn, icon (URL), subMuscles[] |
 | `equipment` | ציוד כושר | id, nameHe, nameEn |
 | `workoutSessions` | אימונים פעילים | userId, exercises[], status, createdAt |
@@ -327,9 +327,64 @@ export interface ActiveWorkoutExercise { ... }
 
 ---
 
+## תצוגת מדיה של תרגילים — `<ExerciseMedia>` (30/04/2026)
+
+מקור אמת יחיד להצגת תמונת/אנימציית תרגיל בכל המסכים: `src/shared/components/ExerciseMedia/`. כל הצגה של תמונת תרגיל באפליקציה (24 נקודות נכון ל-30/04/2026) עוברת דרך הרכיב הזה.
+
+### API
+```ts
+type ExerciseMediaVariant = 'hero' | 'thumbnail' | 'preview'
+
+interface ExerciseMediaProps {
+  imageUrl?: string         // תמונה סטטית (PNG/JPG)
+  videoWebpUrl?: string     // אנימציית WebP (אופציונלי)
+  exerciseName?: string     // לבניית URL gen אוטומטי כש-imageUrl ריק
+  alt: string
+  className?: string        // מועבר ל-<img>
+  onClick?: (e) => void
+  loading?: 'lazy' | 'eager'  // default: 'lazy'
+  variant?: ExerciseMediaVariant  // default: 'thumbnail' (defensive)
+  placeholder?: ReactNode   // מוצג כש-imageUrl + videoWebpUrl ריקים
+}
+```
+
+### מדיניות variants
+| variant | טוען WebP? | שימוש |
+|---------|-----------|------|
+| `hero` | ✅ אם קיים → fallback לתמונה על onError | תצוגה גדולה (`aspect-video`, `h-36 sm:h-44` וכו׳) |
+| `thumbnail` | ❌ אף פעם — תמיד תמונה סטטית | thumbnails ≤ 80px (אנימציה לא נראית, ולא שווה את ה-bandwidth) |
+| `preview` | ✅ | אדמין שמוודא שהקובץ תקין בטופס עריכה |
+
+### שכבות fallback (CDN propagation delay protection)
+1. `videoWebpUrl` נטען. נכשל → state `webpFailed=true`, re-render עם `staticUrl`
+2. `staticUrl = getExerciseImageUrl({imageUrl, name: exerciseName})`. נכשל → `target.src = EXERCISE_PLACEHOLDER_IMAGE`
+3. ה-SVG הסטטי קיים תמיד ב-`/public/images/exercise-placeholder.svg`
+
+### `videoWebpUrl` propagation pattern (Iron Rule 29/01)
+
+`videoWebpUrl` הוא שדה אופציונלי ב-`Exercise` (מקור האמת). כדי שהאנימציה תופיע באימון פעיל ובהמשך אימון, השדה חייב לזרום בכל ה-payloads. כל המקומות בהם `imageUrl` מועתק מ-Exercise ל-payload פנימי — חייבים להעתיק גם `videoWebpUrl`:
+
+| Type / Path | מספר נקודות propagation |
+|-------------|--------------------------|
+| `useActiveWorkout.ts` (autoSave + retry + recovery + addToWorkout + initWorkout + finishWorkout + exitWorkout) | 9 |
+| `workoutHistory.ts` service (saveWorkoutHistory + autoSaveWorkout + completeWorkout/trainerEditWorkout) | 3 |
+| `ExerciseLibrary.tsx` (toggleExercise + selectSet + toProgramExercisesPayload + 2 saveWorkoutHistory + cleanExercises) | 6 |
+| `WorkoutHistory.tsx` continue handlers (4 addExercise + 2 exercisesWithSets + 2 exerciseDetailsMap) | 8 |
+| `WorkoutSession.tsx` mid-workout addExercise | 1 |
+| `ExerciseCard.tsx` (exercises) addExercise | 1 |
+| Trainer ProgramExercise builders (StandaloneWorkoutEditor + ProgramBuilder + ProgramDayEditor + WorkoutHistoryEditor + MuscleAnalysisTab) | 5 |
+| `PersonalRecord` aggregator (getPersonalRecords + exerciseMap) | 3 |
+
+**הכלל:** Firebase recovery של אימון פעיל מעדיף את הערך מ-Exercise החי על-פני ה-snapshot ב-history (`details?.videoWebpUrl ?? ex.videoWebpUrl`). כשאדמין יעדכן `videoWebpUrl` ל-WebP חדש, אימונים בתהליך שיתחדשו יקבלו את הערך החדש. אם התרגיל נמחק → snapshot עדיין שורד.
+
+### Test רגרסיה
+`tests/critical.spec.ts` כולל 9 בדיקות תחת `describe('videoWebpUrl propagates through workout lifecycle - Phase 1 (30/04/2026)')` שמוודאות שכל ה-propagation points קיימים בקוד. אלו בדיקות source-grep (לא runtime) כי הן תמיד יכשלו אם מישהו ישכח להעתיק את השדה במקום אחד.
+
+---
+
 ```
 ═══════════════════════════════════════════════════════════════════════════════
-עדכון אחרון: 07/02/2026
-גרסה: 1.12.1
+עדכון אחרון: 30/04/2026
+גרסה: 1.10.114
 ═══════════════════════════════════════════════════════════════════════════════
 ```
