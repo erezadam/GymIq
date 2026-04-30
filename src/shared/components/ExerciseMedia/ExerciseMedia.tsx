@@ -42,11 +42,18 @@ export function ExerciseMedia({
   const effectiveUrl =
     allowAnimation && hasVideoWebp && !webpFailed ? videoWebpUrl : staticUrl
 
+  // Hero variants must show the whole exercise — swap object-cover (which crops)
+  // for object-contain so head/feet stay in frame. Letterbox bars are acceptable.
+  const finalClassName =
+    variant === 'hero' && className
+      ? className.replace(/\bobject-cover\b/g, 'object-contain')
+      : className
+
   return (
     <img
       src={effectiveUrl}
       alt={alt}
-      className={className}
+      className={finalClassName}
       loading={loading}
       onClick={onClick}
       onError={(e) => {
