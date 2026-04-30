@@ -18,7 +18,7 @@ import {
 import toast from 'react-hot-toast'
 import { useWorkoutBuilderStore } from '../store'
 import { exerciseService } from '@/domains/exercises/services'
-import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '@/domains/exercises/utils'
+import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
 import { saveWorkoutHistory } from '@/lib/firebase/workoutHistory'
 import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import type { Exercise } from '@/domains/exercises/types'
@@ -506,15 +506,13 @@ export default function WorkoutSession() {
                   className="w-full p-3 bg-neon-gray-800 hover:bg-neon-gray-700 rounded-lg text-right transition-colors flex items-center gap-3"
                 >
                   <div className="w-10 h-10 rounded-lg bg-neon-gray-700 overflow-hidden flex-shrink-0">
-                    <img
-                      src={getExerciseImageUrl(exercise)}
+                    <ExerciseMedia
+                      imageUrl={exercise.imageUrl}
+                      videoWebpUrl={exercise.videoWebpUrl}
+                      exerciseName={exercise.name}
                       alt={exercise.nameHe}
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement
-                        target.onerror = null
-                        target.src = EXERCISE_PLACEHOLDER_IMAGE
-                      }}
+                      variant="thumbnail"
                     />
                   </div>
                   <div className="flex-1">

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { getMuscleNameHe, getCategoryNameHe } from '@/utils/muscleTranslations'
 import { getWorkoutById } from '@/lib/firebase/workoutHistory'
+import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
 import type { WorkoutHistorySummary, WorkoutHistoryEntry, WorkoutCompletionStatus } from '@/domains/workouts/types'
 
 export interface AIBundleCardProps {
@@ -243,19 +244,20 @@ export function AIBundleCard({
                                     key={exercise.exerciseId || exIndex}
                                     className="flex items-center gap-3 p-2 rounded-lg bg-dark-card/50"
                                   >
-                                    {/* Exercise image or icon */}
+                                    {/* Exercise image or icon (#12) */}
                                     <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-purple-500/10">
-                                      {exercise.imageUrl ? (
-                                        <img
-                                          src={exercise.imageUrl}
-                                          alt={exercise.exerciseNameHe || exercise.exerciseName}
-                                          className="w-full h-full object-cover"
-                                        />
-                                      ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                          <Dumbbell className="w-5 h-5 text-purple-400" />
-                                        </div>
-                                      )}
+                                      <ExerciseMedia
+                                        imageUrl={exercise.imageUrl}
+                                        videoWebpUrl={exercise.videoWebpUrl}
+                                        alt={exercise.exerciseNameHe || exercise.exerciseName}
+                                        className="w-full h-full object-cover"
+                                        variant="thumbnail"
+                                        placeholder={
+                                          <div className="w-full h-full flex items-center justify-center">
+                                            <Dumbbell className="w-5 h-5 text-purple-400" />
+                                          </div>
+                                        }
+                                      />
                                     </div>
                                     {/* Exercise info */}
                                     <div className="flex-1 min-w-0">

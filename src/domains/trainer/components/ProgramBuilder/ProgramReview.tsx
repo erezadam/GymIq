@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Moon, ChevronDown } from 'lucide-react'
+import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
 import type { ProgramDay } from '../../types'
 
 interface ProgramReviewProps {
@@ -198,17 +199,19 @@ export function ProgramReview({
                           <span className="text-on-surface-variant text-sm w-5 flex-shrink-0">
                             {i + 1}.
                           </span>
-                          {ex.imageUrl ? (
-                            <img
-                              src={ex.imageUrl}
-                              alt=""
-                              className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
-                            />
-                          ) : (
-                            <div className="w-8 h-8 rounded-lg bg-dark-surface flex items-center justify-center text-sm flex-shrink-0">
-                              🏋️
-                            </div>
-                          )}
+                          {/* #15 */}
+                          <ExerciseMedia
+                            imageUrl={ex.imageUrl}
+                            videoWebpUrl={ex.videoWebpUrl}
+                            alt=""
+                            className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
+                            variant="thumbnail"
+                            placeholder={
+                              <div className="w-8 h-8 rounded-lg bg-dark-surface flex items-center justify-center text-sm flex-shrink-0">
+                                🏋️
+                              </div>
+                            }
+                          />
                           <span className="text-on-surface-variant text-sm truncate">
                             {ex.exerciseNameHe}
                           </span>

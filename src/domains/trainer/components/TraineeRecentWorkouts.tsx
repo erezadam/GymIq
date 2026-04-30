@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronLeft, Check, Loader2, Pencil } from 'lucide-react'
 import { getWorkoutById, getUserWorkoutHistoryPaginated } from '@/lib/firebase/workoutHistory'
+import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
 import type { WorkoutHistorySummary, WorkoutHistoryEntry } from '@/domains/workouts/types'
 
 interface TraineeRecentWorkoutsProps {
@@ -275,17 +276,19 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
                             className="rounded-lg bg-dark-card/40 overflow-hidden"
                           >
                             <div className="flex items-center gap-3 py-2 px-2">
-                              {ex.imageUrl ? (
-                                <img
-                                  src={ex.imageUrl}
-                                  alt=""
-                                  className="w-9 h-9 rounded-lg object-cover flex-shrink-0"
-                                />
-                              ) : (
-                                <div className="w-9 h-9 rounded-lg bg-dark-surface flex items-center justify-center text-sm flex-shrink-0">
-                                  🏋️
-                                </div>
-                              )}
+                              {/* #18 */}
+                              <ExerciseMedia
+                                imageUrl={ex.imageUrl}
+                                videoWebpUrl={ex.videoWebpUrl}
+                                alt=""
+                                className="w-9 h-9 rounded-lg object-cover flex-shrink-0"
+                                variant="thumbnail"
+                                placeholder={
+                                  <div className="w-9 h-9 rounded-lg bg-dark-surface flex items-center justify-center text-sm flex-shrink-0">
+                                    🏋️
+                                  </div>
+                                }
+                              />
                               <div className="flex-1 min-w-0">
                                 <div className="text-sm font-medium text-text-primary truncate">
                                   {ex.exerciseNameHe || ex.exerciseName}

@@ -6,7 +6,7 @@ import type { Exercise, MuscleGroup } from '../types'
 import type { PrimaryMuscle } from '../types/muscles'
 import { defaultMuscleMapping } from '../types/muscles'
 import { exerciseService } from '../services'
-import { getExerciseImageUrl, EXERCISE_PLACEHOLDER_IMAGE } from '../utils'
+import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
 import { useWorkoutBuilderStore } from '@/domains/workouts/store'
 import { getMuscles, getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { getEquipment } from '@/lib/firebase/equipment'
@@ -93,7 +93,7 @@ export function ExerciseLibrary({
     initialSubMuscleFilter || (fromAnalysis && initialSubMuscle && initialSubMuscle !== initialMuscle ? initialSubMuscle : 'all')
   )
   const [selectedEquipment, setSelectedEquipment] = useState<string>('all')
-  const [imageModal, setImageModal] = useState<{ url: string; name: string; instructionsHe: string[] } | null>(null)
+  const [imageModal, setImageModal] = useState<{ url: string; videoWebpUrl?: string; name: string; instructionsHe: string[] } | null>(null)
   const [recentlyDoneExerciseIds, setRecentlyDoneExerciseIds] = useState<Set<string>>(new Set())
   const [weeklyMuscleSets, setWeeklyMuscleSets] = useState<Map<string, number>>(new Map())
   const [isScheduleForLater, setIsScheduleForLater] = useState(false)
@@ -852,8 +852,13 @@ export function ExerciseLibrary({
 
   const handleImageClick = (e: React.MouseEvent, exercise: Exercise) => {
     e.stopPropagation()
-    if (exercise.imageUrl) {
-      setImageModal({ url: exercise.imageUrl, name: exercise.nameHe, instructionsHe: exercise.instructionsHe || [] })
+    if (exercise.imageUrl || exercise.videoWebpUrl) {
+      setImageModal({
+        url: exercise.imageUrl,
+        videoWebpUrl: exercise.videoWebpUrl,
+        name: exercise.nameHe,
+        instructionsHe: exercise.instructionsHe || [],
+      })
     }
   }
 
@@ -1259,20 +1264,18 @@ export function ExerciseLibrary({
                                   </p>
                                 </div>
 
-                                {/* Image */}
+                                {/* Image (#2 — selected list thumbnail) */}
                                 <div
                                   onClick={(e) => handleImageClick(e, exercise)}
                                   className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-background-elevated"
                                 >
-                                  <img
-                                    src={getExerciseImageUrl(exercise)}
+                                  <ExerciseMedia
+                                    imageUrl={exercise.imageUrl}
+                                    videoWebpUrl={exercise.videoWebpUrl}
+                                    exerciseName={exercise.name}
                                     alt={exercise.nameHe}
                                     className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      const target = e.target as HTMLImageElement
-                                      target.onerror = null
-                                      target.src = EXERCISE_PLACEHOLDER_IMAGE
-                                    }}
+                                    variant="thumbnail"
                                   />
                                 </div>
 
@@ -1381,20 +1384,18 @@ export function ExerciseLibrary({
                         </p>
                       </div>
 
-                      {/* Image */}
+                      {/* Image (#3 — unselected list thumbnail) */}
                       <div
                         onClick={(e) => handleImageClick(e, exercise)}
                         className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-background-elevated"
                       >
-                        <img
-                          src={getExerciseImageUrl(exercise)}
+                        <ExerciseMedia
+                          imageUrl={exercise.imageUrl}
+                          videoWebpUrl={exercise.videoWebpUrl}
+                          exerciseName={exercise.name}
                           alt={exercise.nameHe}
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.onerror = null
-                            target.src = EXERCISE_PLACEHOLDER_IMAGE
-                          }}
+                          variant="thumbnail"
                         />
                       </div>
                     </div>
@@ -1548,10 +1549,14 @@ export function ExerciseLibrary({
             ✕
           </button>
           <div className="relative max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
-            <img
-              src={imageModal.url}
+            {/* #4 — image-zoom modal hero */}
+            <ExerciseMedia
+              imageUrl={imageModal.url}
+              videoWebpUrl={imageModal.videoWebpUrl}
               alt={imageModal.name}
               className="w-full max-h-[60vh] object-contain rounded-xl"
+              variant="hero"
+              loading="eager"
             />
             <p className="text-white text-center mt-3 font-semibold">{imageModal.name}</p>
             <button

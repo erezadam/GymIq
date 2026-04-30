@@ -8,6 +8,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Search, X, GripVertical } from 'lucide-react'
 import { getExercises } from '@/lib/firebase/exercises'
 import type { Exercise } from '@/domains/exercises/types/exercise.types'
+import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
 import { getExerciseImageUrl } from '@/domains/exercises/utils/getExerciseImageUrl'
 
 interface ExerciseSetExercisePickerProps {
@@ -137,14 +138,14 @@ export default function ExerciseSetExercisePicker({
                 className="flex items-center gap-2 bg-dark-elevated rounded-lg p-2"
               >
                 <GripVertical className="w-4 h-4 text-text-muted flex-shrink-0" />
-                <img
-                  src={getExerciseImageUrl(exercise)}
+                {/* #23 — selected list thumbnail */}
+                <ExerciseMedia
+                  imageUrl={exercise.imageUrl}
+                  videoWebpUrl={exercise.videoWebpUrl}
+                  exerciseName={exercise.name}
                   alt={exercise.nameHe}
                   className="w-8 h-8 rounded object-cover flex-shrink-0"
-                  onError={(e) => {
-                    ;(e.target as HTMLImageElement).src =
-                      '/images/exercise-placeholder.svg'
-                  }}
+                  variant="thumbnail"
                 />
                 <span className="text-sm text-white flex-1 truncate">
                   {exercise.nameHe}
@@ -212,14 +213,14 @@ export default function ExerciseSetExercisePicker({
                 onClick={(e) => handleImageClick(e, exercise)}
                 className="relative w-full aspect-[4/3] bg-dark-bg"
               >
-                <img
-                  src={getExerciseImageUrl(exercise)}
+                {/* #24 — grid card hero (large enough for animation to add value) */}
+                <ExerciseMedia
+                  imageUrl={exercise.imageUrl}
+                  videoWebpUrl={exercise.videoWebpUrl}
+                  exerciseName={exercise.name}
                   alt={exercise.nameHe}
                   className="w-full h-full object-contain"
-                  onError={(e) => {
-                    ;(e.target as HTMLImageElement).src =
-                      '/images/exercise-placeholder.svg'
-                  }}
+                  variant="hero"
                 />
               </div>
 

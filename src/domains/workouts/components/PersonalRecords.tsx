@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Trophy, ChevronRight, ChevronDown, Dumbbell, Flame } from 'lucide-react'
 import { getPersonalRecords, getExerciseHistory, PersonalRecord, ExerciseHistoryEntry } from '@/lib/firebase/workoutHistory'
 import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
-import { getExerciseImageUrl } from '@/domains/exercises/utils/getExerciseImageUrl'
+import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
 
 // Format date for display - D/M format only
 function formatDate(date: Date): string {
@@ -229,17 +229,14 @@ export default function PersonalRecords({ userId: propUserId }: PersonalRecordsP
                 key={`recent-${record.exerciseId}`}
                 className="flex items-center gap-3 p-3.5 bg-background-card border border-accent-orange/30 rounded-xl bg-gradient-to-l from-accent-orange/10 to-transparent"
               >
-                {/* Exercise Image */}
+                {/* Exercise Image (#10 — recent records thumbnail; placeholder.png → standard SVG) */}
                 <div className="w-11 h-11 rounded-xl bg-accent-orange/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                  <img
-                    src={getExerciseImageUrl({ imageUrl: record.imageUrl })}
+                  <ExerciseMedia
+                    imageUrl={record.imageUrl}
+                    videoWebpUrl={record.videoWebpUrl}
                     alt={record.exerciseNameHe}
                     className="w-full h-full rounded-xl object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement
-                      target.onerror = null
-                      target.src = '/images/exercise-placeholder.png'
-                    }}
+                    variant="thumbnail"
                   />
                 </div>
 
@@ -302,17 +299,14 @@ export default function PersonalRecords({ userId: propUserId }: PersonalRecordsP
                   onClick={() => toggleExerciseHistory(record.exerciseId)}
                 >
                   <div className="flex items-center gap-3">
-                    {/* Exercise Image */}
+                    {/* Exercise Image (#11 — all records thumbnail; placeholder.png → standard SVG) */}
                     <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-background-elevated">
-                      <img
-                        src={getExerciseImageUrl({ imageUrl: record.imageUrl })}
+                      <ExerciseMedia
+                        imageUrl={record.imageUrl}
+                        videoWebpUrl={record.videoWebpUrl}
                         alt={record.exerciseNameHe}
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.onerror = null
-                          target.src = '/images/exercise-placeholder.png'
-                        }}
+                        variant="thumbnail"
                       />
                     </div>
 
