@@ -187,7 +187,16 @@ describe('approveTrainerRequest', () => {
 })
 
 describe('rejectTrainerRequest', () => {
+  // Helper to mock getDoc returning a relationship with the given status.
+  function mockExistingStatus(status: string) {
+    getDocMock.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({ status }),
+    })
+  }
+
   it('updates status to rejected with respondedAt and does not touch users', async () => {
+    mockExistingStatus('pending')
     const { trainerService } = await import('../src/domains/trainer/services/trainerService')
 
     await trainerService.rejectTrainerRequest('rel-abc')
@@ -201,6 +210,7 @@ describe('rejectTrainerRequest', () => {
   })
 
   it('records rejectionReason when provided', async () => {
+    mockExistingStatus('pending')
     const { trainerService } = await import('../src/domains/trainer/services/trainerService')
 
     await trainerService.rejectTrainerRequest('rel-abc', '  שעות לא מתאימות  ')
@@ -210,6 +220,7 @@ describe('rejectTrainerRequest', () => {
   })
 
   it('omits rejectionReason when reason is empty/whitespace', async () => {
+    mockExistingStatus('pending')
     const { trainerService } = await import('../src/domains/trainer/services/trainerService')
 
     await trainerService.rejectTrainerRequest('rel-abc', '   ')
@@ -219,6 +230,7 @@ describe('rejectTrainerRequest', () => {
   })
 
   it('triggers sendTrainerRejectedEmail Cloud Function after the rejection is persisted', async () => {
+    mockExistingStatus('pending')
     const { trainerService } = await import('../src/domains/trainer/services/trainerService')
 
     await trainerService.rejectTrainerRequest('rel-abc', 'reason X')
@@ -226,6 +238,34 @@ describe('rejectTrainerRequest', () => {
     const emailCalls = callableInvocations.filter(c => c.name === 'sendTrainerRejectedEmail')
     expect(emailCalls).toHaveLength(1)
     expect(emailCalls[0].payload).toEqual({ relationshipId: 'rel-abc' })
+  })
+
+  it('is a silent no-op when the relationship is already rejected (idempotent, no second email)', async () => {
+    mockExistingStatus('rejected')
+    const { trainerService } = await import('../src/domains/trainer/services/trainerService')
+
+    await trainerService.rejectTrainerRequest('rel-abc')
+
+    expect(updateDocMock).not.toHaveBeenCalled()
+    const emailCalls = callableInvocations.filter(c => c.name === 'sendTrainerRejectedEmail')
+    expect(emailCalls).toHaveLength(0)
+  })
+
+  it('is a silent no-op when the relationship is already active', async () => {
+    mockExistingStatus('active')
+    const { trainerService } = await import('../src/domains/trainer/services/trainerService')
+
+    await trainerService.rejectTrainerRequest('rel-abc')
+
+    expect(updateDocMock).not.toHaveBeenCalled()
+  })
+
+  it('throws when the relationship does not exist', async () => {
+    getDocMock.mockResolvedValueOnce({ exists: () => false, data: () => undefined })
+    const { trainerService } = await import('../src/domains/trainer/services/trainerService')
+
+    await expect(trainerService.rejectTrainerRequest('rel-abc')).rejects.toThrow(/not found/i)
+    expect(updateDocMock).not.toHaveBeenCalled()
   })
 })
 
@@ -284,6 +324,52 @@ describe('hasActiveOrPendingTrainer', () => {
     const result = await trainerService.hasActiveOrPendingTrainer('trainee-123')
 
     expect(result).toEqual({ has: true, status: 'pending', trainerName: 'יוסי הירוק' })
+  })
+
+  it('returns has=true when a paused relationship exists (paused must block new requests)', async () => {
+    getDocsMock.mockResolvedValueOnce({
+      empty: false,
+      docs: [{ data: () => ({ status: 'paused', trainerName: 'מאמן מושהה' }) }],
+    })
+    const { trainerService } = await import('../src/domains/trainer/services/trainerService')
+
+    const result = await trainerService.hasActiveOrPendingTrainer('trainee-123')
+
+    expect(result).toEqual({ has: true, status: 'paused', trainerName: 'מאמן מושהה' })
+  })
+
+  it("queries with 'paused' included in the status `in` filter", async () => {
+    const fbf = await import('firebase/firestore')
+    const whereMock = fbf.where as unknown as ReturnType<typeof vi.fn>
+    whereMock.mockClear()
+
+    getDocsMock.mockResolvedValueOnce({ empty: true, docs: [] })
+    const { trainerService } = await import('../src/domains/trainer/services/trainerService')
+
+    await trainerService.hasActiveOrPendingTrainer('trainee-123')
+
+    // Find the call that uses the `in` operator on `status` and assert the
+    // value array contains 'paused' in addition to 'active' and 'pending'.
+    const inStatusCall = whereMock.mock.calls.find(
+      (c: unknown[]) => c[0] === 'status' && c[1] === 'in'
+    )
+    expect(inStatusCall).toBeDefined()
+    expect(inStatusCall?.[2]).toEqual(expect.arrayContaining(['active', 'paused', 'pending']))
+  })
+
+  it('blocks requestTrainer when an existing paused relationship is found', async () => {
+    getDocsMock.mockResolvedValueOnce({
+      empty: false,
+      docs: [{ data: () => ({ status: 'paused', trainerName: 'מאמן מושהה' }) }],
+    })
+    const { trainerService, TrainerRelationshipError } = await import(
+      '../src/domains/trainer/services/trainerService'
+    )
+
+    await expect(
+      trainerService.requestTrainer(FAKE_TRAINEE, 'new-trainer', 'מאמן חדש')
+    ).rejects.toBeInstanceOf(TrainerRelationshipError)
+    expect(setDocMock).not.toHaveBeenCalled()
   })
 })
 

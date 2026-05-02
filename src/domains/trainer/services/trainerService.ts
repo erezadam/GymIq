@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import { db, app } from '@/lib/firebase/config'
+import { removeUndefined } from '@/lib/firebase/firestoreUtils'
 import type { TrainerRelationship, TraineeWithStats, TraineeStats, RelationshipStatus } from '../types'
 import { getUserWorkoutStats } from '@/lib/firebase/workoutHistory'
 import { getUserWorkoutHistory } from '@/lib/firebase/workoutHistory'
@@ -60,12 +61,14 @@ export const trainerService = {
   ): Promise<string> {
     const existing = await trainerService.hasActiveOrPendingTrainer(trainee.uid)
     if (existing.has) {
-      throw new TrainerRelationshipError(
-        'TRAINER_RELATIONSHIP_EXISTS',
+      const trainerLabel = existing.trainerName ?? ''
+      const message =
         existing.status === 'pending'
-          ? `כבר יש לך בקשה ממתינה למאמן ${existing.trainerName ?? ''}`.trim()
-          : `כבר יש לך מאמן פעיל (${existing.trainerName ?? ''})`.trim()
-      )
+          ? `כבר יש לך בקשה ממתינה למאמן ${trainerLabel}`.trim()
+          : existing.status === 'paused'
+            ? `הקשר עם המאמן ${trainerLabel} מושהה. סיים אותו לפני בחירת מאמן חדש`.trim()
+            : `כבר יש לך מאמן פעיל (${trainerLabel})`.trim()
+      throw new TrainerRelationshipError('TRAINER_RELATIONSHIP_EXISTS', message)
     }
 
     const traineeFullName = [trainee.firstName, trainee.lastName].filter(Boolean).join(' ').trim()
@@ -95,10 +98,10 @@ export const trainerService = {
   },
 
   // Approve a pending trainer request. Atomicity (relationship.status +
-  // user.trainerId) is enforced server-side via a Cloud Function using the
-  // Admin SDK, because Firestore client rules cannot grant a trainer
-  // permission to set users.trainerId for a not-yet-linked trainee.
-  // The Cloud Function `approveTrainerRequest` is implemented in Sub-phase B.5.
+  // user.trainerId) is enforced server-side by a Cloud Function that runs
+  // both writes inside a Firestore runTransaction; concurrent approvals or
+  // double-clicks are rejected via optimistic concurrency. The CF lives in
+  // functions/src/trainer-approval/approveRequest.ts.
   async approveTrainerRequest(relationshipId: string): Promise<void> {
     const callable = httpsCallable<{ relationshipId: string }, { success: boolean }>(
       functions,
@@ -109,18 +112,30 @@ export const trainerService = {
 
   // Reject a pending trainer request. Trainer-side, client-only (rules
   // permit pending → rejected by trainer). Does NOT touch user.trainerId.
+  // Idempotent: a second call on an already-rejected request is a silent
+  // no-op (no second email). The status is checked first to ensure the
+  // rejection email is only sent on a real pending → rejected transition.
   async rejectTrainerRequest(relationshipId: string, reason?: string): Promise<void> {
     const docRef = doc(db, 'trainerRelationships', relationshipId)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updates: Record<string, any> = {
-      status: 'rejected',
-      respondedAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+    const snapshot = await getDoc(docRef)
+    if (!snapshot.exists()) {
+      throw new Error('Relationship not found')
     }
-    if (reason && reason.trim()) {
-      updates.rejectionReason = reason.trim()
+    if (snapshot.data().status !== 'pending') {
+      // Already responded to (rejected/active/cancelled/etc.). Skip silently
+      // so a duplicate click does not re-email the trainee.
+      return
     }
-    await updateDoc(docRef, updates)
+
+    await updateDoc(
+      docRef,
+      removeUndefined({
+        status: 'rejected',
+        respondedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        rejectionReason: reason && reason.trim() ? reason.trim() : undefined,
+      })
+    )
 
     // Fire-and-forget email notification to the trainee. Email failure must
     // not block the user-facing action — the rejection is already persisted.
@@ -136,11 +151,14 @@ export const trainerService = {
   // (not deleted) so analytics can detect spam-request patterns later.
   async cancelTrainerRequest(relationshipId: string): Promise<void> {
     const docRef = doc(db, 'trainerRelationships', relationshipId)
-    await updateDoc(docRef, {
-      status: 'cancelled',
-      respondedAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
+    await updateDoc(
+      docRef,
+      removeUndefined({
+        status: 'cancelled',
+        respondedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+    )
   },
 
   // List pending requests waiting for a trainer's decision, newest first.
@@ -164,13 +182,19 @@ export const trainerService = {
 
   // Used by requestTrainer to block multiple concurrent requests, and by UI
   // to display the trainee's current state.
+  //
+  // Includes 'paused' as well as 'active' and 'pending' — a paused
+  // relationship is not terminated, so allowing a second request to a
+  // different trainer would create two parallel "live" links for the same
+  // trainee. Despite the name, this query reflects "any non-terminal"
+  // relationship (terminal = ended | rejected | cancelled).
   async hasActiveOrPendingTrainer(
     traineeId: string
   ): Promise<{ has: boolean; status?: RelationshipStatus; trainerName?: string }> {
     const q = query(
       collection(db, 'trainerRelationships'),
       where('traineeId', '==', traineeId),
-      where('status', 'in', ['active', 'pending'])
+      where('status', 'in', ['active', 'paused', 'pending'])
     )
     const snapshot = await getDocs(q)
     if (snapshot.empty) return { has: false }
@@ -247,15 +271,16 @@ export const trainerService = {
     data: Omit<TrainerRelationship, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<string> {
     const docRef = doc(collection(db, 'trainerRelationships'))
-    // Filter out undefined values - Firestore doesn't accept them
-    const cleanData = Object.fromEntries(
-      Object.entries(data).filter(([, value]) => value !== undefined)
+    // Iron rule (CLAUDE.md, 02/05/2026): payloads to setDoc/updateDoc/addDoc
+    // must pass through removeUndefined so Firestore does not reject the write.
+    await setDoc(
+      docRef,
+      removeUndefined({
+        ...data,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
     )
-    await setDoc(docRef, {
-      ...cleanData,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
     return docRef.id
   },
 

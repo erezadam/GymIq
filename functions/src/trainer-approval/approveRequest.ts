@@ -2,18 +2,22 @@
  * Cloud Function: approveTrainerRequest
  *
  * Atomically transitions a pending trainerRelationships document to 'active'
- * AND sets the trainee's user.trainerId — in a single batched write that the
- * Admin SDK can perform without being constrained by Firestore client rules.
- * (The client-side rules cannot grant a trainer permission to set
- * users.trainerId for a not-yet-linked trainee, hence the CF.)
+ * AND sets the trainee's user.trainerId — inside a Firestore runTransaction
+ * so concurrent approvals or double-clicks are rejected via optimistic
+ * concurrency. (The client-side rules cannot grant a trainer permission to
+ * set users.trainerId for a not-yet-linked trainee, hence the CF.)
  *
- * Race protection: if the trainee has been bound to a different trainer
- * between the request and the approval, this function marks the current
- * request as 'rejected' with rejectionReason='TRAINEE_ALREADY_HAS_TRAINER'
- * and reports failed-precondition to the caller.
+ * Race protection: the transaction re-reads both documents from Firestore
+ * inside the tx; if the trainee is bound to a different trainer between the
+ * caller's read and the commit, the transaction marks THIS request as
+ * 'rejected' with rejectionReason='TRAINEE_ALREADY_HAS_TRAINER' and the CF
+ * reports failed-precondition to the caller. Two parallel approvals against
+ * the same trainee can no longer both win — Firestore's tx engine retries
+ * one of them on commit-conflict, after which the rerun observes the
+ * already-set trainerId and the race-rejection branch fires.
  *
- * Email: after a successful commit the trainee receives an approval email.
- * Email failure is logged but does not roll back the approval.
+ * Email: best-effort after a successful commit. A failure to send the
+ * approval email is logged but does not roll back the approval.
  */
 
 import * as admin from 'firebase-admin'
@@ -23,6 +27,10 @@ import { sendTrainerApprovedEmailDirect } from '../email/trainerApproval'
 interface ApproveRequestPayload {
   relationshipId: string
 }
+
+type TxOutcome =
+  | { kind: 'approved'; traineeId: string; traineeEmail?: string; traineeName: string; trainerName: string }
+  | { kind: 'race_already_has_trainer' }
 
 export const approveTrainerRequest = onCall(
   { secrets: ['RESEND_API_KEY'], timeoutSeconds: 30, memory: '256MiB' },
@@ -37,69 +45,86 @@ export const approveTrainerRequest = onCall(
 
     const db = admin.firestore()
     const relRef = db.collection('trainerRelationships').doc(relationshipId)
-    const relSnap = await relRef.get()
-    if (!relSnap.exists) {
-      throw new HttpsError('not-found', 'Relationship not found')
-    }
-    const rel = relSnap.data()!
+    const callerUid = request.auth.uid
+    const FieldValue = admin.firestore.FieldValue
 
-    // Authorization: only the trainer named on this relationship can approve.
-    if (rel.trainerId !== request.auth.uid) {
-      throw new HttpsError('permission-denied', 'Caller is not the trainer on this relationship')
-    }
+    const outcome: TxOutcome = await db.runTransaction(async (tx) => {
+      const relSnap = await tx.get(relRef)
+      if (!relSnap.exists) {
+        throw new HttpsError('not-found', 'Relationship not found')
+      }
+      const rel = relSnap.data()!
 
-    // Status: must currently be pending.
-    if (rel.status !== 'pending') {
-      throw new HttpsError('failed-precondition', `Relationship status is "${rel.status}", expected "pending"`)
-    }
+      if (rel.trainerId !== callerUid) {
+        throw new HttpsError('permission-denied', 'Caller is not the trainer on this relationship')
+      }
+      if (rel.status !== 'pending') {
+        // Idempotent: a second approve on an already-approved/rejected request
+        // throws failed-precondition rather than re-emailing.
+        throw new HttpsError('failed-precondition', `Relationship status is "${rel.status}", expected "pending"`)
+      }
 
-    const traineeId = rel.traineeId as string
-    const traineeRef = db.collection('users').doc(traineeId)
+      const traineeId = rel.traineeId as string
+      const traineeRef = db.collection('users').doc(traineeId)
+      const traineeSnap = await tx.get(traineeRef)
+      if (!traineeSnap.exists) {
+        throw new HttpsError('not-found', 'Trainee user document not found')
+      }
+      const traineeData = traineeSnap.data()!
 
-    // Race detection: trainee may have an active trainer already (from a
-    // parallel approval, or from a trainer-initiated createTraineeAccount that
-    // ran after this pending request). If so, reject this request and abort.
-    const traineeSnap = await traineeRef.get()
-    if (!traineeSnap.exists) {
-      throw new HttpsError('not-found', 'Trainee user document not found')
-    }
-    const traineeData = traineeSnap.data()!
-    if (traineeData.trainerId && traineeData.trainerId !== request.auth.uid) {
-      // Mark the current request as rejected so it doesn't linger as pending.
-      await relRef.update({
-        status: 'rejected',
-        rejectionReason: 'TRAINEE_ALREADY_HAS_TRAINER',
-        respondedAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      if (traineeData.trainerId && traineeData.trainerId !== callerUid) {
+        // Race: another trainer already linked. Mark this request rejected
+        // INSIDE the same transaction so the rejection commits atomically
+        // alongside the read that observed the conflict. Returning here
+        // (no throw) lets the tx commit the rejection write; the CF
+        // converts the outcome into a client-facing failed-precondition
+        // outside the transaction.
+        tx.update(relRef, {
+          status: 'rejected',
+          rejectionReason: 'TRAINEE_ALREADY_HAS_TRAINER',
+          respondedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        })
+        return { kind: 'race_already_has_trainer' }
+      }
+
+      // Atomic happy path: relationship → 'active' AND user.trainerId set.
+      tx.update(relRef, {
+        status: 'active',
+        respondedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       })
+      tx.update(traineeRef, {
+        trainerId: callerUid,
+        updatedAt: FieldValue.serverTimestamp(),
+      })
+
+      return {
+        kind: 'approved',
+        traineeId,
+        traineeEmail: (rel.traineeEmail as string | undefined) || (traineeData.email as string | undefined),
+        traineeName: (rel.traineeName as string | undefined) || (traineeData.displayName as string | undefined) || 'מתאמן',
+        trainerName: (rel.trainerName as string | undefined) || 'מאמן',
+      }
+    })
+
+    if (outcome.kind === 'race_already_has_trainer') {
       throw new HttpsError(
         'failed-precondition',
         'Trainee is already assigned to another trainer'
       )
     }
 
-    // Atomic commit: relationship.status='active' + user.trainerId=trainerId.
-    const batch = db.batch()
-    batch.update(relRef, {
-      status: 'active',
-      respondedAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    })
-    batch.update(traineeRef, {
-      trainerId: request.auth.uid,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    })
-    await batch.commit()
-
     // Email is best-effort. A failure here must not roll back the approval.
     try {
-      const traineeEmail = (rel.traineeEmail as string | undefined) || (traineeData.email as string | undefined)
-      const traineeName = (rel.traineeName as string | undefined) || (traineeData.displayName as string | undefined) || 'מתאמן'
-      const trainerName = (rel.trainerName as string | undefined) || 'מאמן'
-      if (traineeEmail) {
-        await sendTrainerApprovedEmailDirect({ traineeEmail, traineeName, trainerName })
+      if (outcome.traineeEmail) {
+        await sendTrainerApprovedEmailDirect({
+          traineeEmail: outcome.traineeEmail,
+          traineeName: outcome.traineeName,
+          trainerName: outcome.trainerName,
+        })
       } else {
-        console.warn(`approveTrainerRequest: no trainee email for ${traineeId}; skipping notification`)
+        console.warn(`approveTrainerRequest: no trainee email for ${outcome.traineeId}; skipping notification`)
       }
     } catch (emailErr) {
       console.error('approveTrainerRequest: approval email failed (commit succeeded):', emailErr)

@@ -78,7 +78,7 @@ export default function SelectTrainerPrompt() {
     }
     return (
       <div
-        className="mb-4 p-4 rounded-xl bg-warning/10 border border-warning/30 flex flex-col gap-3"
+        className="mb-4 p-4 rounded-xl bg-status-warning/10 border border-status-warning/30 flex flex-col gap-3"
         dir="rtl"
       >
         <p className="text-on-surface text-sm leading-snug">
@@ -103,7 +103,7 @@ export default function SelectTrainerPrompt() {
   if (effective?.status === 'rejected') {
     return (
       <div
-        className="mb-4 p-4 rounded-xl bg-error/10 border border-error/30 flex flex-col gap-3"
+        className="mb-4 p-4 rounded-xl bg-status-error/10 border border-status-error/30 flex flex-col gap-3"
         dir="rtl"
       >
         <p className="text-on-surface text-sm leading-snug">

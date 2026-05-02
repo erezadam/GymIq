@@ -88,12 +88,12 @@ export function PendingRequestsSection({ trainerId, onApproved }: PendingRequest
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-xl bg-warning/15 flex items-center justify-center">
-          <Inbox className="w-4 h-4 text-warning" />
+        <div className="w-8 h-8 rounded-xl bg-status-warning/15 flex items-center justify-center">
+          <Inbox className="w-4 h-4 text-status-warning" />
         </div>
         <div>
           <h3 className="text-base font-bold text-on-surface">בקשות ממתינות</h3>
-          <div className="h-1 w-6 rounded-full bg-warning/40 mt-1" />
+          <div className="h-1 w-6 rounded-full bg-status-warning/40 mt-1" />
         </div>
         {requests.length > 0 && (
           <span className="ml-auto text-xs text-on-surface-variant">{requests.length} בקשות</span>
@@ -101,7 +101,7 @@ export function PendingRequestsSection({ trainerId, onApproved }: PendingRequest
       </div>
 
       {errorMsg && (
-        <div className="bg-error/10 border border-error/30 text-error rounded-xl p-3 text-sm" dir="rtl">
+        <div className="bg-status-error/10 border border-status-error/30 text-status-error rounded-xl p-3 text-sm" dir="rtl">
           {errorMsg}
         </div>
       )}
@@ -188,7 +188,7 @@ export function PendingRequestsSection({ trainerId, onApproved }: PendingRequest
                 type="button"
                 onClick={handleConfirmReject}
                 disabled={actionInProgress === rejectingId}
-                className="flex-1 py-3 rounded-lg bg-error text-white font-semibold disabled:opacity-60 min-h-[44px]"
+                className="flex-1 py-3 rounded-lg bg-status-error text-white font-semibold disabled:opacity-60 min-h-[44px]"
               >
                 {actionInProgress === rejectingId ? 'דוחה...' : 'דחה בקשה'}
               </button>
