@@ -26,7 +26,7 @@ You log workouts, track progress, get AI-generated workout plans, and your train
 | `tsconfig.node.json` | **The Config Type Rulebook** | TypeScript settings for config files only. |
 | `firebase.json` | **The Cloud Wiring** | Connects the app to Firebase: hosting, functions, Firestore, emulators. |
 | `.firebaserc` | **The Project ID** | Maps this directory to a Firebase project. |
-| `firestore.rules` | **The Bouncer** | Security rules - who can read/write which Firestore collections. |
+| `firestore.rules` | **The Bouncer** | Security rules - who can read/write which Firestore collections. Includes the trainerRelationships state machine (2 CREATE + 4 UPDATE rules) for the Trainer Approval Flow. |
 | `firestore.indexes.json` | **The Query Optimizer** | Composite indexes for fast Firestore queries. |
 | `index.html` | **The Shell** | The single HTML page where the entire React app mounts. |
 | `vitest.config.ts` | **The Unit Test Director** | Configures unit/integration tests. |
@@ -310,7 +310,7 @@ All Firestore/Auth operations. No component ever talks to Firebase directly.
 
 | File | Conceptual Name | What it does |
 |------|----------------|-------------|
-| `services/trainerService.ts` | **The Trainee Stats Loader** | Fetches all trainees with their workout stats. |
+| `services/trainerService.ts` | **The Trainee Stats Loader** | Fetches all trainees with their workout stats. Also owns the Trainer Approval Flow: `requestTrainer`, `approveTrainerRequest` (httpsCallable wrapper), `rejectTrainerRequest`, `cancelTrainerRequest`, `getPendingRequestsForTrainer`, `hasActiveOrPendingTrainer`, `getMyLatestRelationshipState`. |
 | `services/programService.ts` | **The Program Manager** | CRUD for weekly training programs. |
 | `services/messageService.ts` | **The Messenger** | Send, read, reply, delete messages between trainer and trainee. |
 | `services/traineeAccountService.ts` | **The Account Creator** | Creates new trainee accounts (auth + profile + relationship). |
@@ -333,6 +333,7 @@ All Firestore/Auth operations. No component ever talks to Firebase directly.
 | `TrainerDashboard.tsx` | **The Trainer HQ** | Stats overview + trainee list + "Add Trainee" button. |
 | `TrainerDashboardTile.tsx` | **The Stat Chip** | Reusable metric tile (active trainees, weekly workouts, etc). |
 | `TraineeCard.tsx` | **The Trainee Snapshot** | Card: name, last workout, streak, program progress, unread badge. |
+| `PendingRequestsSection.tsx` | **The Approval Inbox** | Dashboard section listing pending trainer requests with approve/reject buttons (reject opens an optional-reason modal). Hidden when empty. |
 
 ### Components - Trainee Detail
 
@@ -450,7 +451,7 @@ All Firestore/Auth operations. No component ever talks to Firebase directly.
 
 | File | Conceptual Name | What it does |
 |------|----------------|-------------|
-| `src/index.ts` | **The Backend Gateway** | Initializes Firebase Admin, exports 3 Cloud Functions. |
+| `src/index.ts` | **The Backend Gateway** | Initializes Firebase Admin and exports the deployed Cloud Functions: AI (`generateAIWorkout`, `generateTrainingAnalysis`, `generateAIProgram`), email (`sendWelcomeEmail`, `sendTrainerRequestEmail`, `sendTrainerRejectedEmail`), Trainer Approval (`approveTrainerRequest`), and admin (`updateUserEmail`). |
 
 ### AI Trainer (`functions/src/ai-trainer/`)
 
@@ -475,6 +476,19 @@ All Firestore/Auth operations. No component ever talks to Firebase directly.
 | `generateProgram.ts` | **The Program Generator** | Cloud Function: verifies trainer role, fetches trainee context + analysis, calls GPT to create a weekly program, validates exercise IDs. |
 | `types.ts` | **The Program Contract** | Types for program generation. |
 
+### Email (`functions/src/email/`)
+
+| File | Conceptual Name | What it does |
+|------|----------------|-------------|
+| `sendWelcomeEmail.ts` | **The Welcome Mailer** | Cloud Function: generates a password-reset link via Admin SDK and sends a branded RTL Hebrew welcome email through Resend. Called by `traineeAccountService.createTraineeAccount`. |
+| `trainerApproval.ts` | **The Approval Mailer** | Three Trainer Approval Flow templates + Resend HTTP helper, all in one file. Exports `sendTrainerRequestEmail` (callable, trainee→trainer notification), `sendTrainerRejectedEmail` (callable, trainer→trainee notification), and `sendTrainerApprovedEmailDirect` (server-only helper called from inside the approve CF). |
+
+### Trainer Approval (`functions/src/trainer-approval/`)
+
+| File | Conceptual Name | What it does |
+|------|----------------|-------------|
+| `approveRequest.ts` | **The Atomic Approver** | Cloud Function `approveTrainerRequest` — runs `db.runTransaction` to set `relationship.status='active'` and `users.trainerId` together. Race-detection branch marks the request `rejected` with `TRAINEE_ALREADY_HAS_TRAINER` if the trainee was bound to another trainer concurrently. Sends approval email best-effort after commit. |
+
 ---
 
 ## `tests/` - Unit Tests
@@ -482,6 +496,8 @@ All Firestore/Auth operations. No component ever talks to Firebase directly.
 | File | Conceptual Name | What it does |
 |------|----------------|-------------|
 | `critical.spec.ts` | **The Regression Guard** | Critical tests including the 29/01 exercise data fields regression. |
+| `firestore-undefined.spec.ts` | **The Undefined Sentinel** | Behavior tests for the Firestore-undefined iron rule (no `undefined` reaches `updateDoc`/`setDoc`/`addDoc`). Covers `removeUndefined()` recursion, FieldValue sentinels, and exercise/workout write paths. |
+| `trainer-approval.spec.ts` | **The Approval Flow Guard** | 27 behavior tests for the Trainer Approval Flow service layer: `requestTrainer` (creates pending, no `user.trainerId` write, blocks on existing active/paused/pending), `approveTrainerRequest` (only invokes the CF, no client writes), `rejectTrainerRequest` (idempotent — silent no-op when not pending — plus reason handling and email trigger), `cancelTrainerRequest` (writes `cancelled`, never deletes), `getMyLatestRelationshipState` (30-day fade for ended/cancelled, never fades rejected), `hasActiveOrPendingTrainer` (paused must block). |
 | `setup.ts` | **The Test Setup** | Configures jsdom and jest-dom matchers. |
 
 ---

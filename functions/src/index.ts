@@ -20,5 +20,14 @@ export { generateAIProgram } from './ai-program/generateProgram'
 // Export Welcome Email function
 export { sendWelcomeEmail } from './email/sendWelcomeEmail'
 
+// Export Trainer Approval Flow emails (Phase 1)
+export {
+  sendTrainerRequestEmail,
+  sendTrainerRejectedEmail,
+} from './email/trainerApproval'
+
+// Export Trainer Approval Flow Cloud Function (atomic approval)
+export { approveTrainerRequest } from './trainer-approval/approveRequest'
+
 // Export Admin functions
 export { updateUserEmail } from './admin/updateUserEmail'
