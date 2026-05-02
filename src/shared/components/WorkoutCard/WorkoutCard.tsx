@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { getMuscleNameHe } from '@/utils/muscleTranslations'
 import { calculateExerciseVolumeFromHistory } from '@/lib/firebase/workoutHistory'
+import { partitionPerformedSets } from '@/domains/workouts/utils/setFiltering'
 import type { WorkoutHistorySummary, WorkoutHistoryEntry, WorkoutCompletionStatus } from '@/domains/workouts/types'
 
 export interface StatusConfig {
@@ -203,10 +204,7 @@ export function WorkoutCard({
                       <>
                         {/* Sets detail table (for non-AI workouts) — performed sets only */}
                         {exercise.sets && exercise.sets.length > 0 && (() => {
-                          const performedSets = exercise.sets.filter(
-                            (s) => s.completed || (s.actualReps != null && s.actualReps > 0)
-                          )
-                          const skippedCount = exercise.sets.length - performedSets.length
+                          const { performed: performedSets, skippedCount } = partitionPerformedSets(exercise.sets)
 
                           return (
                             <>

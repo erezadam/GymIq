@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ChevronDown, ChevronLeft, Check, Loader2, Pencil } from 'lucide-react'
 import { getWorkoutById, getUserWorkoutHistoryPaginated } from '@/lib/firebase/workoutHistory'
 import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
+import { partitionPerformedSets } from '@/domains/workouts/utils/setFiltering'
 import type { WorkoutHistorySummary, WorkoutHistoryEntry } from '@/domains/workouts/types'
 
 interface TraineeRecentWorkoutsProps {
@@ -266,9 +267,7 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
                   {expandedWorkoutData && expandedWorkoutData.exercises && (
                     <div className="space-y-1.5 pt-3">
                       {expandedWorkoutData.exercises.map((ex, exIdx) => {
-                        const completedSets = ex.sets?.filter(
-                          s => s.completed || (s.actualReps && s.actualReps > 0)
-                        )
+                        const { performed: completedSets, total: totalSets } = partitionPerformedSets(ex.sets)
 
                         return (
                           <div
@@ -295,7 +294,7 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
                                 </div>
                               </div>
                               <div className="text-xs text-on-surface-variant flex-shrink-0">
-                                {completedSets?.length ?? 0}/{ex.sets?.length || 0} סטים
+                                {completedSets.length}/{totalSets} סטים
                               </div>
                             </div>
 
