@@ -19,6 +19,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore'
 import { db } from './config'
+import { removeUndefined } from './firestoreUtils'
 import type { WorkoutHistoryEntry, WorkoutHistorySummary } from '@/domains/workouts/types'
 import {
   getPRAxisForReportType,
@@ -112,30 +113,6 @@ function toSummary(entry: WorkoutHistoryEntry): WorkoutHistorySummary {
 // Check if a workout document is NOT soft-deleted
 function isNotSoftDeleted(data: any): boolean {
   return !data.deletedByTrainee
-}
-
-// Helper to remove undefined values from object
-function removeUndefined<T extends Record<string, any>>(obj: T): T {
-  const result: Record<string, any> = {}
-  for (const [key, value] of Object.entries(obj)) {
-    if (value !== undefined) {
-      if (Array.isArray(value)) {
-        result[key] = value.map(item =>
-          typeof item === 'object' && item !== null && !isTimestamp(item) ? removeUndefined(item) : item
-        )
-      } else if (typeof value === 'object' && value !== null && !(value instanceof Date) && !isTimestamp(value)) {
-        result[key] = removeUndefined(value)
-      } else {
-        result[key] = value
-      }
-    }
-  }
-  return result as T
-}
-
-// Check if value is a Firestore Timestamp
-function isTimestamp(value: any): boolean {
-  return value && typeof value.toDate === 'function'
 }
 
 // Save a workout to history
