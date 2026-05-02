@@ -1569,11 +1569,12 @@ export async function getRecentlyDoneExerciseIds(userId: string): Promise<Set<st
       if (!isNotSoftDeleted(data)) continue
 
       if (!foundCompleted && data.status === 'completed') {
-        // First completed workout - add all exercises
+        // First completed workout — add only exercises the user actually performed
+        // (consistent with in_progress branch below)
         const exercises = data.exercises || []
         console.log('📋 Last completed workout has', exercises.length, 'exercises')
         for (const ex of exercises) {
-          if (ex.exerciseId) {
+          if (ex.isCompleted && ex.exerciseId) {
             result.add(ex.exerciseId)
           }
         }

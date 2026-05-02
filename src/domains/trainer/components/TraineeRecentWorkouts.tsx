@@ -295,7 +295,7 @@ export function TraineeRecentWorkouts({ workouts: initialWorkouts, traineeId, is
                                 </div>
                               </div>
                               <div className="text-xs text-on-surface-variant flex-shrink-0">
-                                {ex.sets?.length || 0} סטים
+                                {completedSets?.length ?? 0}/{ex.sets?.length || 0} סטים
                               </div>
                             </div>
 

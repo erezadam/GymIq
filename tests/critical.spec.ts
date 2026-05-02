@@ -315,3 +315,41 @@ describe('videoWebpUrl propagates through workout lifecycle - Phase 1 (30/04/202
     expect(content).toMatch(/\.optional\(\)/);
   });
 });
+
+describe('Workout history display — unperformed-set filtering (PR 1, May 2026)', () => {
+  /**
+   * רגרסיה: שלושה דפוסי תצוגה/לוגיקה היסטוריים שלא סינו סטים לא-מבוצעים נכון
+   * (התקיים גם עבור partial workouts קיימים). תוקן כצעד הכנה ל-PR שמשנה את
+   * הזרימה של "סיים אימון עם תרגילים שלא הושלמו" ל-status='completed'.
+   */
+
+  async function readSourceFile(relPath: string): Promise<string> {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    return fs.readFile(path.join(process.cwd(), relPath), 'utf-8');
+  }
+
+  it('getRecentlyDoneExerciseIds gates completed branch on ex.isCompleted', async () => {
+    const content = await readSourceFile('src/lib/firebase/workoutHistory.ts');
+    // שתי הופעות צפויות: בלוק completed החדש + בלוק in_progress הקיים.
+    // אם מישהו יסיר את הבדיקה מבלוק completed — הספירה תצנח ל-1 והבדיקה תיפול.
+    const matches = content.match(/ex\.isCompleted\s*&&\s*ex\.exerciseId/g) || [];
+    expect(matches.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('WorkoutCard filters sets by performance and removes targetReps fallback', async () => {
+    const content = await readSourceFile('src/shared/components/WorkoutCard/WorkoutCard.tsx');
+    // מסנן performedSets קיים (s.completed || actualReps > 0)
+    expect(content).toMatch(/performedSets[\s\S]{0,200}exercise\.sets\.filter/);
+    // ה-fallback שמטעה (actualReps || targetReps) הוסר
+    expect(content).not.toMatch(/set\.actualReps\s*\|\|\s*set\.targetReps/);
+    // סיכום "לא בוצעו: N סטים" קיים עבור סטים שלא בוצעו
+    expect(content).toMatch(/לא בוצעו/);
+  });
+
+  it('TraineeRecentWorkouts header shows performed/total ratio', async () => {
+    const content = await readSourceFile('src/domains/trainer/components/TraineeRecentWorkouts.tsx');
+    // הכותרת מציגה performed/total (ולא רק total) — תואם לרשימת השורות מתחת
+    expect(content).toMatch(/completedSets\?\.length[\s\S]{0,40}ex\.sets\?\.length[\s\S]{0,40}סטים/);
+  });
+});
