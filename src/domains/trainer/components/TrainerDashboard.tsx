@@ -8,6 +8,7 @@ import type { TraineeWorkoutCompletion } from '../services/trainerService'
 import { TraineeCard } from './TraineeCard'
 import { TraineeRegistrationModal } from './TraineeRegistrationModal'
 import { CompletedWorkoutsPopup } from './CompletedWorkoutsPopup'
+import { PendingRequestsSection } from './PendingRequestsSection'
 
 const LAST_SEEN_KEY = 'trainer_completions_last_seen'
 
@@ -103,6 +104,11 @@ export default function TrainerDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Pending Trainer Requests */}
+      {user?.uid && (
+        <PendingRequestsSection trainerId={user.uid} onApproved={refreshTrainees} />
       )}
 
       {/* Section Title */}

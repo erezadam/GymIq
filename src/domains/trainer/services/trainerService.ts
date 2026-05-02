@@ -49,32 +49,6 @@ export const trainerService = {
       .sort((a, b) => a.displayName.localeCompare(b.displayName, 'he'))
   },
 
-  /**
-   * @deprecated Replaced by `requestTrainer` + `approveTrainerRequest` (Trainer
-   * Approval Flow). After Phase 1 deploys, the Firestore rules block direct
-   * trainee→active creation, so this function will fail at runtime. The
-   * function body is preserved only until B.6 deletes it within this PR.
-   */
-  async selfAssignTrainer(
-    trainee: Pick<AppUser, 'uid' | 'email' | 'firstName' | 'lastName' | 'displayName'>,
-    trainerId: string,
-    trainerName: string
-  ): Promise<string> {
-    const traineeFullName = [trainee.firstName, trainee.lastName].filter(Boolean).join(' ').trim()
-    const traineeName = traineeFullName || trainee.displayName || trainee.email || 'מתאמן'
-
-    await updateUserProfile(trainee.uid, { trainerId })
-
-    return await trainerService.createRelationship({
-      trainerId,
-      traineeId: trainee.uid,
-      trainerName,
-      traineeName,
-      traineeEmail: trainee.email,
-      status: 'active',
-    })
-  },
-
   // Trainee requests a trainer (Approval Flow). Creates a 'pending' relationship.
   // Does NOT touch user.trainerId — that happens only on approval.
   // Throws TrainerRelationshipError('TRAINER_RELATIONSHIP_EXISTS') if the
@@ -97,7 +71,7 @@ export const trainerService = {
     const traineeFullName = [trainee.firstName, trainee.lastName].filter(Boolean).join(' ').trim()
     const traineeName = traineeFullName || trainee.displayName || trainee.email || 'מתאמן'
 
-    return await trainerService.createRelationship({
+    const relationshipId = await trainerService.createRelationship({
       trainerId,
       traineeId: trainee.uid,
       trainerName,
@@ -107,6 +81,17 @@ export const trainerService = {
       requestedBy: 'trainee',
       requestedAt: serverTimestamp() as unknown as Timestamp,
     })
+
+    // Fire-and-forget email notification to the trainer. Email failure must
+    // not block the user-facing action — the request is already persisted.
+    try {
+      const callable = httpsCallable(functions, 'sendTrainerRequestEmail')
+      await callable({ relationshipId })
+    } catch (emailErr) {
+      console.warn('Trainer request email failed (request was saved):', emailErr)
+    }
+
+    return relationshipId
   },
 
   // Approve a pending trainer request. Atomicity (relationship.status +
@@ -136,6 +121,15 @@ export const trainerService = {
       updates.rejectionReason = reason.trim()
     }
     await updateDoc(docRef, updates)
+
+    // Fire-and-forget email notification to the trainee. Email failure must
+    // not block the user-facing action — the rejection is already persisted.
+    try {
+      const callable = httpsCallable(functions, 'sendTrainerRejectedEmail')
+      await callable({ relationshipId })
+    } catch (emailErr) {
+      console.warn('Trainer rejection email failed (rejection was saved):', emailErr)
+    }
   },
 
   // Trainee cancels their own pending request. Stored as status='cancelled'

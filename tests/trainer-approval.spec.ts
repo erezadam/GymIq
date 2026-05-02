@@ -107,6 +107,17 @@ describe('requestTrainer', () => {
     expect(payload.traineeId).toBe('trainee-123')
   })
 
+  it('triggers sendTrainerRequestEmail Cloud Function after the relationship is created', async () => {
+    getDocsMock.mockResolvedValueOnce({ empty: true, docs: [] })
+    const { trainerService } = await import('../src/domains/trainer/services/trainerService')
+
+    await trainerService.requestTrainer(FAKE_TRAINEE, 'trainer-456', 'יוסי הירוק')
+
+    const emailCalls = callableInvocations.filter(c => c.name === 'sendTrainerRequestEmail')
+    expect(emailCalls).toHaveLength(1)
+    expect(emailCalls[0].payload).toEqual({ relationshipId: 'new-rel-id' })
+  })
+
   it('does NOT touch user.trainerId on the trainee', async () => {
     getDocsMock.mockResolvedValueOnce({ empty: true, docs: [] })
     const { trainerService } = await import('../src/domains/trainer/services/trainerService')
@@ -205,6 +216,16 @@ describe('rejectTrainerRequest', () => {
 
     const [, payload] = updateDocMock.mock.calls[0] as [unknown, Record<string, unknown>]
     expect('rejectionReason' in payload).toBe(false)
+  })
+
+  it('triggers sendTrainerRejectedEmail Cloud Function after the rejection is persisted', async () => {
+    const { trainerService } = await import('../src/domains/trainer/services/trainerService')
+
+    await trainerService.rejectTrainerRequest('rel-abc', 'reason X')
+
+    const emailCalls = callableInvocations.filter(c => c.name === 'sendTrainerRejectedEmail')
+    expect(emailCalls).toHaveLength(1)
+    expect(emailCalls[0].payload).toEqual({ relationshipId: 'rel-abc' })
   })
 })
 

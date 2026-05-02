@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '@/domains/authentication/store'
 import { useRealUser } from '@/domains/authentication/hooks/useEffectiveUser'
-import { trainerService } from '@/domains/trainer/services/trainerService'
+import { trainerService, TrainerRelationshipError } from '@/domains/trainer/services/trainerService'
 
 type TrainerOption = { uid: string; displayName: string }
 
@@ -13,7 +12,8 @@ export default function TrainerSelectionScreen() {
   const [isLoading, setIsLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [pendingTrainer, setPendingTrainer] = useState<TrainerOption | null>(null)
-  const [isAssigning, setIsAssigning] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [requestSentToName, setRequestSentToName] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -36,9 +36,10 @@ export default function TrainerSelectionScreen() {
 
   const handleConfirm = async () => {
     if (!pendingTrainer || !realUser) return
-    setIsAssigning(true)
+    setIsSubmitting(true)
+    setErrorMsg(null)
     try {
-      await trainerService.selfAssignTrainer(
+      await trainerService.requestTrainer(
         {
           uid: realUser.uid,
           email: realUser.email,
@@ -49,17 +50,43 @@ export default function TrainerSelectionScreen() {
         pendingTrainer.uid,
         pendingTrainer.displayName
       )
-      useAuthStore.setState({
-        user: { ...realUser, trainerId: pendingTrainer.uid },
-      })
       sessionStorage.removeItem('dismissedTrainerPrompt')
-      navigate('/dashboard', { replace: true })
-    } catch (err) {
-      console.error('Failed to self-assign trainer:', err)
-      setErrorMsg('שגיאה בשיוך המאמן. נסה שוב.')
-      setIsAssigning(false)
+      setRequestSentToName(pendingTrainer.displayName)
       setPendingTrainer(null)
+    } catch (err) {
+      console.error('Failed to send trainer request:', err)
+      const message =
+        err instanceof TrainerRelationshipError
+          ? err.message
+          : 'שגיאה בשליחת הבקשה. נסה שוב.'
+      setErrorMsg(message)
+      setPendingTrainer(null)
+    } finally {
+      setIsSubmitting(false)
     }
+  }
+
+  // Success state — request sent, awaiting trainer's decision.
+  if (requestSentToName) {
+    return (
+      <div className="flex flex-col min-h-full px-4 py-6" dir="rtl">
+        <div className="flex-1 flex flex-col items-center justify-center text-center max-w-sm mx-auto">
+          <div className="w-16 h-16 rounded-full bg-primary/15 flex items-center justify-center mb-4 text-primary text-3xl">✓</div>
+          <h1 className="text-2xl font-bold text-on-surface mb-3">הבקשה נשלחה</h1>
+          <p className="text-on-surface-variant mb-2">
+            המאמן <span className="text-on-surface font-semibold">{requestSentToName}</span> קיבל את בקשתך.
+          </p>
+          <p className="text-on-surface-variant mb-8">תקבל הודעה ברגע שהבקשה תאושר או תידחה.</p>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard', { replace: true })}
+            className="px-6 py-3 rounded-lg bg-primary text-on-primary font-semibold min-h-[44px]"
+          >
+            חזרה לדשבורד
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -77,7 +104,7 @@ export default function TrainerSelectionScreen() {
       </div>
 
       <p className="text-on-surface-variant mb-6">
-        בחר מאמן מתוך הרשימה ותשויך אליו באופן מיידי.
+        שלח בקשה למאמן. הוא יקבל הודעה ויאשר או ידחה אותה.
       </p>
 
       {errorMsg && (
@@ -109,7 +136,7 @@ export default function TrainerSelectionScreen() {
                 onClick={() => setPendingTrainer(trainer)}
                 className="shrink-0 px-4 py-2 rounded-lg bg-primary text-on-primary font-semibold text-sm hover:opacity-90 transition-opacity min-h-[44px]"
               >
-                בחר מאמן זה
+                שלח בקשה
               </button>
             </li>
           ))}
@@ -119,7 +146,7 @@ export default function TrainerSelectionScreen() {
       {pendingTrainer && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          onClick={() => !isAssigning && setPendingTrainer(null)}
+          onClick={() => !isSubmitting && setPendingTrainer(null)}
           dir="rtl"
         >
           <div
@@ -128,30 +155,30 @@ export default function TrainerSelectionScreen() {
           >
             <button
               type="button"
-              onClick={() => !isAssigning && setPendingTrainer(null)}
+              onClick={() => !isSubmitting && setPendingTrainer(null)}
               aria-label="סגור"
-              disabled={isAssigning}
+              disabled={isSubmitting}
               className="absolute top-3 left-3 w-11 h-11 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-on-surface/10 disabled:opacity-40"
             >
               ✕
             </button>
-            <h2 className="text-lg font-bold text-on-surface mb-2 pr-2">אישור בחירה</h2>
+            <h2 className="text-lg font-bold text-on-surface mb-2 pr-2">אישור שליחת בקשה</h2>
             <p className="text-on-surface-variant mb-6">
-              לשייך אותך ל־<span className="text-on-surface font-semibold">{pendingTrainer.displayName}</span>?
+              לשלוח בקשה ל־<span className="text-on-surface font-semibold">{pendingTrainer.displayName}</span>?
             </p>
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={handleConfirm}
-                disabled={isAssigning}
+                disabled={isSubmitting}
                 className="flex-1 py-3 rounded-lg bg-primary text-on-primary font-semibold disabled:opacity-60 min-h-[44px]"
               >
-                {isAssigning ? 'משייך...' : 'אישור'}
+                {isSubmitting ? 'שולח...' : 'שלח בקשה'}
               </button>
               <button
                 type="button"
                 onClick={() => setPendingTrainer(null)}
-                disabled={isAssigning}
+                disabled={isSubmitting}
                 className="flex-1 py-3 rounded-lg border border-on-surface/20 text-on-surface font-semibold disabled:opacity-60 min-h-[44px]"
               >
                 ביטול
