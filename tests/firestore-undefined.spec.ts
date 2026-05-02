@@ -27,6 +27,15 @@ const batchSetMock = vi.fn()
 const batchCommitMock = vi.fn(async () => undefined)
 const writeBatchMock = vi.fn(() => ({ set: batchSetMock, commit: batchCommitMock }))
 
+// `deleteField()` returns an opaque sentinel that the Firestore SDK uses to
+// remove a field on update. We model it with a tagged class instance so the
+// `removeUndefined()` plain-object check correctly preserves it.
+class FakeFieldValue {
+  constructor(public readonly _methodName: string) {}
+}
+const deleteFieldSentinel = new FakeFieldValue('deleteField')
+const deleteFieldMock = vi.fn(() => deleteFieldSentinel)
+
 vi.mock('firebase/firestore', () => ({
   collection: vi.fn(() => ({})),
   doc: vi.fn(() => ({})),
@@ -36,6 +45,7 @@ vi.mock('firebase/firestore', () => ({
   updateDoc: updateDocMock,
   setDoc: setDocMock,
   deleteDoc: vi.fn(),
+  deleteField: deleteFieldMock,
   query: vi.fn(),
   where: vi.fn(),
   orderBy: vi.fn(),
@@ -99,6 +109,21 @@ describe('removeUndefined()', () => {
     expect(result).toEqual({ a: null, b: false, c: 0, d: '' })
     expect('e' in result).toBe(false)
   })
+
+  it('preserves Firestore FieldValue sentinels (deleteField etc.) verbatim', async () => {
+    const { removeUndefined } = await import('../src/lib/firebase/firestoreUtils')
+    const result = removeUndefined({ videoWebpUrl: deleteFieldSentinel })
+    expect(result.videoWebpUrl).toBe(deleteFieldSentinel)
+  })
+
+  it('preserves Date objects inside arrays', async () => {
+    const { removeUndefined } = await import('../src/lib/firebase/firestoreUtils')
+    const a = new Date('2026-01-01T00:00:00Z')
+    const b = new Date('2026-02-01T00:00:00Z')
+    const result = removeUndefined({ when: [a, b] })
+    expect(result.when).toEqual([a, b])
+    expect(result.when[0]).toBe(a)
+  })
 })
 
 describe('updateExercise() — videoWebpUrl=undefined regression', () => {
@@ -142,6 +167,20 @@ describe('updateExercise() — videoWebpUrl=undefined regression', () => {
     expect(payload).not.toHaveProperty('complexity')
     expect(payload).not.toHaveProperty('videoWebpUrl')
     expect(payload).toMatchObject({ primaryMuscle: 'chest' })
+  })
+
+  it('passes a deleteField() sentinel through to updateDoc unchanged', async () => {
+    // Models the ExerciseForm "edit + cleared field" flow: the form sends
+    // `videoWebpUrl: deleteField()` so Firestore actively removes the
+    // existing value (merge semantics would otherwise leave it stale).
+    const { updateExercise } = await import('../src/lib/firebase/exercises')
+
+    await updateExercise('exercise-id-4', {
+      videoWebpUrl: deleteFieldSentinel as never,
+    })
+
+    const [, payload] = updateDocMock.mock.calls[0]
+    expect(payload).toHaveProperty('videoWebpUrl', deleteFieldSentinel)
   })
 })
 

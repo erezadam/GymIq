@@ -7,8 +7,8 @@ import { z } from 'zod'
 import { ArrowRight, Save, Plus, Trash2, Image, ChevronDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { exerciseService } from '@/domains/exercises/services'
-import { serverTimestamp } from 'firebase/firestore'
-import type { ExerciseCategory, MuscleGroup, EquipmentType, AssistanceType, ExerciseComplexity } from '@/domains/exercises/types'
+import { serverTimestamp, deleteField } from 'firebase/firestore'
+import type { ExerciseCategory, MuscleGroup, EquipmentType, AssistanceType, ExerciseComplexity, CreateExerciseDto } from '@/domains/exercises/types'
 import { difficultyOptions, complexityOptions } from '@/domains/exercises/data/mockExercises'
 import { getEquipment, type Equipment } from '@/lib/firebase/equipment'
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner'
@@ -331,7 +331,7 @@ export default function ExerciseForm() {
 
     const trimmedVideoWebpUrl = data.videoWebpUrl?.trim()
 
-    const formattedData = {
+    const formattedData: Record<string, unknown> = {
       ...data,
       category: data.category as ExerciseCategory,
       primaryMuscle: data.primaryMuscle as MuscleGroup,
@@ -343,9 +343,6 @@ export default function ExerciseForm() {
       assistanceTypes: data.assistanceTypes as AssistanceType[],
       // Only include availableBands if 'bands' is in assistanceTypes
       availableBands: data.assistanceTypes.includes('bands') ? data.availableBands : [],
-      // Omit videoWebpUrl entirely when empty — Firestore updateDoc rejects `undefined`
-      // values, and downstream consumers already treat a missing key as falsy.
-      ...(trimmedVideoWebpUrl ? { videoWebpUrl: trimmedVideoWebpUrl } : {}),
       targetMuscles: data.targetMuscles as MuscleGroup[],
       instructions: data.instructions.map((i) => i.value).filter(Boolean),
       instructionsHe: data.instructionsHe.map((i) => i.value).filter(Boolean),
@@ -354,20 +351,34 @@ export default function ExerciseForm() {
       lastEditedAt: serverTimestamp(),
     }
 
-    // The form schema includes `videoWebpUrl: ''` by default; ensure it never
-    // leaks into the payload when empty (defense-in-depth for the iron rule).
-    if (!trimmedVideoWebpUrl) {
-      delete (formattedData as { videoWebpUrl?: string }).videoWebpUrl
+    // videoWebpUrl handling matrix:
+    //   - filled  → store the trimmed URL.
+    //   - empty + create → omit the key (no field on the new document).
+    //   - empty + edit → send deleteField() so Firestore actively removes
+    //     a previously-stored URL (merge semantics would otherwise leave it).
+    //   Never send `undefined` — Firestore SDK rejects it.
+    delete formattedData.videoWebpUrl
+    if (trimmedVideoWebpUrl) {
+      formattedData.videoWebpUrl = trimmedVideoWebpUrl
+    } else if (isEditing) {
+      formattedData.videoWebpUrl = deleteField()
     }
 
     console.log('🔥 ExerciseForm: Submitting formatted data:', formattedData)
 
     if (isEditing && id) {
       console.log('🔥 ExerciseForm: Updating exercise with id:', id)
-      updateMutation.mutate({ id, data: formattedData })
+      // Cast: formattedData may carry a FieldValue sentinel (deleteField) on
+      // videoWebpUrl, which the static Partial<CreateExerciseDto> type cannot
+      // express. The Firestore SDK accepts it at runtime.
+      updateMutation.mutate({
+        id,
+        data: formattedData as unknown as Parameters<typeof exerciseService.updateExercise>[1],
+      })
     } else {
       console.log('🔥 ExerciseForm: Creating new exercise')
-      createMutation.mutate(formattedData)
+      // On create, videoWebpUrl is either present as a string or absent.
+      createMutation.mutate(formattedData as unknown as CreateExerciseDto)
     }
   }
 
