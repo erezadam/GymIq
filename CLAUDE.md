@@ -452,6 +452,31 @@ npm test                        # Vitest unit/regression tests
 
 **שני הצעדים חייבים לעבור ירוקים. אם משהו נכשל — עצור, דווח למשתמש, תקן את הסיבה השורשית.**
 
+### ❌ חוק ברזל: בדיקות חייבות לבדוק התנהגות, לא קיום מחרוזות
+
+> **רקע:** ב-30/04/2026 נוספו 9 בדיקות source-grep ב-Stage 6 של PR #108 (תמיכת WebP). הן עברו את ה-CI אבל בדקו רק שמחרוזות מופיעות בקבצים — לא התנהגות. הבאג של `videoWebpUrl=undefined` ב-`updateDoc()` עבר דרכן ללא בעיה והגיע לפרודקשן.
+
+בדיקות מסוג **source-grep** (קריאת קבצים ובדיקה שמחרוזת/שדה מופיעים) מותרות **רק כתוספת לבדיקה התנהגותית אמיתית**, לעולם לא כתחליף.
+
+**אם הסוכן מצהיר שכתב בדיקה — הבדיקה חייבת להיכשל אם הפיצ'ר נשבר ב-runtime.**
+
+❌ **לא מקובל** (source-grep בלבד):
+```typescript
+expect(readFileSync('src/x.tsx').includes('videoWebpUrl')).toBe(true)
+```
+
+✅ **מקובל** (התנהגותי, mock + assert על קריאה ל-API):
+```typescript
+vi.mock('firebase/firestore', () => ({ updateDoc: vi.fn(), ... }))
+await updateExercise('id', { videoWebpUrl: undefined })
+expect(updateDoc).toHaveBeenCalledWith(
+  expect.anything(),
+  expect.not.objectContaining({ videoWebpUrl: expect.anything() })
+)
+```
+
+source-grep יכול להיות **שכבה שנייה** של הגנה (לדאוג שהשדה לא נמחק בטעות), אבל ללא בדיקה התנהגותית — הוא חסר ערך.
+
 ### 📱 אימות במכשיר — לפני merge, לא אחרי deploy
 
 - **production אינה סביבת בדיקה.** אסור להסתמך על "נבדוק בפרודקשן אחרי deploy" כעל מנגנון אימות. הזרימה הזו כשלה ב-27-28/04/2026 (ראה סעיף "Mobile Date Picker — Lesson Learned" למטה).
@@ -599,6 +624,7 @@ The label + hidden input pattern is the standard, accessible solution.
 | 28/04/2026 | הוסרה תשתית Playwright מהפרויקט | נמחקו `playwright.config.ts`, `e2e/`, `.github/workflows/playwright.yml`, `.mcp.json` (Playwright MCP), והתלות `@playwright/test` מ-package.json. בנוסף שונה שם `E2E_ADMIN_*` → `ADMIN_*` בכל הפרויקט (workflow, release-note script, ו-14 סקריפטי תחזוקה/מיגרציה) כי השם היה מטעה — הקרדיטים מעולם לא היו של framework טסטים. בדיקות הפרויקט: `npm run build` + `npm test` (Vitest) בלבד. |
 | 30/04/2026 | תמיכה ב-WebP אנימציה לתרגילים — Phase 1 (תשתית) | נוסף שדה אופציונלי `videoWebpUrl?: string` ל-`Exercise`. כל 24 נקודות הצגת תמונת תרגיל באפליקציה (משתמש + מאמן + אדמין) עברו לרכיב משותף חדש `<ExerciseMedia>` ב-`src/shared/components/ExerciseMedia/`. ה-variant מכריע על מדיניות הטעינה: `hero` טוען WebP אנימטיבי, `thumbnail` תמיד תמונה סטטית (חיסכון ברוחב פס במיניאטורות קטנות), `preview` ל-context של אדמין. propagation מלא בכל iron-rule save/restore points (29/01): 9 ב-`useActiveWorkout`, 3 ב-`workoutHistory.ts`, 6 ב-`ExerciseLibrary`, 8 ב-`WorkoutHistory` continue handlers, 5 ב-trainer builders. test רגרסיה חדש: 9 בדיקות תחת `describe('videoWebpUrl propagates through workout lifecycle')`. side fixes: `PersonalRecords.tsx` placeholder.png → SVG, `admin/ExerciseList.tsx` הסיר תלות חיצונית `via.placeholder.com`. **Phase 2 TODO**: bulk migration script. |
 | 27-28/04/2026 | באג date picker מובייל דווח כ"מתוקן" אחרי PR #102 — התברר שהתיקון העביר סימפטום, לא טיפל בשורש (event propagation במודל). PR #104 הסיר את ה-modal לחלוטין | נוסף סעיף "Mobile Date Picker — Lesson Learned" + עודכן סעיף "🧪 בדיקות" עם מנדט אימות-במכשיר-לפני-merge + Bug Verification Policy גלובלי ב-`~/.claude/CLAUDE.md` |
+| 02/05/2026 | 9 בדיקות source-grep מ-Stage 6 של PR #108 (תמיכת WebP) עברו את ה-CI אבל לא תפסו שהקוד שולח `videoWebpUrl=undefined` ל-`updateDoc()`. Firestore דחה ועדכון תרגיל נשבר ב-production | נוסף חוק ברזל בסעיף "🧪 בדיקות": בדיקות חייבות לבדוק התנהגות (mock + assert על API), לא קיום מחרוזות. source-grep מותר רק כתוספת. |
 
 ---
 
