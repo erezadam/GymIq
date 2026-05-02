@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { getMuscleNameHe } from '@/utils/muscleTranslations'
 import { calculateExerciseVolumeFromHistory } from '@/lib/firebase/workoutHistory'
+import { partitionPerformedSets } from '@/domains/workouts/utils/setFiltering'
 import type { WorkoutHistorySummary, WorkoutHistoryEntry, WorkoutCompletionStatus } from '@/domains/workouts/types'
 
 export interface StatusConfig {
@@ -201,53 +202,66 @@ export function WorkoutCard({
                       null
                     ) : (
                       <>
-                        {/* Sets detail table (for non-AI workouts) */}
-                        {exercise.sets && exercise.sets.length > 0 && (
-                          <div className="space-y-1.5">
-                            {exercise.sets.map((set, setIdx) => {
-                              const reps = set.actualReps || set.targetReps || 0
-                              const weight = set.actualWeight || set.targetWeight || 0
-                              const time = (set as any).time as number | undefined
-                              const zone = (set as any).zone as number | undefined
-                              const isCardioSet = (time !== undefined && time > 0) || (zone !== undefined && zone > 0)
+                        {/* Sets detail table (for non-AI workouts) — performed sets only */}
+                        {exercise.sets && exercise.sets.length > 0 && (() => {
+                          const { performed: performedSets, skippedCount } = partitionPerformedSets(exercise.sets)
 
-                              return (
-                                <div key={setIdx} className="flex items-center gap-2 text-sm">
-                                  <span className="text-text-muted w-12">סט {setIdx + 1}:</span>
+                          return (
+                            <>
+                              {performedSets.length > 0 && (
+                                <div className="space-y-1.5">
+                                  {performedSets.map((set, setIdx) => {
+                                    const reps = set.actualReps || 0
+                                    const weight = set.actualWeight || 0
+                                    const time = (set as any).time as number | undefined
+                                    const zone = (set as any).zone as number | undefined
+                                    const isCardioSet = (time !== undefined && time > 0) || (zone !== undefined && zone > 0)
 
-                                  {isCardioSet ? (
-                                    <>
-                                      {time !== undefined && time > 0 && (
-                                        <span className="text-white">
-                                          {`${Math.floor(time / 60)}:${(time % 60).toString().padStart(2, '0')}`} דק׳
-                                        </span>
-                                      )}
-                                      {reps > 0 && (
-                                        <span className="text-text-muted">• {reps} חזרות</span>
-                                      )}
-                                      {zone !== undefined && zone > 0 && (
-                                        <span className="text-blue-400">• אזור {zone}</span>
-                                      )}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <span className="text-white">{reps} חזרות</span>
+                                    return (
+                                      <div key={setIdx} className="flex items-center gap-2 text-sm">
+                                        <span className="text-text-muted w-12">סט {setIdx + 1}:</span>
 
-                                      {/* Show appropriate weight/assistance info */}
-                                      {set.assistanceWeight !== undefined && set.assistanceWeight > 0 ? (
-                                        <span className="text-teal-400">• עזרה: {set.assistanceWeight} ק"ג</span>
-                                      ) : set.assistanceBand ? (
-                                        <span className="text-purple-400">• {bandNameMap[set.assistanceBand] || set.assistanceBand}</span>
-                                      ) : weight > 0 ? (
-                                        <span className="text-text-muted">• {weight} ק"ג</span>
-                                      ) : null}
-                                    </>
-                                  )}
+                                        {isCardioSet ? (
+                                          <>
+                                            {time !== undefined && time > 0 && (
+                                              <span className="text-white">
+                                                {`${Math.floor(time / 60)}:${(time % 60).toString().padStart(2, '0')}`} דק׳
+                                              </span>
+                                            )}
+                                            {reps > 0 && (
+                                              <span className="text-text-muted">• {reps} חזרות</span>
+                                            )}
+                                            {zone !== undefined && zone > 0 && (
+                                              <span className="text-blue-400">• אזור {zone}</span>
+                                            )}
+                                          </>
+                                        ) : (
+                                          <>
+                                            <span className="text-white">{reps} חזרות</span>
+
+                                            {/* Show appropriate weight/assistance info */}
+                                            {set.assistanceWeight !== undefined && set.assistanceWeight > 0 ? (
+                                              <span className="text-teal-400">• עזרה: {set.assistanceWeight} ק"ג</span>
+                                            ) : set.assistanceBand ? (
+                                              <span className="text-purple-400">• {bandNameMap[set.assistanceBand] || set.assistanceBand}</span>
+                                            ) : weight > 0 ? (
+                                              <span className="text-text-muted">• {weight} ק"ג</span>
+                                            ) : null}
+                                          </>
+                                        )}
+                                      </div>
+                                    )
+                                  })}
                                 </div>
-                              )
-                            })}
-                          </div>
-                        )}
+                              )}
+                              {skippedCount > 0 && (
+                                <p className="text-xs text-text-muted/70 italic mt-1.5">
+                                  לא בוצעו: {skippedCount} סטים
+                                </p>
+                              )}
+                            </>
+                          )
+                        })()}
 
                         {/* Fallback summary for exercises without sets */}
                         {(!exercise.sets || exercise.sets.length === 0) && (

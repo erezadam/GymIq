@@ -315,3 +315,4 @@ describe('videoWebpUrl propagates through workout lifecycle - Phase 1 (30/04/202
     expect(content).toMatch(/\.optional\(\)/);
   });
 });
+
