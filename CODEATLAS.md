@@ -369,7 +369,7 @@ ProgramBuilder ──"AI Generate"──▶ Cloud Function call
 ## 8. Trainer-Trainee Relationship Flow
 
 ```
-TRAINER CREATES TRAINEE:
+TRAINER CREATES TRAINEE (still active immediately — does NOT go through approval):
   TrainerDashboard ──"הוסף מתאמן"──▶ TraineeRegistrationModal
     │
     ▼
@@ -381,6 +381,10 @@ TRAINER CREATES TRAINEE:
          { trainerId, traineeId, status:'active' })
     5. sendPasswordResetEmail() → trainee sets own password
     6. Delete secondary app
+
+TRAINEE CHOOSES A TRAINER (now requires trainer approval — see section 8.5):
+  Old `selfAssignTrainer` (instant active) was REMOVED.
+  Replaced by `requestTrainer` → status:'pending' → trainer approves via Cloud Function.
 
 TRAINER BUILDS PROGRAM:
   TraineeDetail ──▶ ProgramBuilder (/trainer/program/new?traineeId=xxx)
@@ -407,6 +411,98 @@ TRAINEE SEES PROGRAM:
 MESSAGING:
   Trainer:  MessageCenter ──▶ messageService ──▶ Firestore 'trainerMessages'
   Trainee:  TraineeInbox  ──▶ messageService ──▶ Firestore 'trainerMessages'
+```
+
+---
+
+## 8.5. Trainer Approval Flow (Trainee-initiated)
+
+Replaces the old `selfAssignTrainer` instant link. The trainee sends a request,
+the trainer approves or rejects. `users.trainerId` is written **only** on
+approval, atomically with the relationship status flip.
+
+```
+TRAINEE REQUESTS A TRAINER:
+  UserDashboard
+    │
+    ├── SelectTrainerPrompt (banner, hidden if user.trainerId set)
+    │     └── branches on getMyLatestRelationshipState():
+    │           pending  → "ממתין לאישור מ-X" + "ביטול בקשה"
+    │           rejected → "המאמן X דחה" + reason + "בחר מאמן אחר"
+    │           ended    → "הקשר עם X הסתיים" (within 30-day fade)
+    │           cancelled → treated as null (UX decision — trainee initiated it)
+    │           default  → "בחר מאמן" + "דלג"
+    │
+    └── /trainers ──▶ TrainerSelectionScreen
+          │
+          ├── trainerService.getAvailableTrainers() → users where role=='trainer'
+          │
+          └── handleConfirm:
+                trainerService.requestTrainer():
+                  1. hasActiveOrPendingTrainer() — blocks if existing
+                     active/paused/pending; throws TrainerRelationshipError
+                     ('TRAINER_RELATIONSHIP_EXISTS')
+                  2. createRelationship() with status:'pending',
+                     requestedBy:'trainee', requestedAt
+                     (does NOT touch user.trainerId)
+                  3. fire-and-forget callable: sendTrainerRequestEmail
+                     → emails the trainer
+                  4. UI shows "request sent" success state
+
+TRAINER SEES THE PENDING REQUEST:
+  TrainerDashboard
+    │
+    └── PendingRequestsSection (hidden when empty)
+          │
+          ├── trainerService.getPendingRequestsForTrainer(trainerId)
+          │     └── Firestore: trainerRelationships
+          │           where trainerId == auth.uid && status == 'pending'
+          │           order by requestedAt desc
+          │
+          ├── "אישור" → trainerService.approveTrainerRequest(relationshipId):
+          │     │
+          │     └── httpsCallable('approveTrainerRequest') ──▶ Cloud Function:
+          │           db.runTransaction(async tx => {
+          │             - re-read relationship (verify status=='pending', auth ok)
+          │             - re-read users/{traineeId}
+          │             - if traineeData.trainerId !== null && !== caller:
+          │                 → mark THIS request 'rejected' with
+          │                   rejectionReason='TRAINEE_ALREADY_HAS_TRAINER'
+          │                 → return race outcome
+          │             - else:
+          │                 → tx.update relationship: status='active', respondedAt
+          │                 → tx.update users/{traineeId}: trainerId=callerUid
+          │           })
+          │           best-effort: sendTrainerApprovedEmailDirect()
+          │
+          └── "דחייה" → modal with optional reason
+                │
+                └── trainerService.rejectTrainerRequest(relationshipId, reason?):
+                      - read status; silent no-op if not 'pending' (idempotency)
+                      - updateDoc: status='rejected', respondedAt, rejectionReason
+                      - fire-and-forget callable: sendTrainerRejectedEmail
+
+State machine — `firestore.rules` for `trainerRelationships`:
+
+  CREATE: trainer→active (createTraineeAccount path) | trainee→pending
+  UPDATE: trainer rejects pending→rejected | trainee cancels pending→cancelled
+          | either party manages active/paused (pause/resume/end/notes)
+          | notes-only on ended
+  DELETE: either party (broad, unchanged)
+
+  pending→active is performed ONLY by the Cloud Function via Admin SDK.
+  No client rule allows it; client rules cannot grant a trainer write access
+  to users.trainerId for a not-yet-linked trainee.
+
+Indexes (firestore.indexes.json):
+  - (trainerId, status, requestedAt desc)  → getPendingRequestsForTrainer
+  - (traineeId, status)                    → hasActiveOrPendingTrainer (where-in)
+  - (traineeId, updatedAt desc)            → getMyLatestRelationshipState
+
+Known limitation (Phase 3): Firestore rules cannot query other documents on
+create, so two parallel `pending` requests by the same trainee can both pass
+the application-layer `hasActiveOrPendingTrainer` check before either commit.
+Distributed enforcement is deferred.
 ```
 
 ---
@@ -769,6 +865,7 @@ src/domains/workouts/components/WorkoutHistory.tsx
 | Change program builder | `src/domains/trainer/components/ProgramBuilder/ProgramBuilder.tsx` |
 | Change trainee program view | `src/domains/trainer/components/ProgramView/TraineeProgramView.tsx` |
 | Change messaging | `src/domains/trainer/services/messageService.ts` |
+| Change trainer approval flow | `src/domains/trainer/services/trainerService.ts` (`requestTrainer` / `approveTrainerRequest` / `rejectTrainerRequest` / `cancelTrainerRequest`) + `functions/src/trainer-approval/approveRequest.ts` (atomic CF) + `functions/src/email/trainerApproval.ts` (3 emails) |
 | Add a new Firestore collection | `firestore.rules` + `src/lib/firebase/` new file |
 | Change Firestore security rules | `firestore.rules` |
 | Change design tokens/colors | `src/theme/tailwind-tokens.js` + `tailwind.config.js` |

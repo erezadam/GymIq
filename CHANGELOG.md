@@ -1,5 +1,34 @@
 # Changelog
 
+## [Unreleased] - 2026-05-02
+
+### Added
+- **Trainer Approval Flow (Phase 1, 2026-05-02)**: זרימת בקשה-ואישור לשיוך מתאמן→מאמן. במקום שיוך מיידי (`selfAssignTrainer` שהוסר), המתאמן שולח **בקשה** שהמאמן מאשר/דוחה. סטטוס המעבר: `pending → active` (אישור) או `pending → rejected` (דחייה) או `pending → cancelled` (המתאמן מבטל בעצמו). `users.trainerId` נכתב **רק** כשהבקשה אושרה — לא בעת הבקשה.
+- **Cloud Function `approveTrainerRequest`** (`functions/src/trainer-approval/approveRequest.ts`): `onCall` שמבצע את האישור בתוך `db.runTransaction` של Admin SDK — שני ה-writes (relationship.status='active' + users.trainerId=trainerId) קורים אטומית, ו-optimistic concurrency של Firestore דוחה approvals מקבילים. נוצר ב-CF (לא ב-client) כי Firestore client rules לא יכולות לתת למאמן הרשאה לכתוב `users.trainerId` של מתאמן שעדיין לא משויך אליו. race detection: אם המתאמן נקשר למאמן אחר במקביל, הבקשה הנוכחית מסומנת `rejected` עם `rejectionReason='TRAINEE_ALREADY_HAS_TRAINER'` באותה transaction.
+- **3 התראות מייל** (`functions/src/email/trainerApproval.ts`): templates inline בעברית (RTL, צבע מותג `#00D4AA`) באותו דפוס כמו `sendWelcomeEmail.ts` הקיים — `sendTrainerRequestEmail` (למאמן כשמתאמן ביקש), `sendTrainerRejectedEmail` (למתאמן כשנדחה), ו-helper פנימי `sendTrainerApprovedEmailDirect` שה-CF של ה-approve קוראת לו אחרי commit. כל הקריאות best-effort עטופות ב-`try/catch` — כשל מייל לא מגלגל את הפעולה הראשית.
+- **`SelectTrainerPrompt` עם 4 מצבים** (`src/domains/trainee-onboarding/components/SelectTrainerPrompt.tsx`): default ("בחר מאמן" — כקודם), `pending` ("בקשתך נשלחה ל-X" + כפתור ביטול), `rejected` ("המאמן X דחה" + reason + "בחר מאמן אחר"), ו-`ended` (חלון fade של 30 יום אחרי disconnect). `cancelled` ממופה ל-null ב-UI לפי החלטת UX (המתאמן יזם את הביטול בעצמו). הזרימה מבוססת על `getMyLatestRelationshipState(traineeId)` חדש ב-`trainerService`.
+- **`PendingRequestsSection`** (`src/domains/trainer/components/PendingRequestsSection.tsx`): סקציה חדשה בדשבורד המאמן (`TrainerDashboard.tsx`), מוסתרת כשאין בקשות. כל בקשה מציגה שם המתאמן + email + תאריך הבקשה, עם כפתורי "אישור" (קורא ל-CF) ו"דחייה" (פותח modal עם textarea אופציונלי לסיבה).
+- **6 פונקציות חדשות ב-`trainerService.ts`**: `requestTrainer` (יוצר pending + שולח מייל למאמן), `approveTrainerRequest` (httpsCallable wrapper ל-CF), `rejectTrainerRequest` (silent no-op אם status≠'pending' למניעת spam, שולח מייל), `cancelTrainerRequest` (mark cancelled, לא delete — לאנליטיקס), `getPendingRequestsForTrainer` (query ממוין `requestedAt desc`), `hasActiveOrPendingTrainer` (חוסם בקשות חדשות אם יש active/paused/pending), ו-`getMyLatestRelationshipState` עם 30-day auto-fade ל-`ended`/`cancelled` (`rejected` תמיד מוצג).
+- **`TrainerRelationshipError` class** עם code `'TRAINER_RELATIONSHIP_EXISTS'` — נזרק מ-`requestTrainer` כשלמתאמן יש כבר relationship `active`/`paused`/`pending`.
+- **3 indexes חדשים ב-`firestore.indexes.json`** (אינדקסים קיימים לא נגעו): `trainerRelationships(trainerId, status, requestedAt desc)` ל-`getPendingRequestsForTrainer`; `trainerRelationships(traineeId, status)` ל-`hasActiveOrPendingTrainer` (where-in); `trainerRelationships(traineeId, updatedAt desc)` ל-`getMyLatestRelationshipState`.
+
+### Changed
+- **`RelationshipStatus` הורחב מ-3 ל-6 ערכים**: נוספו `'pending'`, `'rejected'`, `'cancelled'` ל-`'active' | 'paused' | 'ended'` הקיימים. `TrainerRelationship` interface קיבל 4 שדות אופציונליים חדשים — `requestedAt`, `requestedBy: 'trainer'|'trainee'`, `respondedAt`, `rejectionReason`. תוויות עברית נוספו ל-`RELATIONSHIP_STATUS_LABELS` (`'ממתין לאישור'`, `'נדחה'`, `'בוטל'`).
+- **`firestore.rules` של `trainerRelationships` הומר ל-state machine מפורש**: 2 כללי CREATE — (1) trainer יוצר active (משמר את הזרימה הקיימת של `createTraineeAccount`), (2) trainee יוצר pending עם `requestedBy=='trainee'`. 4 כללי UPDATE — (1) trainer ידחה pending→rejected, (2) trainee יבטל pending→cancelled, (3) שני הצדדים מנהלים active/paused (pause/resume/end/notes — שומר את כל ההתנהגות הקיימת), (4) notes-only על ended (משמר `updateRelationshipNotes` אחרי disconnect). מעבר pending→active מתבצע **רק** דרך CF (Admin SDK עוקף את ה-rules); אין כלל client לזה. אסור active→pending (one-way). DELETE נשאר רחב כקודם.
+- **כל הכתיבות החדשות ב-`trainerService.ts` עוטפות payloads ב-`removeUndefined()`** מ-`src/lib/firebase/firestoreUtils.ts` (iron rule 02/05/2026). ה-inline filter שהיה ב-`createRelationship` הוסר.
+
+### Removed
+- **`selfAssignTrainer` הוסר מ-`trainerService.ts`**: הוחלף ב-`requestTrainer` עם flow אישור. הצרכן היחיד (`TrainerSelectionScreen.tsx`) הוסב באותו commit. ה-rules החדשים ממילא חוסמים את הזרימה הישנה (trainee create with status:'active' נדחה).
+
+### Notes
+- **`createTraineeAccount` (מאמן יוצר חשבון מתאמן) לא השתנה**: נוצר עדיין ישר עם `status:'active'`, שולח welcome email כקודם. סימטריה דו-כיוונית (trainer-initiated גם דורש אישור מתאמן) מתוכננת ל-PR נפרד.
+- **אף רשומת `trainerRelationships` קיימת לא שונתה ב-DB**: אין migration. כל מי שיש לו היום `status:'active'` נשאר `'active'`.
+- **27 בדיקות התנהגותיות חדשות** ב-`tests/trainer-approval.spec.ts` (mock SDK + assert על call args, לפי iron rule 02/05 — לא source-grep): מכסות את 6 הפונקציות החדשות, idempotency של reject (silent no-op כשלא pending), וכלילת `paused` ב-`hasActiveOrPendingTrainer`. סך הכל 64 tests (היו 56).
+- **התראת deploy**: ה-PR מוסיף Cloud Functions חדשים — auto-deploy ב-`push: main` פורס hosting בלבד. נדרש `workflow_dispatch` ידני עם target `hosting,functions,firestore` כדי לפרוס גם CF + rules + indexes. אינדקסים חדשים נבנים אסינכרונית — חלון של דקות עד שעה שבו השאילתות החדשות יחזירו `failed-precondition` עד ש-Firestore מסיים את הבנייה.
+
+### Known limitations
+- **Race condition של 2 בקשות pending במקביל**: Firestore rules לא יכולות לבצע query על מסמכים אחרים בעת `create`, ולכן חסימת בקשות כפולות מאותו מתאמן ל-2 מאמנים במקביל קיימת רק ברובד ה-application (`hasActiveOrPendingTrainer` ב-`requestTrainer`) — לא ב-rules. מתאמן זדוני שעוקף את ה-client יכול ליצור 2 רשומות `pending` סימולטנית. אכיפה מבוזרת מתוכננת ל-Phase 3 (deterministic doc IDs או Cloud Function לכל בקשה).
+
 ## [Unreleased] - 2026-04-30
 
 ### Added
