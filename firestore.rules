@@ -224,21 +224,57 @@ service cloud.firestore {
         (resource.data.trainerId == request.auth.uid ||
          resource.data.traineeId == request.auth.uid);
 
-      // Trainers can create relationships
+      // ---- CREATE ----
+      // (1) Trainer creates an active relationship (trainer-initiated path,
+      //     used by createTraineeAccount). Preserves existing behavior.
       allow create: if isTrainer() &&
-        request.resource.data.trainerId == request.auth.uid;
-
-      // Trainees can self-assign to a trainer (must create for themselves, active only)
-      allow create: if isAuthenticated() &&
-        request.resource.data.traineeId == request.auth.uid &&
+        request.resource.data.trainerId == request.auth.uid &&
         request.resource.data.status == 'active';
 
-      // Both parties can update (for acceptance/status)
+      // (2) Trainee requests a trainer (Approval Flow Phase 1).
+      //     Must be self, must be 'pending', must be marked as trainee-initiated.
+      allow create: if isAuthenticated() &&
+        request.resource.data.traineeId == request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.requestedBy == 'trainee';
+
+      // ---- UPDATE ----
+      // Note: pending → active transition (approval) is performed by a
+      // Cloud Function (Admin SDK) which bypasses these rules. The rule
+      // below documents the state machine for direct client writes; we keep
+      // it so trainer-side rejection works without a CF round-trip.
+
+      // (1) Trainer rejects a pending request: pending → rejected.
+      allow update: if isAuthenticated() &&
+        resource.data.trainerId == request.auth.uid &&
+        resource.data.status == 'pending' &&
+        request.resource.data.status == 'rejected';
+
+      // (2) Trainee cancels their own pending request: pending → cancelled.
+      allow update: if isAuthenticated() &&
+        resource.data.traineeId == request.auth.uid &&
+        resource.data.status == 'pending' &&
+        request.resource.data.status == 'cancelled';
+
+      // (3) Either party manages an active/paused relationship.
+      //     Covers pause, resume, end, and notes — all existing behavior.
+      //     Forbids transitions back to pending (one-way after approval).
       allow update: if isAuthenticated() &&
         (resource.data.trainerId == request.auth.uid ||
-         resource.data.traineeId == request.auth.uid);
+         resource.data.traineeId == request.auth.uid) &&
+        resource.data.status in ['active', 'paused'] &&
+        request.resource.data.status in ['active', 'paused', 'ended'];
 
-      // Both parties can delete
+      // (4) Notes-only update on an ended relationship (preserves
+      //     updateRelationshipNotes after disconnect).
+      allow update: if isAuthenticated() &&
+        (resource.data.trainerId == request.auth.uid ||
+         resource.data.traineeId == request.auth.uid) &&
+        resource.data.status == 'ended' &&
+        request.resource.data.status == 'ended';
+
+      // ---- DELETE ----
+      // Either party can delete (existing broad rule, preserved).
       allow delete: if isAuthenticated() &&
         (resource.data.trainerId == request.auth.uid ||
          resource.data.traineeId == request.auth.uid);

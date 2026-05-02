@@ -22,7 +22,13 @@ export type TrainerSpecialization =
   | 'martial_arts'
   | 'swimming'
 
-export type RelationshipStatus = 'active' | 'paused' | 'ended'
+export type RelationshipStatus =
+  | 'pending'
+  | 'active'
+  | 'paused'
+  | 'ended'
+  | 'rejected'
+  | 'cancelled'
 
 export type ProgramStatus = 'active' | 'paused' | 'completed' | 'draft'
 
@@ -63,6 +69,11 @@ export interface TrainerRelationship {
   endedBy?: 'trainer' | 'trainee' | 'admin'
   endReason?: string
   notes?: string
+  // Trainer Approval Flow (Phase 1) — populated only on requested relationships
+  requestedAt?: Timestamp | Date
+  requestedBy?: 'trainer' | 'trainee'
+  respondedAt?: Timestamp | Date
+  rejectionReason?: string
 }
 
 // ============ TRAINING PROGRAMS ============
@@ -245,9 +256,12 @@ export const MESSAGE_TYPE_LABELS: Record<MessageType, string> = {
 }
 
 export const RELATIONSHIP_STATUS_LABELS: Record<RelationshipStatus, string> = {
+  pending: 'ממתין לאישור',
   active: 'פעיל',
   paused: 'מושהה',
   ended: 'הסתיים',
+  rejected: 'נדחה',
+  cancelled: 'בוטל',
 }
 
 export const PROGRAM_STATUS_LABELS: Record<ProgramStatus, string> = {
