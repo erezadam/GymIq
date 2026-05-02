@@ -37,6 +37,7 @@ import { getExerciseById } from '@/lib/firebase/exercises'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { muscleGroupNames } from '@/styles/design-tokens'
 import { validateWorkoutId, isNetworkError } from '@/utils/workoutValidation'
+import { determineWorkoutStatus } from '../utils/workoutStatus'
 
 // Equipment names in Hebrew
 const equipmentNames: Record<string, string> = {
@@ -128,6 +129,11 @@ export function useActiveWorkout() {
 
   // Preserve continue workout ID across async operations (survives validation failures)
   const continueWorkoutIdRef = useRef<string | null>(null)
+
+  // True when user pressed "כן, סיים בכל זאת" in the incomplete-exercises
+  // warning modal. Read by doFinish() to promote 'partial' → 'completed'.
+  // Reset to false on every save outcome and on warning-modal cancel.
+  const explicitFinishConfirmedRef = useRef(false)
 
   // Load dynamic muscle names and weekly muscle sets from Firebase on mount
   useEffect(() => {
@@ -1437,17 +1443,28 @@ export function useActiveWorkout() {
 
   // Called when user confirms finish from confirmation modal (partial workout)
   const handleConfirmFinish = useCallback(() => {
+    // If we got here through the incomplete-exercises warning, the user
+    // explicitly opted in to closing the workout as 'completed'.
+    if (confirmModal.type === 'incomplete_exercises_warning') {
+      explicitFinishConfirmedRef.current = true
+    }
     setConfirmModal({ type: null })
     setShowSummaryModal(true)
-  }, [])
+  }, [confirmModal.type])
 
   // Close summary modal
   const closeSummaryModal = useCallback(() => {
+    // Drop any pending explicit-finish consent — closing the summary without
+    // saving means the consent gathered earlier is no longer current.
+    explicitFinishConfirmedRef.current = false
     setShowSummaryModal(false)
   }, [])
 
   // Close modal
   const closeModal = useCallback(() => {
+    // Drop any pending explicit-finish consent — user is dismissing the modal,
+    // not confirming. If they re-open later, they must reconfirm.
+    explicitFinishConfirmedRef.current = false
     setConfirmModal({ type: null })
   }, [])
 
@@ -1472,16 +1489,19 @@ export function useActiveWorkout() {
           isFinishingRef.current = false
           setIsSaving(false)
           setShowSummaryModal(false)
+          explicitFinishConfirmedRef.current = false
           return
         }
 
         const endTime = new Date()
         const duration = Math.floor((endTime.getTime() - workout.startedAt.getTime()) / 60000)
-        const status = workout.stats.completedExercises === workout.stats.totalExercises
-          ? 'completed'
-          : workout.stats.completedExercises === 0
-          ? 'cancelled'
-          : 'partial'
+        const status = determineWorkoutStatus(
+          {
+            completedExercises: workout.stats.completedExercises,
+            totalExercises: workout.stats.totalExercises,
+          },
+          explicitFinishConfirmedRef.current
+        )
 
         const exercises = workout.exercises.map((ex) => {
             const volume = calculateExerciseVolume(ex.reportedSets, ex.reportType)
@@ -1594,6 +1614,7 @@ export function useActiveWorkout() {
           hasInitialized.current = false
           continueWorkoutIdRef.current = null
           setConfirmModal({ type: null })
+          explicitFinishConfirmedRef.current = false
 
           // Navigate back: trainer report → trainee detail, own workout → history
           if (wasTrainerReport && reportTargetUserId) {
@@ -1610,6 +1631,7 @@ export function useActiveWorkout() {
             isFinishingRef.current = false
             setIsSaving(false)
             setShouldFinish(false)
+            explicitFinishConfirmedRef.current = false
             return
           }
 
@@ -1654,6 +1676,7 @@ export function useActiveWorkout() {
               hasInitialized.current = false
               continueWorkoutIdRef.current = null
               setConfirmModal({ type: null })
+              explicitFinishConfirmedRef.current = false
               const wasTrainerReport = workout.reportedBy
               const reportTargetUserId2 = targetUserId
               if (wasTrainerReport && reportTargetUserId2) {
@@ -1673,6 +1696,7 @@ export function useActiveWorkout() {
           isFinishingRef.current = false
           setIsSaving(false)
           setShouldFinish(false)
+          explicitFinishConfirmedRef.current = false
         }
       }
 

@@ -67,15 +67,22 @@ export function ConfirmationModal({
           showStats: false,
           isDanger: false,
         }
-      case 'incomplete_exercises_warning':
+      case 'incomplete_exercises_warning': {
+        const incomplete = modal.incompleteCount ?? 0
+        const total = stats?.totalExercises
+        const ratio = total !== undefined ? `${incomplete} מתוך ${total}` : `${incomplete}`
         return {
           title: '⚠️ יש תרגילים שלא הושלמו',
-          text: `לא סיימת ${modal.incompleteCount} תרגילים. האם אתה בטוח שברצונך לסיים את האימון?`,
-          confirmText: 'כן, סיים',
+          text:
+            `לא סיימת ${ratio} תרגילים. ` +
+            `האימון יישמר כ"הושלם" — תרגילים שלא בוצעו יישארו בהיסטוריה לתיעוד. ` +
+            `האם לסיים בכל זאת?`,
+          confirmText: 'כן, סיים בכל זאת',
           cancelText: 'ביטול',
           showStats: false,
           isDanger: false,
         }
+      }
       default:
         return null
     }

@@ -1543,9 +1543,10 @@ export async function getExerciseHistory(
   })
 }
 
-// Get exercise IDs that were done recently:
-// 1. All exercises from last completed workout
-// 2. Completed exercises from current in-progress workout
+// Returns exercise IDs that the user has actually performed in their most
+// recent workouts. Filters by `isCompleted: true` for both 'completed' and
+// 'in_progress' statuses — a planned exercise that wasn't actually performed
+// is not considered "recently done".
 export async function getRecentlyDoneExerciseIds(userId: string): Promise<Set<string>> {
   const result = new Set<string>()
   const historyRef = collection(db, COLLECTION_NAME)
