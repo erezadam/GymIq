@@ -28,7 +28,7 @@ const functions = getFunctions(app)
 const STALE_TERMINAL_STATE_DAYS = 30
 
 export class TrainerRelationshipError extends Error {
-  constructor(public code: 'TRAINER_RELATIONSHIP_EXISTS' | 'NOT_PENDING' | 'NOT_FOUND', message: string) {
+  constructor(public code: 'TRAINER_RELATIONSHIP_EXISTS', message: string) {
     super(message)
     this.name = 'TrainerRelationshipError'
   }
