@@ -13,6 +13,7 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { db } from './config'
+import { removeUndefined } from './firestoreUtils'
 import type { Exercise, ExerciseFilters, CreateExerciseDto } from '@/domains/exercises/types'
 
 const COLLECTION = 'exercises'
@@ -92,7 +93,7 @@ export const getExerciseById = async (id: string): Promise<Exercise | null> => {
 // Create new exercise
 export const createExercise = async (data: CreateExerciseDto): Promise<Exercise> => {
   const docRef = await addDoc(collection(db, COLLECTION), {
-    ...data,
+    ...removeUndefined(data),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
@@ -112,7 +113,7 @@ export const updateExercise = async (
 ): Promise<void> => {
   const docRef = doc(db, COLLECTION, id)
   await updateDoc(docRef, {
-    ...data,
+    ...removeUndefined(data),
     updatedAt: serverTimestamp(),
   })
 }
@@ -135,7 +136,7 @@ export const bulkImportExercises = async (
     try {
       const docRef = doc(collection(db, COLLECTION))
       batch.set(docRef, {
-        ...exercise,
+        ...removeUndefined(exercise),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       })

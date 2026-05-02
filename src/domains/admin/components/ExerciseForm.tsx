@@ -329,6 +329,8 @@ export default function ExerciseForm() {
       return
     }
 
+    const trimmedVideoWebpUrl = data.videoWebpUrl?.trim()
+
     const formattedData = {
       ...data,
       category: data.category as ExerciseCategory,
@@ -341,14 +343,21 @@ export default function ExerciseForm() {
       assistanceTypes: data.assistanceTypes as AssistanceType[],
       // Only include availableBands if 'bands' is in assistanceTypes
       availableBands: data.assistanceTypes.includes('bands') ? data.availableBands : [],
-      // Drop empty videoWebpUrl — store undefined rather than '' (downstream consumers check truthiness)
-      videoWebpUrl: data.videoWebpUrl?.trim() ? data.videoWebpUrl.trim() : undefined,
+      // Omit videoWebpUrl entirely when empty — Firestore updateDoc rejects `undefined`
+      // values, and downstream consumers already treat a missing key as falsy.
+      ...(trimmedVideoWebpUrl ? { videoWebpUrl: trimmedVideoWebpUrl } : {}),
       targetMuscles: data.targetMuscles as MuscleGroup[],
       instructions: data.instructions.map((i) => i.value).filter(Boolean),
       instructionsHe: data.instructionsHe.map((i) => i.value).filter(Boolean),
       tips: data.tips.map((t) => t.value).filter(Boolean),
       tipsHe: data.tipsHe.map((t) => t.value).filter(Boolean),
       lastEditedAt: serverTimestamp(),
+    }
+
+    // The form schema includes `videoWebpUrl: ''` by default; ensure it never
+    // leaks into the payload when empty (defense-in-depth for the iron rule).
+    if (!trimmedVideoWebpUrl) {
+      delete (formattedData as { videoWebpUrl?: string }).videoWebpUrl
     }
 
     console.log('🔥 ExerciseForm: Submitting formatted data:', formattedData)

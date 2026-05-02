@@ -172,6 +172,31 @@ grep -r "AIza" --include="*.ts" --include="*.js" --include="*.cjs" --include="*.
 - **Security תקין** = הרשאות Firestore נבדקו בפועל (כתיבה + קריאה), לא רק שהקובץ קיים.
 - **Regression תקין** = זרימת אימון שלמה (התחל → דווח → סיים → נשמר) עובדת, לא רק grep.
 
+### ❌ חוק ברזל: אין `undefined` בכתיבות ל-Firestore
+
+> **רקע:** ב-30/04/2026 נוסף שדה אופציונלי `videoWebpUrl?: string` ל-Exercise (PR #108). הטופס שלח `undefined` כשהשדה ריק. Firestore SDK דוחה כל שדה עם ערך `undefined` ב-`updateDoc()`/`setDoc()`/`addDoc()` — וכל עדכון של תרגיל קרס בפרודקשן עד שהבאג זוהה.
+
+**כל קריאה ל-`updateDoc()`, `setDoc()` או `addDoc()` עם `Partial<T>` או `T` שמכיל שדות אופציונליים — חובה לעטוף את ה-payload ב-`removeUndefined()` לפני הקריאה.**
+
+```typescript
+import { removeUndefined } from '@/lib/firebase/firestoreUtils'
+
+// ✅ נכון
+await updateDoc(docRef, {
+  ...removeUndefined(data),
+  updatedAt: serverTimestamp(),
+})
+
+// ❌ לא נכון — אם יש שדה אופציונלי ב-data שערכו undefined, הקריאה תקרוס
+await updateDoc(docRef, { ...data, updatedAt: serverTimestamp() })
+```
+
+**Helper זמין**: `src/lib/firebase/firestoreUtils.ts` מייצא את `removeUndefined<T>(obj)` ו-`isTimestamp(value)`. ה-helper שומר על Date, Firestore Timestamp, מערכים, ואובייקטים מקוננים — רק מסיר מפתחות עם `undefined`.
+
+**גם בצד הטופס**: עדיף לא לשלוח `undefined` מלכתחילה (defense-in-depth). תיקון בצד service בלבד מסתיר את הכוונה ועלול להישבר אם בעתיד מישהו יעקוף את ה-helper.
+
+**בדיקות חובה**: בדיקה התנהגותית עם mock של `updateDoc` (לא source-grep). דוגמה ב-`tests/firestore-undefined.spec.ts`.
+
 ---
 
 ## 🔤 שמות שרירים — מקור אמת יחיד (חוק ברזל!)
@@ -625,6 +650,7 @@ The label + hidden input pattern is the standard, accessible solution.
 | 30/04/2026 | תמיכה ב-WebP אנימציה לתרגילים — Phase 1 (תשתית) | נוסף שדה אופציונלי `videoWebpUrl?: string` ל-`Exercise`. כל 24 נקודות הצגת תמונת תרגיל באפליקציה (משתמש + מאמן + אדמין) עברו לרכיב משותף חדש `<ExerciseMedia>` ב-`src/shared/components/ExerciseMedia/`. ה-variant מכריע על מדיניות הטעינה: `hero` טוען WebP אנימטיבי, `thumbnail` תמיד תמונה סטטית (חיסכון ברוחב פס במיניאטורות קטנות), `preview` ל-context של אדמין. propagation מלא בכל iron-rule save/restore points (29/01): 9 ב-`useActiveWorkout`, 3 ב-`workoutHistory.ts`, 6 ב-`ExerciseLibrary`, 8 ב-`WorkoutHistory` continue handlers, 5 ב-trainer builders. test רגרסיה חדש: 9 בדיקות תחת `describe('videoWebpUrl propagates through workout lifecycle')`. side fixes: `PersonalRecords.tsx` placeholder.png → SVG, `admin/ExerciseList.tsx` הסיר תלות חיצונית `via.placeholder.com`. **Phase 2 TODO**: bulk migration script. |
 | 27-28/04/2026 | באג date picker מובייל דווח כ"מתוקן" אחרי PR #102 — התברר שהתיקון העביר סימפטום, לא טיפל בשורש (event propagation במודל). PR #104 הסיר את ה-modal לחלוטין | נוסף סעיף "Mobile Date Picker — Lesson Learned" + עודכן סעיף "🧪 בדיקות" עם מנדט אימות-במכשיר-לפני-merge + Bug Verification Policy גלובלי ב-`~/.claude/CLAUDE.md` |
 | 02/05/2026 | 9 בדיקות source-grep מ-Stage 6 של PR #108 (תמיכת WebP) עברו את ה-CI אבל לא תפסו שהקוד שולח `videoWebpUrl=undefined` ל-`updateDoc()`. Firestore דחה ועדכון תרגיל נשבר ב-production | נוסף חוק ברזל בסעיף "🧪 בדיקות": בדיקות חייבות לבדוק התנהגות (mock + assert על API), לא קיום מחרוזות. source-grep מותר רק כתוספת. |
+| 02/05/2026 | עדכון תרגיל קרס בפרודקשן — `ExerciseForm` שלח `videoWebpUrl: undefined` ו-`updateExercise` לא ניקה לפני `updateDoc` | חולץ `removeUndefined()` מ-`workoutHistory.ts` ל-`src/lib/firebase/firestoreUtils.ts` (משותף). `createExercise`/`updateExercise`/`bulkImportExercises` עוטפים payloads ב-`removeUndefined`. `ExerciseForm` משמיט `videoWebpUrl` כשריק במקום לשלוח `undefined` (defense-in-depth). חוק ברזל חדש ב-"Firestore חדש". 10 בדיקות התנהגותיות חדשות ב-`tests/firestore-undefined.spec.ts`. PRs נוספים מתוכננים אחרי soak: workouts.ts, programService, trainerService, וכו'. |
 
 ---
 
