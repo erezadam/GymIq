@@ -13,6 +13,7 @@ import { WorkoutCard } from '@/shared/components/WorkoutCard'
 import { AIBundleCard } from './ai-trainer/AIBundleCard'
 import { TrainerProgramCard } from '@/domains/trainer/components/ProgramView/TrainerProgramCard'
 import { useTraineeProgram } from '@/domains/trainer/hooks/useTraineeProgram'
+import { deduplicateWorkouts } from '../utils/deduplicateWorkouts'
 import type { WorkoutHistorySummary, WorkoutHistoryEntry, WorkoutCompletionStatus } from '../types'
 
 // Confirmation dialog for continuing workout
@@ -105,32 +106,15 @@ export default function WorkoutHistory() {
     try {
       const history = await getUserWorkoutHistory(user.uid)
 
-      // Duplicate detection: find workouts with same start time (±5 min) and same exercises
-      const FIVE_MINUTES = 5 * 60 * 1000
-      const duplicateIds = new Set<string>()
-
-      for (let i = 0; i < history.length; i++) {
-        if (duplicateIds.has(history[i].id)) continue
-        for (let j = i + 1; j < history.length; j++) {
-          if (duplicateIds.has(history[j].id)) continue
-          const timeDiff = Math.abs(history[i].date.getTime() - history[j].date.getTime())
-          if (
-            timeDiff <= FIVE_MINUTES &&
-            history[i].name === history[j].name &&
-            history[i].totalExercises === history[j].totalExercises
-          ) {
-            // Keep the one with more completed exercises; tie-break: keep newer (earlier index since sorted desc)
-            const keepI = history[i].completedExercises >= history[j].completedExercises
-            const duplicateId = keepI ? history[j].id : history[i].id
-            duplicateIds.add(duplicateId)
-            console.warn('🔍 Duplicate workout detected:', duplicateId, '(keeping', keepI ? history[i].id : history[j].id, ')')
-          }
-        }
+      // Dedup criterion: programId + programDayLabel + same calendar day.
+      // Ad-hoc workouts (no programId) are never deduplicated.
+      // See deduplicateWorkouts.ts for full rationale and tie-break rules.
+      const { filtered, duplicates } = deduplicateWorkouts(history)
+      for (const { duplicateId, keptId, keptStatus } of duplicates) {
+        console.warn(
+          `🔍 Duplicate workout (same programId+day): ${duplicateId} (keeping ${keptId}, status=${keptStatus})`
+        )
       }
-
-      const filtered = duplicateIds.size > 0
-        ? history.filter(w => !duplicateIds.has(w.id))
-        : history
 
       setWorkouts(filtered)
     } catch (error) {

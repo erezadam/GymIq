@@ -1,6 +1,6 @@
 // Service Worker for GymIQ PWA
 // Version-based cache busting - increment to force update
-const CACHE_VERSION = 'v2026.05.02-e98f9d1';
+const CACHE_VERSION = 'v2026.05.03-7ce82a3';
 const CACHE_NAME = `gymiq-cache-${CACHE_VERSION}`;
 
 // Files to cache for offline use (minimal - just shell)
@@ -128,10 +128,18 @@ self.addEventListener('fetch', (event) => {
           });
           return response;
         })
-        .catch(() => {
-          // Fallback to cache if network fails
-          return caches.match(request).then((cached) => {
-            return cached || caches.match('/');
+        .catch(async () => {
+          // Fallback to cache if network fails. Must always return a Response
+          // — returning undefined causes "Failed to convert value to 'Response'"
+          // and breaks navigation entirely on iOS Safari.
+          const cached = await caches.match(request);
+          if (cached) return cached;
+          const root = await caches.match('/');
+          if (root) return root;
+          return new Response('App offline', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
           });
         })
     );
