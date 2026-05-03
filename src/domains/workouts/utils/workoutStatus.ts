@@ -51,3 +51,44 @@ export function determineWorkoutStatus(
   if (userExplicitlyConfirmedFinish) return 'completed'
   return 'partial'
 }
+
+/**
+ * The action that should happen when the user presses "Finish" on a workout.
+ * Each variant maps to one branch of `determineFinishAction`.
+ */
+export type FinishAction =
+  | { type: 'exit-as-in-progress' }
+  | { type: 'show-warning'; incompleteCount: number }
+  | { type: 'show-summary' }
+
+/**
+ * Decides what should happen when the user presses "Finish".
+ *
+ * Three branches:
+ *
+ * 1. Zero exercises performed → `'exit-as-in-progress'`. The user
+ *    probably opened the workout by mistake or plans to do it later;
+ *    no warning, no decision modal — save silently as in_progress.
+ * 2. Some performed but not all → `'show-warning'`. Open the warning
+ *    modal so the user can choose: cancel, keep in progress, or
+ *    finish anyway.
+ * 3. All performed → `'show-summary'`. Open the calorie summary modal
+ *    directly — the workout is done.
+ *
+ * The function is pure so the hook does not need to embed branching
+ * logic, and so all four states (including the 0/0 edge case where
+ * `completedExercises === totalExercises === 0`) are exercised by
+ * unit tests.
+ */
+export function determineFinishAction(stats: WorkoutStatusInputs): FinishAction {
+  if (stats.completedExercises === 0) {
+    return { type: 'exit-as-in-progress' }
+  }
+  if (stats.completedExercises < stats.totalExercises) {
+    return {
+      type: 'show-warning',
+      incompleteCount: stats.totalExercises - stats.completedExercises,
+    }
+  }
+  return { type: 'show-summary' }
+}

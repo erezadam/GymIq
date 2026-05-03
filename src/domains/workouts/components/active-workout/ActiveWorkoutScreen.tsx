@@ -71,6 +71,7 @@ export default function ActiveWorkoutScreen() {
     exitWorkout,
     confirmFinish,
     handleConfirmFinish,
+    handleSaveAsInProgress,
     handleFinishExerciseReminder,
     finishWorkoutWithCalories,
     closeModal,
@@ -361,6 +362,7 @@ export default function ActiveWorkoutScreen() {
         modal={confirmModal}
         onClose={closeModal}
         onConfirm={handleModalConfirm}
+        onSaveAsInProgress={handleSaveAsInProgress}
         stats={{
           completedExercises: workout.stats.completedExercises,
           totalExercises: workout.stats.totalExercises,

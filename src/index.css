@@ -1155,6 +1155,11 @@
     @apply flex-1 py-3 rounded-xl font-semibold;
     @apply bg-red-500 hover:bg-red-600 text-white transition-colors;
   }
+
+  .confirmation-modal-btn-secondary {
+    @apply flex-1 py-3 rounded-xl font-semibold;
+    @apply bg-blue-500 hover:bg-blue-600 text-white transition-colors;
+  }
 }
 
 /* ===================

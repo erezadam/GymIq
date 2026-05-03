@@ -11,6 +11,14 @@ interface ConfirmationModalProps {
   modal: ConfirmModalState
   onClose: () => void
   onConfirm: () => void
+  /**
+   * Optional third action — currently used only by the
+   * 'incomplete_exercises_warning' modal to offer "save as in_progress
+   * and exit" as a middle ground between cancel and finish. The button
+   * is rendered only when this callback is provided AND the modal type
+   * is 'incomplete_exercises_warning'.
+   */
+  onSaveAsInProgress?: () => void
   stats?: {
     completedExercises: number
     totalExercises: number
@@ -24,6 +32,7 @@ export function ConfirmationModal({
   modal,
   onClose,
   onConfirm,
+  onSaveAsInProgress,
   stats,
 }: ConfirmationModalProps) {
   if (!modal.type) return null
@@ -73,10 +82,7 @@ export function ConfirmationModal({
         const ratio = total !== undefined ? `${incomplete} מתוך ${total}` : `${incomplete}`
         return {
           title: '⚠️ יש תרגילים שלא הושלמו',
-          text:
-            `לא סיימת ${ratio} תרגילים. ` +
-            `האימון יישמר כ"הושלם" — תרגילים שלא בוצעו יישארו בהיסטוריה לתיעוד. ` +
-            `האם לסיים בכל זאת?`,
+          text: `לא סיימת ${ratio} תרגילים. בחר מה לעשות:`,
           confirmText: 'כן, סיים בכל זאת',
           cancelText: 'ביטול',
           showStats: false,
@@ -143,6 +149,14 @@ export function ConfirmationModal({
           <button className="confirmation-modal-btn-cancel" onClick={onClose}>
             {content.cancelText}
           </button>
+          {modal.type === 'incomplete_exercises_warning' && onSaveAsInProgress && (
+            <button
+              className="confirmation-modal-btn-secondary"
+              onClick={onSaveAsInProgress}
+            >
+              השאר בתהליך
+            </button>
+          )}
           <button
             className={
               content.isDanger
