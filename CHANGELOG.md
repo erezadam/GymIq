@@ -8,6 +8,10 @@
 ### Changed
 - לחיצה על "סיים" באימון בלי דיווח כלל (0/N) שומרת אוטומטית כ"בתהליך" בלי מודאל אזהרה. ההתנהגות הקודמת (סגירה כ-cancelled) הוסרה.
 
+### Fixed
+- אימון "השאר בתהליך" לא הוצג ברשימת ההיסטוריה כשתוכנית קיימת עם אימון ישן בעל אותו שם — תוקן קריטריון ה-deduplication להסתמך על `programId + programDayLabel + date` במקום `name + totalExercises`. אימוני ad-hoc (ללא programId) לא מסוננים יותר. ההכרעה איזה לשמור עברה לקדימויות סטטוס: `completed > in_progress/partial > planned > cancelled`.
+- שגיאת `TypeError: Failed to convert value to 'Response'` ב-Service Worker בעת fetch ל-navigation routes (כגון `/workout/history`) במצב cache ריק — נוספה הגנה כפולה: cache → fallback ל-`/` → fallback ל-`Response 503` synthetic. ה-handler לעולם לא מחזיר `undefined`.
+
 ## [Unreleased] - 2026-05-02
 
 ### Added
