@@ -37,7 +37,7 @@ import { getExerciseById } from '@/lib/firebase/exercises'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { muscleGroupNames } from '@/styles/design-tokens'
 import { validateWorkoutId, isNetworkError } from '@/utils/workoutValidation'
-import { determineWorkoutStatus } from '../utils/workoutStatus'
+import { determineWorkoutStatus, determineFinishAction } from '../utils/workoutStatus'
 
 // Equipment names in Hebrew
 const equipmentNames: Record<string, string> = {
@@ -1417,6 +1417,7 @@ export function useActiveWorkout() {
 
   // Show finish confirmation - sets shouldFinish flag
   const [shouldFinish, setShouldFinish] = useState(false)
+  const [shouldExitNow, setShouldExitNow] = useState(false)
   const [pendingCalories, setPendingCalories] = useState<number | undefined>(undefined)
 
   const confirmFinish = useCallback(() => {
@@ -1425,20 +1426,25 @@ export function useActiveWorkout() {
       return
     }
 
-    // Check if there are incomplete exercises
-    const incompleteCount = workout.stats.totalExercises - workout.stats.completedExercises
-
-    if (incompleteCount > 0) {
-      // Show warning modal
-      setConfirmModal({
-        type: 'incomplete_exercises_warning',
-        incompleteCount,
-      })
-      return
+    const action = determineFinishAction(workout.stats)
+    switch (action.type) {
+      case 'exit-as-in-progress':
+        // 0/N — user opened the workout but reported nothing. Save as
+        // in_progress and exit silently. The actual exitWorkout call
+        // happens in a useEffect below because exitWorkout is declared
+        // later in this hook (TDZ).
+        setShouldExitNow(true)
+        return
+      case 'show-warning':
+        setConfirmModal({
+          type: 'incomplete_exercises_warning',
+          incompleteCount: action.incompleteCount,
+        })
+        return
+      case 'show-summary':
+        setShowSummaryModal(true)
+        return
     }
-
-    // All exercises complete - show summary modal directly
-    setShowSummaryModal(true)
   }, [workout])
 
   // Called when user confirms finish from confirmation modal (partial workout)
@@ -1834,6 +1840,27 @@ export function useActiveWorkout() {
     }
   }, [workout, firebaseWorkoutId, targetUserId, clearStorage, clearWorkout, navigate])
 
+  // Save workout as in_progress and exit. Called from the third button
+  // ("השאר בתהליך") on the incomplete-exercises warning modal.
+  // Identical semantics to exitWorkout — explicitly resets the
+  // explicit-finish consent ref because the user chose to keep the
+  // workout open, not to finish.
+  const handleSaveAsInProgress = useCallback(() => {
+    explicitFinishConfirmedRef.current = false
+    exitWorkout()
+  }, [exitWorkout])
+
+  // Bridge effect: confirmFinish cannot call exitWorkout directly because
+  // exitWorkout is declared later in this hook (TDZ). Mirrors the
+  // shouldFinish/doFinish pattern used a few hundred lines above.
+  useEffect(() => {
+    if (shouldExitNow) {
+      setShouldExitNow(false)
+      explicitFinishConfirmedRef.current = false
+      exitWorkout()
+    }
+  }, [shouldExitNow, exitWorkout])
+
   // Finish workout with calories (called from summary modal)
   const finishWorkoutWithCalories = useCallback((calories?: number) => {
     // CRITICAL: Block auto-save IMMEDIATELY to prevent race condition
@@ -2083,6 +2110,7 @@ export function useActiveWorkout() {
     exitWorkout,
     confirmFinish,
     handleConfirmFinish,
+    handleSaveAsInProgress,
     handleFinishExerciseReminder,
     finishWorkout,
     finishWorkoutWithCalories,
