@@ -4,6 +4,7 @@
 
 ### Added
 - כפתור "השאר בתהליך" במודאל סיום אימון — מאפשר למשתמש לסגור אימון חלקי ולחזור אליו מאוחר יותר דרך "המשך אימון" בהיסטוריה.
+- תשתית diagnostic logs לחקירת באגי production: שירות `src/lib/firebase/diagnosticLogs.ts` עם `logDiagnostic()` fire-and-forget, gated על `DEBUG_USER_UID` יחיד hardcoded (אפס overhead למשתמשים אחרים), וקולקציה חדשה `diagnosticLogs` עם 6 eventTypes פעילים: `WORKOUT_CREATED`, `WORKOUT_AUTOSAVE`, `WORKOUT_COMPLETE`, `SOFT_DELETE`, `WORKOUT_RECOVERY_FOUND`, `WORKOUT_VALIDATION`. הוטמע ב-5 call sites ב-`workoutHistory.ts` ובאחד ב-`workoutValidation.ts`. כל doc נושא actor uid + `workoutOwnerId` (רק כשהוא שונה מ-actor — לזרימות trainer→trainee), `sessionId` ב-sessionStorage (מתאפס לכל tab), `serverTimestamp`, stack trace מסונן (8 שורות), userAgent, ו-url. **Known limitation**: אירועים מתוך `useActiveWorkout.ts` (`WORKOUT_INIT/EXIT/RECOVERY_LOADED`, `FIREBASE_ID_LOADED_FROM_STORAGE/CLEARED`) לא נלכדים — ראיה עקיפה זמינה דרך הצמדת `WORKOUT_RECOVERY_FOUND` ל-`WORKOUT_AUTOSAVE` עם אותו workoutId. setup ידני (TTL בקונסול) ב-`docs/diagnostic-logs-setup.md`. ה-Admin UI מגיע ב-PR נפרד שייבא את `DEBUG_USER_UID` מהשירות (אסור duplicate).
 
 ### Changed
 - לחיצה על "סיים" באימון בלי דיווח כלל (0/N) שומרת אוטומטית כ"בתהליך" בלי מודאל אזהרה. ההתנהגות הקודמת (סגירה כ-cancelled) הוסרה.
