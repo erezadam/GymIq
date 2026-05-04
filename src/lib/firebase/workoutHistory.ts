@@ -20,6 +20,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './config'
 import { removeUndefined } from './firestoreUtils'
+import { logDiagnostic } from './diagnosticLogs'
 import type { WorkoutHistoryEntry, WorkoutHistorySummary } from '@/domains/workouts/types'
 import {
   getPRAxisForReportType,
@@ -193,12 +194,33 @@ export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'
   console.log('📋 Collection:', COLLECTION_NAME)
   console.log('📋 Data:', JSON.stringify(cleanWorkout, null, 2))
 
+  const basePayload = {
+    status: workout.status,
+    source: 'saveWorkoutHistory',
+    exerciseCount: workout.exercises.length,
+    hasProgramId: Boolean(workout.programId),
+    programId: workout.programId ?? null,
+    isReportedByTrainer: Boolean(workout.reportedBy),
+  }
+
   try {
     const docRef = await addDoc(historyRef, cleanWorkout)
     console.log('✅ SUCCESS - Workout saved with ID:', docRef.id)
     console.log('✅ Full path:', `${COLLECTION_NAME}/${docRef.id}`)
+    logDiagnostic('WORKOUT_CREATED', docRef.id, { ...basePayload, succeeded: true }, workout.userId)
     return docRef.id
   } catch (error: any) {
+    logDiagnostic(
+      'WORKOUT_CREATED',
+      null,
+      {
+        ...basePayload,
+        succeeded: false,
+        errorCode: error?.code ?? null,
+        errorMessage: error?.message ?? null,
+      },
+      workout.userId,
+    )
     console.error('❌ FAILED TO SAVE WORKOUT!')
     console.error('❌ Error code:', error.code)
     console.error('❌ Error message:', error.message)
@@ -1220,12 +1242,23 @@ export async function updateWorkoutHistory(
 // Soft-delete a workout (marks as deleted, data stays in Firestore)
 export async function softDeleteWorkout(workoutId: string, reason?: string): Promise<void> {
   const docRef = doc(db, COLLECTION_NAME, workoutId)
-  await updateDoc(docRef, {
-    deletedByTrainee: {
-      deletedAt: Timestamp.now(),
-      ...(reason && { reason }),
-    },
-  })
+  try {
+    await updateDoc(docRef, {
+      deletedByTrainee: {
+        deletedAt: Timestamp.now(),
+        ...(reason && { reason }),
+      },
+    })
+    logDiagnostic('SOFT_DELETE', workoutId, { reason: reason ?? null, succeeded: true })
+  } catch (error: any) {
+    logDiagnostic('SOFT_DELETE', workoutId, {
+      reason: reason ?? null,
+      succeeded: false,
+      errorCode: error?.code ?? null,
+      errorMessage: error?.message ?? null,
+    })
+    throw error
+  }
 }
 
 // Delete a workout from history (hard delete - kept for admin tools)
@@ -1263,18 +1296,41 @@ export async function getInProgressWorkout(userId: string): Promise<WorkoutHisto
 
     if (snapshot.empty) {
       console.log('📭 No in_progress workout found')
+      logDiagnostic('WORKOUT_RECOVERY_FOUND', null, { foundCount: 0 }, userId)
       return null
     }
 
     // Skip soft-deleted workouts
+    const rawHasDeleted = snapshot.docs.some(d => !isNotSoftDeleted(d.data()))
     const validDocs = snapshot.docs.filter(d => isNotSoftDeleted(d.data()))
     if (validDocs.length === 0) {
       console.log('📭 No non-deleted in_progress workout found')
+      logDiagnostic(
+        'WORKOUT_RECOVERY_FOUND',
+        null,
+        {
+          foundCount: snapshot.size,
+          hasDeletedByTrainee: rawHasDeleted,
+          status: 'in_progress',
+        },
+        userId,
+      )
       return null
     }
 
     const activeDoc = validDocs[0]
     console.log('✅ Found in_progress workout:', activeDoc.id)
+    logDiagnostic(
+      'WORKOUT_RECOVERY_FOUND',
+      activeDoc.id,
+      {
+        foundWorkoutId: activeDoc.id,
+        foundCount: snapshot.size,
+        hasDeletedByTrainee: rawHasDeleted,
+        status: 'in_progress',
+      },
+      userId,
+    )
     return toWorkoutHistory(activeDoc.id, activeDoc.data())
   } catch (error: any) {
     console.error('❌ Failed to get in_progress workout:', error)
@@ -1371,12 +1427,27 @@ export async function autoSaveWorkout(
     reportedByName: workout.reportedByName,
   })
 
+  const completedExerciseCount = workout.exercises.filter((e) => e.isCompleted).length
+  const basePayload = {
+    fieldsBeingWritten: Object.keys(cleanWorkout),
+    status: 'in_progress',
+    exerciseCount: workout.exercises.length,
+    completedExerciseCount,
+  }
+  const isUpdate = workoutId !== null
+
   try {
     if (workoutId) {
       // Update existing workout
       const docRef = doc(db, COLLECTION_NAME, workoutId)
       await updateDoc(docRef, cleanWorkout)
       console.log('💾 Auto-save: Updated workout', workoutId)
+      logDiagnostic(
+        'WORKOUT_AUTOSAVE',
+        workoutId,
+        { ...basePayload, isUpdate: true, succeeded: true },
+        workout.userId,
+      )
       return workoutId
     } else {
       // Create new workout
@@ -1384,9 +1455,27 @@ export async function autoSaveWorkout(
       ;(cleanWorkout as any).createdAt = Timestamp.now()
       const docRef = await addDoc(historyRef, cleanWorkout)
       console.log('💾 Auto-save: Created workout', docRef.id)
+      logDiagnostic(
+        'WORKOUT_AUTOSAVE',
+        docRef.id,
+        { ...basePayload, isUpdate: false, succeeded: true },
+        workout.userId,
+      )
       return docRef.id
     }
   } catch (error: any) {
+    logDiagnostic(
+      'WORKOUT_AUTOSAVE',
+      workoutId,
+      {
+        ...basePayload,
+        isUpdate,
+        succeeded: false,
+        errorCode: error?.code ?? null,
+        errorMessage: error?.message ?? null,
+      },
+      workout.userId,
+    )
     console.error('❌ Auto-save failed:', error)
     throw error
   }
@@ -1745,10 +1834,24 @@ export async function completeWorkout(
 
   console.log('🏁 Completing workout:', workoutId)
 
+  const basePayload = {
+    exerciseCount: updates.totalExercises,
+    completedExerciseCount: updates.completedExercises,
+    status: updates.status,
+    duration: updates.duration,
+  }
+
   try {
     await updateDoc(docRef, updateData)
     console.log('✅ Workout completed successfully')
+    logDiagnostic('WORKOUT_COMPLETE', workoutId, { ...basePayload, succeeded: true })
   } catch (error: any) {
+    logDiagnostic('WORKOUT_COMPLETE', workoutId, {
+      ...basePayload,
+      succeeded: false,
+      errorCode: error?.code ?? null,
+      errorMessage: error?.message ?? null,
+    })
     console.error('❌ Failed to complete workout:', error)
     throw error
   }

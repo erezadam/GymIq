@@ -15,6 +15,7 @@
 
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase/config'
+import { logDiagnostic } from '@/lib/firebase/diagnosticLogs'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '@/domains/workouts/types/active-workout.types'
 
 const COLLECTION_NAME = 'workoutHistory'
@@ -36,54 +37,86 @@ export async function validateWorkoutId(
   workoutId: string,
   currentUserId: string
 ): Promise<ValidationResult> {
+  const logResult = (result: ValidationResult, hasDeletedByTrainee: boolean | null) => {
+    logDiagnostic(
+      'WORKOUT_VALIDATION',
+      workoutId,
+      {
+        validationResult: result.valid ? 'valid' : 'invalid',
+        reason: result.reason ?? null,
+        hasDeletedByTrainee,
+        documentUserId: result.documentUserId ?? null,
+        documentStatus: result.documentStatus ?? null,
+      },
+      currentUserId,
+    )
+  }
+
   try {
     const docRef = doc(db, COLLECTION_NAME, workoutId)
     const snapshot = await getDoc(docRef)
 
     if (!snapshot.exists()) {
       console.warn(`[WorkoutValidation] Document ${workoutId} not found in Firestore`)
-      return { valid: false, reason: 'not_found' }
+      const result: ValidationResult = { valid: false, reason: 'not_found' }
+      logResult(result, false)
+      return result
     }
 
     const data = snapshot.data()
     const documentUserId = data?.userId as string | undefined
     const documentStatus = data?.status as string | undefined
+    const hasDeletedByTrainee = Boolean(data?.deletedByTrainee)
 
     if (documentUserId !== currentUserId) {
       console.warn(
         `[WorkoutValidation] userId mismatch for ${workoutId}: ` +
         `document=${documentUserId}, current=${currentUserId}`
       )
-      return { valid: false, reason: 'wrong_user', documentUserId, documentStatus }
+      const result: ValidationResult = { valid: false, reason: 'wrong_user', documentUserId, documentStatus }
+      logResult(result, hasDeletedByTrainee)
+      return result
     }
 
     if (documentStatus !== 'in_progress') {
       console.warn(
         `[WorkoutValidation] Status not in_progress for ${workoutId}: status=${documentStatus}`
       )
-      return { valid: false, reason: 'wrong_status', documentUserId, documentStatus }
+      const result: ValidationResult = { valid: false, reason: 'wrong_status', documentUserId, documentStatus }
+      logResult(result, hasDeletedByTrainee)
+      return result
     }
 
-    return { valid: true }
+    const result: ValidationResult = { valid: true }
+    logResult(result, hasDeletedByTrainee)
+    return result
   } catch (error: any) {
     const code = error?.code || ''
 
-    // permission-denied → definitely stale/wrong user, safe to delete
+    // permission-denied → definitely stale/wrong user, safe to delete.
+    // hasDeletedByTrainee is null (unknown) — we couldn't read the doc.
     if (code === 'permission-denied') {
       console.warn(`[WorkoutValidation] Permission denied for ${workoutId} — marking invalid`)
-      return { valid: false, reason: 'fetch_error' }
+      const result: ValidationResult = { valid: false, reason: 'fetch_error' }
+      logResult(result, null)
+      return result
     }
 
     // Network/offline/timeout errors → we can't tell if the ID is valid or not.
     // Optimistic: keep the ID so offline users don't lose their workout.
+    // hasDeletedByTrainee is null (unknown) — getDoc threw before we could read.
     if (isNetworkError(code)) {
       console.warn(`[WorkoutValidation] Network error for ${workoutId}, keeping ID (optimistic), code=${code}`)
-      return { valid: true, reason: 'network_error' }
+      const result: ValidationResult = { valid: true, reason: 'network_error' }
+      logResult(result, null)
+      return result
     }
 
-    // Unknown error → defensive, mark invalid
+    // Unknown error → defensive, mark invalid. hasDeletedByTrainee is null (unknown).
     console.warn(`[WorkoutValidation] Unknown error for ${workoutId}:`, code || error?.message)
-    return { valid: false, reason: 'fetch_error' }
+    const result: ValidationResult = { valid: false, reason: 'fetch_error' }
+    logResult(result, null)
+    return result
   }
 }
 
