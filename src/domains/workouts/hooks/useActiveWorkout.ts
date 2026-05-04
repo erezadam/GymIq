@@ -646,7 +646,12 @@ export function useActiveWorkout() {
       // Try to restore from localStorage (only if not continuing from history)
       const savedWorkout = localStorage.getItem(storageKey)
       const savedFirebaseId = localStorage.getItem(firebaseIdKey)
-      if (savedFirebaseId && user?.uid) {
+      // Only restore the localStorage firebaseId for the tab-close case (no
+      // builder data, no history continuation). Starting fresh from the
+      // WorkoutBuilder must always create a new doc — restoring a stale ID
+      // here caused autosaves to overwrite the previously-exited workout.
+      const isTabCloseRecovery = selectedExercises.length === 0 && !isContinuingFromHistory
+      if (savedFirebaseId && user?.uid && isTabCloseRecovery) {
         // Validate saved Firebase ID before restoring it
         const validation = await validateWorkoutId(savedFirebaseId, effectiveUserId)
         if (validation.valid) {
@@ -660,8 +665,13 @@ export function useActiveWorkout() {
             toast('נתוני אימון ישנים נמחקו — מתחיל מחדש', { icon: '🔄' })
           }
         }
-      } else if (savedFirebaseId) {
+      } else if (savedFirebaseId && isTabCloseRecovery) {
+        // No user yet but we're in the tab-close path — keep the ID for now.
         setFirebaseWorkoutId(savedFirebaseId)
+      } else if (savedFirebaseId && !isTabCloseRecovery) {
+        // New workout from builder (or history continuation handled above) —
+        // discard the stale localStorage entry so autosave creates a fresh doc.
+        localStorage.removeItem(firebaseIdKey)
       }
 
       if (savedWorkout && !continueData) {
@@ -1821,13 +1831,16 @@ export function useActiveWorkout() {
       }
     }
 
-    // Clear everything - but DON'T clear the Firebase workout ID from storage
-    // so we can find it later if the user comes back
+    // Clear everything including the firebaseId — recovery for the tab-close
+    // case uses the Firestore query path (getInProgressWorkout, ~line 415),
+    // not localStorage. Keeping a stale ID here caused new workouts started
+    // from the builder to overwrite the previously-exited workout's content
+    // via the localStorage restore path (firebaseId reuse bug).
     clearStorage()
     clearWorkout()
     setWorkout(null)
     setFirebaseWorkoutId(null)
-    // Keep the firebase ID in localStorage for recovery!
+    localStorage.removeItem(firebaseIdKey)
     hasInitialized.current = false
     continueWorkoutIdRef.current = null
     setConfirmModal({ type: null })
