@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased] - 2026-05-04
+
+### Fixed
+- **תיקון firebaseId reuse (2026-05-04):** אימון חדש שמתחיל מ-`WorkoutBuilder` לא ימחזר `firebaseId` ישן מ-`localStorage`. הבאג נחשף דרך ה-Admin Diagnostic Console (PR #122): משתמש שיצא מאימון דרך "השאר בתהליך" השאיר את ה-firebaseId ב-localStorage; כשהתחיל אימון חדש מה-builder, ה-init flow שיחזר את ה-id הישן ו-autosave דרס את התוכן של האימון הקודם. **תיקון:** (1) `exitWorkout` מנקה את `firebaseIdKey` מ-localStorage אחרי שמירה מוצלחת (היה comment "Keep the firebase ID in localStorage for recovery!" שגרם לבאג); (2) ה-localStorage restore ב-init flow gated על `isTabCloseRecovery = selectedExercises.length === 0 && !isContinuingFromHistory` — חידוש מ-builder תמיד מתחיל מ-doc חדש; (3) recovery לאחר tab-close ממשיך לעבוד דרך ה-Firestore query path (`getInProgressWorkout`) שזו הדרך הסמכותית. 3 בדיקות התנהגותיות חדשות ב-`tests/firebaseIdRecovery.spec.ts` — render hook עם mocked deps ובדיקת side effects ב-localStorage + call args.
+
 ## [Unreleased] - 2026-05-03
 
 ### Added
