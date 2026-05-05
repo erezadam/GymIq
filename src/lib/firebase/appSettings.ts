@@ -6,11 +6,17 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from './config'
 
-const SETTINGS_COLLECTION = 'settings'
-const APP_SETTINGS_DOC = 'app'
+export const SETTINGS_COLLECTION = 'settings'
+export const APP_SETTINGS_DOC = 'app'
 
 export interface AppSettings {
   externalComparisonUrl?: string
+  // Global kill switch for diagnosticLogs writes. Default when absent = true
+  // (fail-open) so a fresh deploy keeps observability until an admin actively
+  // disables. Read by src/lib/firebase/diagnosticLogs.ts via direct getDoc
+  // (not getAppSettings) so a transient Firestore read failure can preserve
+  // the prior cached value instead of being misread as "field absent → true".
+  diagnosticLogsEnabled?: boolean
   updatedAt?: Date
 }
 

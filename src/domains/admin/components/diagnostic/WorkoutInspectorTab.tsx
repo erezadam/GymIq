@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { X } from 'lucide-react'
 import { getWorkoutsForUser, getWorkoutRaw } from '../../services/diagnosticService'
@@ -35,7 +35,11 @@ function formatDateTime(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
-export function WorkoutInspectorTab() {
+interface Props {
+  userId: string | null
+}
+
+export function WorkoutInspectorTab({ userId }: Props) {
   const initial = useMemo(defaultDateRange, [])
   const [dateFrom, setDateFrom] = useState(initial.from)
   const [dateTo, setDateTo] = useState(initial.to)
@@ -43,6 +47,14 @@ export function WorkoutInspectorTab() {
   const [deletedFilter, setDeletedFilter] = useState<WorkoutFilters['deletedFilter']>('either')
   const [cursors, setCursors] = useState<Date[]>([])
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null)
+
+  // Drop any open workout-detail modal when the investigated user changes —
+  // otherwise the modal would briefly fetch a workout doc belonging to the
+  // previous subject (the rules allow admin reads, but the UX would show a
+  // doc unrelated to the new subject's listing).
+  useEffect(() => {
+    setSelectedWorkoutId(null)
+  }, [userId])
 
   const filters = useMemo<WorkoutFilters>(
     () => ({
@@ -57,10 +69,19 @@ export function WorkoutInspectorTab() {
   )
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['diagnostic-workouts', filters],
-    queryFn: () => getWorkoutsForUser(filters),
+    queryKey: ['diagnostic-workouts', userId, filters],
+    queryFn: () => getWorkoutsForUser(userId!, filters),
+    enabled: !!userId,
     staleTime: 30_000,
   })
+
+  if (!userId) {
+    return (
+      <div className="rounded-xl bg-dark-surface border border-dark-border p-8 text-center text-text-muted">
+        בחר משתמש לתחילת חקירה.
+      </div>
+    )
+  }
 
   const toggleStatus = (s: WorkoutCompletionStatus) => {
     setCursors([])

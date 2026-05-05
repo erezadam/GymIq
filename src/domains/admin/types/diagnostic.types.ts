@@ -1,4 +1,4 @@
-// MIRROR of src/lib/firebase/diagnosticLogs.ts (PR #1). Keep in sync.
+// MIRROR of src/lib/firebase/diagnosticLogs.ts. Keep in sync.
 // If the writer-side schema changes (eventType enum, payload shape, field names),
 // update this file verbatim and bump any related UI assumptions.
 
@@ -27,6 +27,9 @@ export interface DiagnosticLog {
   workoutOwnerId?: string
   sessionId: string
   timestamp: Date
+  // 30-day TTL marker written by logDiagnostic. Not displayed in the UI;
+  // mirrored here only so the type matches Firestore's actual shape.
+  expiresAt?: Date
   eventType: DiagnosticEventType
   workoutId: string | null
   payload: Record<string, unknown>

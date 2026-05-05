@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { getSessionLogs, getUserSessions } from '../../services/diagnosticService'
@@ -27,21 +27,42 @@ function formatRelative(start: Date, ts: Date): string {
   return `+${(ms / 1000).toFixed(3)}s`
 }
 
-export function SessionReplayTab() {
+interface Props {
+  userId: string | null
+}
+
+export function SessionReplayTab({ userId }: Props) {
   const [selectedSessionId, setSelectedSessionId] = useState<string>('')
 
+  // A stale sessionId would be safely returned as "no logs" by the service's
+  // userId filter, but the <select>'s value would briefly point to an option
+  // that does not exist in the new user's session list (React controlled-input
+  // warning). Reset on subject change.
+  useEffect(() => {
+    setSelectedSessionId('')
+  }, [userId])
+
   const sessionsQuery = useQuery({
-    queryKey: ['diagnostic-sessions'],
-    queryFn: getUserSessions,
+    queryKey: ['diagnostic-sessions', userId],
+    queryFn: () => getUserSessions(userId!),
+    enabled: !!userId,
     staleTime: 30_000,
   })
 
   const logsQuery = useQuery({
-    queryKey: ['diagnostic-session-logs', selectedSessionId],
-    queryFn: () => getSessionLogs(selectedSessionId),
-    enabled: !!selectedSessionId,
+    queryKey: ['diagnostic-session-logs', userId, selectedSessionId],
+    queryFn: () => getSessionLogs(userId!, selectedSessionId),
+    enabled: !!userId && !!selectedSessionId,
     staleTime: 30_000,
   })
+
+  if (!userId) {
+    return (
+      <div className="rounded-xl bg-dark-surface border border-dark-border p-8 text-center text-text-muted">
+        בחר משתמש לתחילת חקירה.
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">
@@ -74,7 +95,7 @@ export function SessionReplayTab() {
         !sessionsQuery.isError &&
         (sessionsQuery.data?.length ?? 0) === 0 && (
           <div className="rounded-xl bg-dark-surface border border-dark-border p-8 text-center text-text-muted">
-            אין sessions. כדי ליצור session חדש — פתח את האפליקציה בחשבון a@gmail.com.
+            אין sessions למשתמש זה. ודא שה-kill switch פעיל ושהמשתמש פעל באפליקציה לאחר ההפעלה.
           </div>
         )}
 

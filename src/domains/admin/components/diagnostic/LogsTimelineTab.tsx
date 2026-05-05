@@ -28,7 +28,11 @@ function formatTime(d: Date): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
-export function LogsTimelineTab() {
+interface Props {
+  userId: string | null
+}
+
+export function LogsTimelineTab({ userId }: Props) {
   const initial = useMemo(defaultDateRange, [])
   const [dateFrom, setDateFrom] = useState(initial.from)
   const [dateTo, setDateTo] = useState(initial.to)
@@ -51,10 +55,19 @@ export function LogsTimelineTab() {
   )
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['diagnostic-logs', filters],
-    queryFn: () => getDiagnosticLogs(filters),
+    queryKey: ['diagnostic-logs', userId, filters],
+    queryFn: () => getDiagnosticLogs(userId!, filters),
+    enabled: !!userId,
     staleTime: 30_000,
   })
+
+  if (!userId) {
+    return (
+      <div className="rounded-xl bg-dark-surface border border-dark-border p-8 text-center text-text-muted">
+        בחר משתמש לתחילת חקירה.
+      </div>
+    )
+  }
 
   const toggleEventType = (t: DiagnosticEventType) => {
     setCursors([])
@@ -162,10 +175,10 @@ export function LogsTimelineTab() {
 
       {!isLoading && !isError && (data?.logs.length ?? 0) === 0 && (
         <div className="rounded-xl bg-dark-surface border border-dark-border p-8 text-center text-text-muted">
-          אין לוגים בטווח הזה. ודא ש-DEBUG_USER_UID ביצע פעולות.
+          אין לוגים בטווח הזה למשתמש זה.
           <br />
           <span className="text-xs">
-            (אם הלוגים אמורים להיות פה ולא — ייתכן שפג זמן retention.)
+            (אם הלוגים אמורים להיות פה ולא — ייתכן שה-kill switch כבוי או שפג זמן retention.)
           </span>
         </div>
       )}
