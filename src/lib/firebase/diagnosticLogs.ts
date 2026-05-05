@@ -1,28 +1,49 @@
 /**
- * Diagnostic logs service — fire-and-forget Firestore writes for one debug user.
+ * Diagnostic logs service — fire-and-forget Firestore writes for any
+ * authenticated user, gated by a global kill switch.
  *
- * Activated only when the actor's auth uid matches DEBUG_USER_UID. For any other
- * user, every call returns immediately with zero side effects (no Firestore reads
- * or writes, no allocations beyond a function call).
+ * Write path (`logDiagnostic`):
+ *   1. No authenticated actor → return.
+ *   2. Kill switch is `false` → return (with bounded staleness, see below).
+ *   3. Otherwise, append to `diagnosticLogs` with full event context.
  *
- * Writes go to the `diagnosticLogs` collection. Each log carries the full event
- * context (actor uid, optional workout owner uid, sessionId scoped to the tab,
- * server timestamp, eventType, workoutId, custom payload, stack trace, user agent,
- * URL). Failures are swallowed with `console.warn` — diagnostic logging must
- * never break the host flow.
+ * Kill switch source: `settings/app.diagnosticLogsEnabled`. Cached in-memory
+ * with a 60s TTL. Behavior:
+ *   - Cold start (no value cached yet): treat as `true` (fail-open) so a
+ *     fresh deploy doesn't silently lose observability before the field is
+ *     written manually.
+ *   - Field absent in Firestore: treat as `true` (same fail-open rationale).
+ *   - Field === `false`: writes are dropped.
+ *   - getDoc rejection (transient Firestore read failure): keep the previously
+ *     cached value. Don't misread an outage as "field absent → true".
+ *   - Cache refresh runs in the background (does not block the caller). The
+ *     current call uses whatever value is already cached.
  *
- * The companion admin UI (separate PR) imports `DEBUG_USER_UID` from this module —
- * do not duplicate the constant.
+ * The companion admin UI (Diagnostic Console) reads from this collection via
+ * `src/domains/admin/services/diagnosticService.ts`, which now accepts an
+ * arbitrary `userId` instead of a hardcoded debug uid.
+ *
+ * `expiresAt` carries a 30-day TTL marker. Actual deletion happens via
+ * Firestore TTL policy (configured manually in Firebase Console on this
+ * field) — `firestore.rules` cannot delete data.
  */
 
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  serverTimestamp,
+  Timestamp,
+} from 'firebase/firestore'
 import { auth, db } from './config'
 import { removeUndefined } from './firestoreUtils'
-
-export const DEBUG_USER_UID = 'OHxRVH3RdUP8k7xQBuAa5ZXvfrI2'
+import { APP_SETTINGS_DOC, SETTINGS_COLLECTION } from './appSettings'
 
 const COLLECTION_NAME = 'diagnosticLogs'
 const SESSION_STORAGE_KEY = 'gymiq_session_id'
+const KILL_SWITCH_TTL_MS = 60_000
+const LOG_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
 
 export type DiagnosticEventType =
   | 'WORKOUT_CREATED'
@@ -32,8 +53,41 @@ export type DiagnosticEventType =
   | 'WORKOUT_RECOVERY_FOUND'
   | 'WORKOUT_VALIDATION'
 
-export function shouldLogForUser(userId: string | null | undefined): boolean {
-  return userId === DEBUG_USER_UID
+let killSwitchCachedValue = true
+let killSwitchLoadedAt = 0
+let killSwitchInFlight: Promise<void> | null = null
+
+function refreshKillSwitchInBackground(): void {
+  if (killSwitchInFlight) return
+  killSwitchInFlight = (async () => {
+    try {
+      const snap = await getDoc(doc(db, SETTINGS_COLLECTION, APP_SETTINGS_DOC))
+      if (snap.exists()) {
+        const data = snap.data() as { diagnosticLogsEnabled?: unknown }
+        // Only an explicit `false` disables. Missing field, true, or any
+        // other value leaves logging enabled.
+        killSwitchCachedValue = data.diagnosticLogsEnabled !== false
+      } else {
+        // Doc missing → fail-open.
+        killSwitchCachedValue = true
+      }
+      killSwitchLoadedAt = Date.now()
+    } catch {
+      // Read failure: keep the previous cached value, but advance the load
+      // timestamp so we don't hammer Firestore on every call during an
+      // outage. Next refresh in TTL_MS.
+      killSwitchLoadedAt = Date.now()
+    } finally {
+      killSwitchInFlight = null
+    }
+  })()
+}
+
+function isLoggingEnabled(): boolean {
+  if (Date.now() - killSwitchLoadedAt >= KILL_SWITCH_TTL_MS) {
+    refreshKillSwitchInBackground()
+  }
+  return killSwitchCachedValue
 }
 
 function getOrCreateSessionId(): string {
@@ -73,17 +127,20 @@ export function logDiagnostic(
   workoutOwnerId?: string | null,
 ): void {
   const actorUid = auth.currentUser?.uid ?? null
-  if (!shouldLogForUser(actorUid)) return
+  if (!actorUid) return
+  if (!isLoggingEnabled()) return
 
   const stackTrace = captureStackTrace()
   const ownerForDoc =
     workoutOwnerId && workoutOwnerId !== actorUid ? workoutOwnerId : null
+  const expiresAt = Timestamp.fromDate(new Date(Date.now() + LOG_RETENTION_MS))
 
   const docData = {
     userId: actorUid,
     workoutOwnerId: ownerForDoc,
     sessionId: getOrCreateSessionId(),
     timestamp: serverTimestamp(),
+    expiresAt,
     eventType,
     workoutId: workoutId ?? null,
     payload: removeUndefined(payload),
@@ -95,4 +152,12 @@ export function logDiagnostic(
   void addDoc(collection(db, COLLECTION_NAME), docData).catch((err) => {
     console.warn('Diagnostic log failed:', err)
   })
+}
+
+// Test-only: reset kill-switch in-memory cache between specs so the cold-start
+// behavior is reproducible. NOT for production use.
+export function __resetKillSwitchCacheForTests(): void {
+  killSwitchCachedValue = true
+  killSwitchLoadedAt = 0
+  killSwitchInFlight = null
 }

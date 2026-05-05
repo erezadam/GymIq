@@ -3,7 +3,7 @@
  * Firestore service.
  *
  * Verifies that:
- *   - every read passes the hardcoded DEBUG_USER_UID via `where('userId','==',...)`
+ *   - every read passes the dynamic `userId` argument via `where('userId','==',...)`
  *   - filters (date, eventType, sessionId, status, deletedFilter) translate
  *     to the right Firestore query constraints, OR are applied client-side
  *     when documented
@@ -14,11 +14,6 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-
-// Mock the writer module (PR #121).
-vi.mock('@/lib/firebase/diagnosticLogs', () => ({
-  DEBUG_USER_UID: 'OHxRVH3RdUP8k7xQBuAa5ZXvfrI2',
-}))
 
 // Mock the existing workoutHistory single-doc reader (re-exported from the service).
 vi.mock('@/lib/firebase/workoutHistory', () => ({
@@ -63,8 +58,9 @@ import {
   getSessionLogs,
   getWorkoutsForUser,
   getWorkoutRaw,
-  DEBUG_USER_UID,
 } from '@/domains/admin/services/diagnosticService'
+
+const TEST_UID = 'test-user-uid-abc123'
 
 const getDocsMock = firestore.getDocs as unknown as ReturnType<typeof vi.fn>
 const getDocMock = firestore.getDoc as unknown as ReturnType<typeof vi.fn>
@@ -73,7 +69,7 @@ function makeLogDoc(overrides: Record<string, unknown> = {}) {
   return {
     id: overrides.id ?? `log-${Math.random().toString(36).slice(2, 8)}`,
     data: () => ({
-      userId: DEBUG_USER_UID,
+      userId: TEST_UID,
       sessionId: 'sess-abc',
       timestamp: { toDate: () => new Date('2026-05-04T12:00:00Z') },
       eventType: 'WORKOUT_AUTOSAVE',
@@ -91,7 +87,7 @@ function makeWorkoutDoc(overrides: Record<string, unknown> = {}) {
   return {
     id: overrides.id ?? `wid-${Math.random().toString(36).slice(2, 8)}`,
     data: () => ({
-      userId: DEBUG_USER_UID,
+      userId: TEST_UID,
       name: 'Test workout',
       date: { toDate: () => new Date('2026-05-04T12:00:00Z') },
       duration: 30,
@@ -110,10 +106,10 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('diagnosticService — DEBUG_USER_UID enforcement', () => {
-  it('getDiagnosticLogs always passes userId == DEBUG_USER_UID', async () => {
+describe('diagnosticService — userId parameter is honored', () => {
+  it('getDiagnosticLogs filters by the userId argument', async () => {
     getDocsMock.mockResolvedValueOnce({ docs: [] })
-    await getDiagnosticLogs({})
+    await getDiagnosticLogs(TEST_UID, {})
     const constraints = queryConstraintsRecorder[0] as Array<{
       field?: string
       op?: string
@@ -121,36 +117,62 @@ describe('diagnosticService — DEBUG_USER_UID enforcement', () => {
     }>
     const userIdWhere = constraints.find((c) => c.field === 'userId' && c.op === '==')
     expect(userIdWhere).toBeDefined()
-    expect(userIdWhere?.value).toBe(DEBUG_USER_UID)
+    expect(userIdWhere?.value).toBe(TEST_UID)
   })
 
-  it('getWorkoutsForUser always passes userId == DEBUG_USER_UID', async () => {
+  it('getWorkoutsForUser filters by the userId argument', async () => {
     getDocsMock.mockResolvedValueOnce({ docs: [] })
-    await getWorkoutsForUser({})
+    await getWorkoutsForUser(TEST_UID, {})
     const constraints = queryConstraintsRecorder[0] as Array<{
       field?: string
       op?: string
       value?: string
     }>
     const userIdWhere = constraints.find((c) => c.field === 'userId' && c.op === '==')
-    expect(userIdWhere?.value).toBe(DEBUG_USER_UID)
+    expect(userIdWhere?.value).toBe(TEST_UID)
   })
 
-  it('getUserSessions always passes userId == DEBUG_USER_UID', async () => {
+  it('getUserSessions filters by the userId argument', async () => {
     getDocsMock.mockResolvedValueOnce({ docs: [] })
-    await getUserSessions()
+    await getUserSessions(TEST_UID)
     const constraints = queryConstraintsRecorder[0] as Array<{
       field?: string
       value?: string
     }>
-    expect(constraints.find((c) => c.field === 'userId')?.value).toBe(DEBUG_USER_UID)
+    expect(constraints.find((c) => c.field === 'userId')?.value).toBe(TEST_UID)
+  })
+
+  it('getSessionLogs filters by both the userId and sessionId arguments', async () => {
+    getDocsMock.mockResolvedValueOnce({ docs: [] })
+    await getSessionLogs(TEST_UID, 'sess-xyz')
+    const constraints = queryConstraintsRecorder[0] as Array<{
+      field?: string
+      op?: string
+      value?: string
+    }>
+    expect(
+      constraints.find((c) => c.field === 'userId' && c.op === '==')?.value,
+    ).toBe(TEST_UID)
+    expect(
+      constraints.find((c) => c.field === 'sessionId' && c.op === '==')?.value,
+    ).toBe('sess-xyz')
+  })
+
+  it('different userId values produce different query constraints', async () => {
+    getDocsMock.mockResolvedValue({ docs: [] })
+    await getDiagnosticLogs('user-a', {})
+    await getDiagnosticLogs('user-b', {})
+    const a = queryConstraintsRecorder[0] as Array<{ field?: string; value?: string }>
+    const b = queryConstraintsRecorder[1] as Array<{ field?: string; value?: string }>
+    expect(a.find((c) => c.field === 'userId')?.value).toBe('user-a')
+    expect(b.find((c) => c.field === 'userId')?.value).toBe('user-b')
   })
 })
 
 describe('diagnosticService — filter translation', () => {
   it('getDiagnosticLogs with single eventType adds where clause', async () => {
     getDocsMock.mockResolvedValueOnce({ docs: [] })
-    await getDiagnosticLogs({ eventTypes: ['SOFT_DELETE'] })
+    await getDiagnosticLogs(TEST_UID, { eventTypes: ['SOFT_DELETE'] })
     const constraints = queryConstraintsRecorder[0] as Array<{
       field?: string
       op?: string
@@ -168,7 +190,7 @@ describe('diagnosticService — filter translation', () => {
         makeLogDoc({ eventType: 'WORKOUT_COMPLETE' }),
       ],
     })
-    const result = await getDiagnosticLogs({
+    const result = await getDiagnosticLogs(TEST_UID, {
       eventTypes: ['SOFT_DELETE', 'WORKOUT_COMPLETE'],
     })
 
@@ -184,7 +206,7 @@ describe('diagnosticService — filter translation', () => {
 
   it('getDiagnosticLogs with sessionId adds where clause', async () => {
     getDocsMock.mockResolvedValueOnce({ docs: [] })
-    await getDiagnosticLogs({ sessionId: 'sess-xyz' })
+    await getDiagnosticLogs(TEST_UID, { sessionId: 'sess-xyz' })
     const constraints = queryConstraintsRecorder[0] as Array<{
       field?: string
       op?: string
@@ -209,7 +231,7 @@ describe('diagnosticService — filter translation', () => {
         }),
       ],
     })
-    const result = await getWorkoutsForUser({ deletedFilter: 'yes' })
+    const result = await getWorkoutsForUser(TEST_UID, { deletedFilter: 'yes' })
     expect(result.workouts.map((w) => w.id).sort()).toEqual(['a', 'c'])
   })
 
@@ -223,7 +245,7 @@ describe('diagnosticService — filter translation', () => {
         makeWorkoutDoc({ id: 'b' }),
       ],
     })
-    const result = await getWorkoutsForUser({ deletedFilter: 'no' })
+    const result = await getWorkoutsForUser(TEST_UID, { deletedFilter: 'no' })
     expect(result.workouts.map((w) => w.id)).toEqual(['b'])
   })
 
@@ -235,7 +257,7 @@ describe('diagnosticService — filter translation', () => {
         makeWorkoutDoc({ id: 'c', status: 'cancelled' }),
       ],
     })
-    const result = await getWorkoutsForUser({ statuses: ['completed', 'cancelled'] })
+    const result = await getWorkoutsForUser(TEST_UID, { statuses: ['completed', 'cancelled'] })
     expect(result.workouts.map((w) => w.id).sort()).toEqual(['a', 'c'])
   })
 })
@@ -244,7 +266,7 @@ describe('diagnosticService — pagination via N+1 fetch', () => {
   it('hasMore=true when result exceeds pageSize', async () => {
     const docs = Array.from({ length: 51 }, (_, i) => makeLogDoc({ id: `l${i}` }))
     getDocsMock.mockResolvedValueOnce({ docs })
-    const result = await getDiagnosticLogs({ pageSize: 50 })
+    const result = await getDiagnosticLogs(TEST_UID, { pageSize: 50 })
     expect(result.hasMore).toBe(true)
     expect(result.logs).toHaveLength(50)
   })
@@ -252,7 +274,7 @@ describe('diagnosticService — pagination via N+1 fetch', () => {
   it('hasMore=false when result fits pageSize', async () => {
     const docs = Array.from({ length: 30 }, (_, i) => makeLogDoc({ id: `l${i}` }))
     getDocsMock.mockResolvedValueOnce({ docs })
-    const result = await getDiagnosticLogs({ pageSize: 50 })
+    const result = await getDiagnosticLogs(TEST_UID, { pageSize: 50 })
     expect(result.hasMore).toBe(false)
     expect(result.logs).toHaveLength(30)
   })
@@ -270,7 +292,7 @@ describe('diagnosticService — pagination via N+1 fetch', () => {
       ),
     ]
     getDocsMock.mockResolvedValueOnce({ docs })
-    const result = await getDiagnosticLogs({
+    const result = await getDiagnosticLogs(TEST_UID, {
       pageSize: 50,
       eventTypes: ['SOFT_DELETE', 'WORKOUT_VALIDATION'],
     })
@@ -290,7 +312,7 @@ describe('diagnosticService — pagination via N+1 fetch', () => {
       ),
     ]
     getDocsMock.mockResolvedValueOnce({ docs })
-    const result = await getWorkoutsForUser({
+    const result = await getWorkoutsForUser(TEST_UID, {
       pageSize: 50,
       statuses: ['cancelled'],
     })
@@ -319,7 +341,7 @@ describe('diagnosticService — pagination via N+1 fetch', () => {
       }),
     ]
     getDocsMock.mockResolvedValueOnce({ docs })
-    const result = await getDiagnosticLogs({
+    const result = await getDiagnosticLogs(TEST_UID, {
       pageSize: 50,
       eventTypes: ['SOFT_DELETE', 'WORKOUT_VALIDATION'],
     })
@@ -346,7 +368,7 @@ describe('diagnosticService — pagination via N+1 fetch', () => {
       }),
     ]
     getDocsMock.mockResolvedValueOnce({ docs })
-    const result = await getWorkoutsForUser({
+    const result = await getWorkoutsForUser(TEST_UID, {
       pageSize: 50,
       statuses: ['cancelled'], // matches none on this page
     })
@@ -359,7 +381,7 @@ describe('diagnosticService — pagination via N+1 fetch', () => {
     getDocsMock.mockResolvedValueOnce({
       docs: Array.from({ length: 10 }, (_, i) => makeLogDoc({ id: `l${i}` })),
     })
-    const result = await getDiagnosticLogs({ pageSize: 50 })
+    const result = await getDiagnosticLogs(TEST_UID, { pageSize: 50 })
     expect(result.hasMore).toBe(false)
     expect(result.nextCursor).toBeNull()
   })
@@ -367,7 +389,7 @@ describe('diagnosticService — pagination via N+1 fetch', () => {
   it('getDiagnosticLogs: cursor triggers startAfter constraint with the right timestamp', async () => {
     getDocsMock.mockResolvedValueOnce({ docs: [] })
     const cursor = new Date('2026-05-04T10:00:00Z')
-    await getDiagnosticLogs({ cursor })
+    await getDiagnosticLogs(TEST_UID, { cursor })
     const constraints = queryConstraintsRecorder[0] as Array<{
       __type?: string
       value?: unknown
@@ -390,7 +412,7 @@ describe('diagnosticService — workoutOwnerId mapping', () => {
         }),
       ],
     })
-    const result = await getDiagnosticLogs({})
+    const result = await getDiagnosticLogs(TEST_UID, {})
     expect(result.logs).toHaveLength(1)
     expect(result.logs[0].workoutOwnerId).toBe('trainee-uid-xyz')
   })
@@ -399,7 +421,7 @@ describe('diagnosticService — workoutOwnerId mapping', () => {
     getDocsMock.mockResolvedValueOnce({
       docs: [makeLogDoc({ id: 'log-self' })], // makeLogDoc never sets workoutOwnerId
     })
-    const result = await getDiagnosticLogs({})
+    const result = await getDiagnosticLogs(TEST_UID, {})
     expect(result.logs[0].workoutOwnerId).toBeUndefined()
   })
 })
@@ -408,10 +430,10 @@ describe('diagnosticService — getWorkoutRaw', () => {
   it('returns raw doc data merged with id when document exists', async () => {
     getDocMock.mockResolvedValueOnce({
       exists: () => true,
-      data: () => ({ name: 'אימון', userId: DEBUG_USER_UID, foo: 'bar' }),
+      data: () => ({ name: 'אימון', userId: TEST_UID, foo: 'bar' }),
     })
     const result = await getWorkoutRaw('workout-id-123')
-    expect(result).toEqual({ name: 'אימון', userId: DEBUG_USER_UID, foo: 'bar' })
+    expect(result).toEqual({ name: 'אימון', userId: TEST_UID, foo: 'bar' })
   })
 
   it('returns null when document does not exist', async () => {
@@ -435,7 +457,7 @@ describe('diagnosticService — getUserSessions aggregation', () => {
         makeLogDoc({ sessionId: 'sess-b', timestamp: { toDate: () => t4 } }),
       ],
     })
-    const sessions = await getUserSessions()
+    const sessions = await getUserSessions(TEST_UID)
     const a = sessions.find((s) => s.sessionId === 'sess-a')
     const b = sessions.find((s) => s.sessionId === 'sess-b')
     expect(a?.eventCount).toBe(3)
@@ -450,20 +472,20 @@ describe('diagnosticService — getUserSessions aggregation', () => {
   it('throws if log count hits the SESSIONS_SCAN_LIMIT cap', async () => {
     const docs = Array.from({ length: 500 }, () => makeLogDoc())
     getDocsMock.mockResolvedValueOnce({ docs })
-    await expect(getUserSessions()).rejects.toThrow(/sessions collection|מיגרציה/)
+    await expect(getUserSessions(TEST_UID)).rejects.toThrow(/sessions collection|מיגרציה/)
   })
 })
 
 describe('diagnosticService — getSessionLogs', () => {
   it('returns empty array for empty sessionId without firing a query', async () => {
-    const result = await getSessionLogs('')
+    const result = await getSessionLogs(TEST_UID, '')
     expect(result).toEqual([])
     expect(getDocsMock).not.toHaveBeenCalled()
   })
 
   it('queries by sessionId ASC for replay order', async () => {
     getDocsMock.mockResolvedValueOnce({ docs: [makeLogDoc({ id: '1' })] })
-    await getSessionLogs('sess-xyz')
+    await getSessionLogs(TEST_UID, 'sess-xyz')
     const constraints = queryConstraintsRecorder[0] as Array<{
       field?: string
       op?: string

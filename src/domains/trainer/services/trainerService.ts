@@ -444,7 +444,9 @@ export const trainerService = {
     })
   },
 
-  // Find user by email (for checking if email exists in system)
+  // Find user by email (for checking if email exists in system).
+  // Returns the first match only (limit(1)). Use findAllUsersByEmail when the
+  // caller needs to detect duplicate records (e.g. admin diagnostic console).
   async findUserByEmail(email: string): Promise<AppUser | null> {
     const q = query(
       collection(db, 'users'),
@@ -460,6 +462,28 @@ export const trainerService = {
       createdAt: data.createdAt?.toDate?.() || data.createdAt || new Date(),
       updatedAt: data.updatedAt?.toDate?.() || data.updatedAt || new Date(),
     } as AppUser
+  },
+
+  // Find ALL users matching an email (no limit). Used by the admin Diagnostic
+  // Console to surface duplicate records that the limit(1) variant cannot
+  // detect (e.g. zehava@assa-adam.com has multiple records under one email).
+  // Existence checks should keep using findUserByEmail; this helper exists
+  // specifically for duplicate-aware paths.
+  async findAllUsersByEmail(email: string): Promise<AppUser[]> {
+    const q = query(
+      collection(db, 'users'),
+      where('email', '==', email.toLowerCase().trim())
+    )
+    const snapshot = await getDocs(q)
+    return snapshot.docs.map((d) => {
+      const data = d.data()
+      return {
+        ...data,
+        uid: d.id,
+        createdAt: data.createdAt?.toDate?.() || data.createdAt || new Date(),
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt || new Date(),
+      } as AppUser
+    })
   },
 
   // Check if trainer-trainee relationship already exists

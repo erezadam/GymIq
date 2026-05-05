@@ -1,12 +1,13 @@
 /**
  * Read-only Firestore service for the admin Diagnostic Console.
  *
- * Reads from `diagnosticLogs` (written by the writer added in PR #1) and from
- * the existing `workoutHistory` collection. Never writes diagnostic data — the
- * Diagnostic Console is observation-only.
+ * Reads from `diagnosticLogs` (written by `src/lib/firebase/diagnosticLogs.ts`)
+ * and from the existing `workoutHistory` collection. Never writes diagnostic
+ * data — the Diagnostic Console is observation-only.
  *
- * The active subject is hardcoded: `DEBUG_USER_UID` from PR #1. There is no UI
- * to change it. To add another user, edit the constant in PR #1.
+ * The active subject is the `userId` parameter, resolved by the UI from an
+ * email lookup. There is no longer a hardcoded debug uid; to investigate a
+ * different user, the admin types another email in the console header.
  */
 
 import {
@@ -25,7 +26,6 @@ import {
   type QueryDocumentSnapshot,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase/config'
-import { DEBUG_USER_UID } from '@/lib/firebase/diagnosticLogs'
 import { getWorkoutById as getWorkoutEntryById } from '@/lib/firebase/workoutHistory'
 import type {
   DiagnosticLog,
@@ -35,8 +35,6 @@ import type {
   WorkoutFilters,
 } from '../types/diagnostic.types'
 import type { WorkoutHistoryEntry, WorkoutHistorySummary } from '@/domains/workouts/types'
-
-export { DEBUG_USER_UID }
 
 const LOGS_COLLECTION = 'diagnosticLogs'
 const WORKOUTS_COLLECTION = 'workoutHistory'
@@ -68,6 +66,7 @@ function snapshotToLog(snap: QueryDocumentSnapshot<DocumentData>): DiagnosticLog
       typeof data.workoutOwnerId === 'string' ? data.workoutOwnerId : undefined,
     sessionId: String(data.sessionId ?? ''),
     timestamp: toDate(data.timestamp),
+    expiresAt: data.expiresAt ? toDate(data.expiresAt) : undefined,
     eventType: data.eventType as DiagnosticEventType,
     workoutId: typeof data.workoutId === 'string' ? data.workoutId : null,
     payload:
@@ -81,9 +80,9 @@ function snapshotToLog(snap: QueryDocumentSnapshot<DocumentData>): DiagnosticLog
 }
 
 /**
- * Page diagnostic logs for DEBUG_USER_UID, newest first.
+ * Page diagnostic logs for the given user, newest first.
  *
- * Composite index required (defined in PR #1's firestore.indexes.json):
+ * Composite index used (defined in firestore.indexes.json):
  *   diagnosticLogs: userId ASC, timestamp DESC
  *
  * `eventTypes` filter applied client-side when 1 < count < 6, since Firestore's
@@ -91,11 +90,12 @@ function snapshotToLog(snap: QueryDocumentSnapshot<DocumentData>): DiagnosticLog
  * combination would be wasteful. Single-value filter goes through the query.
  */
 export async function getDiagnosticLogs(
+  userId: string,
   filters: DiagnosticLogFilters = {},
 ): Promise<{ logs: DiagnosticLog[]; hasMore: boolean; nextCursor: Date | null }> {
   const pageSize = filters.pageSize ?? DEFAULT_PAGE_SIZE
   const constraints: QueryConstraint[] = [
-    where('userId', '==', DEBUG_USER_UID),
+    where('userId', '==', userId),
     orderBy('timestamp', 'desc'),
   ]
 
@@ -144,15 +144,15 @@ export async function getDiagnosticLogs(
 }
 
 /**
- * List unique sessions for DEBUG_USER_UID. Aggregates client-side from up to
+ * List unique sessions for the given user. Aggregates client-side from up to
  * SESSIONS_SCAN_LIMIT recent logs. Throws if the cap is hit so the admin knows
  * pagination is needed.
  */
-export async function getUserSessions(): Promise<SessionSummary[]> {
+export async function getUserSessions(userId: string): Promise<SessionSummary[]> {
   const snapshot = await getDocs(
     query(
       collection(db, LOGS_COLLECTION),
-      where('userId', '==', DEBUG_USER_UID),
+      where('userId', '==', userId),
       orderBy('timestamp', 'desc'),
       firestoreLimit(SESSIONS_SCAN_LIMIT),
     ),
@@ -195,12 +195,20 @@ export async function getUserSessions(): Promise<SessionSummary[]> {
   return result
 }
 
-/** All logs for a single session, ordered ASC by timestamp (replay order). */
-export async function getSessionLogs(sessionId: string): Promise<DiagnosticLog[]> {
+/**
+ * All logs for a single session, ordered ASC by timestamp (replay order).
+ * Filters by `userId` as defense-in-depth even though sessionIds are UUIDs;
+ * uses the composite `userId+sessionId+timestamp` index from indexes.json.
+ */
+export async function getSessionLogs(
+  userId: string,
+  sessionId: string,
+): Promise<DiagnosticLog[]> {
   if (!sessionId) return []
   const snapshot = await getDocs(
     query(
       collection(db, LOGS_COLLECTION),
+      where('userId', '==', userId),
       where('sessionId', '==', sessionId),
       orderBy('timestamp', 'asc'),
     ),
@@ -239,16 +247,17 @@ function workoutSummaryFromDoc(
 }
 
 /**
- * Page workoutHistory docs for DEBUG_USER_UID. Includes soft-deleted by
+ * Page workoutHistory docs for the given user. Includes soft-deleted by
  * default; `deletedFilter` narrows. Sorted by `date DESC` (matches existing
- * single-field index — no extra index required).
+ * `workoutHistory: userId+date DESC` composite index — no extra index required).
  */
 export async function getWorkoutsForUser(
+  userId: string,
   filters: WorkoutFilters = {},
 ): Promise<{ workouts: WorkoutHistorySummary[]; hasMore: boolean; nextCursor: Date | null }> {
   const pageSize = filters.pageSize ?? DEFAULT_PAGE_SIZE
   const constraints: QueryConstraint[] = [
-    where('userId', '==', DEBUG_USER_UID),
+    where('userId', '==', userId),
     orderBy('date', 'desc'),
   ]
 
