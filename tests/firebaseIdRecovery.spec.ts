@@ -29,11 +29,16 @@ const {
   autoSaveWorkoutMock,
   validateWorkoutIdMock,
   navigateMock,
+  locationStateRef,
 } = vi.hoisted(() => ({
   getInProgressWorkoutMock: vi.fn(),
   autoSaveWorkoutMock: vi.fn(),
   validateWorkoutIdMock: vi.fn(),
   navigateMock: vi.fn(),
+  // Mutable per-test state for the useLocation mock — set in a test before
+  // renderHook() to simulate navigation with router state (e.g. the
+  // resumingFromLibrary flag carried from ExerciseLibrary).
+  locationStateRef: { current: null as unknown },
 }))
 
 // ----- Module mocks (must run before importing the hook) -----
@@ -114,6 +119,13 @@ vi.mock('@/domains/workouts/store', () => {
 
 vi.mock('react-router-dom', () => ({
   useNavigate: () => navigateMock,
+  useLocation: () => ({
+    state: locationStateRef.current,
+    pathname: '/workout/session',
+    search: '',
+    hash: '',
+    key: 'test',
+  }),
 }))
 
 vi.mock('react-hot-toast', () => ({
@@ -152,6 +164,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
   resetBuilder()
+  locationStateRef.current = null
   validateWorkoutIdMock.mockResolvedValue({ valid: true })
   getInProgressWorkoutMock.mockResolvedValue(null)
   autoSaveWorkoutMock.mockResolvedValue('new-doc-id')
@@ -249,5 +262,52 @@ describe('useActiveWorkout — firebaseId recovery (regression: localStorage reu
     // The fix: exitWorkout must remove the firebaseId from localStorage so
     // the next builder-started workout does not inherit it.
     expect(localStorage.getItem(FIREBASE_ID_KEY)).toBeNull()
+  })
+
+  it('returning from ExerciseLibrary mid-session PRESERVES firebaseIdKey (resumingFromLibrary)', async () => {
+    // The bug this guards against: navigating ActiveWorkoutScreen → ExerciseLibrary
+    // → back unmounts the hook, then on remount initWorkout sees selectedExercises
+    // non-empty and (per the PR #123 gate) would discard the localStorage firebaseId
+    // — causing the next autosave to addDoc and create a duplicate in_progress.
+    // The fix: ExerciseLibrary navigates with state.resumingFromLibrary=true, and
+    // the gate now skips the removal in that case so updateDoc continues on the
+    // existing doc.
+    locationStateRef.current = { resumingFromLibrary: true }
+    localStorage.setItem(FIREBASE_ID_KEY, 'active-session-id-456')
+    resetBuilder({
+      selectedExercises: [
+        {
+          exerciseId: 'ex-1',
+          exerciseName: 'Bench Press',
+          exerciseNameHe: 'לחיצת חזה',
+          primaryMuscle: 'chest',
+        },
+      ],
+    })
+
+    renderHook(() => useActiveWorkout())
+
+    // Wait for init's immediate-save path to invoke autoSaveWorkout.
+    await waitFor(() => {
+      expect(autoSaveWorkoutMock).toHaveBeenCalled()
+    })
+
+    // The PROOF that no duplicate was created: autoSaveWorkout must be called
+    // with the existing workoutId as its first arg (which routes to updateDoc
+    // in workoutHistory.ts:1440), not with null (which routes to addDoc and
+    // creates a duplicate). The mock's return value overwrites localStorage
+    // unconditionally at line 1134, so checking localStorage is unreliable —
+    // checking the call args is what proves the duplicate-doc bug is closed.
+    expect(autoSaveWorkoutMock).toHaveBeenCalledWith(
+      'active-session-id-456',
+      expect.any(Object),
+    )
+
+    // The history-state cleanup useEffect must replace the entry without the
+    // flag, so a subsequent back-button hit doesn't replay it.
+    expect(navigateMock).toHaveBeenCalledWith(
+      '/workout/session',
+      expect.objectContaining({ replace: true, state: {} }),
+    )
   })
 })

@@ -280,6 +280,26 @@ await updateDoc(docRef, { ...data, updatedAt: serverTimestamp() })
 - `WorkoutSet` ב-`workout.types.ts`
 - `WorkoutHistoryEntry.exercises[].sets[]` ב-`workout.types.ts`
 
+### firebaseWorkoutId — חוק אחד שאסור לשבור (10/05/2026)
+
+> **רקע:** PR #123 (`dc5d020`) תיקן stale `firebaseId` אחרי tab-close.
+> ה-gate שלו (`isTabCloseRecovery = selectedExercises.length === 0`) לא הבחין
+> בין tab-close לבין חזרה מ-`ExerciseLibrary` mid-session. תוצאה: 9 כפילויות
+> `in_progress` לאותו משתמש (10/05/2026).
+
+**כל שינוי ב-`initWorkout` שנוגע ב-`firebaseIdKey` חייב לאמת שלושה תרחישים לפני merge:**
+
+1. **tab-close + reopen** — `isTabCloseRecovery=true` → `firebaseId` חייב להישמר (recovery עובד)
+2. **חזרה מ-`ExerciseLibrary` באמצע אימון** — `resumingFromLibrary=true` → `firebaseId` חייב להישמר (לא נוצר doc כפול)
+3. **אימון חדש מ-`WorkoutBuilder`** — שני הדגלים `false` → `firebaseId` ישן חייב להימחק (לא דורסים אימון קודם)
+
+**בדיקה חסרה של אחד מהשלושה = כפילות דוקומנטים בפרודקשן.**
+
+**קבצים:**
+- `src/domains/workouts/hooks/useActiveWorkout.ts` — לוגיקת ה-gate
+- `src/domains/exercises/components/ExerciseLibrary.tsx` — מעביר `resumingFromLibrary` ב-navigate state
+- בדיקות: `tests/firebaseIdRecovery.spec.ts` — חייבות לכסות את כל שלושת התרחישים
+
 ### קטגוריות תרגילים - category vs primaryMuscle
 
 | שדה | תפקיד | ערכים תקינים |
@@ -653,6 +673,7 @@ The label + hidden input pattern is the standard, accessible solution.
 | 02/05/2026 | 9 בדיקות source-grep מ-Stage 6 של PR #108 (תמיכת WebP) עברו את ה-CI אבל לא תפסו שהקוד שולח `videoWebpUrl=undefined` ל-`updateDoc()`. Firestore דחה ועדכון תרגיל נשבר ב-production | נוסף חוק ברזל בסעיף "🧪 בדיקות": בדיקות חייבות לבדוק התנהגות (mock + assert על API), לא קיום מחרוזות. source-grep מותר רק כתוספת. |
 | 02/05/2026 | עדכון תרגיל קרס בפרודקשן — `ExerciseForm` שלח `videoWebpUrl: undefined` ו-`updateExercise` לא ניקה לפני `updateDoc` | חולץ `removeUndefined()` מ-`workoutHistory.ts` ל-`src/lib/firebase/firestoreUtils.ts` (משותף). `createExercise`/`updateExercise`/`bulkImportExercises` עוטפים payloads ב-`removeUndefined`. בעריכה — `ExerciseForm` שולח `deleteField()` כשהשדה רוקן (כדי שהמחיקה תשתקף ב-Firestore עצמו, לא רק מבוטל crash). ב-create — השדה מושמט. `removeUndefined` עודכן לשמור על FieldValue sentinels ו-Date/Timestamp גם בתוך מערכים (plain-object check). חוק ברזל חדש ב-"Firestore חדש". 13 בדיקות התנהגותיות חדשות ב-`tests/firestore-undefined.spec.ts`. PRs נוספים מתוכננים אחרי soak: workouts.ts, programService, trainerService, וכו'. |
 | 02/05/2026 | בשיחה לאחר merge של PR #110, סוכן ומשתמש התבלבלו לגבי האם תיעוד CLAUDE.md אכן נכנס. הבלבול נבע מקובץ חתוך שהמשתמש העלה, ולא מהצהרה שגויה של הסוכן. נמנעה כתיבת פיקציה היסטורית רק כי הסוכן עצר ודרש אימות לפני ביצוע. | נוסף חוק ברזל No documentation claims without diff — חל על **שני הצדדים**: הסוכן לא מצהיר על עדכון בלי דיף, והמשתמש/ארכיטקט לא מאשים בחוסר עדכון בלי לראות grep מלא של main המסונכרן |
+| 10/05/2026 | 9 documents כפולים `in_progress` לאותו משתמש בעקבות חזרה חוזרת מ-`ExerciseLibrary` באמצע אימון. הגייט שנוסף ב-PR #123 (`isTabCloseRecovery = selectedExercises.length === 0`) לא הבחין בין tab-close לבין navigate-and-return mid-session, ומחק את `firebaseIdKey` בכל חזרה מהספרייה → autosave הבא קרא `addDoc` במקום `updateDoc`. | תוקן ב-`useActiveWorkout.ts` (גייט הסניפים בשורות ~675-698) ע"י הוספת flag `resumingFromLibrary` שמועבר מ-`ExerciseLibrary.tsx:639` דרך React Router state, ענף שיחזור חדש שמשחזר את ה-React state (`setFirebaseWorkoutId(savedFirebaseId)` כשהדגל מורם), ו-cleanup useEffect שמנקה את ה-state מ-history (`navigate(pathname, { replace: true, state: {} })`) כדי שלחיצה על Back לא תפעיל את הדגל מחדש. נוסף חוק ברזל "firebaseWorkoutId — חוק אחד שאסור לשבור" המחייב אימות 3 תרחישים בכל שינוי ב-`initWorkout`, וטסט התנהגותי רביעי ב-`tests/firebaseIdRecovery.spec.ts` שמכסה את התרחיש החדש. |
 
 ---
 
