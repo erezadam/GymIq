@@ -636,7 +636,7 @@ export function ExerciseLibrary({
     if (isAddingToWorkout) {
       // Adding exercises to existing workout - DON'T clear localStorage!
       // The useActiveWorkout hook will merge the new exercises
-      navigate('/workout/session')
+      navigate('/workout/session', { state: { resumingFromLibrary: true } })
       return
     }
 

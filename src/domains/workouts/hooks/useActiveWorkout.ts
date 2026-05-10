@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 import type {
@@ -80,6 +80,23 @@ function computeStats(
 
 export function useActiveWorkout() {
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Set by ExerciseLibrary on add-exercise navigate so the firebaseId gate
+  // in initWorkout doesn't treat mid-session library returns like a fresh
+  // builder workout (the gate was added in PR #123 for tab-close).
+  const isResumingFromLibrary =
+    (location.state as { resumingFromLibrary?: boolean } | null)?.resumingFromLibrary === true
+
+  // Clear the flag from history.state immediately after a render where it
+  // was true — otherwise the browser back-button would replay the flag on
+  // re-entry and re-open the duplicate-doc bug PR #123 protected against.
+  useEffect(() => {
+    if (isResumingFromLibrary) {
+      navigate(location.pathname, { replace: true, state: {} })
+    }
+  }, [isResumingFromLibrary, navigate, location.pathname])
+
   const user = useEffectiveUser()
   const isImpersonating = useIsImpersonating()
   const { selectedExercises, clearWorkout, removeExercise: removeFromStore, programId, programDayLabel, programSource, workoutName: builderWorkoutName, targetUserId, plannedWorkoutDocId } = useWorkoutBuilderStore()
@@ -667,6 +684,12 @@ export function useActiveWorkout() {
         }
       } else if (savedFirebaseId && isTabCloseRecovery) {
         // No user yet but we're in the tab-close path — keep the ID for now.
+        setFirebaseWorkoutId(savedFirebaseId)
+      } else if (savedFirebaseId && isResumingFromLibrary) {
+        // Mid-session return from ExerciseLibrary — restore the React state
+        // so the next autosave calls updateDoc on the existing in_progress
+        // doc instead of addDoc (which would create the duplicates the
+        // CLAUDE.md "firebaseWorkoutId" iron rule guards against).
         setFirebaseWorkoutId(savedFirebaseId)
       } else if (savedFirebaseId && !isTabCloseRecovery) {
         // New workout from builder (or history continuation handled above) —

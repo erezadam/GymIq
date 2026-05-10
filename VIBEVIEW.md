@@ -240,7 +240,7 @@ All Firestore/Auth operations. No component ever talks to Firebase directly.
 
 | File | Conceptual Name | What it does |
 |------|----------------|-------------|
-| `hooks/useActiveWorkout.ts` | **The Workout Engine** | The most complex hook. Manages everything during a live workout: set tracking, auto-save, recovery, PR detection, celebrations, stats, finish/cancel. |
+| `hooks/useActiveWorkout.ts` | **The Workout Engine** | The most complex hook. Manages everything during a live workout: set tracking, auto-save, recovery, PR detection, celebrations, stats, finish/cancel. **כל שינוי ב-`initWorkout` דורש אימות של שלושה תרחישי firebaseId — ראה CLAUDE.md.** |
 | `hooks/useWorkoutSession.ts` | **The Step Navigator** | Simpler hook for exercise-by-exercise navigation. |
 | `hooks/useRestTimerAudio.ts` | **The Beep** | Plays a sound when rest timer finishes. |
 
