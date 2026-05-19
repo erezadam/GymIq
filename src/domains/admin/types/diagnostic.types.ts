@@ -11,6 +11,8 @@ export type DiagnosticEventType =
   | 'SOFT_DELETE'
   | 'WORKOUT_VALIDATION'
   | 'WORKOUT_CREATED'
+  | 'WORKOUT_INIT_START'
+  | 'WORKOUT_INIT_TIMING'
 
 export const DIAGNOSTIC_EVENT_TYPES: DiagnosticEventType[] = [
   'WORKOUT_AUTOSAVE',
@@ -19,6 +21,8 @@ export const DIAGNOSTIC_EVENT_TYPES: DiagnosticEventType[] = [
   'SOFT_DELETE',
   'WORKOUT_VALIDATION',
   'WORKOUT_CREATED',
+  'WORKOUT_INIT_START',
+  'WORKOUT_INIT_TIMING',
 ]
 
 export interface DiagnosticLog {
