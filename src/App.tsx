@@ -40,6 +40,9 @@ const AnalyticsTraineeDetail = lazy(
 const AnalyticsTrainerDetail = lazy(
   () => import('@/domains/admin/components/analytics/TrainerDetailScreen'),
 )
+const DiagnosticConsole = lazy(
+  () => import('@/domains/admin/components/DiagnosticConsole'),
+)
 
 // User
 const MainLayout = lazy(() => import('@/design-system/layouts/MainLayout'))
@@ -158,6 +161,7 @@ function App() {
           <Route path="analytics" element={<UsageAnalytics />} />
           <Route path="analytics/trainee/:id" element={<AnalyticsTraineeDetail />} />
           <Route path="analytics/trainer/:id" element={<AnalyticsTrainerDetail />} />
+          <Route path="diagnose" element={<DiagnosticConsole />} />
         </Route>
 
         {/* Fallback */}

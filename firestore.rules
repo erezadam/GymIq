@@ -400,5 +400,18 @@ service cloud.firestore {
       // Only admins can write settings
       allow create, update, delete: if isAdmin();
     }
+
+    // ============ DIAGNOSTIC LOGS ============
+    match /diagnosticLogs/{logId} {
+      // Users can write logs only with their own auth uid as actor.
+      allow create: if isAuthenticated() &&
+                       request.resource.data.userId == request.auth.uid;
+
+      // Only admins can read logs.
+      allow read: if isAdmin();
+
+      // Logs are immutable — TTL handles cleanup.
+      allow update, delete: if false;
+    }
   }
 }
