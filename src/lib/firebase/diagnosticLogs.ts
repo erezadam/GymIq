@@ -52,6 +52,8 @@ export type DiagnosticEventType =
   | 'SOFT_DELETE'
   | 'WORKOUT_RECOVERY_FOUND'
   | 'WORKOUT_VALIDATION'
+  | 'WORKOUT_INIT_START'
+  | 'WORKOUT_INIT_TIMING'
 
 let killSwitchCachedValue = true
 let killSwitchLoadedAt = 0

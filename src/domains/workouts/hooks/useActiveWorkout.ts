@@ -34,6 +34,7 @@ import {
   getWeeklySetsByCategory,
 } from '@/lib/firebase/workoutHistory'
 import { getExerciseById } from '@/lib/firebase/exercises'
+import { logDiagnostic } from '@/lib/firebase/diagnosticLogs'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { muscleGroupNames } from '@/styles/design-tokens'
 import { validateWorkoutId, isNetworkError } from '@/utils/workoutValidation'
@@ -75,6 +76,151 @@ function computeStats(
         sum + ex.reportedSets.reduce((s, set) => s + set.weight * set.reps, 0),
       0
     ),
+  }
+}
+
+// ===========================================================================
+// Init-timing instrumentation (added 2026-05-19, scope: instrumentation only)
+//
+// Captures per-block durations + decision context for the `initWorkout`
+// useEffect below. Emits two fire-and-forget diagnostic events:
+//   - WORKOUT_INIT_START  : once at the top of initWorkout (entry trace).
+//   - WORKOUT_INIT_TIMING : at each of the 4 setIsLoading(false) exits,
+//                           summarizing what happened on that hydration cycle.
+//
+// Additive only: removing this section leaves the hydration bit-exact
+// identical. logDiagnostic is fire-and-forget; safeLogDiagnostic wraps it so
+// a log-write failure never breaks the hydration path. The firebaseId iron
+// rule (CLAUDE.md) is unaffected — gate conditions in initWorkout, the body
+// of validateWithRetry (modulo an optional telemetry callback), and the
+// savedFirebaseId restoration branches all remain untouched.
+// ===========================================================================
+
+type InitPathTaken =
+  | 'firebase_recovery'
+  | 'continue_from_history'
+  | 'localstorage_fast_path'
+  | 'new_from_builder'
+  | 'trainer_planned'
+  | 'skip_already_initialized'
+  | 'no_workout_no_selection'
+
+interface ValidateAttemptRecord {
+  attempt: number
+  durationMs: number
+  valid: boolean
+  reason?: string
+  // Distinguishes the two validateWithRetry call sites inside initWorkout —
+  // 'init' fires during the continueFromHistory branch, 'autosave' fires
+  // during the new-from-builder autosave path. In a single hydration cycle
+  // for a "המשך אימון" scenario, both can run sequentially.
+  phase?: 'init' | 'autosave'
+}
+
+interface InitTimingTracker {
+  startedAtMs: number
+  blocks: Record<string, number>
+  validate: { attempts: ValidateAttemptRecord[]; totalMs: number | null }
+  exerciseCount: number | null
+  outcome: 'success' | 'error_recovered' | 'error_failed'
+  measure: <T>(blockName: string, p: Promise<T>) => Promise<T>
+  recordValidateAttempt: (rec: ValidateAttemptRecord) => void
+}
+
+function createInitTimingTracker(): InitTimingTracker {
+  const tracker: InitTimingTracker = {
+    startedAtMs: performance.now(),
+    blocks: {},
+    validate: { attempts: [], totalMs: null },
+    exerciseCount: null,
+    outcome: 'success',
+    measure: async <T>(blockName: string, p: Promise<T>): Promise<T> => {
+      const t0 = performance.now()
+      try {
+        const result = await p
+        tracker.blocks[blockName] = performance.now() - t0
+        return result
+      } catch (e) {
+        tracker.blocks[blockName] = performance.now() - t0
+        throw e
+      }
+    },
+    recordValidateAttempt: (rec) => {
+      tracker.validate.attempts.push(rec)
+    },
+  }
+  return tracker
+}
+
+interface LocalStorageStateSnapshot {
+  continueWorkoutData: 'present' | 'absent'
+  continueWorkoutDataSizeBytes?: number
+  continueWorkoutMode: string | null
+  continueWorkoutId: 'present' | 'absent'
+  continueAIRecommendations: 'present' | 'absent'
+  savedWorkout: 'present' | 'absent'
+  savedWorkoutSizeBytes?: number
+  savedFirebaseId: 'present' | 'absent'
+}
+
+// Snapshot policy: only present/absent flags + sizes. Doc IDs and workout
+// content are NOT included — diagnosticLogs already records doc IDs via the
+// `workoutId` column on related event types; we don't widen exposure here.
+function snapshotLocalStorageStateForTiming(
+  storageKey: string,
+  firebaseIdKey: string,
+): LocalStorageStateSnapshot {
+  if (typeof localStorage === 'undefined') {
+    return {
+      continueWorkoutData: 'absent',
+      continueWorkoutMode: null,
+      continueWorkoutId: 'absent',
+      continueAIRecommendations: 'absent',
+      savedWorkout: 'absent',
+      savedFirebaseId: 'absent',
+    }
+  }
+  const cwData = localStorage.getItem('continueWorkoutData')
+  const sw = localStorage.getItem(storageKey)
+  return {
+    continueWorkoutData: cwData ? 'present' : 'absent',
+    ...(cwData ? { continueWorkoutDataSizeBytes: cwData.length } : {}),
+    continueWorkoutMode: localStorage.getItem('continueWorkoutMode'),
+    continueWorkoutId: localStorage.getItem('continueWorkoutId') ? 'present' : 'absent',
+    continueAIRecommendations: localStorage.getItem('continueAIRecommendations')
+      ? 'present'
+      : 'absent',
+    savedWorkout: sw ? 'present' : 'absent',
+    ...(sw ? { savedWorkoutSizeBytes: sw.length } : {}),
+    savedFirebaseId: localStorage.getItem(firebaseIdKey) ? 'present' : 'absent',
+  }
+}
+
+function getNetworkType(): string {
+  if (typeof navigator === 'undefined') return 'unknown'
+  const conn = (navigator as unknown as { connection?: { effectiveType?: string } })
+    .connection
+  return conn?.effectiveType ?? 'unknown'
+}
+
+function isCurrentlyOnline(): boolean {
+  if (typeof navigator === 'undefined') return true
+  return navigator.onLine !== false
+}
+
+// Defensive wrapper: logDiagnostic itself is fire-and-forget (its addDoc is
+// `void`d with a .catch), but its synchronous preamble can throw on some
+// environments (e.g., when `auth` or `crypto` are unavailable). We refuse to
+// let a telemetry call escape into the hydration path.
+function safeLogDiagnostic(
+  eventType: Parameters<typeof logDiagnostic>[0],
+  workoutId: string | null,
+  payload: Record<string, unknown>,
+): void {
+  try {
+    logDiagnostic(eventType, workoutId, payload)
+  } catch (err) {
+    console.warn('safeLogDiagnostic failed:', err)
   }
 }
 
@@ -388,9 +534,67 @@ export function useActiveWorkout() {
         console.log('📋 Detected continue from history - will override existing workout')
       }
 
+      // === Init-timing instrumentation (additive, 2026-05-19) ===
+      // Place AFTER the isInitializing.current skip (no need to track concurrent
+      // re-entries) but BEFORE the skip_already_initialized exit, so that
+      // hydration cycle gets a START + END pair too.
+      const __tracker = createInitTimingTracker()
+      const __initLsSnapshot = snapshotLocalStorageStateForTiming(storageKey, firebaseIdKey)
+      safeLogDiagnostic('WORKOUT_INIT_START', null, {
+        selectedExercisesCount: selectedExercises.length,
+        isContinuingFromHistory: !!isContinuingFromHistory,
+        hasUser: !!user?.uid,
+        hasTargetUserId: !!targetUserId,
+        hasPlannedWorkoutDocId: !!plannedWorkoutDocId,
+        localStorageState: __initLsSnapshot,
+        networkType: getNetworkType(),
+        online: isCurrentlyOnline(),
+      })
+      // Closes over: __tracker, __initLsSnapshot, user, targetUserId,
+      // plannedWorkoutDocId, isContinuingFromHistory, selectedExercises.
+      const __emitEnd = (
+        path: InitPathTaken,
+        workoutIdForLog: string | null = null,
+      ): void => {
+        const validateSection =
+          __tracker.validate.attempts.length > 0
+            ? {
+                attempts: __tracker.validate.attempts.length,
+                attemptDurationsMs: __tracker.validate.attempts.map((a) => a.durationMs),
+                attemptResults: __tracker.validate.attempts.map((a) => ({
+                  valid: a.valid,
+                  reason: a.reason ?? null,
+                  ...(a.phase && { phase: a.phase }),
+                })),
+                ...(__tracker.validate.totalMs !== null && {
+                  totalMs: __tracker.validate.totalMs,
+                }),
+              }
+            : undefined
+        safeLogDiagnostic('WORKOUT_INIT_TIMING', workoutIdForLog, {
+          pathTaken: path,
+          totalMs: performance.now() - __tracker.startedAtMs,
+          gateConditions: {
+            hasUser: !!user?.uid,
+            selectedExercisesCount: selectedExercises.length,
+            isContinuingFromHistory: !!isContinuingFromHistory,
+            hasTargetUserId: !!targetUserId,
+            hasPlannedWorkoutDocId: !!plannedWorkoutDocId,
+          },
+          localStorageState: __initLsSnapshot,
+          durations: { ...__tracker.blocks },
+          ...(validateSection && { validate: validateSection }),
+          ...(__tracker.exerciseCount !== null && { exerciseCount: __tracker.exerciseCount }),
+          networkType: getNetworkType(),
+          online: isCurrentlyOnline(),
+          outcome: __tracker.outcome,
+        })
+      }
+
       // Don't re-initialize if we already have a workout (UNLESS continuing from history)
       if (workout && hasInitialized.current && !isContinuingFromHistory) {
         console.log('⏭️ Already have workout, skipping init')
+        __emitEnd('skip_already_initialized')
         setIsLoading(false)
         return
       }
@@ -411,9 +615,31 @@ export function useActiveWorkout() {
       }
 
       // Retry helper for validation — auth timing issues can cause transient failures
-      const validateWithRetry = async (id: string, uid: string, maxAttempts = 3): Promise<{ valid: boolean; reason?: string }> => {
+      // Optional `onAttempt` callback added 2026-05-19 for init-timing
+      // instrumentation. When undefined, the retry count, 1s delay, and return
+      // value are bit-exact identical to the pre-instrumentation form.
+      const validateWithRetry = async (
+        id: string,
+        uid: string,
+        maxAttempts = 3,
+        onAttempt?: (info: {
+          attempt: number
+          durationMs: number
+          valid: boolean
+          reason?: string
+        }) => void,
+      ): Promise<{ valid: boolean; reason?: string }> => {
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          const __attemptStart = onAttempt ? performance.now() : 0
           const result = await validateWorkoutId(id, uid)
+          if (onAttempt) {
+            onAttempt({
+              attempt,
+              durationMs: performance.now() - __attemptStart,
+              valid: result.valid,
+              reason: result.reason,
+            })
+          }
           if (result.valid) return result
           if (attempt < maxAttempts) {
             console.log(`🔄 Validation attempt ${attempt}/${maxAttempts} failed, retrying in 1s...`)
@@ -429,32 +655,39 @@ export function useActiveWorkout() {
       // Skip this if continuing from history or if trainer is reporting for a trainee
       if (user?.uid && selectedExercises.length === 0 && !isContinuingFromHistory && !targetUserId) {
         try {
-          const firebaseWorkout = await getInProgressWorkout(user.uid)
+          const firebaseWorkout = await __tracker.measure(
+            'firebase_recovery.getInProgressWorkout',
+            getInProgressWorkout(user.uid),
+          )
           if (firebaseWorkout) {
             console.log('🔥 Found in_progress workout in Firebase:', firebaseWorkout.id)
+            __tracker.exerciseCount = firebaseWorkout.exercises.length
 
             // Fetch exercise details (category, primaryMuscle, equipment) from exercise service
             const exerciseDetailsMap = new Map<string, { primaryMuscle: string; category: string; equipment: string; complexity?: 'compound' | 'simple'; imageUrl: string; videoWebpUrl?: string; name: string; nameHe: string }>()
-            await Promise.all(
-              firebaseWorkout.exercises.map(async (ex: any) => {
-                try {
-                  const details = await getExerciseById(ex.exerciseId)
-                  if (details) {
-                    exerciseDetailsMap.set(ex.exerciseId, {
-                      primaryMuscle: details.primaryMuscle || '',
-                      category: details.category || '',
-                      equipment: details.equipment || '',
-                      complexity: details.complexity,
-                      imageUrl: details.imageUrl || '',
-                      videoWebpUrl: details.videoWebpUrl,
-                      name: details.name || '',
-                      nameHe: details.nameHe || '',
-                    })
+            await __tracker.measure(
+              'firebase_recovery.getExerciseDetailsBatch',
+              Promise.all(
+                firebaseWorkout.exercises.map(async (ex: any) => {
+                  try {
+                    const details = await getExerciseById(ex.exerciseId)
+                    if (details) {
+                      exerciseDetailsMap.set(ex.exerciseId, {
+                        primaryMuscle: details.primaryMuscle || '',
+                        category: details.category || '',
+                        equipment: details.equipment || '',
+                        complexity: details.complexity,
+                        imageUrl: details.imageUrl || '',
+                        videoWebpUrl: details.videoWebpUrl,
+                        name: details.name || '',
+                        nameHe: details.nameHe || '',
+                      })
+                    }
+                  } catch {
+                    // Silently continue - exercise data from Firebase is used as fallback
                   }
-                } catch {
-                  // Silently continue - exercise data from Firebase is used as fallback
-                }
-              })
+                }),
+              ),
             )
 
             // Convert Firebase workout to ActiveWorkout format
@@ -505,7 +738,10 @@ export function useActiveWorkout() {
             // Fetch previous exercise volumes (non-critical)
             try {
               const volExerciseIds = restoredExercises.map((ex) => ex.exerciseId)
-              const volumes = await getLastExerciseVolumes(effectiveUserId, volExerciseIds)
+              const volumes = await __tracker.measure(
+                'firebase_recovery.getLastExerciseVolumes',
+                getLastExerciseVolumes(effectiveUserId, volExerciseIds),
+              )
               restoredExercises.forEach((ex) => {
                 ex.previousExerciseVolume = volumes[ex.exerciseId] ?? null
               })
@@ -533,11 +769,14 @@ export function useActiveWorkout() {
                   .filter((ex) => ex.reportType)
                   .map((ex) => [ex.exerciseId, ex.reportType as string])
               )
-              const [prData, lastData, historicalNotes] = await Promise.all([
-                getBestPerformanceForExercises(effectiveUserId, exerciseIds, detailsById, reportTypeById),
-                getLastWorkoutForExercises(effectiveUserId, exerciseIds, detailsById, reportTypeById),
-                getExerciseNotesForExercises(effectiveUserId, exerciseIds),
-              ])
+              const [prData, lastData, historicalNotes] = await __tracker.measure(
+                'firebase_recovery.getPRLastWorkoutNotesBatch',
+                Promise.all([
+                  getBestPerformanceForExercises(effectiveUserId, exerciseIds, detailsById, reportTypeById),
+                  getLastWorkoutForExercises(effectiveUserId, exerciseIds, detailsById, reportTypeById),
+                  getExerciseNotesForExercises(effectiveUserId, exerciseIds),
+                ]),
+              )
               restoredExercises.forEach((ex) => {
                 if (prData[ex.exerciseId]) {
                   ex.personalRecordData = prData[ex.exerciseId]
@@ -555,7 +794,10 @@ export function useActiveWorkout() {
 
             // Weight recommendations - separate try/catch (non-critical)
             try {
-              const weightRecs = await getWeightRecommendations(effectiveUserId)
+              const weightRecs = await __tracker.measure(
+                'firebase_recovery.getWeightRecommendations',
+                getWeightRecommendations(effectiveUserId),
+              )
               restoredExercises.forEach((ex) => {
                 if (weightRecs[ex.exerciseId]) {
                   ex.weightRecommendation = true
@@ -578,12 +820,14 @@ export function useActiveWorkout() {
             localStorage.setItem(firebaseIdKey, firebaseWorkout.id)
             saveToStorage(restoredWorkout)
             hasInitialized.current = true
+            __emitEnd('firebase_recovery', firebaseWorkout.id)
             setIsLoading(false)
             toast.success('האימון שוחזר!')
             return
           }
         } catch (error) {
           console.error('❌ Failed to check Firebase for in_progress workout:', error)
+          __tracker.outcome = 'error_recovered'
         }
       }
 
@@ -611,7 +855,14 @@ export function useActiveWorkout() {
           }
           if (existingWorkoutId && user?.uid) {
             // Validate with retry — auth timing issues can cause transient failures
-            const validation = await validateWithRetry(existingWorkoutId, effectiveUserId)
+            const __validateStartTs = performance.now()
+            const validation = await validateWithRetry(
+              existingWorkoutId,
+              effectiveUserId,
+              3,
+              (info) => __tracker.recordValidateAttempt({ ...info, phase: 'init' }),
+            )
+            __tracker.validate.totalMs = performance.now() - __validateStartTs
             if (validation.valid) {
               console.log('📋 Found existing workout ID (validated):', existingWorkoutId)
               setFirebaseWorkoutId(existingWorkoutId)
@@ -816,11 +1067,14 @@ export function useActiveWorkout() {
                     .filter((ex) => ex.reportType)
                     .map((ex) => [ex.exerciseId, ex.reportType as string])
                 )
-                const [prData, lastData, historicalNotes] = await Promise.all([
-                  getBestPerformanceForExercises(effectiveUserId, exerciseIds, detailsById, reportTypeById),
-                  getLastWorkoutForExercises(effectiveUserId, exerciseIds, detailsById, reportTypeById),
-                  getExerciseNotesForExercises(effectiveUserId, exerciseIds),
-                ])
+                const [prData, lastData, historicalNotes] = await __tracker.measure(
+                  'localstorage_merge.getPRLastWorkoutNotesBatch',
+                  Promise.all([
+                    getBestPerformanceForExercises(effectiveUserId, exerciseIds, detailsById, reportTypeById),
+                    getLastWorkoutForExercises(effectiveUserId, exerciseIds, detailsById, reportTypeById),
+                    getExerciseNotesForExercises(effectiveUserId, exerciseIds),
+                  ]),
+                )
                 newExercises.forEach((ex) => {
                   if (prData[ex.exerciseId]) {
                     ex.personalRecordData = prData[ex.exerciseId]
@@ -838,7 +1092,10 @@ export function useActiveWorkout() {
 
               // Weight recommendations - separate try/catch to never affect summary rows
               try {
-                const weightRecs = await getWeightRecommendations(effectiveUserId)
+                const weightRecs = await __tracker.measure(
+                  'localstorage_merge.getWeightRecommendations',
+                  getWeightRecommendations(effectiveUserId),
+                )
                 newExercises.forEach((ex) => {
                   if (weightRecs[ex.exerciseId]) {
                     ex.weightRecommendation = true
@@ -851,7 +1108,10 @@ export function useActiveWorkout() {
               // Exercise volumes - separate try/catch (non-critical)
               try {
                 const volExerciseIds = newExercises.map((ex) => ex.exerciseId)
-                const volumes = await getLastExerciseVolumes(effectiveUserId, volExerciseIds)
+                const volumes = await __tracker.measure(
+                  'localstorage_merge.getLastExerciseVolumes',
+                  getLastExerciseVolumes(effectiveUserId, volExerciseIds),
+                )
                 newExercises.forEach((ex) => {
                   ex.previousExerciseVolume = volumes[ex.exerciseId] ?? null
                 })
@@ -873,11 +1133,14 @@ export function useActiveWorkout() {
           setWorkout(parsed)
           saveToStorage(parsed)
           hasInitialized.current = true
+          __tracker.exerciseCount = parsed.exercises.length
+          __emitEnd('localstorage_fast_path', null)
           setIsLoading(false)
           return
         } catch (e) {
           console.error('Failed to restore workout:', e)
           localStorage.removeItem(storageKey)
+          __tracker.outcome = 'error_recovered'
         }
       }
 
@@ -971,11 +1234,14 @@ export function useActiveWorkout() {
                 .filter((ex) => ex.reportType)
                 .map((ex) => [ex.exerciseId, ex.reportType as string])
             )
-            const [prData, lastData, historicalNotes] = await Promise.all([
-              getBestPerformanceForExercises(effectiveUserId, exerciseIds, detailsById, reportTypeById),
-              getLastWorkoutForExercises(effectiveUserId, exerciseIds, detailsById, reportTypeById),
-              getExerciseNotesForExercises(effectiveUserId, exerciseIds),
-            ])
+            const [prData, lastData, historicalNotes] = await __tracker.measure(
+              'new_from_builder.getPRLastWorkoutNotesBatch',
+              Promise.all([
+                getBestPerformanceForExercises(effectiveUserId, exerciseIds, detailsById, reportTypeById),
+                getLastWorkoutForExercises(effectiveUserId, exerciseIds, detailsById, reportTypeById),
+                getExerciseNotesForExercises(effectiveUserId, exerciseIds),
+              ]),
+            )
 
             // Update exercises with PR + last-workout summaries + historical notes
             exercises.forEach((ex) => {
@@ -995,7 +1261,10 @@ export function useActiveWorkout() {
 
           // Weight recommendations - separate try/catch to never affect summary rows
           try {
-            const weightRecs = await getWeightRecommendations(effectiveUserId)
+            const weightRecs = await __tracker.measure(
+              'new_from_builder.getWeightRecommendations',
+              getWeightRecommendations(effectiveUserId),
+            )
             exercises.forEach((ex) => {
               if (weightRecs[ex.exerciseId]) {
                 ex.weightRecommendation = true
@@ -1008,7 +1277,10 @@ export function useActiveWorkout() {
           // Exercise volumes - separate try/catch (non-critical)
           try {
             const volExerciseIds = exercises.map((ex) => ex.exerciseId)
-            const volumes = await getLastExerciseVolumes(effectiveUserId, volExerciseIds)
+            const volumes = await __tracker.measure(
+              'new_from_builder.getLastExerciseVolumes',
+              getLastExerciseVolumes(effectiveUserId, volExerciseIds),
+            )
             exercises.forEach((ex) => {
               ex.previousExerciseVolume = volumes[ex.exerciseId] ?? null
             })
@@ -1047,9 +1319,17 @@ export function useActiveWorkout() {
         let existingId = localStorage.getItem(firebaseIdKey)
         if (existingId && user?.uid) {
           // Use retry for continuation (auth timing), single attempt otherwise
+          const __autosaveValidateStart = performance.now()
           const validation = isContinuingFromHistory
-            ? await validateWithRetry(existingId, effectiveUserId)
+            ? await validateWithRetry(
+                existingId,
+                effectiveUserId,
+                3,
+                (info) => __tracker.recordValidateAttempt({ ...info, phase: 'autosave' }),
+              )
             : await validateWorkoutId(existingId, effectiveUserId)
+          __tracker.blocks['new_from_builder.autosaveValidate'] =
+            performance.now() - __autosaveValidateStart
           if (!validation.valid) {
             if (isContinuingFromHistory) {
               // During continuation: NEVER null the ID — use it anyway
@@ -1140,6 +1420,25 @@ export function useActiveWorkout() {
         console.log('⚠️ No selectedExercises and no saved workout')
       }
 
+      // Path priority at the final exit:
+      //   continue_from_history > trainer_planned > new_from_builder > no_workout_no_selection
+      // continueFromHistory falls through the localStorage fast-path (gated on
+      // `!continueData`) so it lands here when `selectedExercises.length > 0`.
+      const __finalExitPath: InitPathTaken =
+        selectedExercises.length > 0
+          ? isContinuingFromHistory
+            ? 'continue_from_history'
+            : plannedWorkoutDocId
+              ? 'trainer_planned'
+              : 'new_from_builder'
+          : 'no_workout_no_selection'
+      if (selectedExercises.length > 0) {
+        __tracker.exerciseCount = selectedExercises.length
+      }
+      __emitEnd(
+        __finalExitPath,
+        typeof localStorage !== 'undefined' ? localStorage.getItem(firebaseIdKey) : null,
+      )
       setIsLoading(false)
       isInitializing.current = false
     }
