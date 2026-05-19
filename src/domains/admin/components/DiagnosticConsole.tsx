@@ -1,17 +1,25 @@
 import { useState } from 'react'
-import { Search, ScrollText, Activity, X } from 'lucide-react'
+import { Search, ScrollText, Activity, Timer, X } from 'lucide-react'
 import { trainerService } from '@/domains/trainer/services/trainerService'
 import { LogsTimelineTab } from './diagnostic/LogsTimelineTab'
 import { WorkoutInspectorTab } from './diagnostic/WorkoutInspectorTab'
 import { SessionReplayTab } from './diagnostic/SessionReplayTab'
+import { InitTimingTab } from './diagnostic/InitTimingTab'
 
-type TabKey = 'logs' | 'workouts' | 'replay'
+type TabKey = 'logs' | 'init-timing' | 'workouts' | 'replay'
 
 const TABS: { key: TabKey; label: string; icon: typeof Search }[] = [
   { key: 'logs', label: 'Logs Timeline', icon: ScrollText },
+  // 'Init Timing' surfaces WORKOUT_INIT_TIMING events (workout hydration
+  // performance) — see useActiveWorkout instrumentation, added 2026-05-19.
+  { key: 'init-timing', label: 'Init Timing', icon: Timer },
   { key: 'workouts', label: 'Workout Inspector', icon: Search },
   { key: 'replay', label: 'Session Replay', icon: Activity },
 ]
+
+// Default email at console open: the user investigating their own current
+// regression. Editable via the input — every admin diagnoses different users.
+const DEFAULT_EMAIL = 'erez1964@gmail.com'
 
 interface SelectedSubject {
   email: string
@@ -20,7 +28,7 @@ interface SelectedSubject {
 
 export default function DiagnosticConsole() {
   const [activeTab, setActiveTab] = useState<TabKey>('logs')
-  const [emailInput, setEmailInput] = useState('')
+  const [emailInput, setEmailInput] = useState(DEFAULT_EMAIL)
   const [selected, setSelected] = useState<SelectedSubject | null>(null)
   const [lookupError, setLookupError] = useState<string | null>(null)
   const [isLooking, setIsLooking] = useState(false)
@@ -57,7 +65,7 @@ export default function DiagnosticConsole() {
   function clearSelection() {
     setSelected(null)
     setLookupError(null)
-    setEmailInput('')
+    setEmailInput(DEFAULT_EMAIL)
   }
 
   return (
@@ -155,6 +163,7 @@ export default function DiagnosticConsole() {
 
       <section>
         {activeTab === 'logs' && <LogsTimelineTab userId={selected?.uid ?? null} />}
+        {activeTab === 'init-timing' && <InitTimingTab userId={selected?.uid ?? null} />}
         {activeTab === 'workouts' && (
           <WorkoutInspectorTab userId={selected?.uid ?? null} />
         )}
