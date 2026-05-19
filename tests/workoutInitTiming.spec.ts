@@ -362,6 +362,75 @@ describe('useActiveWorkout — init-timing instrumentation', () => {
     expect(logDiagnosticMock).toHaveBeenCalled()
   })
 
+  it('emits initPhaseTotalMs and autosavePhaseTotalMs as SEPARATE fields in a dual-validation cycle', async () => {
+    // The "המשך אימון" diagnostic scenario where BOTH validateWithRetry
+    // calls fire in one cycle. Requires the resumingFromLibrary + continue
+    // combination: without `resumingFromLibrary`, the savedFirebaseId
+    // catch-all branch (line ~965 of useActiveWorkout.ts) clears
+    // firebaseIdKey before the autosave validation can read it, so the
+    // autosave-phase validateWithRetry never fires.
+    //
+    // This test deliberately picks a setup where both phases run so the
+    // emit must surface BOTH fields independently. Merging them into a
+    // single `totalMs` would defeat the entire point of this PR.
+    validateWorkoutIdMock.mockResolvedValue({ valid: true })
+
+    localStorage.setItem('continueWorkoutId', 'continue-doc-id')
+    localStorage.setItem('continueWorkoutMode', 'in_progress')
+    localStorage.setItem(
+      'continueWorkoutData',
+      JSON.stringify([
+        { exerciseId: 'ex-1', exerciseName: 'Squat', exerciseNameHe: 'סקוואט', sets: [] },
+      ]),
+    )
+    localStorage.setItem(FIREBASE_ID_KEY, 'continue-doc-id')
+    // Enter via the isResumingFromLibrary branch so the savedFirebaseId
+    // restoration KEEPS firebaseIdKey (instead of clearing it via the
+    // catch-all `!isTabCloseRecovery` branch). That preservation is what
+    // makes the autosave-phase validateWithRetry fire.
+    locationStateRef.current = { resumingFromLibrary: true }
+    resetBuilder({
+      selectedExercises: [
+        {
+          exerciseId: 'ex-1',
+          exerciseName: 'Squat',
+          exerciseNameHe: 'סקוואט',
+          primaryMuscle: 'legs',
+        },
+      ],
+    })
+
+    renderHook(() => useActiveWorkout())
+    await waitFor(() => expect(autoSaveWorkoutMock).toHaveBeenCalled())
+
+    const end = findEndCall()
+    expect(end).not.toBeNull()
+    const validate = end!.payload.validate as
+      | {
+          initPhaseTotalMs?: number
+          autosavePhaseTotalMs?: number
+          totalMs?: number
+          attemptResults: { phase?: string }[]
+        }
+      | undefined
+    expect(validate).toBeDefined()
+
+    // Both phase totals present, both non-negative numbers.
+    expect(typeof validate!.initPhaseTotalMs).toBe('number')
+    expect(validate!.initPhaseTotalMs!).toBeGreaterThanOrEqual(0)
+    expect(typeof validate!.autosavePhaseTotalMs).toBe('number')
+    expect(validate!.autosavePhaseTotalMs!).toBeGreaterThanOrEqual(0)
+
+    // No collapsed `totalMs` field — that would lose the per-phase
+    // distinction this PR exists to preserve.
+    expect(validate!.totalMs).toBeUndefined()
+
+    // Per-attempt records include both phases.
+    const phases = validate!.attemptResults.map((r) => r.phase).filter(Boolean)
+    expect(phases).toContain('init')
+    expect(phases).toContain('autosave')
+  })
+
   it('captures multi-attempt validate retries when validateWorkoutId fails twice then succeeds', async () => {
     validateWorkoutIdMock
       .mockResolvedValueOnce({ valid: false, reason: 'transient' })

@@ -120,7 +120,20 @@ interface ValidateAttemptRecord {
 interface InitTimingTracker {
   startedAtMs: number
   blocks: Record<string, number>
-  validate: { attempts: ValidateAttemptRecord[]; totalMs: number | null }
+  // Validation timing is split into TWO explicit fields, one per phase,
+  // because a single hydration cycle can run validateWithRetry twice:
+  //   - `initPhaseTotalMs`: continueFromHistory primary validation (~line 853)
+  //   - `autosavePhaseTotalMs`: autosave-path validation (~line 1320, only
+  //     fires when isContinuingFromHistory)
+  // We deliberately do NOT collapse these into a single `totalMs` — losing
+  // the distinction would defeat the entire purpose of this instrumentation
+  // (the "המשך אימון" scenario hits BOTH validations sequentially, and the
+  // diagnosis hinges on which one was slow).
+  validate: {
+    attempts: ValidateAttemptRecord[]
+    initPhaseTotalMs: number | null
+    autosavePhaseTotalMs: number | null
+  }
   exerciseCount: number | null
   outcome: 'success' | 'error_recovered' | 'error_failed'
   measure: <T>(blockName: string, p: Promise<T>) => Promise<T>
@@ -131,7 +144,7 @@ function createInitTimingTracker(): InitTimingTracker {
   const tracker: InitTimingTracker = {
     startedAtMs: performance.now(),
     blocks: {},
-    validate: { attempts: [], totalMs: null },
+    validate: { attempts: [], initPhaseTotalMs: null, autosavePhaseTotalMs: null },
     exerciseCount: null,
     outcome: 'success',
     measure: async <T>(blockName: string, p: Promise<T>): Promise<T> => {
@@ -557,7 +570,9 @@ export function useActiveWorkout() {
         workoutIdForLog: string | null = null,
       ): void => {
         const validateSection =
-          __tracker.validate.attempts.length > 0
+          __tracker.validate.attempts.length > 0 ||
+          __tracker.validate.initPhaseTotalMs !== null ||
+          __tracker.validate.autosavePhaseTotalMs !== null
             ? {
                 attempts: __tracker.validate.attempts.length,
                 attemptDurationsMs: __tracker.validate.attempts.map((a) => a.durationMs),
@@ -566,8 +581,13 @@ export function useActiveWorkout() {
                   reason: a.reason ?? null,
                   ...(a.phase && { phase: a.phase }),
                 })),
-                ...(__tracker.validate.totalMs !== null && {
-                  totalMs: __tracker.validate.totalMs,
+                // Phase-tagged totals — emitted independently. Either, both,
+                // or neither may be present in a single hydration cycle.
+                ...(__tracker.validate.initPhaseTotalMs !== null && {
+                  initPhaseTotalMs: __tracker.validate.initPhaseTotalMs,
+                }),
+                ...(__tracker.validate.autosavePhaseTotalMs !== null && {
+                  autosavePhaseTotalMs: __tracker.validate.autosavePhaseTotalMs,
                 }),
               }
             : undefined
@@ -862,7 +882,7 @@ export function useActiveWorkout() {
               3,
               (info) => __tracker.recordValidateAttempt({ ...info, phase: 'init' }),
             )
-            __tracker.validate.totalMs = performance.now() - __validateStartTs
+            __tracker.validate.initPhaseTotalMs = performance.now() - __validateStartTs
             if (validation.valid) {
               console.log('📋 Found existing workout ID (validated):', existingWorkoutId)
               setFirebaseWorkoutId(existingWorkoutId)
@@ -1318,7 +1338,10 @@ export function useActiveWorkout() {
         // Validate the ID before using it — stale IDs cause permission-denied
         let existingId = localStorage.getItem(firebaseIdKey)
         if (existingId && user?.uid) {
-          // Use retry for continuation (auth timing), single attempt otherwise
+          // Use retry for continuation (auth timing), single attempt otherwise.
+          // Duration goes to `validate.autosavePhaseTotalMs` (not `blocks`)
+          // so the diagnostic payload exposes the autosave validation as a
+          // first-class field — symmetric with `validate.initPhaseTotalMs`.
           const __autosaveValidateStart = performance.now()
           const validation = isContinuingFromHistory
             ? await validateWithRetry(
@@ -1328,7 +1351,7 @@ export function useActiveWorkout() {
                 (info) => __tracker.recordValidateAttempt({ ...info, phase: 'autosave' }),
               )
             : await validateWorkoutId(existingId, effectiveUserId)
-          __tracker.blocks['new_from_builder.autosaveValidate'] =
+          __tracker.validate.autosavePhaseTotalMs =
             performance.now() - __autosaveValidateStart
           if (!validation.valid) {
             if (isContinuingFromHistory) {

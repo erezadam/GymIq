@@ -25,11 +25,16 @@ interface TimingPayload {
   }
   localStorageState: Record<string, unknown>
   durations: Record<string, number>
+  // Validate section is split into two phase-tagged totals. Both can be
+  // present in a single hydration cycle (continueFromHistory triggers init
+  // AND autosave validations) — the UI surfaces them as two adjacent
+  // columns so an analyst sees at a glance which phase was slow.
   validate?: {
     attempts: number
     attemptDurationsMs: number[]
     attemptResults: { valid: boolean; reason: string | null; phase?: ValidatePhase }[]
-    totalMs?: number
+    initPhaseTotalMs?: number
+    autosavePhaseTotalMs?: number
   }
   exerciseCount?: number
   networkType: string
@@ -157,7 +162,12 @@ export function InitTimingTab({ userId }: Props) {
               <th className="text-right p-3">מסלול</th>
               <th className="text-right p-3">משך כולל</th>
               <th className="text-right p-3">תרגילים</th>
-              <th className="text-right p-3">retries</th>
+              {/* Two adjacent validate columns — see PR #128 finding 3.
+                  A "המשך אימון" cycle can trigger BOTH; surfacing them
+                  side-by-side makes the "which phase was slow" decision
+                  visible at a glance. */}
+              <th className="text-right p-3">init validate</th>
+              <th className="text-right p-3">autosave validate</th>
               <th className="text-right p-3">רשת</th>
               <th className="text-right p-3">בלוקים</th>
               <th className="text-right p-3"></th>
@@ -174,6 +184,32 @@ export function InitTimingTab({ userId }: Props) {
   )
 }
 
+function ValidatePhaseCell({
+  totalMs,
+  attempts,
+}: {
+  totalMs: number | undefined
+  attempts: { durationMs: number }[]
+}) {
+  if (totalMs === undefined && attempts.length === 0) {
+    return <span className="text-text-muted">—</span>
+  }
+  return (
+    <div className="flex flex-col gap-0.5 font-mono text-xs">
+      {totalMs !== undefined && (
+        <span className={`font-semibold ${durationColorClass(totalMs)}`}>
+          {formatMs(totalMs)}
+        </span>
+      )}
+      {attempts.length > 0 && (
+        <span className="text-text-muted">
+          {attempts.length}× ({attempts.map((a) => formatMs(a.durationMs)).join(', ')})
+        </span>
+      )}
+    </div>
+  )
+}
+
 function TimingRow({
   log,
 }: {
@@ -183,6 +219,23 @@ function TimingRow({
   const p = log.payload
   const blockEntries = Object.entries(p.durations)
   const validateInfo = p.validate
+  // Split attempts by phase so each adjacent column shows only its own
+  // per-attempt list — matches the split of initPhaseTotalMs /
+  // autosavePhaseTotalMs the writer emits.
+  const initAttempts =
+    validateInfo?.attemptResults
+      .map((r, i) => ({
+        phase: r.phase,
+        durationMs: validateInfo.attemptDurationsMs[i] ?? 0,
+      }))
+      .filter((a) => a.phase === 'init') ?? []
+  const autosaveAttempts =
+    validateInfo?.attemptResults
+      .map((r, i) => ({
+        phase: r.phase,
+        durationMs: validateInfo.attemptDurationsMs[i] ?? 0,
+      }))
+      .filter((a) => a.phase === 'autosave') ?? []
 
   return (
     <>
@@ -201,14 +254,17 @@ function TimingRow({
         <td className="p-3 font-mono text-xs text-text-muted">
           {p.exerciseCount ?? '—'}
         </td>
-        <td className="p-3 font-mono text-xs">
-          {validateInfo ? (
-            <span className="text-text-primary">
-              {validateInfo.attempts}× ({validateInfo.attemptDurationsMs.map((m) => formatMs(m)).join(', ')})
-            </span>
-          ) : (
-            <span className="text-text-muted">—</span>
-          )}
+        <td className="p-3">
+          <ValidatePhaseCell
+            totalMs={validateInfo?.initPhaseTotalMs}
+            attempts={initAttempts}
+          />
+        </td>
+        <td className="p-3">
+          <ValidatePhaseCell
+            totalMs={validateInfo?.autosavePhaseTotalMs}
+            attempts={autosaveAttempts}
+          />
         </td>
         <td className="p-3 font-mono text-xs text-text-muted whitespace-nowrap">
           {p.networkType}
@@ -249,7 +305,7 @@ function TimingRow({
       </tr>
       {expanded && (
         <tr className="bg-dark-bg/30">
-          <td colSpan={8} className="p-3">
+          <td colSpan={9} className="p-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <div className="text-xs text-text-muted uppercase mb-1">gate conditions</div>
