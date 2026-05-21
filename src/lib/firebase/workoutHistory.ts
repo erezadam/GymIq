@@ -1690,6 +1690,91 @@ export async function getRecentlyDoneExerciseIds(userId: string): Promise<Set<st
   }
 }
 
+// Same selection logic as getRecentlyDoneExerciseIds, but returns the date of
+// the workout each exercise was last done in — so the "אחרון" badge can show
+// "לפני X ימים" instead of pretending a 2-month-old workout was recent.
+//
+// Mirrors the existing function: same query (recent 10, ordered by date desc),
+// same `isCompleted + exerciseId` filter, same status branches (last completed
+// + any in_progress). Newest wins when an exercise appears in multiple recent
+// workouts — naturally achieved by iterating in date-desc order and only
+// recording the date the first time each exerciseId is seen.
+//
+// Diverges from the sibling on one point: docs whose `date` field is missing
+// or unparseable are skipped entirely. The whole purpose of this function is
+// to feed the date to the badge; falling back to `new Date()` (as the rest of
+// this file does — lines 38, 384, 421, 456, 703, 1052, 1523) would render a
+// corrupt-date workout as "אחרון · היום", which is worse than showing
+// "אחרון" alone. The sibling function tolerates the fallback because it only
+// collects ids; this one cannot.
+export async function getRecentlyDoneExerciseDates(
+  userId: string
+): Promise<Map<string, Date>> {
+  const result = new Map<string, Date>()
+  const historyRef = collection(db, COLLECTION_NAME)
+
+  try {
+    const recentQuery = query(
+      historyRef,
+      where('userId', '==', userId),
+      orderBy('date', 'desc'),
+      limit(10)
+    )
+
+    const snapshot = await getDocs(recentQuery)
+
+    let foundCompleted = false
+    for (const doc of snapshot.docs) {
+      const data = doc.data()
+      if (!isNotSoftDeleted(data)) continue
+
+      const workoutDate = parseWorkoutDate(data.date)
+      if (!workoutDate) continue
+
+      if (!foundCompleted && data.status === 'completed') {
+        const exercises = data.exercises || []
+        for (const ex of exercises) {
+          if (ex.isCompleted && ex.exerciseId && !result.has(ex.exerciseId)) {
+            result.set(ex.exerciseId, workoutDate)
+          }
+        }
+        foundCompleted = true
+      }
+
+      if (data.status === 'in_progress') {
+        const exercises = data.exercises || []
+        for (const ex of exercises) {
+          if (ex.isCompleted && ex.exerciseId && !result.has(ex.exerciseId)) {
+            result.set(ex.exerciseId, workoutDate)
+          }
+        }
+      }
+    }
+
+    return result
+  } catch (error) {
+    console.error('❌ Error getting recently done exercise dates:', error)
+    return result
+  }
+}
+
+// Returns the workout's date as a real Date, or null if the field is missing,
+// not a Firestore Timestamp, or resolves to an Invalid Date. Used only by
+// getRecentlyDoneExerciseDates so a corrupt doc doesn't masquerade as "today"
+// in the "אחרון" badge.
+function parseWorkoutDate(raw: unknown): Date | null {
+  if (!raw || typeof raw !== 'object') return null
+  const toDate = (raw as { toDate?: unknown }).toDate
+  if (typeof toDate !== 'function') return null
+  try {
+    const d = (toDate as () => unknown).call(raw)
+    if (!(d instanceof Date) || Number.isNaN(d.getTime())) return null
+    return d
+  } catch {
+    return null
+  }
+}
+
 // Get weekly completed sets per primaryMuscle for the current week (Sunday to now)
 // exerciseLookup maps exerciseId -> { primaryMuscle } (caller provides to avoid extra Firebase read)
 export async function getWeeklyMuscleSets(

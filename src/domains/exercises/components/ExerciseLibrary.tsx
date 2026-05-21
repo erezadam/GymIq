@@ -13,7 +13,8 @@ import { getEquipment } from '@/lib/firebase/equipment'
 import { MuscleIcon } from '@/shared/components/MuscleIcon'
 import RecommendedSets from './RecommendedSets'
 import QuickPlanExerciseList from './QuickPlanExerciseList'
-import { saveWorkoutHistory, getRecentlyDoneExerciseIds, getWeeklyMuscleSets } from '@/lib/firebase/workoutHistory'
+import { saveWorkoutHistory, getRecentlyDoneExerciseDates, getWeeklyMuscleSets } from '@/lib/firebase/workoutHistory'
+import { formatLastWorkoutBadge } from '@/utils/formatLastWorkoutBadge'
 import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { ACTIVE_WORKOUT_STORAGE_KEY } from '@/domains/workouts/types/active-workout.types'
 import type { WorkoutHistoryEntry } from '@/domains/workouts/types'
@@ -94,7 +95,7 @@ export function ExerciseLibrary({
   )
   const [selectedEquipment, setSelectedEquipment] = useState<string>('all')
   const [imageModal, setImageModal] = useState<{ url: string; videoWebpUrl?: string; name: string; instructionsHe: string[] } | null>(null)
-  const [recentlyDoneExerciseIds, setRecentlyDoneExerciseIds] = useState<Set<string>>(new Set())
+  const [recentlyDoneExerciseDates, setRecentlyDoneExerciseDates] = useState<Map<string, Date>>(new Map())
   const [weeklyMuscleSets, setWeeklyMuscleSets] = useState<Map<string, number>>(new Map())
   const [isScheduleForLater, setIsScheduleForLater] = useState(false)
   const dateInputRef = useRef<HTMLInputElement>(null)
@@ -260,7 +261,7 @@ export function ExerciseLibrary({
     if (historyUserId && !loading && exercises.length > 0) {
       // If scheduled for a future week, no sets data needed (will show 0/10)
       if (isScheduledInDifferentWeek) {
-        setRecentlyDoneExerciseIds(new Set())
+        setRecentlyDoneExerciseDates(new Map())
         setWeeklyMuscleSets(new Map())
         return
       }
@@ -274,11 +275,11 @@ export function ExerciseLibrary({
 
       // Load both in parallel
       Promise.all([
-        getRecentlyDoneExerciseIds(historyUserId),
+        getRecentlyDoneExerciseDates(historyUserId),
         getWeeklyMuscleSets(historyUserId, exerciseLookup)
       ])
-        .then(([recentIds, muscleSets]) => {
-          setRecentlyDoneExerciseIds(recentIds)
+        .then(([recentDates, muscleSets]) => {
+          setRecentlyDoneExerciseDates(recentDates)
           setWeeklyMuscleSets(muscleSets)
         })
         .catch(err => console.error('Failed to load exercise history:', err))
@@ -1215,7 +1216,7 @@ export function ExerciseLibrary({
                         )}
                         <div className="space-y-1.5">
                           {group.exercises.map((exercise) => {
-                            const wasInLastWorkout = recentlyDoneExerciseIds.has(exercise.id)
+                            const wasInLastWorkout = recentlyDoneExerciseDates.has(exercise.id)
                             const otherDayLetters = otherDaysMap.get(exercise.id)
                             const WEEKLY_SETS_TARGET = 10
                             const STRENGTH_CATEGORIES = new Set(['legs', 'chest', 'back', 'shoulders', 'biceps_brachii', 'triceps', 'core'])
@@ -1244,7 +1245,7 @@ export function ExerciseLibrary({
                                       </span>
                                     )}
                                     {wasInLastWorkout ? (
-                                      <span className="badge-last-workout flex-shrink-0">אחרון</span>
+                                      <span className="badge-last-workout flex-shrink-0">{formatLastWorkoutBadge(recentlyDoneExerciseDates.get(exercise.id))}</span>
                                     ) : showRecommended ? (
                                       <span className="badge-recommended flex-shrink-0">מומלץ {currentWeeklySets}/{WEEKLY_SETS_TARGET}</span>
                                     ) : showWeeklySets ? (
@@ -1322,7 +1323,7 @@ export function ExerciseLibrary({
               <div className="space-y-2">
                 {unselectedFilteredExercises.map((exercise) => {
                   const isSelected = effectiveSelectedIds.has(exercise.id)
-                  const wasInLastWorkout = recentlyDoneExerciseIds.has(exercise.id)
+                  const wasInLastWorkout = recentlyDoneExerciseDates.has(exercise.id)
                   const otherDayLetters = otherDaysMap.get(exercise.id)
 
                   // Weekly sets badge: show for all strength categories
@@ -1363,7 +1364,7 @@ export function ExerciseLibrary({
                           )}
                           {/* Priority: "אחרון" > "מומלץ X/10" > "X/10" (target met) */}
                           {wasInLastWorkout ? (
-                            <span className="badge-last-workout flex-shrink-0">אחרון</span>
+                            <span className="badge-last-workout flex-shrink-0">{formatLastWorkoutBadge(recentlyDoneExerciseDates.get(exercise.id))}</span>
                           ) : showRecommended ? (
                             <span className="badge-recommended flex-shrink-0">מומלץ {currentWeeklySets}/{WEEKLY_SETS_TARGET}</span>
                           ) : showWeeklySets ? (
