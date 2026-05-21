@@ -174,7 +174,10 @@ describe('getRecentlyDoneExerciseDates — invalid-date docs are skipped', () =>
 
   it('drops a doc whose `date.toDate()` returns an Invalid Date', async () => {
     // Defense-in-depth: a Timestamp-shaped object that yields NaN must also
-    // be skipped, not silently mapped to `new Date()`.
+    // be skipped, not silently mapped to `new Date()`. The second doc is a
+    // valid `completed` workout to assert the loop continues past the skipped
+    // doc — its status is irrelevant to the assertion, but must be a status
+    // the function actually scans.
     const validDate = new Date(2026, 4, 10, 14, 0, 0)
     getDocsMock.mockResolvedValueOnce(
       snapshot([
@@ -184,7 +187,7 @@ describe('getRecentlyDoneExerciseDates — invalid-date docs are skipped', () =>
           exercises: [{ exerciseId: 'ex-corrupt', isCompleted: true }],
         },
         {
-          status: 'in_progress',
+          status: 'completed',
           date: asTimestamp(validDate),
           exercises: [{ exerciseId: 'ex-recovered', isCompleted: true }],
         },
@@ -199,5 +202,190 @@ describe('getRecentlyDoneExerciseDates — invalid-date docs are skipped', () =>
     expect(result.has('ex-corrupt')).toBe(false)
     expect(result.get('ex-recovered')).toEqual(validDate)
     expect(result.size).toBe(1)
+  })
+})
+
+// ────────────────────────────────────────────────────────────────────────────
+// getRecentlyDoneExerciseDates — 21-day window, completed-only behavior.
+//
+// Reference time NOW = 2026-05-21 14:00 local. Day arithmetic uses
+// `vi.useFakeTimers` so "5 days ago" etc. are deterministic.
+// ────────────────────────────────────────────────────────────────────────────
+
+describe('getRecentlyDoneExerciseDates — 21 day window', () => {
+  beforeEach(() => {
+    getDocsMock.mockReset()
+    vi.useFakeTimers()
+    vi.setSystemTime(NOW)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('workout 5 days ago: exercise enters Map with correct date', async () => {
+    const fiveDaysAgo = new Date(2026, 4, 16, 12, 0, 0)
+    getDocsMock.mockResolvedValueOnce(
+      snapshot([
+        {
+          status: 'completed',
+          date: asTimestamp(fiveDaysAgo),
+          exercises: [{ exerciseId: 'ex-5', isCompleted: true }],
+        },
+      ])
+    )
+
+    const { getRecentlyDoneExerciseDates } = await import(
+      '../src/lib/firebase/workoutHistory'
+    )
+    const result = await getRecentlyDoneExerciseDates('user-1')
+
+    expect(result.get('ex-5')).toEqual(fiveDaysAgo)
+    expect(result.size).toBe(1)
+  })
+
+  it('workout 20 days ago: exercise enters Map (window edge inside)', async () => {
+    const twentyDaysAgo = new Date(2026, 4, 1, 14, 0, 0)
+    getDocsMock.mockResolvedValueOnce(
+      snapshot([
+        {
+          status: 'completed',
+          date: asTimestamp(twentyDaysAgo),
+          exercises: [{ exerciseId: 'ex-20', isCompleted: true }],
+        },
+      ])
+    )
+
+    const { getRecentlyDoneExerciseDates } = await import(
+      '../src/lib/firebase/workoutHistory'
+    )
+    const result = await getRecentlyDoneExerciseDates('user-1')
+
+    expect(result.get('ex-20')).toEqual(twentyDaysAgo)
+    expect(result.size).toBe(1)
+  })
+
+  it('query filters to a 21-day cutoff on `date` (window contract enforced at Firestore layer)', async () => {
+    // The 22-day exclusion is enforced by Firestore's `where('date', '>', X)`,
+    // not by client-side code. The mock returns whatever we feed it, so the
+    // only honest behavioral assertion at this layer is: the query was
+    // constructed with the right cutoff. If someone removes the date filter
+    // or shifts the window (e.g. 21 → 14), this test fails.
+    getDocsMock.mockResolvedValueOnce(snapshot([]))
+
+    const firestoreModule = await import('firebase/firestore')
+    vi.mocked(firestoreModule.where).mockClear()
+
+    const { getRecentlyDoneExerciseDates } = await import(
+      '../src/lib/firebase/workoutHistory'
+    )
+    await getRecentlyDoneExerciseDates('user-1')
+
+    const calls = vi.mocked(firestoreModule.where).mock.calls
+    const dateRangeCall = calls.find(
+      ([field, op]) => field === 'date' && op === '>'
+    )
+    expect(dateRangeCall).toBeDefined()
+
+    const cutoffTimestamp = dateRangeCall![2] as { toDate: () => Date }
+    expect(typeof cutoffTimestamp.toDate).toBe('function')
+
+    const expectedMs = NOW.getTime() - 21 * 24 * 60 * 60 * 1000
+    expect(
+      Math.abs(cutoffTimestamp.toDate().getTime() - expectedMs)
+    ).toBeLessThan(1000)
+  })
+
+  it('same exercise in workout 3 days ago AND 10 days ago: Map holds the 3-day date (first-write-wins under date desc)', async () => {
+    const threeDaysAgo = new Date(2026, 4, 18, 12, 0, 0)
+    const tenDaysAgo = new Date(2026, 4, 11, 12, 0, 0)
+    getDocsMock.mockResolvedValueOnce(
+      snapshot([
+        {
+          status: 'completed',
+          date: asTimestamp(threeDaysAgo),
+          exercises: [{ exerciseId: 'ex-shared', isCompleted: true }],
+        },
+        {
+          status: 'completed',
+          date: asTimestamp(tenDaysAgo),
+          exercises: [{ exerciseId: 'ex-shared', isCompleted: true }],
+        },
+      ])
+    )
+
+    const { getRecentlyDoneExerciseDates } = await import(
+      '../src/lib/firebase/workoutHistory'
+    )
+    const result = await getRecentlyDoneExerciseDates('user-1')
+
+    expect(result.get('ex-shared')).toEqual(threeDaysAgo)
+    expect(result.size).toBe(1)
+  })
+
+  it('in_progress workout in window: exercises NOT in Map (in_progress branch removed)', async () => {
+    const fourDaysAgo = new Date(2026, 4, 17, 12, 0, 0)
+    getDocsMock.mockResolvedValueOnce(
+      snapshot([
+        {
+          status: 'in_progress',
+          date: asTimestamp(fourDaysAgo),
+          exercises: [{ exerciseId: 'ex-active', isCompleted: true }],
+        },
+      ])
+    )
+
+    const { getRecentlyDoneExerciseDates } = await import(
+      '../src/lib/firebase/workoutHistory'
+    )
+    const result = await getRecentlyDoneExerciseDates('user-1')
+
+    expect(result.has('ex-active')).toBe(false)
+    expect(result.size).toBe(0)
+  })
+
+  it('cancelled workout in window: exercises NOT in Map', async () => {
+    const sevenDaysAgo = new Date(2026, 4, 14, 12, 0, 0)
+    getDocsMock.mockResolvedValueOnce(
+      snapshot([
+        {
+          status: 'cancelled',
+          date: asTimestamp(sevenDaysAgo),
+          exercises: [{ exerciseId: 'ex-quit', isCompleted: true }],
+        },
+      ])
+    )
+
+    const { getRecentlyDoneExerciseDates } = await import(
+      '../src/lib/firebase/workoutHistory'
+    )
+    const result = await getRecentlyDoneExerciseDates('user-1')
+
+    expect(result.has('ex-quit')).toBe(false)
+    expect(result.size).toBe(0)
+  })
+
+  it('15 completed workouts in window, all scanned (no foundCompleted gate)', async () => {
+    const docs: Array<Record<string, unknown>> = []
+    for (let i = 0; i < 15; i++) {
+      const daysAgo = i + 1
+      const dt = new Date(NOW.getTime() - daysAgo * 24 * 60 * 60 * 1000)
+      docs.push({
+        status: 'completed',
+        date: asTimestamp(dt),
+        exercises: [{ exerciseId: `ex-${i}`, isCompleted: true }],
+      })
+    }
+    getDocsMock.mockResolvedValueOnce(snapshot(docs))
+
+    const { getRecentlyDoneExerciseDates } = await import(
+      '../src/lib/firebase/workoutHistory'
+    )
+    const result = await getRecentlyDoneExerciseDates('user-1')
+
+    expect(result.size).toBe(15)
+    for (let i = 0; i < 15; i++) {
+      expect(result.has(`ex-${i}`)).toBe(true)
+    }
   })
 })

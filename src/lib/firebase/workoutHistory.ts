@@ -1632,10 +1632,14 @@ export async function getExerciseHistory(
   })
 }
 
-// Returns exercise IDs that the user has actually performed in their most
-// recent workouts. Filters by `isCompleted: true` for both 'completed' and
-// 'in_progress' statuses — a planned exercise that wasn't actually performed
-// is not considered "recently done".
+/**
+ * Returns exercise IDs that the user has actually performed in their most
+ * recent workouts. Filters by `isCompleted: true` for both 'completed' and
+ * 'in_progress' statuses — a planned exercise that wasn't actually performed
+ * is not considered "recently done".
+ *
+ * @see getRecentlyDoneExerciseDates — UI-badge sibling with intentionally wider window. Changes here should not be made without considering the divergence.
+ */
 export async function getRecentlyDoneExerciseIds(userId: string): Promise<Set<string>> {
   const result = new Set<string>()
   const historyRef = collection(db, COLLECTION_NAME)
@@ -1690,23 +1694,19 @@ export async function getRecentlyDoneExerciseIds(userId: string): Promise<Set<st
   }
 }
 
-// Same selection logic as getRecentlyDoneExerciseIds, but returns the date of
-// the workout each exercise was last done in — so the "אחרון" badge can show
-// "לפני X ימים" instead of pretending a 2-month-old workout was recent.
-//
-// Mirrors the existing function: same query (recent 10, ordered by date desc),
-// same `isCompleted + exerciseId` filter, same status branches (last completed
-// + any in_progress). Newest wins when an exercise appears in multiple recent
-// workouts — naturally achieved by iterating in date-desc order and only
-// recording the date the first time each exerciseId is seen.
-//
-// Diverges from the sibling on one point: docs whose `date` field is missing
-// or unparseable are skipped entirely. The whole purpose of this function is
-// to feed the date to the badge; falling back to `new Date()` (as the rest of
-// this file does — lines 38, 384, 421, 456, 703, 1052, 1523) would render a
-// corrupt-date workout as "אחרון · היום", which is worse than showing
-// "אחרון" alone. The sibling function tolerates the fallback because it only
-// collects ids; this one cannot.
+/**
+ * Returns the most recent date each exercise was performed, for the UI
+ * "אחרון" badge. Scans `completed` workouts within the last 21 days.
+ *
+ * Intentionally diverges from sibling `getRecentlyDoneExerciseIds`, which
+ * feeds the AI Trainer from a narrow window (last completed workout + all
+ * `in_progress`). This one is wider and `completed`-only — a UI badge
+ * wants a calm view of recent history, not just the workout you just
+ * finished. The split is deliberate: changing one should not implicitly
+ * change the other.
+ *
+ * @see PR #131 (architectural rationale for the split)
+ */
 export async function getRecentlyDoneExerciseDates(
   userId: string
 ): Promise<Map<string, Date>> {
@@ -1714,39 +1714,31 @@ export async function getRecentlyDoneExerciseDates(
   const historyRef = collection(db, COLLECTION_NAME)
 
   try {
+    const twentyOneDaysAgo = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000)
+
     const recentQuery = query(
       historyRef,
       where('userId', '==', userId),
+      where('date', '>', Timestamp.fromDate(twentyOneDaysAgo)),
       orderBy('date', 'desc'),
-      limit(10)
+      limit(30)
     )
 
     const snapshot = await getDocs(recentQuery)
 
-    let foundCompleted = false
     for (const doc of snapshot.docs) {
       const data = doc.data()
       if (!isNotSoftDeleted(data)) continue
+      if (data.status !== 'completed') continue
 
       const workoutDate = parseWorkoutDate(data.date)
+      // Skip docs with malformed/missing date — they'd otherwise default to "now" and corrupt the badge.
       if (!workoutDate) continue
 
-      if (!foundCompleted && data.status === 'completed') {
-        const exercises = data.exercises || []
-        for (const ex of exercises) {
-          if (ex.isCompleted && ex.exerciseId && !result.has(ex.exerciseId)) {
-            result.set(ex.exerciseId, workoutDate)
-          }
-        }
-        foundCompleted = true
-      }
-
-      if (data.status === 'in_progress') {
-        const exercises = data.exercises || []
-        for (const ex of exercises) {
-          if (ex.isCompleted && ex.exerciseId && !result.has(ex.exerciseId)) {
-            result.set(ex.exerciseId, workoutDate)
-          }
+      const exercises = data.exercises || []
+      for (const ex of exercises) {
+        if (ex.isCompleted && ex.exerciseId && !result.has(ex.exerciseId)) {
+          result.set(ex.exerciseId, workoutDate)
         }
       }
     }
