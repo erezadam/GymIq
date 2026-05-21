@@ -1705,7 +1705,7 @@ export async function getRecentlyDoneExerciseIds(userId: string): Promise<Set<st
  * finished. The split is deliberate: changing one should not implicitly
  * change the other.
  *
- * @see PR #XXX (architectural rationale for the split)
+ * @see PR #131 (architectural rationale for the split)
  */
 export async function getRecentlyDoneExerciseDates(
   userId: string
