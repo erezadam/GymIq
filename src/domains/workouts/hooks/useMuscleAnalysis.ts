@@ -82,6 +82,9 @@ export interface UseMuscleAnalysisResult {
   rows: MuscleRow[]
   summaryRows: SummaryRow[]
   weekRange: { startStr: string; endStr: string }
+  /** True when the analysis fetch failed — lets consumers distinguish a load
+   *  error from a genuine "no training data this week" empty state. */
+  error: boolean
 }
 
 export function useMuscleAnalysis(
@@ -94,6 +97,7 @@ export function useMuscleAnalysis(
   const [rows, setRows] = useState<MuscleRow[]>([])
   const [summaryRows, setSummaryRows] = useState<SummaryRow[]>([])
   const [weekRange, setWeekRange] = useState({ startStr: '', endStr: '' })
+  const [error, setError] = useState(false)
 
   const getRangeForMode = useCallback((mode: WeekMode) => {
     if (mode === 'current') return getCurrentWeekRange()
@@ -123,6 +127,7 @@ export function useMuscleAnalysis(
     const analyze = async () => {
       try {
         setLoading(true)
+        setError(false)
         const range = getRangeForMode(weekMode)
         setWeekRange({ startStr: range.startStr, endStr: range.endStr })
 
@@ -375,7 +380,10 @@ export function useMuscleAnalysis(
         summary.sort((a, b) => b.totalSets - a.totalSets)
         setSummaryRows(summary)
       } catch (err) {
+        // Surface as an error so consumers can distinguish a failed analysis
+        // from a genuine "no training data this week" empty state.
         console.error('Error analyzing weekly muscles:', err)
+        setError(true)
       } finally {
         setLoading(false)
       }
@@ -384,5 +392,5 @@ export function useMuscleAnalysis(
     analyze()
   }, [userId, weekMode, getRangeForMode])
 
-  return { loading, rows, summaryRows, weekRange }
+  return { loading, rows, summaryRows, weekRange, error }
 }

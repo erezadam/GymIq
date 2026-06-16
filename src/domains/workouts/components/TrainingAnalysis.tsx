@@ -34,7 +34,7 @@ function WeeklyMuscleSection({ userId, onNavigateToSummary }: { userId: string; 
   const [customEnd, setCustomEnd] = useState('')
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleRow | null>(null)
 
-  const { loading, rows, summaryRows, weekRange } = useMuscleAnalysis(userId, weekMode, customStart, customEnd)
+  const { loading, rows, summaryRows, weekRange, error } = useMuscleAnalysis(userId, weekMode, customStart, customEnd)
 
   // Scroll to detailed table when returning from ExerciseLibrary
   useEffect(() => {
@@ -238,6 +238,11 @@ function WeeklyMuscleSection({ userId, onNavigateToSummary }: { userId: string; 
         ) : loading ? (
           <div className="flex justify-center py-12">
             <LoadingSpinner />
+          </div>
+        ) : error ? (
+          <div role="alert" className="flex flex-col items-center justify-center py-12 text-status-error text-sm">
+            <span className="text-3xl mb-3 opacity-60">⚠️</span>
+            <p>לא הצלחנו לטעון את ניתוח השרירים</p>
           </div>
         ) : (
           <div className="overflow-x-auto">

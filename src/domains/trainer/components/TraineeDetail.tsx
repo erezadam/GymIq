@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowRight, Send, ChevronDown, ChevronLeft, Check, Plus, ClipboardEdit, RefreshCw, Trash2 } from 'lucide-react'
@@ -30,6 +30,7 @@ export default function TraineeDetail() {
   const [stats, setStats] = useState<TraineeStats | null>(null)
   const [workouts, setWorkouts] = useState<WorkoutHistorySummary[]>([])
   const [allPrograms, setAllPrograms] = useState<TrainingProgram[]>([])
+  const [programsError, setProgramsError] = useState(false)
   const [showProgramsList, setShowProgramsList] = useState(false)
   const [expandedProgramId, setExpandedProgramId] = useState<string | null>(null)
   const [expandedDayIndex, setExpandedDayIndex] = useState<number | null>(null)
@@ -84,6 +85,20 @@ export default function TraineeDetail() {
       .finally(() => setLoadingWorkout(false))
   }, [expandedDayIndex, expandedProgram, completedDays])
 
+  // Programs load is detached from the main loadData Promise.all, so its
+  // failure needs its own error flag — otherwise a failed fetch silently shows
+  // "no programs" and the trainer assumes the trainee has none.
+  const loadPrograms = useCallback(() => {
+    if (!traineeId) return
+    setProgramsError(false)
+    return programService.getTraineePrograms(traineeId, true)
+      .then(programs => setAllPrograms(programs))
+      .catch(err => {
+        console.warn('Could not load programs:', err)
+        setProgramsError(true)
+      })
+  }, [traineeId])
+
   useEffect(() => {
     if (!traineeId || !user?.uid) return
 
@@ -99,9 +114,7 @@ export default function TraineeDetail() {
         ])
 
         // Load programs separately (include disconnected for trainer view)
-        programService.getTraineePrograms(traineeId, true)
-          .then(programs => setAllPrograms(programs))
-          .catch(err => console.warn('Could not load programs:', err))
+        loadPrograms()
 
         const rel = relationships.find((r) => r.traineeId === traineeId)
         if (!rel) {
@@ -310,7 +323,17 @@ export default function TraineeDetail() {
         {/* Programs list (excluding standalone) */}
         {showProgramsList && (
           <div className="space-y-2">
-            {allPrograms.filter(p => p.type !== 'standalone').length === 0 ? (
+            {programsError ? (
+              <div role="alert" className="bg-dark-card/80 border border-red-500/30 rounded-xl p-4 text-center">
+                <p className="text-sm text-red-300 mb-3">לא הצלחנו לטעון את התוכניות</p>
+                <button
+                  onClick={loadPrograms}
+                  className="text-sm font-medium text-primary-400 hover:underline"
+                >
+                  נסה שוב
+                </button>
+              </div>
+            ) : allPrograms.filter(p => p.type !== 'standalone').length === 0 ? (
               <div className="bg-dark-card/80 border border-white/10 rounded-xl p-4 text-center">
                 <p className="text-sm text-on-surface-variant">אין תוכניות עדיין</p>
               </div>

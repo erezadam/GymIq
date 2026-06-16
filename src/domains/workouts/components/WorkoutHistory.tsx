@@ -49,6 +49,7 @@ export default function WorkoutHistory() {
   // expanded, so a slow getWorkoutById response can't overwrite a newer one.
   const expandRequestRef = useRef<string | null>(null)
   const [isContinuing, setIsContinuing] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [continueDialog, setContinueDialog] = useState<ContinueDialogState>({
     isOpen: false,
     workout: null,
@@ -107,6 +108,7 @@ export default function WorkoutHistory() {
       return
     }
 
+    setLoadError(false)
     try {
       const history = await getUserWorkoutHistory(user.uid)
 
@@ -122,7 +124,10 @@ export default function WorkoutHistory() {
 
       setWorkouts(filtered)
     } catch (error) {
+      // Surface load failures as an error state, not as an empty "no workouts"
+      // screen — otherwise a network error looks like the user has no history.
       console.error('Failed to load workout history:', error)
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
@@ -976,7 +981,18 @@ export default function WorkoutHistory() {
         </div>
       )}
 
-      {plannedWorkouts.length === 0 && otherWorkouts.length === 0 && aiBundles.length === 0 && singleAIWorkouts.length === 0 && !trainerProgram && (
+      {loadError && (
+        <div role="alert" className="text-center py-12">
+          <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-text-primary mb-2">לא הצלחנו לטעון את ההיסטוריה</h3>
+          <p className="text-text-muted mb-6">ייתכן שזו תקלת רשת זמנית.</p>
+          <button onClick={loadWorkouts} className="btn-neon inline-flex items-center gap-2">
+            נסה שוב
+          </button>
+        </div>
+      )}
+
+      {!loadError && plannedWorkouts.length === 0 && otherWorkouts.length === 0 && aiBundles.length === 0 && singleAIWorkouts.length === 0 && !trainerProgram && (
         <div className="text-center py-12">
           <Dumbbell className="w-16 h-16 text-text-muted mx-auto mb-4" />
           <h3 className="text-lg font-medium text-text-primary mb-2">עדיין אין אימונים</h3>
