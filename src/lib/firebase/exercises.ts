@@ -31,6 +31,10 @@ export const getExercises = async (filters?: ExerciseFilters): Promise<Exercise[
     return {
       ...data,
       id: doc.id,
+      // Firestore docs may omit secondaryMuscles, but the Exercise type treats
+      // it as a required array and callers do `.includes(...)` on it. Default to
+      // [] so a missing field can't throw `undefined.includes is not a function`.
+      secondaryMuscles: data.secondaryMuscles ?? [],
     } as Exercise
   })
 
@@ -87,6 +91,8 @@ export const getExerciseById = async (id: string): Promise<Exercise | null> => {
   return {
     ...data,
     id: docSnap.id,
+    // Default missing secondaryMuscles to [] (see getExercises for rationale).
+    secondaryMuscles: data.secondaryMuscles ?? [],
   } as Exercise
 }
 
