@@ -310,4 +310,49 @@ describe('useActiveWorkout — firebaseId recovery (regression: localStorage reu
       expect.objectContaining({ replace: true, state: {} }),
     )
   })
+
+  it('exitWorkout permission-denied fallback CLEANS UP and NAVIGATES (no early return)', async () => {
+    // Regression for the audit fix: when the primary in_progress save fails with
+    // permission-denied, exitWorkout falls back to creating a new doc. That
+    // fallback used to early-return after the success toast, skipping the shared
+    // cleanup+navigation — leaving the user stranded on the workout screen with
+    // live state. The fix proceeds to cleanup+nav like every other success path.
+    resetBuilder({
+      selectedExercises: [
+        {
+          exerciseId: 'ex-1',
+          exerciseName: 'Bench Press',
+          exerciseNameHe: 'לחיצת חזה',
+          primaryMuscle: 'chest',
+        },
+      ],
+    })
+
+    const { result } = renderHook(() => useActiveWorkout())
+
+    // Let init settle: its immediate-save resolves 'new-doc-id', so
+    // firebaseWorkoutId becomes truthy (required to enter the fallback branch).
+    await waitFor(() => expect(autoSaveWorkoutMock).toHaveBeenCalled())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    navigateMock.mockClear()
+
+    // Primary save (existing id) → permission-denied; fallback (null id) → succeeds.
+    autoSaveWorkoutMock.mockReset()
+    autoSaveWorkoutMock.mockImplementation((id: string | null) =>
+      id === null
+        ? Promise.resolve('fallback-doc-id')
+        : Promise.reject(Object.assign(new Error('denied'), { code: 'permission-denied' })),
+    )
+
+    await act(async () => {
+      await result.current.exitWorkout()
+    })
+
+    // Proof the fallback ran (new doc created with a null id arg)...
+    expect(autoSaveWorkoutMock).toHaveBeenCalledWith(null, expect.any(Object))
+    // ...and that control reached the shared cleanup+navigation (the fix). Before
+    // the fix the early return meant navigate was never called on this path.
+    expect(navigateMock).toHaveBeenCalled()
+  })
 })
