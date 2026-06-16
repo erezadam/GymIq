@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Calendar, Dumbbell, CheckCircle, AlertCircle, XCircle, Play, X, ArrowRight, Trash2, ClipboardEdit } from 'lucide-react'
 // Note: Trophy, ChevronDown, ChevronUp, Clock, Zap moved to WorkoutCard
@@ -45,6 +45,10 @@ export default function WorkoutHistory() {
   const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(null)
   const [expandedWorkoutDetails, setExpandedWorkoutDetails] = useState<WorkoutHistoryEntry | null>(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
+  // Latest-wins guard: tracks which workout's details the user currently wants
+  // expanded, so a slow getWorkoutById response can't overwrite a newer one.
+  const expandRequestRef = useRef<string | null>(null)
+  const [isContinuing, setIsContinuing] = useState(false)
   const [continueDialog, setContinueDialog] = useState<ContinueDialogState>({
     isOpen: false,
     workout: null,
@@ -272,23 +276,28 @@ export default function WorkoutHistory() {
   const toggleWorkoutExpanded = async (workoutId: string) => {
     if (expandedWorkoutId === workoutId) {
       // Closing the expanded card
+      expandRequestRef.current = null
       setExpandedWorkoutId(null)
       setExpandedWorkoutDetails(null)
       return
     }
 
     // Opening a new card - load full details
+    expandRequestRef.current = workoutId
     setExpandedWorkoutId(workoutId)
     setLoadingDetails(true)
     setExpandedWorkoutDetails(null)
 
     try {
       const details = await getWorkoutById(workoutId)
+      // Ignore a stale response if the user has since expanded/closed another card.
+      if (expandRequestRef.current !== workoutId) return
       setExpandedWorkoutDetails(details)
     } catch (error) {
       console.error('Failed to load workout details:', error)
     } finally {
-      setLoadingDetails(false)
+      // Only clear the spinner if this is still the active request.
+      if (expandRequestRef.current === workoutId) setLoadingDetails(false)
     }
   }
 
@@ -330,6 +339,11 @@ export default function WorkoutHistory() {
   const handleConfirmContinue = async () => {
     if (isImpersonating) { toast.error('לא ניתן לבצע שינויים במצב צפייה'); return }
     if (!continueDialog.workout || !user?.uid) return
+    // Guard against double-clicks: the dialog stays open across the awaits below,
+    // so a second tap would re-run the whole continue flow (duplicate addExercise
+    // calls, localStorage writes, and updateWorkoutHistory) before navigation.
+    if (isContinuing) return
+    setIsContinuing(true)
 
     const workoutSummary = continueDialog.workout
 
@@ -524,6 +538,8 @@ export default function WorkoutHistory() {
       }
     } catch (error) {
       console.error('Failed to continue workout:', error)
+    } finally {
+      setIsContinuing(false)
     }
 
     setContinueDialog({ isOpen: false, workout: null })
@@ -1019,9 +1035,10 @@ export default function WorkoutHistory() {
                 </button>
                 <button
                   onClick={handleConfirmContinue}
-                  className="flex-1 py-3 px-4 bg-primary-400 hover:bg-primary-500 text-white font-medium rounded-xl transition-colors"
+                  disabled={isContinuing}
+                  className="flex-1 py-3 px-4 bg-primary-400 hover:bg-primary-500 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  אישור
+                  {isContinuing ? 'טוען...' : 'אישור'}
                 </button>
               </div>
             </div>
