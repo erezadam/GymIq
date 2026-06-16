@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo } from 'react'
 import { Users, Dumbbell, User, Trash2, Crown, RefreshCw, X, Mail, Lock, UserPlus, FileDown, ArrowUpDown, ArrowUp, ArrowDown, Eye } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getAllUsers, updateUserRole, deleteUserFromFirestore, getUserStats } from '@/lib/firebase'
-import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase/config'
+import { createIsolatedAuthUser } from '@/lib/firebase/createAuthUser'
+import { removeUndefined } from '@/lib/firebase/firestoreUtils'
 import type { AppUser } from '@/lib/firebase/auth'
 import { getUserWorkoutHistoryByDateRange } from '@/lib/firebase/workoutHistory'
 import { useAuthStore } from '@/domains/authentication/store'
@@ -156,18 +157,16 @@ export default function UsersList() {
 
     setCreating(true)
     try {
-      // Create user in Firebase Auth
-      const auth = getAuth()
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        newUser.email,
-        newUser.password
-      )
+      // Create the Auth user on an isolated secondary app so the admin stays
+      // signed in (createUserWithEmailAndPassword auto-signs-in the new user
+      // on whichever auth instance it runs on — the primary app would swap the
+      // admin's session for the new account).
+      const { uid } = await createIsolatedAuthUser(newUser.email, newUser.password)
 
-      // Create user document in Firestore
-      const userRef = doc(db, 'users', userCredential.user.uid)
-      await setDoc(userRef, {
-        uid: userCredential.user.uid,
+      // Create user document in Firestore (role + doc shape owned here).
+      const userRef = doc(db, 'users', uid)
+      await setDoc(userRef, removeUndefined({
+        uid,
         email: newUser.email,
         firstName: newUser.firstName,
         lastName: newUser.lastName,
@@ -178,7 +177,7 @@ export default function UsersList() {
         // Stamped at creation so the new user doesn't see the entire
         // release-notes history as "new" on first login.
         lastSeenReleaseNotesAt: serverTimestamp(),
-      })
+      }))
 
       toast.success(`משתמש ${newUser.email} נוצר בהצלחה!`)
       setShowCreateModal(false)
