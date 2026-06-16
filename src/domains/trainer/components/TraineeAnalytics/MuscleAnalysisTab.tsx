@@ -39,7 +39,7 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
   const [workoutName, setWorkoutName] = useState('')
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  const { loading, rows, summaryRows, weekRange } = useMuscleAnalysis(traineeId, weekMode, customStart, customEnd)
+  const { loading, rows, summaryRows, weekRange, error } = useMuscleAnalysis(traineeId, weekMode, customStart, customEnd)
 
   // Handle "+" click — open ExerciseLibrary filtered by muscle
   const handleAddExercises = (row: MuscleRow) => {
@@ -369,6 +369,11 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
         ) : loading ? (
           <div className="flex justify-center py-12">
             <div className="spinner" />
+          </div>
+        ) : error ? (
+          <div role="alert" className="flex flex-col items-center justify-center py-12 text-status-error text-sm">
+            <span className="text-3xl mb-3 opacity-60">⚠️</span>
+            <p>לא הצלחנו לטעון את ניתוח השרירים</p>
           </div>
         ) : rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-on-surface-variant text-sm">

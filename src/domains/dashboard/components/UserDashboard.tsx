@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { getUserWorkoutStats } from '@/lib/firebase/workoutHistory'
@@ -116,6 +116,7 @@ export default function UserDashboard() {
   const { currentVersion, performUpdate } = useVersionCheck()
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showAITrainerModal, setShowAITrainerModal] = useState(false)
+  const [loadError, setLoadError] = useState(false)
 
   // Force refresh function
   const handleForceRefresh = async () => {
@@ -129,36 +130,41 @@ export default function UserDashboard() {
   }
 
   // Fetch user stats and external URL from Firebase
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!user?.uid) {
-        setIsLoading(false)
-        return
-      }
-
-      try {
-        // Fetch stats and external URL in parallel
-        const [stats, url] = await Promise.all([
-          getUserWorkoutStats(user.uid),
-          getExternalComparisonUrl(),
-        ])
-
-        setUserStats({
-          totalWorkouts: stats.totalWorkouts,
-          thisWeek: stats.thisWeekWorkouts,
-          thisMonth: stats.thisMonthWorkouts,
-          currentStreak: stats.currentStreak,
-        })
-        setExternalUrl(url)
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error)
-      } finally {
-        setIsLoading(false)
-      }
+  const fetchData = useCallback(async () => {
+    if (!user?.uid) {
+      setIsLoading(false)
+      return
     }
 
-    fetchData()
+    setIsLoading(true)
+    setLoadError(false)
+    try {
+      // Fetch stats and external URL in parallel
+      const [stats, url] = await Promise.all([
+        getUserWorkoutStats(user.uid),
+        getExternalComparisonUrl(),
+      ])
+
+      setUserStats({
+        totalWorkouts: stats.totalWorkouts,
+        thisWeek: stats.thisWeekWorkouts,
+        thisMonth: stats.thisMonthWorkouts,
+        currentStreak: stats.currentStreak,
+      })
+      setExternalUrl(url)
+    } catch (error) {
+      // Distinguish a load failure from a genuine zero-stats state, so a failed
+      // fetch doesn't masquerade as "0 workouts / streak 0".
+      console.error('Failed to fetch dashboard data:', error)
+      setLoadError(true)
+    } finally {
+      setIsLoading(false)
+    }
   }, [user?.uid])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   return (
     <div
@@ -171,6 +177,24 @@ export default function UserDashboard() {
     >
       {/* Trainer selection prompt (trainees without a trainer) */}
       <SelectTrainerPrompt />
+
+      {/* Load-error banner — shown only when the fetch failed, so a network
+          error is not mistaken for a genuine "0 workouts" state. */}
+      {loadError && (
+        <div
+          role="alert"
+          className="mt-4 mb-2 flex items-center justify-between gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3"
+        >
+          <span className="text-sm text-red-300">לא הצלחנו לטעון את הנתונים שלך — ייתכן שזו תקלת רשת זמנית.</span>
+          <button
+            onClick={fetchData}
+            disabled={isLoading}
+            className="shrink-0 rounded-lg bg-red-500/20 px-3 py-1.5 text-sm font-medium text-red-200 hover:bg-red-500/30 transition-colors disabled:opacity-50"
+          >
+            נסה שוב
+          </button>
+        </div>
+      )}
 
       {/* Welcome Section */}
       <div
