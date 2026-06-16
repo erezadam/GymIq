@@ -46,10 +46,13 @@ export function GuestGuard({ children }: { children: React.ReactNode }) {
 
   // If authenticated, redirect to appropriate dashboard
   if (isAuthenticated) {
-    const from = (location.state as { from?: Location })?.from?.pathname
+    const fromLocation = (location.state as { from?: Location })?.from
 
-    if (from) {
-      return <Navigate to={from} replace />
+    if (fromLocation) {
+      // Preserve query string and hash, not just the pathname, so deep links
+      // with params survive the login round-trip.
+      const to = `${fromLocation.pathname}${fromLocation.search ?? ''}${fromLocation.hash ?? ''}`
+      return <Navigate to={to} replace />
     }
 
     if (user?.role === 'admin') {
