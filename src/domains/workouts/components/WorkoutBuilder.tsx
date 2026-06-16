@@ -60,7 +60,7 @@ export default function WorkoutBuilder() {
     if (isPlannedWorkout()) {
       // Future workout - navigate to workout planning screen
       // TODO: Save workout to Firebase with 'planned' status
-      navigate('/workout-history')
+      navigate('/workout/history')
     } else {
       // Immediate workout - navigate to active session
       navigate('/workout/session')
