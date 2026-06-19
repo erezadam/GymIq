@@ -23,6 +23,8 @@ import {
   type MuscleRow,
   type WeekMode,
 } from '../hooks/useMuscleAnalysis'
+import { ACTIVE_WORKOUT_STORAGE_KEY } from '../types/active-workout.types'
+import { buildAddExerciseHref } from '../utils/analysisNav'
 
 function WeeklyMuscleSection({ userId, onNavigateToSummary }: { userId: string; onNavigateToSummary: () => void }) {
   const navigate = useNavigate()
@@ -33,6 +35,12 @@ function WeeklyMuscleSection({ userId, onNavigateToSummary }: { userId: string; 
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleRow | null>(null)
+  // Detect an in-progress workout (trainee self-flow). Its presence makes the
+  // per-muscle "+" merge into the running workout instead of starting fresh, and
+  // surfaces a "return to workout" affordance so the user is never stranded.
+  // Read once on mount: the analysis screen mounts fresh on navigation, and the
+  // key is cleared by clearStorage() on both finish and exit of a workout.
+  const [hasActiveWorkout] = useState(() => !!localStorage.getItem(ACTIVE_WORKOUT_STORAGE_KEY))
 
   const { loading, rows, summaryRows, weekRange, error } = useMuscleAnalysis(userId, weekMode, customStart, customEnd)
 
@@ -147,15 +155,32 @@ function WeeklyMuscleSection({ userId, onNavigateToSummary }: { userId: string; 
             )}
           </div>
         </div>
-        {rows.length > 0 && (
-          <button
-            onClick={handleDownloadReport}
-            className="flex items-center justify-center w-11 h-11 rounded-xl bg-dark-card hover:bg-dark-border transition"
-            title="הורד דוח"
-          >
-            <Download className="w-5 h-5 text-text-secondary" />
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {hasActiveWorkout && (
+            <button
+              // Pass resumingFromLibrary so useActiveWorkout's init gate PRESERVES
+              // the existing firebaseWorkoutId (restores it instead of deleting it).
+              // A plain navigate would hit the !isTabCloseRecovery branch, drop
+              // firebaseIdKey, and the next autosave would addDoc → duplicate
+              // in_progress doc (the 10/05/2026 firebaseWorkoutId iron-rule bug).
+              // No new exercises are selected here, so the merge adds nothing.
+              onClick={() => navigate('/workout/session', { state: { resumingFromLibrary: true } })}
+              className="flex items-center gap-1.5 h-11 px-3 rounded-xl bg-primary/15 border border-primary/40 text-primary text-sm font-semibold transition hover:bg-primary/25"
+            >
+              <ArrowRight className="w-4 h-4" />
+              חזרה לאימון
+            </button>
+          )}
+          {rows.length > 0 && (
+            <button
+              onClick={handleDownloadReport}
+              className="flex items-center justify-center w-11 h-11 rounded-xl bg-dark-card hover:bg-dark-border transition"
+              title="הורד דוח"
+            >
+              <Download className="w-5 h-5 text-text-secondary" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Link to AI Summary */}
@@ -347,9 +372,9 @@ function WeeklyMuscleSection({ userId, onNavigateToSummary }: { userId: string; 
                     </td>
                     <td className="py-2.5 pl-2 text-center">
                       <button
-                        onClick={() => navigate(`/exercises?fromAnalysis=true&muscle=${row.category}&subMuscle=${row.primaryMuscle}`)}
+                        onClick={() => navigate(buildAddExerciseHref(row.category, row.primaryMuscle, hasActiveWorkout))}
                         className="w-7 h-7 rounded-full bg-primary/10 border border-primary/30 text-primary flex items-center justify-center hover:bg-primary/20 transition-colors mx-auto"
-                        title={`הוסף תרגילים ל${row.primaryMuscleHe}`}
+                        title={hasActiveWorkout ? `הוסף ${row.primaryMuscleHe} לאימון הפעיל` : `הוסף תרגילים ל${row.primaryMuscleHe}`}
                       >
                         <Plus className="w-4 h-4" />
                       </button>

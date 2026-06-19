@@ -314,31 +314,43 @@ export default function ActiveWorkoutScreen() {
         <button
           onClick={confirmFinish}
           style={{
-            flex: 1,
-            padding: '14px 20px',
+            padding: '14px 16px',
             background: 'linear-gradient(180deg, #252B3A 0%, #1E2330 100%)',
             border: '2px solid #FF6B35',
             borderRadius: '16px',
             color: '#FFFFFF',
             fontWeight: 700,
-            fontSize: '16px',
+            fontSize: '15px',
             cursor: 'pointer',
             boxShadow: '0 4px 0 #0A0C10, 0 0 12px rgba(255, 107, 53, 0.5)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '8px',
+            gap: '6px',
+            whiteSpace: 'nowrap',
           }}
         >
           <span>🏁</span>
           <span>סיים אימון</span>
         </button>
 
+        {/* What's missing? — jump to weekly analysis without ending the workout.
+            Plain navigation keeps the workout alive (autosave + localStorage +
+            firebaseWorkoutId survive); the analysis "+" routes back via the
+            addToWorkout merge flow. Tailwind-only per the no-inline-styles rule. */}
+        <button
+          onClick={() => navigate('/analysis')}
+          className="flex items-center gap-1.5 px-3.5 py-3.5 rounded-2xl bg-dark-card border border-dark-border text-text-primary text-[15px] font-semibold whitespace-nowrap cursor-pointer transition hover:bg-dark-border"
+        >
+          <span>📊</span>
+          <span>מה חסר?</span>
+        </button>
+
         {/* Add Exercise Button - Right side */}
         <button
           onClick={() => navigate('/exercises?addToWorkout=true')}
           style={{
-            padding: '14px 20px',
+            padding: '14px 16px',
             background: 'linear-gradient(180deg, #252B3A 0%, #1E2330 100%)',
             border: '1px solid #2A3142',
             borderRadius: '16px',
@@ -350,6 +362,7 @@ export default function ActiveWorkoutScreen() {
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
+            whiteSpace: 'nowrap',
           }}
         >
           <span>+</span>

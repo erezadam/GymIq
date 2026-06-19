@@ -2,6 +2,9 @@
 
 ## [Unreleased] - 2026-06-19
 
+### Added
+- **מעבר מאימון פעיל → ניתוח שבועי → הוספת תרגיל (זרימת מתאמן):** כפתור "📊 מה חסר?" בפוטר האימון הפעיל מנווט ל-`/analysis` בלי לסיים את האימון (autosave + localStorage + `firebaseWorkoutId` נשמרים). כפתור ה-`+` שליד כל תת-שריר ב-`TrainingAnalysis` מזהה אימון פעיל (`ACTIVE_WORKOUT_STORAGE_KEY`) ומוסיף `addToWorkout=true` ל-URL, כך שהתרגיל הנבחר **ממוזג** לאימון הפעיל דרך זרימת ה-merge הקיימת במקום לפתוח אימון חדש שמוחק אותו. נוסף כפתור "חזרה לאימון". Helper טהור חדש `buildAddExerciseHref` + בדיקות. **הערה קריטית:** "חזרה לאימון" מנווט עם `resumingFromLibrary` כדי לשמר את `firebaseWorkoutId` (אחרת ה-init gate היה מוחק אותו ויוצר מסמך `in_progress` כפול — באג חוק-הברזל 10/05/2026). מכוסה בבדיקת קומפוננטה שאומתה RED-ללא-הדגל. רק זרימת המתאמן העצמאי.
+
 ### Performance
 - **תיקון השהיית המעבר לאימון פעיל:** הוסר ה-`await` החוסם לפני `navigate('/workout/session')` ב-`ExerciseLibrary.handleStartWorkout` — `maybeCreateSelfStandaloneProgram()` רץ כעת fire-and-forget (`void`), כך שהמעבר למסך האימון לא ממתין יותר לכתיבת ה-Firestore של מסמך ה-trainingProgram הבודד.
 
