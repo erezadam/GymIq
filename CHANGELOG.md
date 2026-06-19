@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased] - 2026-06-19
+
+### Performance
+- **תיקון השהיית המעבר לאימון פעיל:** הוסר ה-`await` החוסם לפני `navigate('/workout/session')` ב-`ExerciseLibrary.handleStartWorkout` — `maybeCreateSelfStandaloneProgram()` רץ כעת fire-and-forget (`void`), כך שהמעבר למסך האימון לא ממתין יותר לכתיבת ה-Firestore של מסמך ה-trainingProgram הבודד.
+
+### Fixed
+- **race בקישור `self_standalone` (נובע מהשינוי לעיל):** מכיוון שיצירת ה-program עברה ל-fire-and-forget, `setSelfStandaloneProgram` כותב ל-store *אחרי* שה-render-closure של `useActiveWorkout` נלכד. כל נקודות השמירה — ה-initial save ב-`initWorkout` ושתי נקודות ה-`saveWorkoutHistory` ב-`doFinish` — קוראות כעת את `programId`/`programSource`/`programDayLabel` **טריים מה-store דרך `getState()`** במקום מה-closure (שהוסר מה-destructure ב-`useActiveWorkout.ts:261`). כך הקישור לא נופל ב-finish מהיר והמאמן רואה את האימון ב"אימונים בודדים". נתיב ה-autosave כבר קרא טרי מקודם (ללא שינוי). בדיקה התנהגותית חדשה ב-`tests/firebaseIdRecovery.spec.ts` — אומתה RED ללא התיקון, GREEN איתו.
+
 ## [Unreleased] - 2026-05-04
 
 ### Fixed

@@ -713,9 +713,10 @@ export function ExerciseLibrary({
       return
     }
 
-    // Immediate workout: mirror to standalone trainingProgram before starting,
-    // so the link travels through to workoutHistory via the store.
-    await maybeCreateSelfStandaloneProgram()
+    // Immediate workout: mirror to standalone trainingProgram in the background
+    // (fire-and-forget) so navigation isn't blocked on the Firestore write. The
+    // function has its own try/catch and never throws.
+    void maybeCreateSelfStandaloneProgram()
 
     // Starting fresh workout today - clear any existing saved workout
     localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY)

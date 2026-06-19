@@ -143,6 +143,7 @@ vi.mock('@/styles/design-tokens', () => ({
 }))
 
 import { useActiveWorkout } from '@/domains/workouts/hooks/useActiveWorkout'
+import { getBestPerformanceForExercises } from '@/lib/firebase/workoutHistory'
 
 const FIREBASE_ID_KEY = 'gymiq_firebase_workout_id'
 const ACTIVE_WORKOUT_KEY = 'gymiq_active_workout_v2'
@@ -309,5 +310,51 @@ describe('useActiveWorkout — firebaseId recovery (regression: localStorage reu
       '/workout/session',
       expect.objectContaining({ replace: true, state: {} }),
     )
+  })
+})
+
+describe('useActiveWorkout — linked-program fields survive the fire-and-forget creation race', () => {
+  it('initial save reads programId/source FRESH from the store, not the mount closure', async () => {
+    // Context: PR-B made maybeCreateSelfStandaloneProgram run fire-and-forget in
+    // ExerciseLibrary (no await before navigate). Its setSelfStandaloneProgram
+    // write therefore lands AFTER this hook's render closure was captured.
+    // If the initial Firebase save used the stale closure, the self_standalone
+    // link (source + programId) would be dropped and the trainer would not see
+    // the workout in "אימונים בודדים".
+    //
+    // Simulate the race: programId is null at mount (closure captures null), and
+    // the background creation "resolves" mid-init by writing the link into the
+    // store — modeled here via the first pre-save fetch (getBestPerformance).
+    resetBuilder({
+      selectedExercises: [
+        {
+          exerciseId: 'ex-1',
+          exerciseName: 'Bench Press',
+          exerciseNameHe: 'לחיצת חזה',
+          primaryMuscle: 'chest',
+        },
+      ],
+      programId: null,
+      programSource: null,
+      programDayLabel: null,
+    })
+
+    vi.mocked(getBestPerformanceForExercises).mockImplementationOnce(async () => {
+      // Fire-and-forget createSelfStandaloneProgram landed: link now in the store.
+      builderState.programId = 'prog-123'
+      builderState.programSource = 'self_standalone'
+      return {}
+    })
+
+    renderHook(() => useActiveWorkout())
+
+    await waitFor(() => {
+      expect(autoSaveWorkoutMock).toHaveBeenCalled()
+    })
+
+    // The initial save payload must carry the link read fresh from the store.
+    const payload = autoSaveWorkoutMock.mock.calls[0][1]
+    expect(payload.programId).toBe('prog-123')
+    expect(payload.source).toBe('self_standalone')
   })
 })

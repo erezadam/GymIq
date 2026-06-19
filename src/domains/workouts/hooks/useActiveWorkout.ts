@@ -258,7 +258,10 @@ export function useActiveWorkout() {
 
   const user = useEffectiveUser()
   const isImpersonating = useIsImpersonating()
-  const { selectedExercises, clearWorkout, removeExercise: removeFromStore, programId, programDayLabel, programSource, workoutName: builderWorkoutName, targetUserId, plannedWorkoutDocId } = useWorkoutBuilderStore()
+  // Linked-program fields (programId/programSource/programDayLabel) are intentionally
+  // NOT destructured here — they are read fresh via getState() at each save point to
+  // survive the fire-and-forget standalone-program creation race (see initWorkout/doFinish).
+  const { selectedExercises, clearWorkout, removeExercise: removeFromStore, workoutName: builderWorkoutName, targetUserId, plannedWorkoutDocId } = useWorkoutBuilderStore()
 
   // Effective userId: trainee (if trainer reporting) or current user
   const effectiveUserId = targetUserId || user?.uid || 'anonymous'
@@ -1317,6 +1320,14 @@ export function useActiveWorkout() {
         const freshReportedBy = freshBuilderState.reportedBy
         const freshReportedByName = freshBuilderState.reportedByName
         const finalUserId = freshTargetUserId || user?.uid || 'anonymous'
+        // Linked-program fields read fresh from the store (not the [] -deps
+        // closure). maybeCreateSelfStandaloneProgram now runs fire-and-forget in
+        // ExerciseLibrary, so its setSelfStandaloneProgram write lands AFTER this
+        // hook's closure was captured. The init's history scans run before this
+        // save, giving the write time to land — so getState() is the truth here.
+        const freshProgramId = freshBuilderState.programId
+        const freshProgramSource = freshBuilderState.programSource
+        const freshProgramDayLabel = freshBuilderState.programDayLabel
 
         const newWorkout: ActiveWorkout = {
           id: `workout_${Date.now()}`,
@@ -1425,11 +1436,12 @@ export function useActiveWorkout() {
             totalSets: newWorkout.stats.totalSets,
             totalVolume: newWorkout.stats.totalVolume,
             personalRecords: 0,
-            // Linked program fields (trainer-assigned or self-built standalone)
-            ...(programId && {
-              source: (programSource || 'trainer_program') as 'trainer_program' | 'self_standalone',
-              programId,
-              ...(programDayLabel && { programDayLabel }),
+            // Linked program fields (trainer-assigned or self-built standalone) —
+            // fresh from the store to survive the fire-and-forget creation race.
+            ...(freshProgramId && {
+              source: (freshProgramSource || 'trainer_program') as 'trainer_program' | 'self_standalone',
+              programId: freshProgramId,
+              ...(freshProgramDayLabel && { programDayLabel: freshProgramDayLabel }),
             }),
           })
 
@@ -1854,6 +1866,15 @@ export function useActiveWorkout() {
           return
         }
 
+        // Linked-program fields read fresh from the store (see initWorkout note):
+        // the fire-and-forget standalone-program creation may have written the
+        // link after this hook's closure was captured. By finish time the write
+        // has long completed, so the store is the source of truth.
+        const freshFinishBuilder = useWorkoutBuilderStore.getState()
+        const freshProgramId = freshFinishBuilder.programId
+        const freshProgramSource = freshFinishBuilder.programSource
+        const freshProgramDayLabel = freshFinishBuilder.programDayLabel
+
         const endTime = new Date()
         const duration = Math.floor((endTime.getTime() - workout.startedAt.getTime()) / 60000)
         const status = determineWorkoutStatus(
@@ -1937,11 +1958,11 @@ export function useActiveWorkout() {
               totalVolume: workout.stats.totalVolume,
               personalRecords: 0,
               calories: pendingCalories,
-              // Linked program fields (trainer-assigned or self-built standalone)
-              ...(programId && {
-                source: programSource || 'trainer_program',
-                programId,
-                ...(programDayLabel && { programDayLabel }),
+              // Linked program fields (trainer-assigned or self-built standalone) — fresh from store
+              ...(freshProgramId && {
+                source: freshProgramSource || 'trainer_program',
+                programId: freshProgramId,
+                ...(freshProgramDayLabel && { programDayLabel: freshProgramDayLabel }),
               }),
             })
           }
@@ -2017,11 +2038,11 @@ export function useActiveWorkout() {
                 totalVolume: workout.stats.totalVolume,
                 personalRecords: 0,
                 calories: pendingCalories,
-                // Linked program fields (preserve trainer-assigned or self-built link)
-                ...(programId && {
-                  source: programSource || 'trainer_program',
-                  programId,
-                  ...(programDayLabel && { programDayLabel }),
+                // Linked program fields (preserve trainer-assigned or self-built link) — fresh from store
+                ...(freshProgramId && {
+                  source: freshProgramSource || 'trainer_program',
+                  programId: freshProgramId,
+                  ...(freshProgramDayLabel && { programDayLabel: freshProgramDayLabel }),
                 }),
               })
               toast.success('האימון נשמר בהצלחה!')
