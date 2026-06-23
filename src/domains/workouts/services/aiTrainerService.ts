@@ -6,7 +6,7 @@
 
 import { getExercises } from '@/lib/firebase/exercises'
 import { getMuscles } from '@/lib/firebase/muscles'
-import { getUserWorkoutHistory, getUserWorkoutHistoryFull, saveWorkoutHistory, getRecentlyDoneExerciseIds } from '@/lib/firebase/workoutHistory'
+import { getUserWorkoutHistory, getUserWorkoutHistoryFull, saveWorkoutHistory, getRecentlyDoneExerciseIds, getDistinctPerformedExerciseIds } from '@/lib/firebase/workoutHistory'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import { app } from '@/lib/firebase/config'
 import type { Exercise } from '@/domains/exercises/types'
@@ -188,17 +188,37 @@ async function buildContext(request: AITrainerRequest): Promise<AITrainerContext
   console.log('🤖 Building AI context...')
 
   // Load all data in parallel
-  const [exercises, muscles, recentSummaries, recentFullHistory, yesterdayExerciseIdsSet] = await Promise.all([
+  const [exercises, muscles, recentSummaries, recentFullHistory, yesterdayExerciseIdsSet, performedExerciseIds] = await Promise.all([
     getExercises(),
     getMuscles(),
     getUserWorkoutHistory(request.userId, 7),
     getUserWorkoutHistoryFull(request.userId, 10),
     getRecentlyDoneExerciseIds(request.userId),
+    getDistinctPerformedExerciseIds(request.userId),
   ])
 
   const yesterdayExerciseIds = Array.from(yesterdayExerciseIdsSet)
 
+  // Single filter point for the whole AI pipeline: restrict the exercise pool to
+  // exercises the trainee has actually performed. Cardio is exempt (warmup must
+  // keep working even for trainees who never logged a cardio exercise); every
+  // strength exercise — core included — must have been performed. Because this
+  // narrows `availableExercises` itself, the reduction propagates automatically
+  // to the Cloud Function payload, the client fallback (strengthExercises ⊂
+  // availableExercises), and the server fallback (data.availableExercises) — no
+  // second filter needed anywhere downstream.
+  // Cardio detection mirrors the server (generateWorkout.ts): primaryMuscle OR
+  // category equal to 'cardio'. `primaryMuscle` is a strict MuscleGroup union
+  // that doesn't list 'cardio', but Firestore is the source of truth and a doc
+  // can carry it at runtime — so compare as a string rather than narrowing it
+  // away.
+  const availableExercises = exercises.filter(ex => {
+    const isCardio = (ex.primaryMuscle as string) === 'cardio' || ex.category === 'cardio'
+    return isCardio || performedExerciseIds.has(ex.id)
+  })
+
   console.log(`📊 Loaded ${exercises.length} exercises, ${muscles.length} muscles`)
+  console.log(`📊 Performed-exercise filter: ${exercises.length} → ${availableExercises.length} (kept cardio + ${performedExerciseIds.size} performed ids)`)
   console.log(`📊 Recent summaries: ${recentSummaries.length}, Full history: ${recentFullHistory.length}, Yesterday exercises: ${yesterdayExerciseIds.length}`)
 
   const recentWorkouts: RecentWorkoutSummary[] = recentSummaries.map(w => ({
@@ -212,7 +232,7 @@ async function buildContext(request: AITrainerRequest): Promise<AITrainerContext
 
   return {
     request,
-    availableExercises: exercises,
+    availableExercises,
     muscles,
     recentWorkouts,
     yesterdayExerciseIds,
