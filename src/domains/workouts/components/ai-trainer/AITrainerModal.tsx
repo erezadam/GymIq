@@ -485,6 +485,17 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
             </p>
           </div>
 
+          {/* Built-from-performed-exercises note — explains the pool the plan was
+              built from. Uses the distinct-count already in state from open (PR1)
+              when available; otherwise omits the number rather than fetching. */}
+          <div className="bg-teal-400/10 border border-teal-400/20 rounded-xl p-3.5 mb-5">
+            <p className="text-sm leading-relaxed text-gray-200 m-0">
+              {distinctExerciseCount && distinctExerciseCount > 0
+                ? `בנינו לך את האימון מהתרגילים שכבר ביצעת — מתוך ${distinctExerciseCount} תרגילים שביצעת עד כה. אתה מכיר אותם, ויש לך עליהם היסטוריה.`
+                : 'בנינו לך את האימון מהתרגילים שכבר ביצעת — אתה מכיר אותם, ויש לך עליהם היסטוריה.'}
+            </p>
+          </div>
+
           {/* Explanations */}
           <div className="mb-6">
             {generatedWorkouts.map((workout, index) => (
