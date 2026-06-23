@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased] - 2026-06-23
+
+### Added
+- **שער כניסה למאמן ה-AI לפי תרגילים שונים שבוצעו (PR1 מתוך 3):** `AITrainerModal` נחסם עד שהמתאמן ביצע לפחות `MIN_DISTINCT_EXERCISES` (=10) תרגילים **שונים** (distinct) בפועל, כדי שה-AI יבנה תוכניות ממסד תנועה אמיתי ולא מפרופיל ריק. נוספה פונקציית read `getDistinctPerformedExerciseIds(userId)` ב-`src/lib/firebase/workoutHistory.ts` — סורקת את **כל** ההיסטוריה (ללא `limit(10)`, בניגוד ל-`getRecentlyDoneExerciseIds`), מדלגת על soft-deleted, ומשתמשת ב-predicate הקיים `ex.isCompleted && ex.exerciseId`. זורקת בכשל קריאה כדי שהקורא יחסום. המודאל גוזר את הספירה פעם אחת בפתיחה (טעינת הנתונים היחידה שלו) עם מצב טעינה קצר; מצב הטעינה נגזר מ-`distinctExerciseCount===null` למניעת הבהוב חד-פריימי של הטופס לפני השער (ממצא CONFIRMED מ-`/code-review` high, תוקן). מתחת לסף → מצב חסימה נייטרלי ומעודד (לא באנר שגיאה אדום) + זרימת היצירה מוחלפת כך שאי-אפשר לייצר. בסף ומעלה → הזרימה, ה-payload, והקריאה ל-`generateAIWorkouts` ללא שינוי. כשל/אין משתמש/אין היסטוריה → נחשב מתחת לסף (לא קורס). 7 בדיקות התנהגותיות חדשות ב-`tests/distinctPerformedExercises.spec.ts` (mock ל-`getDocs` + assert על ה-Set). **לא נגעתי:** Cloud Function, fallback (שרת/לקוח), `useActiveWorkout.ts`, `getPersonalRecords`. אין כתיבות Firestore. PR2 (סינון בריכת התרגילים) ו-PR3 (הודעת ההסבר) — נפרדים, אחרי PR1.
+
 ## [Unreleased] - 2026-06-19
 
 ### Added
