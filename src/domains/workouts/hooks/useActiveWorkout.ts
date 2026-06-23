@@ -2168,6 +2168,7 @@ export function useActiveWorkout() {
         }
 
         // If permission-denied, fall back to creating a new document
+        let savedViaFallback = false
         if (error?.code === 'permission-denied' && firebaseWorkoutId) {
           try {
             console.log('🔄 autoSaveWorkout permission-denied, falling back to new doc...')
@@ -2187,13 +2188,22 @@ export function useActiveWorkout() {
             })
             toast.success('האימון נשמר - תוכל להמשיך מאוחר יותר')
             localStorage.removeItem(firebaseIdKey)
-            return
+            // NOTE: do NOT early-return here. The save succeeded, so we must fall
+            // through to the shared cleanup + navigation block below (clearing the
+            // store and leaving the workout screen) — exactly like the success
+            // path and the finish flow. Returning here left the user stranded on
+            // the workout screen with live state despite the success toast.
+            savedViaFallback = true
           } catch (fallbackErr) {
             console.error('Fallback save also failed:', fallbackErr)
           }
         }
-        const errMsg = error?.code || error?.message || 'unknown'
-        toast.error(`שגיאה בשמירת האימון: ${errMsg}`, { duration: 8000 })
+        // Only show the failure toast if neither the primary save nor the
+        // fallback succeeded.
+        if (!savedViaFallback) {
+          const errMsg = error?.code || error?.message || 'unknown'
+          toast.error(`שגיאה בשמירת האימון: ${errMsg}`, { duration: 8000 })
+        }
       }
     }
 
