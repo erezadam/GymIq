@@ -4,11 +4,12 @@
  * New logic: bodyRegion-based splits, 10 sets/muscle/week
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { X, Loader2, Sparkles } from 'lucide-react'
 import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { generateAIWorkouts } from '@/domains/workouts/services/aiTrainerService'
+import { getDistinctPerformedExerciseIds } from '@/lib/firebase/workoutHistory'
 import type { AITrainerRequest, WorkoutStructure, SplitStartWith, AIGeneratedWorkout } from '@/domains/workouts/services/aiTrainer.types'
 import { getExerciseCount } from '@/domains/workouts/services/aiTrainer.types'
 
@@ -16,6 +17,13 @@ interface AITrainerModalProps {
   isOpen: boolean
   onClose: () => void
 }
+
+/**
+ * Entry-gate threshold: the minimum number of DISTINCT exercises a trainee must
+ * have actually performed (ex.isCompleted) before the AI Trainer unlocks.
+ * Single source of truth — change this one value to tune the gate.
+ */
+const MIN_DISTINCT_EXERCISES = 10
 
 // Duration options (minutes)
 const DURATION_OPTIONS = [
@@ -51,9 +59,53 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
   const [showExplanation, setShowExplanation] = useState(false)
   const [generatedWorkouts, setGeneratedWorkouts] = useState<AIGeneratedWorkout[]>([])
 
+  // Entry-gate state: how many distinct exercises the trainee has performed.
+  // null = not yet resolved (the modal shows a loading state). This is the only
+  // data the modal loads on open.
+  const [distinctExerciseCount, setDistinctExerciseCount] = useState<number | null>(null)
+
+  // On open, derive the distinct-exercise count. Reset to null up-front (and on
+  // close) so the loading state — not a stale form — renders while the check
+  // runs; this avoids a one-frame flash of the config form before the gate
+  // applies. Any failure (or missing user) is treated as 0, i.e. below
+  // threshold, so the neutral block state is shown rather than crashing.
+  useEffect(() => {
+    setDistinctExerciseCount(null)
+    if (!isOpen) return
+
+    let cancelled = false
+
+    const run = async () => {
+      try {
+        if (!user?.uid) {
+          if (!cancelled) setDistinctExerciseCount(0)
+          return
+        }
+        const ids = await getDistinctPerformedExerciseIds(user.uid)
+        if (!cancelled) setDistinctExerciseCount(ids.size)
+      } catch (err) {
+        console.error('Failed to derive distinct exercise count:', err)
+        if (!cancelled) setDistinctExerciseCount(0)
+      }
+    }
+
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, user?.uid])
+
   // Derived state
   const showSplitStartSelection = workoutStructure === 'split' && (numWorkouts === 3 || numWorkouts === 5)
   const effectiveStructure: WorkoutStructure = numWorkouts <= 2 ? 'full_body' : workoutStructure
+
+  // While the count is unresolved, show the loading state. Once resolved, the
+  // gate is active iff the trainee is short of the threshold.
+  const isCheckingHistory = distinctExerciseCount === null
+  const isGated =
+    distinctExerciseCount !== null &&
+    distinctExerciseCount < MIN_DISTINCT_EXERCISES
+  const exercisesRemaining = Math.max(0, MIN_DISTINCT_EXERCISES - (distinctExerciseCount ?? 0))
 
   // Generate workout
   const handleGenerate = async () => {
@@ -166,6 +218,47 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
           </p>
         </div>
 
+        {/* Entry gate: checking the trainee's workout history */}
+        {isCheckingHistory && (
+          <div className="flex flex-col items-center justify-center py-10 gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
+            <p className="text-sm text-gray-400">בודק את היסטוריית האימונים שלך...</p>
+          </div>
+        )}
+
+        {/* Entry gate: not enough distinct exercises — neutral, encouraging state */}
+        {isGated && (
+          <div className="text-center">
+            <div className="w-16 h-16 rounded-full bg-teal-400/15 border border-teal-400/30 flex items-center justify-center mx-auto mb-4 text-3xl">
+              🎯
+            </div>
+            <h4 className="text-base font-bold text-white mb-2">
+              כמעט שם!
+            </h4>
+            <p className="text-sm text-gray-300 leading-relaxed mb-4">
+              כדי שהמאמן יבנה לך תוכנית מותאמת אישית, כדאי שתתעד עוד כמה תרגילים שונים.
+              ככל שתבצע יותר תרגילים מגוונים, האימונים שה-AI יבנה יהיו מדויקים יותר.
+            </p>
+            <div className="bg-teal-400/10 border border-teal-400/20 rounded-xl p-4">
+              <p className="text-sm text-teal-400 font-semibold">
+                נותרו עוד {exercisesRemaining} {exercisesRemaining === 1 ? 'תרגיל שונה' : 'תרגילים שונים'}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                ביצעת {distinctExerciseCount ?? 0} מתוך {MIN_DISTINCT_EXERCISES} הנדרשים
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-full py-3.5 mt-5 rounded-xl border border-white/10 bg-white/5 text-gray-200 text-sm font-semibold cursor-pointer"
+            >
+              הבנתי
+            </button>
+          </div>
+        )}
+
+        {/* Configuration form — only when the entry gate is open */}
+        {!isCheckingHistory && !isGated && (
+          <>
         {/* Error message */}
         {error && (
           <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-3.5 py-2.5 mb-4 text-red-500 text-sm text-center">
@@ -367,6 +460,8 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
         >
           ביטול
         </button>
+          </>
+        )}
       </div>
 
       {/* AI Explanation Popup */}

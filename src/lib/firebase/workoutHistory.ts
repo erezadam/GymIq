@@ -1695,6 +1695,49 @@ export async function getRecentlyDoneExerciseIds(userId: string): Promise<Set<st
 }
 
 /**
+ * Returns the set of distinct exerciseIds the user has actually performed
+ * (ex.isCompleted === true) across their ENTIRE workout history.
+ *
+ * Deliberately diverges from the sibling getRecentlyDoneExerciseIds, which is
+ * capped at the last 10 workouts for the AI "don't repeat yesterday" feature.
+ * This one has no limit — it backs the AI Trainer entry gate, which needs the
+ * user's lifetime count of distinct performed exercises, not a recent window.
+ *
+ * Same "performed" predicate as getRecentlyDoneExerciseIds:
+ * `ex.isCompleted && ex.exerciseId`. Soft-deleted workouts are skipped.
+ *
+ * Throws on a Firestore read failure — callers that gate UI on this should
+ * catch and treat a failure as "below threshold".
+ */
+export async function getDistinctPerformedExerciseIds(userId: string): Promise<Set<string>> {
+  const result = new Set<string>()
+  const historyRef = collection(db, COLLECTION_NAME)
+
+  // Full history (uses existing index: userId + date), no limit.
+  const allQuery = query(
+    historyRef,
+    where('userId', '==', userId),
+    orderBy('date', 'desc')
+  )
+
+  const snapshot = await getDocs(allQuery)
+
+  for (const doc of snapshot.docs) {
+    const data = doc.data()
+    if (!isNotSoftDeleted(data)) continue
+
+    const exercises = data.exercises || []
+    for (const ex of exercises) {
+      if (ex.isCompleted && ex.exerciseId) {
+        result.add(ex.exerciseId)
+      }
+    }
+  }
+
+  return result
+}
+
+/**
  * Returns the most recent date each exercise was performed, for the UI
  * "אחרון" badge. Scans `completed` workouts within the last 21 days.
  *
