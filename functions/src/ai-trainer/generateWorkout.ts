@@ -547,6 +547,14 @@ function validateRequest(data: any, authUid: string): GenerateWorkoutRequest {
     throw new HttpsError('invalid-argument', 'Missing exercises')
   }
 
+  // exerciseSource is advisory metadata — the client already built the pool
+  // (client-authoritative). Normalize an absent/invalid value to 'performed'
+  // (the default) without throwing; never break generation over it. The server
+  // does not act on this value beyond observability.
+  if (request.exerciseSource !== 'all' && request.exerciseSource !== 'performed') {
+    request.exerciseSource = 'performed'
+  }
+
   return data as GenerateWorkoutRequest
 }
 
@@ -608,6 +616,17 @@ export const generateAIWorkout = onCall(
       // Create exercise map for quick lookup
       const exerciseMap = new Map<string, ExerciseSummary>()
       data.availableExercises.forEach((ex) => exerciseMap.set(ex.id, ex))
+
+      // Observability only (client-authoritative pool): record the requested
+      // source mode and the pool size the client actually sent. The server does
+      // NOT recompute the performed set or alter the pool. Cloud Logging only —
+      // no Firestore write. Placed after the awaits above so it reflects a fully
+      // validated request.
+      functions.logger.info('AI Workout exercise source', {
+        userId,
+        exerciseSource: data.request.exerciseSource,
+        receivedPoolSize: data.availableExercises.length,
+      })
 
       // Get starting workout number
       const startNumber = Math.floor(Date.now() / 1000) % 1000

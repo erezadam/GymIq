@@ -144,14 +144,50 @@ describe('aiTrainer exerciseSource flag (PR-1 — plumbing only)', () => {
   })
 
   it('(b) omitting exerciseSource is behavior-preserving — same pool, no crash', async () => {
-    // PR-1 does not make the filter conditional, so an absent flag must behave
-    // exactly like today: performed strength + cardio, success.
+    // An absent flag must behave exactly like today: performed strength +
+    // cardio, success. (Identical default handling in PR-1 and PR-2.)
     const { generateAIWorkouts } = await import(
       '../src/domains/workouts/services/aiTrainerService'
     )
     const result = await generateAIWorkouts({ ...BASE_REQUEST })
 
     expect(result.success).toBe(true)
+    expect(payloadExerciseIds().sort()).toEqual(EXPECTED_POOL_TODAY)
+  })
+})
+
+// PR-2: the flag now CONTROLS the pool. Both the forwarded value and the pool it
+// produces are asserted, per mode, at the service edge.
+describe('aiTrainer exerciseSource flag (PR-2 — flag controls the pool)', () => {
+  // Full library = every fixture exercise (incl. never-performed ex-fly).
+  const FULL_LIBRARY = ['ex-bench', 'ex-fly', 'ex-row', 'ex-run'].sort()
+
+  beforeEach(() => {
+    callableMock.mockClear()
+    getExercisesMock.mockReset()
+    getDistinctPerformedExerciseIdsMock.mockReset()
+    saveWorkoutHistoryMock.mockClear()
+    getExercisesMock.mockResolvedValue(FIXTURE)
+    getDistinctPerformedExerciseIdsMock.mockResolvedValue(PERFORMED)
+  })
+
+  it("'all' → flag forwarded AND pool is the full library", async () => {
+    const { generateAIWorkouts } = await import(
+      '../src/domains/workouts/services/aiTrainerService'
+    )
+    await generateAIWorkouts({ ...BASE_REQUEST, exerciseSource: 'all' })
+
+    expect(payloadRequest().exerciseSource).toBe('all')
+    expect(payloadExerciseIds().sort()).toEqual(FULL_LIBRARY)
+  })
+
+  it("'performed' → flag forwarded AND pool is narrowed (performed + cardio)", async () => {
+    const { generateAIWorkouts } = await import(
+      '../src/domains/workouts/services/aiTrainerService'
+    )
+    await generateAIWorkouts({ ...BASE_REQUEST, exerciseSource: 'performed' })
+
+    expect(payloadRequest().exerciseSource).toBe('performed')
     expect(payloadExerciseIds().sort()).toEqual(EXPECTED_POOL_TODAY)
   })
 })

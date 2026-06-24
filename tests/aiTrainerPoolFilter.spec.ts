@@ -226,3 +226,55 @@ describe('aiTrainerService pool filter (PR2)', () => {
     )
   })
 })
+
+describe('aiTrainerService pool filter — exerciseSource flag (PR-2)', () => {
+  beforeEach(() => {
+    callableMock.mockClear()
+    getExercisesMock.mockReset()
+    getDistinctPerformedExerciseIdsMock.mockReset()
+    getRecentlyDoneExerciseIdsMock.mockClear()
+    saveWorkoutHistoryMock.mockClear()
+    getExercisesMock.mockResolvedValue(FIXTURE)
+    // Only 2 of the 6 fixture exercises were performed — the difference between
+    // 'all' and 'performed' is observable.
+    getDistinctPerformedExerciseIdsMock.mockResolvedValue(
+      new Set(['ex-bench', 'ex-row'])
+    )
+  })
+
+  it("'all' → the pool is the FULL library (no performed filter)", async () => {
+    const { generateAIWorkouts } = await import(
+      '../src/domains/workouts/services/aiTrainerService'
+    )
+    await generateAIWorkouts({ ...REQUEST, exerciseSource: 'all' })
+
+    // Every fixture exercise is present, including never-performed ones.
+    expect(payloadExerciseIds().sort()).toEqual(
+      ['ex-bench', 'ex-crunch', 'ex-fly', 'ex-plank', 'ex-row', 'ex-run'].sort()
+    )
+  })
+
+  it("'performed' → the pool is narrowed (performed strength/core + cardio)", async () => {
+    const { generateAIWorkouts } = await import(
+      '../src/domains/workouts/services/aiTrainerService'
+    )
+    await generateAIWorkouts({ ...REQUEST, exerciseSource: 'performed' })
+
+    // ex-fly (strength, not performed) and ex-plank (core, not performed) dropped;
+    // ex-run (cardio) kept by exemption.
+    expect(payloadExerciseIds().sort()).toEqual(
+      ['ex-bench', 'ex-row', 'ex-run'].sort()
+    )
+  })
+
+  it('default (flag omitted) → identical to performed (behavior preserved)', async () => {
+    const { generateAIWorkouts } = await import(
+      '../src/domains/workouts/services/aiTrainerService'
+    )
+    await generateAIWorkouts({ ...REQUEST })
+
+    expect(payloadExerciseIds().sort()).toEqual(
+      ['ex-bench', 'ex-row', 'ex-run'].sort()
+    )
+  })
+})
