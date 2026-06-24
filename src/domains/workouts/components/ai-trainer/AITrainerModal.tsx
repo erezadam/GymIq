@@ -10,7 +10,7 @@ import { X, Loader2, Sparkles } from 'lucide-react'
 import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { generateAIWorkouts } from '@/domains/workouts/services/aiTrainerService'
 import { getDistinctPerformedExerciseIds } from '@/lib/firebase/workoutHistory'
-import type { AITrainerRequest, WorkoutStructure, SplitStartWith, AIGeneratedWorkout } from '@/domains/workouts/services/aiTrainer.types'
+import type { AITrainerRequest, WorkoutStructure, SplitStartWith, ExerciseSource, AIGeneratedWorkout } from '@/domains/workouts/services/aiTrainer.types'
 import { getExerciseCount } from '@/domains/workouts/services/aiTrainer.types'
 
 interface AITrainerModalProps {
@@ -50,6 +50,9 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
   const [warmupDuration, setWarmupDuration] = useState(5)
   const [workoutStructure, setWorkoutStructure] = useState<WorkoutStructure>('full_body')
   const [splitStartWith, setSplitStartWith] = useState<SplitStartWith>('upper')
+  // Exercise pool source. Default 'performed' preserves current behavior; the
+  // selector UI and the conditional filtering arrive in later PRs. Internal for now.
+  const [exerciseSource] = useState<ExerciseSource>('performed')
 
   // UI state
   const [isGenerating, setIsGenerating] = useState(false)
@@ -124,6 +127,7 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
         warmupDuration,
         userId: user.uid,
         workoutStructure: effectiveStructure,
+        exerciseSource,
         ...(effectiveStructure === 'split' && (numWorkouts === 3 || numWorkouts === 5) && {
           splitStartWith,
         }),
