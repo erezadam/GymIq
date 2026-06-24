@@ -32,6 +32,10 @@ export interface ExercisePerformanceData {
 export type WorkoutStructure = 'full_body' | 'split'
 export type SplitStartWith = 'upper' | 'lower'
 
+// Exercise pool source: build the plan only from exercises the trainee has
+// performed, or from the full exercise library.
+export type ExerciseSource = 'performed' | 'all'
+
 // Request from user to generate workout
 export interface AITrainerRequest {
   numWorkouts: number        // 1-6
@@ -40,6 +44,7 @@ export interface AITrainerRequest {
   userId: string
   workoutStructure: WorkoutStructure
   splitStartWith?: SplitStartWith  // For split with 3 or 5 workouts
+  exerciseSource?: ExerciseSource  // 'performed' (default) | 'all' — consumed in PR-2
 }
 
 // Exercise in AI-generated workout

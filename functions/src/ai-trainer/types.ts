@@ -53,6 +53,12 @@ export interface RecentWorkoutSummary {
 export type WorkoutStructure = 'full_body' | 'split'
 export type SplitStartWith = 'upper' | 'lower'
 
+// Exercise pool source — mirrors the client AITrainerRequest.
+// Kept in sync with src/domains/workouts/services/aiTrainer.types.ts (the type
+// is duplicated client/server). Declared here so the flag survives the payload;
+// not consumed or validated server-side yet (that's PR-2).
+export type ExerciseSource = 'performed' | 'all'
+
 // Request from client to Cloud Function
 export interface GenerateWorkoutRequest {
   request: {
@@ -62,6 +68,7 @@ export interface GenerateWorkoutRequest {
     userId: string
     workoutStructure: WorkoutStructure
     splitStartWith?: SplitStartWith
+    exerciseSource?: ExerciseSource
   }
   availableExercises: ExerciseSummary[]
   muscles: MuscleSummary[]
