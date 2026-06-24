@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased] - 2026-06-24
+
+### Added
+- **צמצום בריכת התרגילים של מאמן ה-AI לתרגילים שבוצעו (PR2 מתוך 3):** נקודת סינון אחת ב-`aiTrainerService.buildContext` מצמצמת את בריכת התרגילים לתרגילים שהמתאמן **ביצע** בפועל — `availableExercises = exercises.filter(ex => isCardio || performedExerciseIds.has(ex.id))`, כאשר `performedExerciseIds` מגיע מ-`getDistinctPerformedExerciseIds` (אותו מקור-אמת של השער מ-PR1). **cardio/חימום פטור** מהצמצום (חימום חייב לעבוד גם למתאמן שלא תיעד cardio); core וכל תרגילי הכוח כפופים לו. **soft-delete לא נספר** (ה-reuse של הפונקציה כבר מחריג אימונים שנמחקו). הסינון מתפשט אוטומטית ל-payload, ל-fallback הלקוח (`strengthExercises ⊂ availableExercises`), ול-fallback השרת (`data.availableExercises`) — נקודה אחת, בלי סינון כפול. קצוות ללא קריסה: בריכה רק-cardio (אפס כוח שבוצע) לא מקריסה (רשימות שרירים מקטלוג `muscles` ב-Firestore, לא מהבריכה); כשל קריאה → נתיב השגיאה החינני הקיים. 7 בדיקות התנהגותיות חדשות ב-`tests/aiTrainerPoolFilter.spec.ts` (mock + assert על ה-payload שנלכד, כולל נתיב throw). אומת במכשיר לפני merge. **לא נגעתי:** Cloud Function, `useActiveWorkout.ts`, `getPersonalRecords`.
+- **הודעת הסבר "בנינו מהתרגילים שביצעת" (PR3 מתוך 3, UI בלבד):** בתוך פופאפ ההסבר של מאמן ה-AI נוספה הודעה — "בנינו לך את האימון מהתרגילים שכבר ביצעת — אתה מכיר אותם, ויש לך עליהם היסטוריה". כשמספר התרגילים השונים מ-state הפתיחה (PR1) זמין, משולב "מתוך N תרגילים שביצעת עד כה"; אחרת המספר מושמט ללא קריאות נתונים נוספות. RTL, tailwind בלבד. **רצף מיזוג נאכף: PR2 (#143) לפני PR3 (#144)** — אחרת ההודעה שקרית (ללא הסינון, המאגר הוא הקטלוג המלא). #144 עבר rebase על main אחרי מיזוג #143, כך שהסינון וההודעה נמצאים יחד ב-main וההודעה אומרת אמת בפרודקשן. בדיקת קומפוננטה התנהגותית ב-`tests/aiTrainerExplanationMessage.spec.tsx`. אומת במכשיר לפני merge. **לא נגעתי:** לוגיקת יצירה, payload, סינון PR2, `useActiveWorkout.ts`, `getPersonalRecords`.
+
 ## [Unreleased] - 2026-06-23
 
 ### Added
