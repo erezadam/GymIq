@@ -212,13 +212,25 @@ async function buildContext(request: AITrainerRequest): Promise<AITrainerContext
   // that doesn't list 'cardio', but Firestore is the source of truth and a doc
   // can carry it at runtime — so compare as a string rather than narrowing it
   // away.
-  const availableExercises = exercises.filter(ex => {
-    const isCardio = (ex.primaryMuscle as string) === 'cardio' || ex.category === 'cardio'
-    return isCardio || performedExerciseIds.has(ex.id)
-  })
+  //
+  // exerciseSource === 'all' opts out of the performed-only restriction and uses
+  // the full library. Any other value (including undefined / default) keeps the
+  // performed-only behavior unchanged — same filter as before, cardio exemption
+  // included. Client-authoritative by design: the server consumes whatever pool
+  // we send and never recomputes the performed set.
+  const availableExercises = request.exerciseSource === 'all'
+    ? exercises
+    : exercises.filter(ex => {
+        const isCardio = (ex.primaryMuscle as string) === 'cardio' || ex.category === 'cardio'
+        return isCardio || performedExerciseIds.has(ex.id)
+      })
 
   console.log(`📊 Loaded ${exercises.length} exercises, ${muscles.length} muscles`)
-  console.log(`📊 Performed-exercise filter: ${exercises.length} → ${availableExercises.length} (kept cardio + ${performedExerciseIds.size} performed ids)`)
+  console.log(
+    request.exerciseSource === 'all'
+      ? `📊 Exercise source 'all': full library, no performed filter (${availableExercises.length} exercises)`
+      : `📊 Exercise source 'performed': ${exercises.length} → ${availableExercises.length} (kept cardio + ${performedExerciseIds.size} performed ids)`
+  )
   console.log(`📊 Recent summaries: ${recentSummaries.length}, Full history: ${recentFullHistory.length}, Yesterday exercises: ${yesterdayExerciseIds.length}`)
 
   const recentWorkouts: RecentWorkoutSummary[] = recentSummaries.map(w => ({
