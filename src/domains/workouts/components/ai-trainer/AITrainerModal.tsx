@@ -98,9 +98,12 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
     }
   }, [isOpen, user?.uid])
 
-  // Derived state
-  const showSplitStartSelection = workoutStructure === 'split' && (numWorkouts === 3 || numWorkouts === 5)
-  const effectiveStructure: WorkoutStructure = numWorkouts <= 2 ? 'full_body' : workoutStructure
+  // Derived state.
+  // The upper/lower start choice only changes the muscle balance when the number
+  // of split workouts is odd (1, 3, 5) — for even counts the split is balanced
+  // regardless of start, so the picker stays hidden. The structure (full body vs
+  // split) is always the user's choice, for every workout count.
+  const showSplitStartSelection = workoutStructure === 'split' && numWorkouts % 2 === 1
 
   // While the count is unresolved, show the loading state. Once resolved, the
   // gate is active iff the trainee is short of the threshold.
@@ -126,9 +129,9 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
         duration,
         warmupDuration,
         userId: user.uid,
-        workoutStructure: effectiveStructure,
+        workoutStructure,
         exerciseSource,
-        ...(effectiveStructure === 'split' && (numWorkouts === 3 || numWorkouts === 5) && {
+        ...(showSplitStartSelection && {
           splitStartWith,
         }),
       }
@@ -178,7 +181,7 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
 
   // Build split schedule description
   const getSplitDescription = (): string => {
-    if (effectiveStructure === 'full_body') return 'כל אימון מכסה את כל הגוף'
+    if (workoutStructure === 'full_body') return 'כל אימון מכסה את כל הגוף'
 
     const start = splitStartWith || 'upper'
     const schedule: string[] = []
@@ -341,51 +344,41 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
         </div>
 
         {/* Workout Structure - only for 3+ workouts */}
-        {numWorkouts <= 2 ? (
-          <div className="mb-5 bg-teal-400/10 border border-teal-400/20 rounded-xl p-3 text-center">
-            <p className="text-sm text-teal-400 font-medium">
-              🏋️ Full Body - כל הגוף
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              {numWorkouts === 1 ? 'אימון אחד' : '2 אימונים'} = אימון כל הגוף אוטומטית
-            </p>
+        {/* Workout structure — always selectable, for every workout count */}
+        <div className="mb-5">
+          <label className="block text-sm font-semibold text-white mb-2.5">
+            מבנה אימון
+          </label>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setWorkoutStructure('full_body')}
+              className={`flex-1 py-3 px-3 rounded-xl border text-sm transition-all cursor-pointer ${
+                workoutStructure === 'full_body'
+                  ? 'border-teal-400/50 bg-teal-400/15 text-teal-400 font-semibold'
+                  : 'border-white/10 bg-white/5 text-gray-400'
+              }`}
+            >
+              🏋️ כל הגוף
+            </button>
+            <button
+              onClick={() => setWorkoutStructure('split')}
+              className={`flex-1 py-3 px-3 rounded-xl border text-sm transition-all cursor-pointer ${
+                workoutStructure === 'split'
+                  ? 'border-violet-500/50 bg-violet-500/15 text-violet-400 font-semibold'
+                  : 'border-white/10 bg-white/5 text-gray-400'
+              }`}
+            >
+              🔀 לפי אזורים
+            </button>
           </div>
-        ) : (
-          <div className="mb-5">
-            <label className="block text-sm font-semibold text-white mb-2.5">
-              מבנה אימון
-            </label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setWorkoutStructure('full_body')}
-                className={`flex-1 py-3 px-3 rounded-xl border text-sm transition-all cursor-pointer ${
-                  workoutStructure === 'full_body'
-                    ? 'border-teal-400/50 bg-teal-400/15 text-teal-400 font-semibold'
-                    : 'border-white/10 bg-white/5 text-gray-400'
-                }`}
-              >
-                🏋️ כל הגוף
-              </button>
-              <button
-                onClick={() => setWorkoutStructure('split')}
-                className={`flex-1 py-3 px-3 rounded-xl border text-sm transition-all cursor-pointer ${
-                  workoutStructure === 'split'
-                    ? 'border-violet-500/50 bg-violet-500/15 text-violet-400 font-semibold'
-                    : 'border-white/10 bg-white/5 text-gray-400'
-                }`}
-              >
-                🔀 לפי אזורים
-              </button>
-            </div>
 
-            {/* Split description */}
-            {workoutStructure === 'split' && (
-              <p className="text-xs text-gray-400 mt-2 text-center">
-                עליון / תחתון לסירוגין
-              </p>
-            )}
-          </div>
-        )}
+          {/* Split description */}
+          {workoutStructure === 'split' && (
+            <p className="text-xs text-gray-400 mt-2 text-center">
+              עליון / תחתון לסירוגין
+            </p>
+          )}
+        </div>
 
         {/* Split start selection - only for 3 or 5 workouts with split */}
         {showSplitStartSelection && (
