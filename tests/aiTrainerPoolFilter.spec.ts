@@ -278,3 +278,43 @@ describe('aiTrainerService pool filter — exerciseSource flag (PR-2)', () => {
     )
   })
 })
+
+describe('exerciseSource and the performed-read failure (PR-3)', () => {
+  beforeEach(() => {
+    callableMock.mockClear()
+    getExercisesMock.mockReset()
+    getDistinctPerformedExerciseIdsMock.mockReset()
+    getRecentlyDoneExerciseIdsMock.mockClear()
+    saveWorkoutHistoryMock.mockClear()
+    getExercisesMock.mockResolvedValue(FIXTURE)
+    // The performed read would reject — but in 'all' mode it must never be called.
+    getDistinctPerformedExerciseIdsMock.mockRejectedValue(
+      new Error('permission-denied')
+    )
+  })
+
+  it("'all' generates even when the performed read would fail (it is never called)", async () => {
+    const { generateAIWorkouts } = await import(
+      '../src/domains/workouts/services/aiTrainerService'
+    )
+    const result = await generateAIWorkouts({ ...REQUEST, exerciseSource: 'all' })
+
+    expect(result.success).toBe(true)
+    // The fix: 'all' mode skips the read entirely, so its rejection can't bubble.
+    expect(getDistinctPerformedExerciseIdsMock).not.toHaveBeenCalled()
+    // Full library — never-performed exercises included.
+    expect(payloadExerciseIds().sort()).toEqual(
+      ['ex-bench', 'ex-crunch', 'ex-fly', 'ex-plank', 'ex-row', 'ex-run'].sort()
+    )
+  })
+
+  it("'performed' still degrades gracefully when the read rejects (unchanged)", async () => {
+    const { generateAIWorkouts } = await import(
+      '../src/domains/workouts/services/aiTrainerService'
+    )
+    const result = await generateAIWorkouts({ ...REQUEST, exerciseSource: 'performed' })
+
+    expect(result.success).toBe(false)
+    expect(callableMock).not.toHaveBeenCalled()
+  })
+})

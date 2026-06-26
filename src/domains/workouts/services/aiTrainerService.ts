@@ -187,14 +187,20 @@ function extractExerciseHistory(recentHistory: WorkoutHistoryEntry[]): ExerciseP
 async function buildContext(request: AITrainerRequest): Promise<AITrainerContext> {
   console.log('🤖 Building AI context...')
 
-  // Load all data in parallel
+  // Load all data in parallel.
+  // In 'all' mode the performed set is unused, so we skip the read entirely — a
+  // failure of getDistinctPerformedExerciseIds must NOT fail an 'all' generation.
+  // In 'performed' mode the call is unchanged (same position in the Promise.all,
+  // same parallelism, its rejection still propagates exactly as before).
   const [exercises, muscles, recentSummaries, recentFullHistory, yesterdayExerciseIdsSet, performedExerciseIds] = await Promise.all([
     getExercises(),
     getMuscles(),
     getUserWorkoutHistory(request.userId, 7),
     getUserWorkoutHistoryFull(request.userId, 10),
     getRecentlyDoneExerciseIds(request.userId),
-    getDistinctPerformedExerciseIds(request.userId),
+    request.exerciseSource === 'all'
+      ? Promise.resolve(new Set<string>())
+      : getDistinctPerformedExerciseIds(request.userId),
   ])
 
   const yesterdayExerciseIds = Array.from(yesterdayExerciseIdsSet)
