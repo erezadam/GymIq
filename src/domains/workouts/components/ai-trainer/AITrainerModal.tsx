@@ -50,9 +50,10 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
   const [warmupDuration, setWarmupDuration] = useState(5)
   const [workoutStructure, setWorkoutStructure] = useState<WorkoutStructure>('full_body')
   const [splitStartWith, setSplitStartWith] = useState<SplitStartWith>('upper')
-  // Exercise pool source. Default 'performed' preserves current behavior; the
-  // selector UI and the conditional filtering arrive in later PRs. Internal for now.
-  const [exerciseSource] = useState<ExerciseSource>('performed')
+  // Exercise pool source — user-selectable. The threshold-based default is set
+  // once when the history check resolves (see the open effect); manual choices
+  // afterward are not overridden until the modal reopens.
+  const [exerciseSource, setExerciseSource] = useState<ExerciseSource>('performed')
 
   // UI state
   const [isGenerating, setIsGenerating] = useState(false)
@@ -81,14 +82,26 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
     const run = async () => {
       try {
         if (!user?.uid) {
-          if (!cancelled) setDistinctExerciseCount(0)
+          if (!cancelled) {
+            setDistinctExerciseCount(0)
+            // Below threshold → default to the full library; 'performed' is locked.
+            setExerciseSource('all')
+          }
           return
         }
         const ids = await getDistinctPerformedExerciseIds(user.uid)
-        if (!cancelled) setDistinctExerciseCount(ids.size)
+        if (!cancelled) {
+          setDistinctExerciseCount(ids.size)
+          // Threshold-based default, set once per open. Subsequent manual choices
+          // are preserved because this effect only re-runs on open / user change.
+          setExerciseSource(ids.size < MIN_DISTINCT_EXERCISES ? 'all' : 'performed')
+        }
       } catch (err) {
         console.error('Failed to derive distinct exercise count:', err)
-        if (!cancelled) setDistinctExerciseCount(0)
+        if (!cancelled) {
+          setDistinctExerciseCount(0)
+          setExerciseSource('all')
+        }
       }
     }
 
@@ -233,38 +246,11 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
           </div>
         )}
 
-        {/* Entry gate: not enough distinct exercises — neutral, encouraging state */}
-        {isGated && (
-          <div className="text-center">
-            <div className="w-16 h-16 rounded-full bg-teal-400/15 border border-teal-400/30 flex items-center justify-center mx-auto mb-4 text-3xl">
-              🎯
-            </div>
-            <h4 className="text-base font-bold text-white mb-2">
-              כמעט שם!
-            </h4>
-            <p className="text-sm text-gray-300 leading-relaxed mb-4">
-              כדי שהמאמן יבנה לך תוכנית מותאמת אישית, כדאי שתתעד עוד כמה תרגילים שונים.
-              ככל שתבצע יותר תרגילים מגוונים, האימונים שה-AI יבנה יהיו מדויקים יותר.
-            </p>
-            <div className="bg-teal-400/10 border border-teal-400/20 rounded-xl p-4">
-              <p className="text-sm text-teal-400 font-semibold">
-                נותרו עוד {exercisesRemaining} {exercisesRemaining === 1 ? 'תרגיל שונה' : 'תרגילים שונים'}
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                ביצעת {distinctExerciseCount ?? 0} מתוך {MIN_DISTINCT_EXERCISES} הנדרשים
-              </p>
-            </div>
-            <button
-              onClick={onClose}
-              className="w-full py-3.5 mt-5 rounded-xl border border-white/10 bg-white/5 text-gray-200 text-sm font-semibold cursor-pointer"
-            >
-              הבנתי
-            </button>
-          </div>
-        )}
-
-        {/* Configuration form — only when the entry gate is open */}
-        {!isCheckingHistory && !isGated && (
+        {/* Configuration form — shown once the history check resolves. The gate
+            no longer blocks the whole form; below the threshold it only
+            constrains the source selector (locks 'מתוך שביצעת' and defaults to
+            'מכל התרגילים'). */}
+        {!isCheckingHistory && (
           <>
         {/* Error message */}
         {error && (
@@ -272,6 +258,43 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
             {error}
           </div>
         )}
+
+        {/* Exercise source selector */}
+        <div className="mb-5">
+          <label className="block text-sm font-semibold text-white mb-2.5">
+            מקור התרגילים
+          </label>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setExerciseSource('performed')}
+              disabled={isGated}
+              className={`flex-1 py-3 px-2 rounded-xl border text-sm transition-all ${
+                isGated
+                  ? 'border-white/10 bg-white/5 text-gray-600 cursor-not-allowed'
+                  : exerciseSource === 'performed'
+                    ? 'border-teal-400/50 bg-teal-400/15 text-teal-400 font-semibold cursor-pointer'
+                    : 'border-white/10 bg-white/5 text-gray-400 cursor-pointer'
+              }`}
+            >
+              💪 מתוך שביצעת
+            </button>
+            <button
+              onClick={() => setExerciseSource('all')}
+              className={`flex-1 py-3 px-2 rounded-xl border text-sm transition-all cursor-pointer ${
+                exerciseSource === 'all'
+                  ? 'border-violet-500/50 bg-violet-500/15 text-violet-400 font-semibold'
+                  : 'border-white/10 bg-white/5 text-gray-400'
+              }`}
+            >
+              🗂️ מכל התרגילים
+            </button>
+          </div>
+          {isGated && (
+            <p className="text-xs text-gray-400 mt-2 text-center">
+              כדי לבחור "מתוך שביצעת" נותרו עוד {exercisesRemaining} {exercisesRemaining === 1 ? 'תרגיל שונה' : 'תרגילים שונים'} (ביצעת {distinctExerciseCount ?? 0} מתוך {MIN_DISTINCT_EXERCISES})
+            </p>
+          )}
+        </div>
 
         {/* Number of workouts */}
         <div className="mb-5">
@@ -482,16 +505,18 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
             </p>
           </div>
 
-          {/* Built-from-performed-exercises note — explains the pool the plan was
-              built from. Uses the distinct-count already in state from open (PR1)
-              when available; otherwise omits the number rather than fetching. */}
-          <div className="bg-teal-400/10 border border-teal-400/20 rounded-xl p-3.5 mb-5">
-            <p className="text-sm leading-relaxed text-gray-200 m-0">
-              {distinctExerciseCount && distinctExerciseCount > 0
-                ? `בנינו לך את האימון מהתרגילים שכבר ביצעת — מתוך ${distinctExerciseCount} תרגילים שביצעת עד כה. אתה מכיר אותם, ויש לך עליהם היסטוריה.`
-                : 'בנינו לך את האימון מהתרגילים שכבר ביצעת — אתה מכיר אותם, ויש לך עליהם היסטוריה.'}
-            </p>
-          </div>
+          {/* Built-from-performed-exercises note — only when the plan was actually
+              built from the performed pool ('performed' mode). In 'all' mode the
+              statement would be untrue, so it is hidden. */}
+          {exerciseSource === 'performed' && (
+            <div className="bg-teal-400/10 border border-teal-400/20 rounded-xl p-3.5 mb-5">
+              <p className="text-sm leading-relaxed text-gray-200 m-0">
+                {distinctExerciseCount && distinctExerciseCount > 0
+                  ? `בנינו לך את האימון מהתרגילים שכבר ביצעת — מתוך ${distinctExerciseCount} תרגילים שביצעת עד כה. אתה מכיר אותם, ויש לך עליהם היסטוריה.`
+                  : 'בנינו לך את האימון מהתרגילים שכבר ביצעת — אתה מכיר אותם, ויש לך עליהם היסטוריה.'}
+              </p>
+            </div>
+          )}
 
           {/* Explanations */}
           <div className="mb-6">
