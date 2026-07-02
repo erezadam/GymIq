@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased] - 2026-07-02
+
+### Changed
+- **תשתית לסקריפטי אבחון חד-פעמיים:** נוספה תיקיית `scripts/adhoc/` המוחרגת מ-git (`scripts/adhoc/*` + `!scripts/adhoc/.gitkeep`) — בית לסקריפטי debug/diagnostic חד-פעמיים שלא נועדו להישמר. סקריפט האבחון `diagnoseZehavaBadge.ts` (untracked, באג הבאדג' "אחרון") נמחק לאחר שמילא את תפקידו. נוסף `.claude/audit-goal.md` — מפרט משימת audit מלאה (4 תחומים: אבטחה, ביצועים, חוקי ברזל, כיסוי בדיקות) להפעלה ידנית עתידית דרך `/goal` (עוקף את מגבלת 4000 התווים). ללא שינוי קוד אפליקציה.
+
 ## [Unreleased] - 2026-06-25
 
 ### Added
