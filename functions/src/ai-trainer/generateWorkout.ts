@@ -22,6 +22,7 @@ import type {
 } from './types'
 
 import { SUB_MUSCLE_TO_PARENT } from './muscleMapping'
+import { applyStagnationFloor } from './stagnationFloor'
 
 /**
  * Fetch the latest AI analysis for a user (if exists and not older than 30 days)
@@ -205,7 +206,9 @@ function convertClaudeResponse(
   workoutNumber: number,
   duration: number,
   warmupExercise: ExerciseSummary | null,
-  coreExercise: ExerciseSummary | null
+  coreExercise: ExerciseSummary | null,
+  stagnationFlags: Record<string, boolean> | null,
+  lastWeightByExercise: Map<string, number>
 ): GeneratedWorkout {
   const aiRecommendations: Record<string, AIRecommendation> = {}
 
@@ -227,8 +230,16 @@ function convertClaudeResponse(
       const exercise = exerciseMap.get(ce.exerciseId)!
 
       if (ce.recommendation) {
+        // 16/07/2026 iron rule: with the stagnation flag ON the recommended weight
+        // must be strictly greater than lastWeight. Overrides are logged, never silent.
+        const flooredWeight = applyStagnationFloor({
+          exerciseId: ce.exerciseId,
+          llmWeight: ce.recommendation.weight || 0,
+          lastWeight: lastWeightByExercise.get(ce.exerciseId),
+          stagnant: stagnationFlags === null ? undefined : stagnationFlags[ce.exerciseId],
+        }, functions.logger)
         aiRecommendations[ce.exerciseId] = {
-          weight: ce.recommendation.weight || 0,
+          weight: flooredWeight,
           repRange: ce.recommendation.repRange || ce.targetReps,
           sets: ce.recommendation.sets || ce.targetSets,
           ...(ce.recommendation.reasoning && { reasoning: ce.recommendation.reasoning }),
@@ -669,9 +680,38 @@ export const generateAIWorkout = onCall(
       // Fetch last analysis
       const lastAnalysisSection = await fetchLastAnalysis(userId)
 
+      // Fetch client-computed stagnation flags (exerciseRecommendations/{userId}).
+      // Read failure degrades to "flags unknown" — the floor is then skipped with a
+      // per-exercise 'missing' warn inside applyStagnationFloor, never silently.
+      let stagnationFlags: Record<string, boolean> | null = null
+      try {
+        const recSnap = await admin.firestore().doc(`exerciseRecommendations/${userId}`).get()
+        if (recSnap.exists) {
+          stagnationFlags = {}
+          const recData = recSnap.data() || {}
+          for (const [key, value] of Object.entries(recData)) {
+            if (key !== 'userId' && value && typeof (value as { recommend?: unknown }).recommend === 'boolean') {
+              stagnationFlags[key] = (value as { recommend: boolean }).recommend
+            }
+          }
+        }
+      } catch (error: any) {
+        functions.logger.warn('Failed to read exerciseRecommendations — stagnation floor disabled for this run', {
+          userId,
+          error: error.message,
+        })
+      }
+      const stagnantExerciseIds = new Set(
+        Object.entries(stagnationFlags ?? {}).filter(([, v]) => v).map(([k]) => k)
+      )
+      const lastWeightByExercise = new Map<string, number>(
+        (data.exerciseHistory ?? []).map(eh => [eh.exerciseId, eh.lastWeight])
+      )
+
       // Call GPT to generate workouts with muscle assignments
       const gptResult = await callGPTForWorkouts(
         data,
+        stagnantExerciseIds,
         muscles,
         assignments,
         filteredExercises,
@@ -687,7 +727,7 @@ export const generateAIWorkout = onCall(
         // GPT succeeded - convert response
         functions.logger.info('GPT API succeeded')
         workouts = gptResult.workouts.map((cw, index) =>
-          convertClaudeResponse(cw, exerciseMap, startNumber + index, data.request.duration, warmupExercise, coreExercise)
+          convertClaudeResponse(cw, exerciseMap, startNumber + index, data.request.duration, warmupExercise, coreExercise, stagnationFlags, lastWeightByExercise)
         )
       } else {
         // GPT failed or returned wrong count - use fallback
