@@ -34,6 +34,7 @@ async function getClient(): Promise<any> {
  */
 export async function callGPTForWorkouts(
   data: GenerateWorkoutRequest,
+  stagnantExerciseIds: Set<string>,
   muscles: MuscleSummary[],
   assignments: WorkoutMuscleAssignment[],
   filteredExercises: ExerciseSummary[],
@@ -54,7 +55,7 @@ export async function callGPTForWorkouts(
     })
 
     const systemPrompt = buildSystemPrompt()
-    const userPrompt = buildUserPrompt(data, muscles, assignments, filteredExercises, lastAnalysisSection, idToIndex, warmupExercise, coreExercise)
+    const userPrompt = buildUserPrompt(data, stagnantExerciseIds, muscles, assignments, filteredExercises, lastAnalysisSection, idToIndex, warmupExercise, coreExercise)
 
     functions.logger.info('Calling GPT for workout generation', {
       numWorkouts: data.request.numWorkouts,
@@ -172,7 +173,8 @@ function buildSystemPrompt(): string {
 
 ## כללי המלצות משקל (קריטי!):
 - בסס על הביצוע האחרון של המשתמש (exerciseHistory)
-- אם יש היסטוריה: המלץ ±5% מהמשקל האחרון
+- אם יש היסטוריה: המלץ בטווח 95%-105% מהמשקל האחרון
+- אם תרגיל מסומן stagnant: true (המשתמש תקוע על אותם ביצועים) — חובה להמליץ משקל גבוה מהמשקל האחרון
 - אם אין היסטוריה: משקל שמרני
 - לתרגילי משקל גוף/חימום: weight = 0
 - הוסף reasoning קצר בעברית
@@ -208,7 +210,8 @@ function buildSystemPrompt(): string {
  */
 function buildExerciseHistorySection(
   exerciseHistory: ExercisePerformanceData[] | undefined,
-  idToIndex: Map<string, number>
+  idToIndex: Map<string, number>,
+  stagnantExerciseIds: Set<string>
 ): string {
   if (!exerciseHistory || exerciseHistory.length === 0) {
     return `\n**היסטוריית ביצוע:** אין נתונים - משתמש חדש, המלץ משקלות שמרניים\n`
@@ -222,13 +225,14 @@ function buildExerciseHistorySection(
       lastReps: eh.lastReps,
       date: eh.lastDate,
       ...(eh.lastVolume && eh.lastVolume > 0 && { lastVolume: eh.lastVolume }),
+      ...(stagnantExerciseIds.has(eh.exerciseId) && { stagnant: true }),
     }))
 
   return `
 **היסטוריית ביצוע (קריטי - בסס המלצות על זה!):**
 ${JSON.stringify(historyMap, null, 0)}
 
-⚠️ חובה: המלצת משקל חייבת להתבסס על ההיסטוריה. טווח: X*0.9 עד X*1.05
+⚠️ חובה: המלצת משקל חייבת להתבסס על ההיסטוריה. טווח: X*0.95 עד X*1.05. לתרגיל עם stagnant: true — המלץ מעל X (המשתמש תקוע, חייב גירוי חדש)
 `
 }
 
@@ -237,6 +241,7 @@ ${JSON.stringify(historyMap, null, 0)}
  */
 function buildUserPrompt(
   data: GenerateWorkoutRequest,
+  stagnantExerciseIds: Set<string>,
   muscles: MuscleSummary[],
   assignments: WorkoutMuscleAssignment[],
   exercises: ExerciseSummary[],
@@ -306,7 +311,7 @@ ${JSON.stringify(yesterdayExerciseIds.map(id => idToIndex.get(id)).filter(Boolea
 
 **היסטוריית אימונים (5 אחרונים):**
 ${JSON.stringify(recentWorkouts.slice(0, 5))}
-${buildExerciseHistorySection(exerciseHistory, idToIndex)}${lastAnalysisSection || ''}
+${buildExerciseHistorySection(exerciseHistory, idToIndex, stagnantExerciseIds)}${lastAnalysisSection || ''}
 **חובה:**
 - לכל תרגיל: recommendation עם weight, repRange, sets, reasoning
 - כל אימון: בדיוק **${strengthCount} תרגילי כוח** (בלי חימום, בלי core — הם מנוהלים בנפרד!)

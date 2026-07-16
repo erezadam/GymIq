@@ -1,0 +1,1478 @@
+{
+  "6EUI93YQAeP9AwNzz8BL": {
+    "difficulty": "intermediate",
+    "instructions": [
+      "Sit with upper back against a bench and a weight across the hips",
+      "Plant feet about hip width and brace the core",
+      "Drive through heels to lift hips until torso and thighs form a straight line",
+      "Lower hips with control and repeat"
+    ],
+    "instructionsHe": [
+      "שב עם גב עליון צמוד לספסל ומשקל מונח על האגן",
+      "הנח רגליים בערך ברוחב אגן ואסוף בטן",
+      "דחף דרך העקבים כדי להרים אגן עד שקו הגוף ישר",
+      "הורד אגן בשליטה וחזור"
+    ],
+    "category": "gluteus_maximus",
+    "name": "Hip Thrust",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1771074376,
+      "nanoseconds": 1000000
+    },
+    "id": "61",
+    "equipment": "dumbbell",
+    "tips": [
+      "Keep ribs down and chin slightly tucked",
+      "Squeeze glutes at the top without overextending the back",
+      "Aim for near vertical shins at the top"
+    ],
+    "reportType": "weight_reps",
+    "assistanceTypes": [],
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1767343727,
+      "nanoseconds": 213000000
+    },
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Hip%20Thrust.png",
+    "availableBands": [],
+    "secondaryMuscles": [],
+    "tipsHe": [
+      "שמור צלעות סגורות וסנטר מעט פנימה",
+      "כווץ ישבן למעלה בלי להקשת את הגב",
+      "שאף לשוקיים כמעט אנכיות למעלה"
+    ],
+    "complexity": "simple",
+    "primaryMuscle": "longissimus",
+    "nameHe": "היפטראסט ",
+    "targetMuscles": [
+      "gluteus_maximus",
+      "gluteus_medius"
+    ],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1771074376,
+      "nanoseconds": 1000000
+    }
+  },
+  "ZnmjmlIkyyIAskc1Qczo": {
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1771074381,
+      "nanoseconds": 734000000
+    },
+    "name": "Single Leg Hip Thrust",
+    "instructions": [],
+    "instructionsHe": [],
+    "category": "gluteus_maximus",
+    "difficulty": "beginner",
+    "tips": [],
+    "equipment": "dumbbell",
+    "tipsHe": [],
+    "availableBands": [],
+    "secondaryMuscles": [],
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1768135336,
+      "nanoseconds": 126000000
+    },
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Single%20Leg%20Hip%20Thrust.png",
+    "reportType": "weight_reps",
+    "assistanceTypes": [],
+    "primaryMuscle": "longissimus",
+    "nameHe": "היפטראסט על רגל אחת ",
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1771074381,
+      "nanoseconds": 734000000
+    },
+    "targetMuscles": [],
+    "complexity": "simple"
+  },
+  "79pWk66pXALdv4ku2pTI": {
+    "difficulty": "beginner",
+    "instructions": [
+      "Attach an ankle strap to a low pulley cable machine and secure it around one ankle.  Position yourself on hands and knees facing away from the machine with the cable attached to the working leg.  Keep your spine neutral and core engaged throughout the movement.  Extend the working leg backward and slightly upward by driving through the hip while keeping the knee bent at 90 degrees.  Slowly return the leg to the starting position with control and repeat for the desired repetitions."
+    ],
+    "instructionsHe": [
+      "בר רצועת קרסול לפולי נמוך במכונת כבלים והדק אותה לקרסול של הרגל העובדת.  היכנס למנח שש על הידיים והברכיים כאשר אתה פונה הרחק מהמכונה והכבל מחובר לרגל.  שמור על גב ניטרלי וליבה אסופה לאורך כל התנועה.  בעט את הרגל העובדת לאחור ולמעלה באמצעות פשיטת הירך כאשר הברך כפופה בזווית של תשעים מעלות.  החזר את הרגל לאט ובשליטה לנקודת ההתחלה וחזור על מספר החזרות הרצוי."
+    ],
+    "category": "gluteus_maximus",
+    "name": "Cable Donkey Kickback",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773609330,
+      "nanoseconds": 71000000
+    },
+    "secondaryMuscleCredits": [],
+    "equipment": "cable_machine",
+    "tips": [
+      "שמור על אגן יציב ולא פתוח לצד הימנע מקשת בגב התחתון בצע את התנועה באיטיות כדי לשמור על מתח רציף בשריר"
+    ],
+    "assistanceTypes": [],
+    "reportType": "weight_reps",
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/donky_kick.png",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1767543081,
+      "nanoseconds": 960000000
+    },
+    "secondaryMuscles": [],
+    "availableBands": [],
+    "tipsHe": [],
+    "complexity": "simple",
+    "targetMuscles": [],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773609330,
+      "nanoseconds": 71000000
+    },
+    "primaryMuscle": "longissimus",
+    "nameHe": "בעיטת חמור בכבל"
+  },
+  "aNKatCW6yKjWCLsWgoXp": {
+    "tipsHe": [
+      "שמור אגן ישר ואל תסובב את הגוף",
+      "הקטן טווח אם הגב התחתון משתלט",
+      "עצור רגע מאחור כדי להרגיש ישבן"
+    ],
+    "secondaryMuscles": [],
+    "availableBands": [],
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Cable_Hip_Extension_1.jpeg",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1767343727,
+      "nanoseconds": 213000000
+    },
+    "assistanceTypes": [],
+    "reportType": "weight_reps",
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1772972261,
+      "nanoseconds": 728000000
+    },
+    "targetMuscles": [
+      "gluteus_maximus",
+      "gluteus_medius"
+    ],
+    "primaryMuscle": "longissimus",
+    "nameHe": "פשיטת ירך בעמידה בפולי תחתון",
+    "complexity": "simple",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1772972261,
+      "nanoseconds": 728000000
+    },
+    "secondaryMuscleCredits": [
+      "triceps"
+    ],
+    "name": "Cable Hip Extension",
+    "instructions": [
+      "Attach an ankle strap to a low cable and hold support",
+      "Brace the core and keep the working knee slightly bent",
+      "Drive the leg back by extending the hip without arching the back",
+      "Return with control and repeat then switch legs"
+    ],
+    "instructionsHe": [
+      "חבר רצועת קרסול לכבל נמוך והחזק תמיכה",
+      "אסוף בטן ושמור כיפוף קל בברך של הרגל העובדת",
+      "דחוף את הרגל לאחור דרך יישור ירך בלי להקשת גב",
+      "החזר בשליטה וחזור ואז החלף רגל"
+    ],
+    "category": "gluteus_maximus",
+    "difficulty": "beginner",
+    "tips": [
+      "Keep pelvis level and do not twist",
+      "Use a smaller range if lower back takes over",
+      "Pause briefly at the back position"
+    ],
+    "id": "66",
+    "equipment": "cable_machine"
+  },
+  "TxiHxnar1u50kdNpJIPq": {
+    "availableBands": [],
+    "secondaryMuscles": [],
+    "tipsHe": [],
+    "reportType": "weight_reps",
+    "assistanceTypes": [],
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1768732209,
+      "nanoseconds": 771000000
+    },
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Cable_Hip_Abduction.png",
+    "nameHe": "הרחקת ירך בפולי תחתון",
+    "primaryMuscle": "longissimus",
+    "targetMuscles": [],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773609352,
+      "nanoseconds": 139000000
+    },
+    "complexity": "simple",
+    "name": "Cable_Hip_Abduction",
+    "secondaryMuscleCredits": [],
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773609352,
+      "nanoseconds": 139000000
+    },
+    "difficulty": "beginner",
+    "category": "gluteus_maximus",
+    "instructionsHe": [],
+    "instructions": [],
+    "equipment": "cable_machine",
+    "tips": []
+  },
+  "rbClLMnp7by4dObWHlFp": {
+    "nameHe": "הרחקת ירך במכונה",
+    "primaryMuscle": "longissimus",
+    "targetMuscles": [
+      "gluteus_medius",
+      "gluteus_minimus",
+      "tensor_fasciae_latae"
+    ],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1777705355,
+      "nanoseconds": 93000000
+    },
+    "complexity": "simple",
+    "availableBands": [],
+    "secondaryMuscles": [],
+    "tipsHe": [
+      "שמור אגן יציב ואל תסובב את הגוף",
+      "שלוט בהחזרה",
+      "עבוד בטווח חלק בלי אי נוחות"
+    ],
+    "reportType": "weight_reps",
+    "assistanceTypes": [],
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1767343727,
+      "nanoseconds": 213000000
+    },
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Hip_Abductor_Machine_1.jpeg",
+    "equipment": "machine",
+    "id": "65",
+    "tips": [
+      "Keep hips square and avoid rotating",
+      "Control the return",
+      "Use a smooth range without discomfort"
+    ],
+    "name": "Hip Abductor Machine",
+    "secondaryMuscleCredits": [],
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1777705355,
+      "nanoseconds": 93000000
+    },
+    "difficulty": "beginner",
+    "category": "gluteus_maximus",
+    "instructionsHe": [
+      "שב במכונה עם גב נתמך וברכיים צמודות לפדים",
+      "התחל כשהברכיים יחסית קרובות בטווח נוח",
+      "דחוף ברכיים החוצה על ידי כיווץ מרחיקי ירך וישבן צד",
+      "החזר לאט וחזור"
+    ],
+    "instructions": [
+      "Sit in the machine with back supported and knees against the pads",
+      "Start with knees closer together in a comfortable position",
+      "Press knees outward by squeezing the side glutes",
+      "Return slowly and repeat"
+    ]
+  },
+  "4xIO6RSxSBBwOBS4QXNL": {
+    "nameHe": "פשיטת מרפקים בפולי מעל הראש (Overhead)",
+    "primaryMuscle": "",
+    "targetMuscles": [
+      "triceps_brachii"
+    ],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476617,
+      "nanoseconds": 512000000
+    },
+    "complexity": "simple",
+    "availableBands": [],
+    "secondaryMuscles": [],
+    "tipsHe": [
+      "אל תפתח מרפקים החוצה",
+      "בחר משקל שניתן לשלוט בו בטווח מלא",
+      "אל תקשת את הגב התחתון"
+    ],
+    "reportType": "weight_reps",
+    "assistanceTypes": [],
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1767343727,
+      "nanoseconds": 213000000
+    },
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Overhead%20Cable%20Triceps%20Extension.png",
+    "id": "74",
+    "equipment": "cable_machine",
+    "tips": [
+      "Keep elbows from flaring out",
+      "Use a weight you can control in full range",
+      "Avoid arching the lower back"
+    ],
+    "name": "Overhead Cable Triceps Extension",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476617,
+      "nanoseconds": 512000000
+    },
+    "difficulty": "beginner",
+    "category": "triceps",
+    "instructionsHe": [
+      "מקם כבל או משקולת מעל הראש והקשח בטן",
+      "שמור מרפקים קדימה וזרועות עליונות כמעט קבועות",
+      "יישר מרפקים כדי להאריך ידיים מעל הראש",
+      "חזור בשליטה וחזור"
+    ],
+    "instructions": [
+      "Set a cable or dumbbell overhead position and brace the core",
+      "Keep elbows pointing forward and upper arms mostly still",
+      "Extend elbows to straighten the arms overhead",
+      "Return with control and repeat"
+    ]
+  },
+  "7DM48GgbgQpfOsehSBUB": {
+    "targetMuscles": [
+      "triceps_brachii"
+    ],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476636,
+      "nanoseconds": 302000000
+    },
+    "primaryMuscle": "",
+    "nameHe": "פשיטת מרפקים בשכיבה עם משקולות יד",
+    "complexity": "simple",
+    "tipsHe": [
+      "שמור מרפקים כלפי מעלה",
+      "שלוט בירידה",
+      "עצור לפני כאב במרפקים או בכתפיים"
+    ],
+    "secondaryMuscles": [],
+    "availableBands": [],
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Lying_Dumbbell_Triceps_Extension.jpeg",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1767343727,
+      "nanoseconds": 213000000
+    },
+    "assistanceTypes": [],
+    "reportType": "weight_reps",
+    "tips": [
+      "Keep elbows pointing up",
+      "Control the negative phase",
+      "Stop short of pain in elbows or shoulders"
+    ],
+    "id": "71",
+    "equipment": "dumbbell",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476636,
+      "nanoseconds": 302000000
+    },
+    "name": "Lying Dumbbell Triceps Extension",
+    "instructionsHe": [
+      "שכב על ספסל והחזק מוט או משקולות מעל החזה",
+      "כופף מרפקים והורד את המשקל לכיוון המצח בשליטה",
+      "שמור זרועות עליונות כמעט קבועות ויישר מרפקים כדי להרים",
+      "חזור לפי מספר החזרות המתוכנן"
+    ],
+    "category": "triceps",
+    "instructions": [
+      "Lie on a bench holding a bar or dumbbells above the chest",
+      "Bend elbows to lower the weight toward the forehead area with control",
+      "Keep upper arms mostly still and extend elbows to raise",
+      "Repeat for the planned reps"
+    ],
+    "difficulty": "beginner"
+  },
+  "Fbw48H0eQfwvkmuye8o8": {
+    "tips": [
+      "Keep wrists stacked over forearms for comfort",
+      "Do not flare elbows wide to protect shoulders",
+      "Control the descent and pause briefly on the chest if needed"
+    ],
+    "id": "77",
+    "equipment": "dumbbell",
+    "instructions": [
+      "Lie on the bench with eyes under the bar and feet planted",
+      "Grip the bar around shoulder width and keep elbows closer to the body",
+      "Lower the bar to the lower chest with control",
+      "Press the bar up until arms are straight and repeat"
+    ],
+    "instructionsHe": [
+      "שכב על הספסל כשהעיניים מתחת למוט וכפות הרגליים יציבות על הרצפה",
+      "אחוז במוט בערך ברוחב כתפיים ושמור את המרפקים קרובים לגוף",
+      "הורד את המוט אל החזה התחתון בשליטה",
+      "דחף את המוט למעלה עד שהידיים ישרות וחזור"
+    ],
+    "category": "triceps",
+    "difficulty": "beginner",
+    "secondaryMuscleCredits": [
+      "triceps"
+    ],
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476556,
+      "nanoseconds": 171000000
+    },
+    "name": "Close Grip Dumbbell Bench Press",
+    "complexity": "compound",
+    "nameHe": "לחיצת חזה צרה במשקולות יד",
+    "primaryMuscle": "",
+    "targetMuscles": [
+      "triceps_brachii"
+    ],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476556,
+      "nanoseconds": 171000000
+    },
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1767343727,
+      "nanoseconds": 213000000
+    },
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Close_Grip_Dumbbell_Bench_Press_1.jpeg",
+    "reportType": "weight_reps",
+    "assistanceTypes": [],
+    "tipsHe": [
+      "שמור פרקי יד מעל האמות לנוחות וליציבות",
+      "אל תפתח מרפקים החוצה כדי לשמור על הכתפיים",
+      "שלוט בירידה ואפשר לעצור רגע על החזה אם צריך"
+    ],
+    "availableBands": [],
+    "secondaryMuscles": []
+  },
+  "NvtGnQEnGkpiaJtAum4h": {
+    "targetMuscles": [],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1775556412,
+      "nanoseconds": 331000000
+    },
+    "nameHe": "פשיטת מרפק מעל הראש עם משקולת יד",
+    "primaryMuscle": "",
+    "complexity": "simple",
+    "secondaryMuscles": [],
+    "availableBands": [],
+    "tipsHe": [],
+    "assistanceTypes": [],
+    "reportType": "weight_reps",
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Dumbbell%20Overhead%20Tricep%20Extension.png",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1775556412,
+      "nanoseconds": 331000000
+    },
+    "equipment": "dumbbell",
+    "tips": [],
+    "name": "Dumbbell Overhead Tricep Extension",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1775556412,
+      "nanoseconds": 331000000
+    },
+    "secondaryMuscleCredits": [],
+    "difficulty": "beginner",
+    "instructions": [],
+    "instructionsHe": [],
+    "category": "triceps"
+  },
+  "XFx4AtVbfQZs92RDE0Cf": {
+    "instructions": [],
+    "instructionsHe": [],
+    "category": "triceps",
+    "difficulty": "beginner",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476449,
+      "nanoseconds": 304000000
+    },
+    "name": "Cable_Triceps_Extension",
+    "tips": [],
+    "equipment": "cable_machine",
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Cable_Triceps_Extension.png",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1768219429,
+      "nanoseconds": 813000000
+    },
+    "assistanceTypes": [],
+    "reportType": "weight_reps",
+    "tipsHe": [],
+    "secondaryMuscles": [],
+    "availableBands": [],
+    "complexity": "simple",
+    "targetMuscles": [],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476449,
+      "nanoseconds": 304000000
+    },
+    "primaryMuscle": "",
+    "nameHe": "ידיים  אחורית פולי עליון "
+  },
+  "daOoSs8suoDDm9q9s6ih": {
+    "name": "Lying Barbell Triceps Extension",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476628,
+      "nanoseconds": 582000000
+    },
+    "difficulty": "beginner",
+    "instructions": [
+      "Lie on a bench holding a bar or dumbbells above the chest",
+      "Bend elbows to lower the weight toward the forehead area with control",
+      "Keep upper arms mostly still and extend elbows to raise",
+      "Repeat for the planned reps"
+    ],
+    "instructionsHe": [
+      "שכב על ספסל והחזק מוט או משקולות מעל החזה",
+      "כופף מרפקים והורד את המשקל לכיוון המצח בשליטה",
+      "שמור זרועות עליונות כמעט קבועות ויישר מרפקים כדי להרים",
+      "חזור לפי מספר החזרות המתוכנן"
+    ],
+    "category": "triceps",
+    "id": "70",
+    "equipment": "machine",
+    "tips": [
+      "Keep elbows pointing up",
+      "Control the negative phase",
+      "Stop short of pain in elbows or shoulders"
+    ],
+    "secondaryMuscles": [],
+    "availableBands": [],
+    "tipsHe": [
+      "שמור מרפקים כלפי מעלה",
+      "שלוט בירידה",
+      "עצור לפני כאב במרפקים או בכתפיים"
+    ],
+    "assistanceTypes": [],
+    "reportType": "weight_reps",
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Lying_Barbell_Triceps_Extension.jpeg",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1767343727,
+      "nanoseconds": 213000000
+    },
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476628,
+      "nanoseconds": 582000000
+    },
+    "targetMuscles": [
+      "triceps_brachii"
+    ],
+    "primaryMuscle": "",
+    "nameHe": "פשיטת מרפקים בשכיבה עם מוט",
+    "complexity": "simple"
+  },
+  "iN6CNbUITqLbPXYrVcA5": {
+    "difficulty": "intermediate",
+    "instructions": [],
+    "category": "triceps",
+    "instructionsHe": [],
+    "name": "Cable_Triceps_Pushdown",
+    "secondaryMuscleCredits": [
+      "biceps_brachii"
+    ],
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476583,
+      "nanoseconds": 720000000
+    },
+    "equipment": "machine",
+    "tips": [],
+    "reportType": "weight_reps",
+    "assistanceTypes": [],
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1770203448,
+      "nanoseconds": 879000000
+    },
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Cable_Triceps_Pushdown.png",
+    "availableBands": [],
+    "secondaryMuscles": [],
+    "tipsHe": [],
+    "complexity": "simple",
+    "primaryMuscle": "",
+    "nameHe": "משיכת פולי עליון יד אחרוית ",
+    "targetMuscles": [],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476583,
+      "nanoseconds": 720000000
+    }
+  },
+  "ls2RllIGdrXboD5nrmf2": {
+    "targetMuscles": [
+      "triceps_brachii"
+    ],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1778415465,
+      "nanoseconds": 678000000
+    },
+    "nameHe": "מקבילים צר (Dips)",
+    "primaryMuscle": "",
+    "complexity": "compound",
+    "tipsHe": [
+      "שמור כתפיים רחוקות מהאוזניים",
+      "אל תפתח מרפקים החוצה",
+      "עבוד בקצב נשלט ויישור מלא בלי כאב"
+    ],
+    "secondaryMuscles": [],
+    "availableBands": [],
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Triceps_Dips.jpeg",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1767343727,
+      "nanoseconds": 213000000
+    },
+    "assistanceTypes": [
+      "graviton"
+    ],
+    "reportType": "weight_reps",
+    "tips": [
+      "Keep shoulders away from ears",
+      "Avoid flaring elbows out",
+      "Use controlled tempo and full extension without pain"
+    ],
+    "equipment": "bodyweight",
+    "id": "79",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1778415465,
+      "nanoseconds": 678000000
+    },
+    "secondaryMuscleCredits": [],
+    "name": "Triceps Dips",
+    "instructions": [
+      "Support yourself on dip bars with a more upright torso",
+      "Lower by bending elbows while keeping them close to the body",
+      "Stop at a comfortable depth",
+      "Extend elbows to return to the top and repeat"
+    ],
+    "instructionsHe": [
+      "תמוך בעצמך על מקבילים עם גוף יותר זקוף",
+      "רד בכיפוף מרפקים כשהם קרובים לגוף",
+      "עצור בעומק נוח",
+      "יישר מרפקים כדי לעלות וחזור"
+    ],
+    "category": "triceps",
+    "difficulty": "beginner"
+  },
+  "pIBbU2E6TQ9uQc8jiQqR": {
+    "instructions": [
+      "Hinge forward with a flat back and upper arm by your side",
+      "Start with elbow bent and dumbbell near the ribs",
+      "Extend the elbow to straighten the arm behind you",
+      "Return with control and repeat"
+    ],
+    "instructionsHe": [
+      "הטה גוף קדימה עם גב ישר וזרוע עליונה צמודה לגוף",
+      "התחל עם מרפק כפוף ומשקולת ליד הצלעות",
+      "יישר מרפק כדי להאריך את היד לאחור",
+      "החזר בשליטה וחזור"
+    ],
+    "category": "triceps",
+    "difficulty": "beginner",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476608,
+      "nanoseconds": 107000000
+    },
+    "name": "Dumbbell Triceps Kickback",
+    "tips": [
+      "Keep upper arm fixed",
+      "Use lighter weight for strict form",
+      "Pause briefly at full extension"
+    ],
+    "equipment": "dumbbell",
+    "id": "72",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1767343727,
+      "nanoseconds": 213000000
+    },
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Dumbbell%20Triceps%20Kickback.png",
+    "reportType": "weight_reps",
+    "assistanceTypes": [],
+    "tipsHe": [
+      "שמור זרוע עליונה קבועה",
+      "בחר משקל קל יחסית כדי לשמור על טכניקה",
+      "עצור רגע בסוף היישור"
+    ],
+    "availableBands": [],
+    "secondaryMuscles": [],
+    "complexity": "simple",
+    "nameHe": "פשיטת מרפק בקיק בק",
+    "primaryMuscle": "",
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476608,
+      "nanoseconds": 107000000
+    },
+    "targetMuscles": [
+      "triceps_brachii"
+    ]
+  },
+  "pPEBBNhgMbC5yvgupahV": {
+    "targetMuscles": [],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476593,
+      "nanoseconds": 332000000
+    },
+    "nameHe": "פשיטת מרפק  מעל הראש ביד אחת ",
+    "primaryMuscle": "",
+    "complexity": "simple",
+    "tipsHe": [],
+    "secondaryMuscles": [],
+    "availableBands": [],
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Single_Arm_Overhead_Cable_Triceps_Extension.png",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1768307543,
+      "nanoseconds": 200000000
+    },
+    "assistanceTypes": [],
+    "reportType": "weight_reps",
+    "tips": [],
+    "equipment": "cable_machine",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476593,
+      "nanoseconds": 332000000
+    },
+    "name": "Single_Arm_Overhead_Cable_Triceps_Extension",
+    "category": "triceps",
+    "instructionsHe": [],
+    "instructions": [],
+    "difficulty": "beginner"
+  },
+  "y9KWVXtSxcED7JQMpSRP": {
+    "name": "Close Grip Smith Machine Bench Press",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476564,
+      "nanoseconds": 675000000
+    },
+    "secondaryMuscleCredits": [
+      "triceps"
+    ],
+    "difficulty": "beginner",
+    "instructionsHe": [
+      "שכב על הספסל כשהעיניים מתחת למוט וכפות הרגליים יציבות על הרצפה",
+      "אחוז במוט בערך ברוחב כתפיים ושמור את המרפקים קרובים לגוף",
+      "הורד את המוט אל החזה התחתון בשליטה",
+      "דחף את המוט למעלה עד שהידיים ישרות וחזור"
+    ],
+    "category": "triceps",
+    "instructions": [
+      "Lie on the bench with eyes under the bar and feet planted",
+      "Grip the bar around shoulder width and keep elbows closer to the body",
+      "Lower the bar to the lower chest with control",
+      "Press the bar up until arms are straight and repeat"
+    ],
+    "equipment": "smit_machine",
+    "id": "78",
+    "tips": [
+      "Keep wrists stacked over forearms for comfort",
+      "Do not flare elbows wide to protect shoulders",
+      "Control the descent and pause briefly on the chest if needed"
+    ],
+    "secondaryMuscles": [],
+    "availableBands": [],
+    "tipsHe": [
+      "שמור פרקי יד מעל האמות לנוחות וליציבות",
+      "אל תפתח מרפקים החוצה כדי לשמור על הכתפיים",
+      "שלוט בירידה ואפשר לעצור רגע על החזה אם צריך"
+    ],
+    "assistanceTypes": [],
+    "reportType": "weight_reps",
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Close%20Grip%20Smith%20Machine%20Bench%20Press.png",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1767343727,
+      "nanoseconds": 213000000
+    },
+    "targetMuscles": [
+      "triceps_brachii"
+    ],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476564,
+      "nanoseconds": 675000000
+    },
+    "nameHe": "לחיצת חזה צרה סמיט",
+    "primaryMuscle": "",
+    "complexity": "compound"
+  },
+  "MaFve2b6vmGU6Ht1s590": {
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476464,
+      "nanoseconds": 700000000
+    },
+    "name": "Machine Biceps Curl",
+    "instructions": [],
+    "instructionsHe": [],
+    "category": "biceps_brachii",
+    "difficulty": "beginner",
+    "tips": [],
+    "equipment": "machine",
+    "tipsHe": [],
+    "secondaryMuscles": [],
+    "availableBands": [],
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Machine%20Biceps%20Curl.png",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1769273638,
+      "nanoseconds": 31000000
+    },
+    "assistanceTypes": [],
+    "reportType": "weight_reps",
+    "targetMuscles": [],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476464,
+      "nanoseconds": 700000000
+    },
+    "primaryMuscle": "",
+    "nameHe": "כפיפת מרפקים ",
+    "complexity": "simple"
+  },
+  "XnmEnDFS42PVHmcRoUip": {
+    "primaryMuscle": "",
+    "nameHe": "כפיפת מרפקים בישיבה בשיפוע (Incline Curl)",
+    "targetMuscles": [
+      "biceps_brachii",
+      "brachialis",
+      "brachioradialis"
+    ],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476474,
+      "nanoseconds": 332000000
+    },
+    "complexity": "simple",
+    "availableBands": [],
+    "secondaryMuscles": [],
+    "tipsHe": [
+      "אל תנדנד את הגוף",
+      "שמור מרפקים צמודים",
+      "שלוט בירידה כדי לשמור מתח על הביספס"
+    ],
+    "reportType": "weight_reps",
+    "assistanceTypes": [],
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1767343727,
+      "nanoseconds": 213000000
+    },
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Incline_Curl.jpeg",
+    "id": "83",
+    "equipment": "dumbbell",
+    "tips": [
+      "Avoid swinging the torso",
+      "Keep elbows pinned",
+      "Control the lowering phase"
+    ],
+    "name": "Incline Curl",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476474,
+      "nanoseconds": 332000000
+    },
+    "difficulty": "beginner",
+    "instructions": [
+      "Stand tall holding dumbbells or a bar with elbows by your sides",
+      "Curl the weight up toward the shoulders without moving elbows forward",
+      "Squeeze at the top while keeping wrists neutral",
+      "Lower slowly to the start and repeat"
+    ],
+    "instructionsHe": [
+      "עמוד זקוף עם משקולות או מוט כשהמרפקים לצד הגוף",
+      "כופף את המשקל לכיוון הכתפיים בלי לדחוף מרפקים קדימה",
+      "לחץ למעלה ושמור פרקי יד ניטרליים",
+      "הורד לאט להתחלה וחזור"
+    ],
+    "category": "biceps_brachii"
+  },
+  "gbA8iuaTKW8ejWePVPPA": {
+    "complexity": "simple",
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476499,
+      "nanoseconds": 404000000
+    },
+    "targetMuscles": [
+      "biceps_brachii",
+      "brachialis",
+      "brachioradialis"
+    ],
+    "nameHe": "כפיפת מרפקים בכיסא כומר (Preacher Curl)",
+    "primaryMuscle": "",
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Preacher%20Curl.png",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1767343727,
+      "nanoseconds": 213000000
+    },
+    "assistanceTypes": [],
+    "reportType": "weight_reps",
+    "tipsHe": [
+      "אל תנדנד את הגוף",
+      "שמור מרפקים צמודים",
+      "שלוט בירידה כדי לשמור מתח על הביספס"
+    ],
+    "secondaryMuscles": [],
+    "availableBands": [],
+    "tips": [
+      "Avoid swinging the torso",
+      "Keep elbows pinned",
+      "Control the lowering phase"
+    ],
+    "id": "84",
+    "equipment": "dumbbell",
+    "instructions": [
+      "Stand tall holding dumbbells or a bar with elbows by your sides",
+      "Curl the weight up toward the shoulders without moving elbows forward",
+      "Squeeze at the top while keeping wrists neutral",
+      "Lower slowly to the start and repeat"
+    ],
+    "instructionsHe": [
+      "עמוד זקוף עם משקולות או מוט כשהמרפקים לצד הגוף",
+      "כופף את המשקל לכיוון הכתפיים בלי לדחוף מרפקים קדימה",
+      "לחץ למעלה ושמור פרקי יד ניטרליים",
+      "הורד לאט להתחלה וחזור"
+    ],
+    "category": "biceps_brachii",
+    "difficulty": "beginner",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476499,
+      "nanoseconds": 404000000
+    },
+    "name": "Preacher Curl"
+  },
+  "gxW8cKebZWGeMWkaF2OC": {
+    "assistanceTypes": [],
+    "reportType": "weight_reps",
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Cable%20Biceps%20Curl.png",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1767343727,
+      "nanoseconds": 213000000
+    },
+    "secondaryMuscles": [],
+    "availableBands": [],
+    "tipsHe": [
+      "אל תנדנד את הגוף",
+      "שמור מרפקים צמודים",
+      "שלוט בירידה כדי לשמור מתח על הביספס"
+    ],
+    "complexity": "simple",
+    "targetMuscles": [
+      "biceps_brachii",
+      "brachialis",
+      "brachioradialis"
+    ],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476521,
+      "nanoseconds": 64000000
+    },
+    "nameHe": "כפיפת מרפקים בפולי תחתון",
+    "primaryMuscle": "",
+    "difficulty": "beginner",
+    "instructions": [
+      "Stand tall holding dumbbells or a bar with elbows by your sides",
+      "Curl the weight up toward the shoulders without moving elbows forward",
+      "Squeeze at the top while keeping wrists neutral",
+      "Lower slowly to the start and repeat"
+    ],
+    "category": "biceps_brachii",
+    "instructionsHe": [
+      "עמוד זקוף עם משקולות או מוט כשהמרפקים לצד הגוף",
+      "כופף את המשקל לכיוון הכתפיים בלי לדחוף מרפקים קדימה",
+      "לחץ למעלה ושמור פרקי יד ניטרליים",
+      "הורד לאט להתחלה וחזור"
+    ],
+    "name": "Cable Biceps Curl",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476521,
+      "nanoseconds": 64000000
+    },
+    "equipment": "cable_machine",
+    "id": "82",
+    "tips": [
+      "Avoid swinging the torso",
+      "Keep elbows pinned",
+      "Control the lowering phase"
+    ]
+  },
+  "p4B9Utw3H50XD1khsVHP": {
+    "reportType": "weight_reps",
+    "assistanceTypes": [],
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1768219201,
+      "nanoseconds": 459000000
+    },
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Cable_Biceps_Curl.png",
+    "availableBands": [],
+    "secondaryMuscles": [],
+    "tipsHe": [],
+    "complexity": "simple",
+    "primaryMuscle": "",
+    "nameHe": "כפיפת מרפקים בכבלים",
+    "targetMuscles": [],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476484,
+      "nanoseconds": 831000000
+    },
+    "difficulty": "intermediate",
+    "instructions": [],
+    "instructionsHe": [],
+    "category": "biceps_brachii",
+    "name": "Cable_Biceps_Curl",
+    "secondaryMuscleCredits": [
+      "triceps"
+    ],
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476484,
+      "nanoseconds": 831000000
+    },
+    "equipment": "cable_machine",
+    "tips": []
+  },
+  "pzjgjrHBfEq0QUEuDOSc": {
+    "name": "Standing Barbell Curl",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476508,
+      "nanoseconds": 254000000
+    },
+    "difficulty": "beginner",
+    "instructions": [
+      "Stand tall holding dumbbells or a bar with elbows by your sides",
+      "Curl the weight up toward the shoulders without moving elbows forward",
+      "Squeeze at the top while keeping wrists neutral",
+      "Lower slowly to the start and repeat"
+    ],
+    "instructionsHe": [
+      "עמוד זקוף עם משקולות או מוט כשהמרפקים לצד הגוף",
+      "כופף את המשקל לכיוון הכתפיים בלי לדחוף מרפקים קדימה",
+      "לחץ למעלה ושמור פרקי יד ניטרליים",
+      "הורד לאט להתחלה וחזור"
+    ],
+    "category": "biceps_brachii",
+    "id": "80",
+    "equipment": "dumbbell",
+    "tips": [
+      "Avoid swinging the torso",
+      "Keep elbows pinned",
+      "Control the lowering phase"
+    ],
+    "availableBands": [],
+    "secondaryMuscles": [],
+    "tipsHe": [
+      "אל תנדנד את הגוף",
+      "שמור מרפקים צמודים",
+      "שלוט בירידה כדי לשמור מתח על הביספס"
+    ],
+    "reportType": "weight_reps",
+    "assistanceTypes": [],
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1767343727,
+      "nanoseconds": 213000000
+    },
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Standing%20Barbell%20Biceps%20Curl.png",
+    "primaryMuscle": "",
+    "nameHe": "כפיפת מרפקים בעמידה עם מוט",
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476508,
+      "nanoseconds": 254000000
+    },
+    "targetMuscles": [
+      "biceps_brachii",
+      "brachialis",
+      "brachioradialis"
+    ],
+    "complexity": "simple"
+  },
+  "w1n27HqyHvQynfAZ9Jtb": {
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1767343727,
+      "nanoseconds": 213000000
+    },
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Concentration%20Curl.png",
+    "reportType": "weight_reps",
+    "assistanceTypes": [],
+    "tipsHe": [
+      "אל תנדנד את הגוף",
+      "שמור מרפקים צמודים",
+      "שלוט בירידה כדי לשמור מתח על הביספס"
+    ],
+    "availableBands": [],
+    "secondaryMuscles": [],
+    "complexity": "simple",
+    "nameHe": "כפיפת מרפקים בתמיכת ירך (Concentration Curl)",
+    "primaryMuscle": "",
+    "targetMuscles": [
+      "biceps_brachii",
+      "brachialis",
+      "brachioradialis"
+    ],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476533,
+      "nanoseconds": 974000000
+    },
+    "instructionsHe": [
+      "עמוד זקוף עם משקולות או מוט כשהמרפקים לצד הגוף",
+      "כופף את המשקל לכיוון הכתפיים בלי לדחוף מרפקים קדימה",
+      "לחץ למעלה ושמור פרקי יד ניטרליים",
+      "הורד לאט להתחלה וחזור"
+    ],
+    "category": "biceps_brachii",
+    "instructions": [
+      "Stand tall holding dumbbells or a bar with elbows by your sides",
+      "Curl the weight up toward the shoulders without moving elbows forward",
+      "Squeeze at the top while keeping wrists neutral",
+      "Lower slowly to the start and repeat"
+    ],
+    "difficulty": "beginner",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476533,
+      "nanoseconds": 974000000
+    },
+    "name": "Concentration Curl",
+    "tips": [
+      "Avoid swinging the torso",
+      "Keep elbows pinned",
+      "Control the lowering phase"
+    ],
+    "equipment": "dumbbell",
+    "id": "85"
+  },
+  "R4VVUQ3M1xZg4XydOAqq": {
+    "difficulty": "beginner",
+    "instructions": [],
+    "instructionsHe": [],
+    "category": "biceps_brachii",
+    "name": "Dumbbell Front Raise Across Body",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476412,
+      "nanoseconds": 950000000
+    },
+    "equipment": "dumbbell",
+    "tips": [],
+    "reportType": "weight_reps",
+    "assistanceTypes": [],
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1768135808,
+      "nanoseconds": 782000000
+    },
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Dumbbell%20Front%20Raise%20Across%20Body.png",
+    "availableBands": [],
+    "secondaryMuscles": [],
+    "tipsHe": [],
+    "complexity": "simple",
+    "primaryMuscle": "",
+    "nameHe": "הרמה קדמית באלכסון עם משקולת יד",
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773476412,
+      "nanoseconds": 950000000
+    },
+    "targetMuscles": []
+  },
+  "clhm0C23fRp5JdBvVNTz": {
+    "difficulty": "beginner",
+    "category": "cardio",
+    "instructions": [],
+    "instructionsHe": [],
+    "name": "Tabata",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773487546,
+      "nanoseconds": 694000000
+    },
+    "equipment": "bodyweight",
+    "tips": [],
+    "assistanceTypes": [],
+    "reportType": "time_zone",
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/tabata.png",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773485769,
+      "nanoseconds": 215000000
+    },
+    "secondaryMuscles": [],
+    "availableBands": [],
+    "tipsHe": [],
+    "complexity": "compound",
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773487546,
+      "nanoseconds": 694000000
+    },
+    "targetMuscles": [],
+    "primaryMuscle": "",
+    "nameHe": "טאבטה"
+  },
+  "g2eOtPeOAAPdg8G8AKun": {
+    "difficulty": "beginner",
+    "category": "cardio",
+    "instructions": [],
+    "instructionsHe": [],
+    "name": "sit",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773487770,
+      "nanoseconds": 20000000
+    },
+    "equipment": "bodyweight",
+    "tips": [],
+    "assistanceTypes": [],
+    "reportType": "time_zone",
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/tabata.png",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773487770,
+      "nanoseconds": 20000000
+    },
+    "secondaryMuscles": [],
+    "availableBands": [],
+    "tipsHe": [],
+    "complexity": "compound",
+    "targetMuscles": [],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773487770,
+      "nanoseconds": 20000000
+    },
+    "primaryMuscle": "",
+    "nameHe": "סייט"
+  },
+  "tV68IfOMs7II2jD7l124": {
+    "name": "hiit",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773487730,
+      "nanoseconds": 767000000
+    },
+    "difficulty": "beginner",
+    "category": "cardio",
+    "instructions": [],
+    "instructionsHe": [],
+    "equipment": "bodyweight",
+    "tips": [],
+    "secondaryMuscles": [],
+    "availableBands": [],
+    "tipsHe": [],
+    "assistanceTypes": [],
+    "reportType": "time_zone",
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/tabata.png",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773487730,
+      "nanoseconds": 767000000
+    },
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1773487730,
+      "nanoseconds": 767000000
+    },
+    "targetMuscles": [],
+    "primaryMuscle": "",
+    "nameHe": "היט ",
+    "complexity": "compound"
+  },
+  "JClCPcKWAxKiuy7KIgRB": {
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1768732693,
+      "nanoseconds": 326000000
+    },
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Smith_Machine_Hip_Thrust.png",
+    "reportType": "weight_reps",
+    "assistanceTypes": [],
+    "tipsHe": [],
+    "availableBands": [],
+    "secondaryMuscles": [],
+    "complexity": "simple",
+    "nameHe": "היפטראסט סמיט ",
+    "primaryMuscle": "",
+    "targetMuscles": [],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1774431380,
+      "nanoseconds": 119000000
+    },
+    "instructions": [],
+    "instructionsHe": [],
+    "category": "gluteus_maximus",
+    "difficulty": "beginner",
+    "secondaryMuscleCredits": [
+      "gluteus_maximus"
+    ],
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1774431380,
+      "nanoseconds": 119000000
+    },
+    "name": "Smith_Machine_Hip_Thrust",
+    "tips": [],
+    "equipment": "smit_machine"
+  },
+  "e82wJzvrGBylmqCiSmR7": {
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1767343727,
+      "nanoseconds": 213000000
+    },
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Hip_Adductor_Machine_1.jpeg",
+    "reportType": "weight_reps",
+    "assistanceTypes": [],
+    "tipsHe": [
+      "אל תקפוץ בסוף הטווח",
+      "שמור גוף יציב בלי תזוזה",
+      "עצור רגע כשהרגליים סגורות"
+    ],
+    "availableBands": [],
+    "secondaryMuscles": [],
+    "complexity": "simple",
+    "nameHe": "קרוב ירך במכונה",
+    "primaryMuscle": "adductor",
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1774330122,
+      "nanoseconds": 629000000
+    },
+    "targetMuscles": [
+      "adductors"
+    ],
+    "category": "legs",
+    "instructions": [
+      "Sit in the machine with back supported and feet on the pads",
+      "Start with legs open in a comfortable range",
+      "Bring legs together by squeezing inner thighs",
+      "Return slowly and repeat"
+    ],
+    "instructionsHe": [
+      "שב במכונה עם גב נתמך וכפות רגליים על הפדים",
+      "התחל עם רגליים פתוחות בטווח נוח",
+      "סגור רגליים על ידי כיווץ מקרבי ירך",
+      "החזר לאט וחזור"
+    ],
+    "difficulty": "beginner",
+    "secondaryMuscleCredits": [],
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1774330122,
+      "nanoseconds": 629000000
+    },
+    "name": "Hip Adductor Machine",
+    "tips": [
+      "Do not bounce at the end range",
+      "Keep torso still",
+      "Pause briefly when legs are together"
+    ],
+    "id": "64",
+    "equipment": "machine"
+  },
+  "FF7lRd2RLiNrKbhSLC2l": {
+    "name": "Single-Leg Hip Abduction Machine",
+    "secondaryMuscleCredits": [],
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1782636845,
+      "nanoseconds": 159000000
+    },
+    "difficulty": "intermediate",
+    "category": "legs",
+    "instructions": [],
+    "instructionsHe": [
+      "עמוד במכונה כשהירך החיצונית של הרגל הפועלת צמודה לכרית הריפוד.",
+      "אחוז בידיות לייצוב ושמור על פלג גוף עליון זקוף.",
+      "דחף את הרגל החוצה ומעלה כנגד הכרית עד שתחוש כיווץ בצד הישבן",
+      "עצור רגע בנקודה העליונה ואז החזר בשליטה למצב ההתחלה"
+    ],
+    "equipment": "machine",
+    "tips": [],
+    "availableBands": [],
+    "secondaryMuscles": [],
+    "tipsHe": [],
+    "reportType": "weight_reps",
+    "assistanceTypes": [],
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1782636845,
+      "nanoseconds": 159000000
+    },
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Single-Leg%20Hip%20Abduction%20Machine.png",
+    "nameHe": "הרחקת ירך במכונה רגל אח",
+    "primaryMuscle": "adductor",
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1782636845,
+      "nanoseconds": 159000000
+    },
+    "targetMuscles": [],
+    "complexity": "simple"
+  },
+  "V2kRvjEM7Dbyi1KwPp0K": {
+    "complexity": "compound",
+    "nameHe": "הרמת רגליים בתלייה",
+    "primaryMuscle": "(iliopsoas",
+    "targetMuscles": [],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1771138540,
+      "nanoseconds": 465000000
+    },
+    "reportType": "reps_only",
+    "assistanceTypes": [],
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1768147404,
+      "nanoseconds": 406000000
+    },
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Hanging%20Leg%20Raise.png",
+    "availableBands": [],
+    "secondaryMuscles": [],
+    "tipsHe": [],
+    "equipment": "bodyweight",
+    "tips": [],
+    "difficulty": "beginner",
+    "instructions": [],
+    "instructionsHe": [],
+    "category": "core",
+    "name": "Hanging Leg Raise",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1771138540,
+      "nanoseconds": 465000000
+    }
+  }
+}

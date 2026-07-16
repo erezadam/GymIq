@@ -1,5 +1,26 @@
 # Changelog
 
+## [Unreleased] - 2026-07-16 (2)
+
+### Fixed
+- **המלצת משקל של מאמן ה-AI סתרה את דגל "מומלץ להגדיל משקל" (fix candidate — ממתין לאימות מכשיר בפרודקשן אחרי deploy):** בכרטיס תרגיל באימון פעיל הוצג "💡 מומלץ להגדיל משקל" (דגל סטגנציה מקומי: 3 אימונים אחרונים זהים) ומיד מתחתיו "המלצה: 9kg" — פחות מהשיא (10kg×10) ומהאימון האחרון (10kg×8). שורש: שני אותות שלא נפגשו באף שכבה — הדגל חושב בלקוח ונשמר ב-`exerciseRecommendations/{userId}`, והמספר הגיע מה-LLM שהפרומפט שלו התיר במפורש רצפה של `X*0.9` (ואף הכיל שתי שורות סותרות: ±5% מול 0.9–1.05). תוקן בשרת (הנקודה היחידה שבה אפשר לאסוף את שלושת האותות לפני כתיבת ה-bundle): `generateWorkout` קורא את דגלי הסטגנציה ב-Admin SDK, מזריק `stagnant:true` לפרומפט, ומחיל רצפה במודול טהור חדש `stagnationFloor.ts` — כשהדגל דלוק וה-LLM המליץ ≤ המשקל האחרון, ההמלצה נדרסת ל-`max(roundToHalf(last*1.05), last+0.5)` (גדול ממש). **בלי דגל — אין רצפה** (אין מסלול deload היום — אומת שאין בכלל — אבל clamp גורף היה חוסם הוספתו בשקט). כל דריסה/דגל-חסר נרשמים ב-`functions.logger.warn` (No silent AI filtering). הפרומפט יושב לטווח יחיד 0.95–1.05. 6 בדיקות התנהגותיות (`tests/stagnationFloor.spec.ts`), אומתו RED לפני המימוש. **מגבלה ידועה:** המלצות שכבר שמורות ב-localStorage מאימונים קיימים יישארו שגויות עד יצירת אימון AI חדש.
+
+## [Unreleased] - 2026-07-16
+
+### Fixed
+- **מאמן ה-AI התעלם מישבן ביום גוף תחתון (תקרית חוזרת — ראה 14/03/2026):** האבחון מצא שהשריר "ישבן" כן הופיע בפרומפט (`gluteus_maximus` מסומן `bodyRegion=lower`), אבל **אפס תרגילי ישבן הגיעו לבריכת ה-GPT**: 7 תרגילי ישבן תויגו `primaryMuscle=longissimus` (ממופה ל-back!) ואחד ריק, כך שפילטר השרת (`SUB_MUSCLE_TO_PARENT`) זרק את כולם. **תיקון נתונים (production Firestore, 16/07/2026, עם גיבוי JSON מלא ב-`scripts/backups/`):** 32 מסמכי exercises תוקנו — 5 תרגילי Hip Thrust/Kickback/Hip Extension → `glutes`; תרגילי הרחקת ירך → `abductors` (נכון אנטומית, גם כשה-category אומר אחרת); 11 triceps + 7 biceps + 3 cardio + front_delt ריקים הושלמו; `adductor` (יחיד) → `adductors`; תקלדת `"(iliopsoas"` → `abs`. הוחזקו בצד: Back Extension Roman Chair (`longissimus` נכון אנטומית) ו-AdductorMagnus (רשומה סותרת את עצמה — ממתינה להחלטת משתמש). עיקרון שנקבע: **primaryMuscle נשאר נכון אנטומית ולא מותאם ל-category שגוי** — אי-התאמות מסומנות בוולידציה.
+
+### Added
+- **חיזוק עמידות מאמן ה-AI לנתונים שבורים:** `SUB_MUSCLE_TO_PARENT` חולץ למודול טהור משותף `functions/src/ai-trainer/muscleMapping.ts` (מקור אמת אחד ל-runtime ולוולידציה); נוספו `adductor`/`abductor` ביחיד; פילטר בריכת ה-GPT נופל כעת ל-`category` כאשר `primaryMuscle` לא נפתר — **עם `functions.logger.warn` בכל הפעלה** (אסור fallback שקט שמכסה על נתונים שבורים). סקריפט ולידציה חדש `scripts/validate-exercise-muscles.ts` (הרצה ידנית/CI): exit 1 על כל תרגיל עם `primaryMuscle` לא ממופה; מדווח אי-התאמות primaryMuscle/category כאזהרה.
+
+### Regression Prevention
+- ✅ סימולציית צנרת השרת על נתונים חיים: בריכת lower כוללת 5 תרגילי ישבן + 2 הרחקות; בריכת upper נקייה מ"תרגילי גב" מזויפים (7 תרגילי הישבן יצאו ממנה) והרוויחה 19 תרגילי זרועות שנפלו קודם בגלל `primaryMuscle` ריק. `npm run build` + 239 בדיקות Vitest ירוקים; `tsc -p functions` נקי.
+
+## [Unreleased] - 2026-07-02
+
+### Changed
+- **תשתית לסקריפטי אבחון חד-פעמיים:** נוספה תיקיית `scripts/adhoc/` המוחרגת מ-git (`scripts/adhoc/*` + `!scripts/adhoc/.gitkeep`) — בית לסקריפטי debug/diagnostic חד-פעמיים שלא נועדו להישמר. סקריפט האבחון `diagnoseZehavaBadge.ts` (untracked, באג הבאדג' "אחרון") נמחק לאחר שמילא את תפקידו. נוסף `.claude/audit-goal.md` — מפרט משימת audit מלאה (4 תחומים: אבטחה, ביצועים, חוקי ברזל, כיסוי בדיקות) להפעלה ידנית עתידית דרך `/goal` (עוקף את מגבלת 4000 התווים). ללא שינוי קוד אפליקציה.
+
 ## [Unreleased] - 2026-06-25
 
 ### Added

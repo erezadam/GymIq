@@ -57,3 +57,8 @@ coverage
 *-instruction.md
 *-instruction*.md
 *-instructions*.md
+.claude/daily-summaries/
+
+# one-off diagnostic/debug scripts - never tracked
+scripts/adhoc/*
+!scripts/adhoc/.gitkeep
