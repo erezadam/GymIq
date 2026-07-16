@@ -1,0 +1,37 @@
+{
+  "qzSZ8lVWtzv2pad94HeT": {
+    "assistanceTypes": [],
+    "reportType": "weight_reps",
+    "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/AdductorMagnus.png",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1772972969,
+      "nanoseconds": 235000000
+    },
+    "secondaryMuscles": [],
+    "availableBands": [],
+    "tipsHe": [],
+    "complexity": "simple",
+    "targetMuscles": [],
+    "lastEditedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1774173698,
+      "nanoseconds": 348000000
+    },
+    "primaryMuscle": "adductor",
+    "nameHe": "הרחקת  ירך בפולי ",
+    "difficulty": "beginner",
+    "instructions": [],
+    "instructionsHe": [],
+    "category": "legs",
+    "name": "AdductorMagnus",
+    "updatedAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1774173698,
+      "nanoseconds": 348000000
+    },
+    "secondaryMuscleCredits": [],
+    "equipment": "cable_machine",
+    "tips": []
+  }
+}
