@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased] - 2026-07-16
+
+### Fixed
+- **מאמן ה-AI התעלם מישבן ביום גוף תחתון (תקרית חוזרת — ראה 14/03/2026):** האבחון מצא שהשריר "ישבן" כן הופיע בפרומפט (`gluteus_maximus` מסומן `bodyRegion=lower`), אבל **אפס תרגילי ישבן הגיעו לבריכת ה-GPT**: 7 תרגילי ישבן תויגו `primaryMuscle=longissimus` (ממופה ל-back!) ואחד ריק, כך שפילטר השרת (`SUB_MUSCLE_TO_PARENT`) זרק את כולם. **תיקון נתונים (production Firestore, 16/07/2026, עם גיבוי JSON מלא ב-`scripts/backups/`):** 32 מסמכי exercises תוקנו — 5 תרגילי Hip Thrust/Kickback/Hip Extension → `glutes`; תרגילי הרחקת ירך → `abductors` (נכון אנטומית, גם כשה-category אומר אחרת); 11 triceps + 7 biceps + 3 cardio + front_delt ריקים הושלמו; `adductor` (יחיד) → `adductors`; תקלדת `"(iliopsoas"` → `abs`. הוחזקו בצד: Back Extension Roman Chair (`longissimus` נכון אנטומית) ו-AdductorMagnus (רשומה סותרת את עצמה — ממתינה להחלטת משתמש). עיקרון שנקבע: **primaryMuscle נשאר נכון אנטומית ולא מותאם ל-category שגוי** — אי-התאמות מסומנות בוולידציה.
+
+### Added
+- **חיזוק עמידות מאמן ה-AI לנתונים שבורים:** `SUB_MUSCLE_TO_PARENT` חולץ למודול טהור משותף `functions/src/ai-trainer/muscleMapping.ts` (מקור אמת אחד ל-runtime ולוולידציה); נוספו `adductor`/`abductor` ביחיד; פילטר בריכת ה-GPT נופל כעת ל-`category` כאשר `primaryMuscle` לא נפתר — **עם `functions.logger.warn` בכל הפעלה** (אסור fallback שקט שמכסה על נתונים שבורים). סקריפט ולידציה חדש `scripts/validate-exercise-muscles.ts` (הרצה ידנית/CI): exit 1 על כל תרגיל עם `primaryMuscle` לא ממופה; מדווח אי-התאמות primaryMuscle/category כאזהרה.
+
+### Regression Prevention
+- ✅ סימולציית צנרת השרת על נתונים חיים: בריכת lower כוללת 5 תרגילי ישבן + 2 הרחקות; בריכת upper נקייה מ"תרגילי גב" מזויפים (7 תרגילי הישבן יצאו ממנה) והרוויחה 19 תרגילי זרועות שנפלו קודם בגלל `primaryMuscle` ריק. `npm run build` + 239 בדיקות Vitest ירוקים; `tsc -p functions` נקי.
+
 ## [Unreleased] - 2026-07-02
 
 ### Changed

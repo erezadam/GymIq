@@ -777,3 +777,15 @@ npm test
 | WP-IR-2 | סיים אימון → היסטוריה → המשך אותו אימון (cancelled או in_progress) | ✅ ה-WebP מופיע באימון החדש שנפתח |
 | WP-IR-3 | מאמן מדווח אימון למתאמן עם תרגיל שיש לו WebP → המתאמן צופה בהיסטוריה שלו | ✅ ה-WebP מופיע גם אצל המתאמן |
 | WP-IR-4 | התחלת אימון מתוכנית מאמן (TraineeProgramView) | ✅ ה-WebP זורם דרך ProgramExercise → SelectedExercise → ActiveWorkoutExercise |
+
+
+## מאמן AI — כיסוי שרירים בבריכת התרגילים (16/07/2026)
+
+> רקע: תקרית חוזרת של ישבן (14/03/2026 ניתוח שבועי → 16/07/2026 מאמן AI). שורש: תיוג `primaryMuscle` שבור ב-Firestore.
+
+| # | תרחיש | ציפייה |
+|---|-------|--------|
+| AIM-1 | צור אימון AI "גוף תחתון" (פיצול עליון/תחתון) | ✅ האימון כולל לפחות תרגיל ישבן אחד (Hip Thrust וכו') כשהמתאמן ביצע תרגילי ישבן (או במקור "כל התרגילים") |
+| AIM-2 | צור אימון AI "פלג עליון" | ✅ אין תרגילי ישבן/רגליים; תרגילי triceps/biceps מופיעים |
+| AIM-3 | הרץ `npx tsx --env-file=.env.local scripts/validate-exercise-muscles.ts` | ✅ exit 0; כל תרגיל נפתר לשריר קיים; אי-התאמות primaryMuscle/category מדווחות כאזהרה בלבד |
+| AIM-4 | Cloud Logging אחרי יצירת אימון AI | ✅ אין אזהרות "primaryMuscle unresolved — falling back to category"; אם יש — לתקן את הרשומה בנתונים (ה-fallback הוא רשת ביטחון, לא פתרון) |
