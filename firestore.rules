@@ -401,6 +401,15 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // ============ AI PROMPT LIBRARY ============
+    // Admin-editable prompts/models for the AI features (edited at /admin/prompts).
+    // Cloud Functions read via Admin SDK (bypasses rules); the release-note
+    // CI script reads while signed in as an admin account.
+    match /aiPrompts/{promptId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
     // ============ DIAGNOSTIC LOGS ============
     match /diagnosticLogs/{logId} {
       // Users can write logs only with their own auth uid as actor.

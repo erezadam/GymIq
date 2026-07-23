@@ -4,6 +4,8 @@
  */
 
 import * as functions from 'firebase-functions'
+import { getPromptOverride } from '../shared/promptConfig'
+import { PROMPT_IDS } from '../shared/promptOverrides'
 import type {
   GenerateWorkoutRequest,
   ClaudeFullResponse,
@@ -54,7 +56,10 @@ export async function callGPTForWorkouts(
       idToIndex.set(ex.id, idx)
     })
 
-    const systemPrompt = buildSystemPrompt()
+    // Admin prompt library override (aiPrompts/workout_generation) — falls
+    // back to the built-in prompt/model when absent or unreadable.
+    const override = await getPromptOverride(PROMPT_IDS.workoutGeneration)
+    const systemPrompt = override?.systemPrompt ?? buildSystemPrompt()
     const userPrompt = buildUserPrompt(data, stagnantExerciseIds, muscles, assignments, filteredExercises, lastAnalysisSection, idToIndex, warmupExercise, coreExercise)
 
     functions.logger.info('Calling GPT for workout generation', {
@@ -65,8 +70,8 @@ export async function callGPTForWorkouts(
     })
 
     const completion = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      max_tokens: 8192,
+      model: override?.model ?? 'gpt-4o-mini',
+      max_tokens: override?.maxTokens ?? 8192,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: systemPrompt },

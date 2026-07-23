@@ -6,6 +6,8 @@
 import * as admin from 'firebase-admin'
 import * as functions from 'firebase-functions'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
+import { getPromptOverride } from '../shared/promptConfig'
+import { applyPromptTemplate, PROMPT_IDS } from '../shared/promptOverrides'
 import type {
   GenerateProgramRequest,
   GenerateProgramResponse,
@@ -509,8 +511,13 @@ export const generateAIProgram = onCall(
         exerciseCount: exercises.length,
       })
 
-      // Build prompts
-      const systemPrompt = buildSystemPrompt(data.daysPerWeek)
+      // Build prompts — admin prompt library override (aiPrompts/program_builder).
+      // An edited system prompt may carry a {{daysPerWeek}} placeholder that is
+      // resolved here; absent/unreadable doc falls back to the built-in prompt.
+      const promptOverride = await getPromptOverride(PROMPT_IDS.programBuilder)
+      const systemPrompt = promptOverride?.systemPrompt
+        ? applyPromptTemplate(promptOverride.systemPrompt, { daysPerWeek: data.daysPerWeek })
+        : buildSystemPrompt(data.daysPerWeek)
       const userPrompt = buildUserPrompt(
         profile,
         lastAnalysis,
@@ -527,8 +534,8 @@ export const generateAIProgram = onCall(
       // Call OpenAI
       const client = await getOpenAIClient()
       const completion = await client.chat.completions.create({
-        model: 'gpt-4o',
-        max_tokens: 8192,
+        model: promptOverride?.model ?? 'gpt-4o',
+        max_tokens: promptOverride?.maxTokens ?? 8192,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: systemPrompt },

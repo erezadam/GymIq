@@ -34,6 +34,7 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
   getDocs,
   query,
   serverTimestamp,
@@ -43,6 +44,43 @@ import {
 import { db, auth } from './firebase-config'
 
 const COLLECTION_NAME = 'releaseNotes'
+const AI_PROMPTS_COLLECTION = 'aiPrompts'
+const PROMPT_DOC_ID = 'release_note_drafter'
+
+interface PromptOverride {
+  systemPrompt?: string
+  model?: string
+  maxTokens?: number
+}
+
+/**
+ * Admin prompt library override (aiPrompts/release_note_drafter), editable at
+ * /admin/prompts. Requires the admin sign-in to have happened first (the
+ * collection is admin-read-only). Fail-soft: any miss/error → built-in defaults.
+ */
+async function fetchPromptOverride(): Promise<PromptOverride | null> {
+  try {
+    const snap = await getDoc(doc(db, AI_PROMPTS_COLLECTION, PROMPT_DOC_ID))
+    if (!snap.exists()) return null
+    const data = snap.data()
+    const override: PromptOverride = {}
+    if (typeof data.systemPrompt === 'string' && data.systemPrompt.trim()) {
+      override.systemPrompt = data.systemPrompt
+    }
+    if (typeof data.model === 'string' && data.model.trim()) {
+      override.model = data.model.trim()
+    }
+    if (typeof data.maxTokens === 'number' && data.maxTokens > 0) {
+      override.maxTokens = Math.floor(data.maxTokens)
+    }
+    if (Object.keys(override).length === 0) return null
+    console.log(`🧩 Using aiPrompts/${PROMPT_DOC_ID} override (model: ${override.model ?? 'default'})`)
+    return override
+  } catch (err) {
+    console.warn('⚠️ Could not read aiPrompts override — using built-in defaults:', err)
+    return null
+  }
+}
 
 interface DraftPayload {
   titleHe: string
@@ -122,15 +160,18 @@ function extractJson(text: string): DraftPayload {
   }
 }
 
-async function generateDraft(ctx: ReturnType<typeof fetchPrContext>): Promise<DraftPayload> {
+async function generateDraft(
+  ctx: ReturnType<typeof fetchPrContext>,
+  override: PromptOverride | null
+): Promise<DraftPayload> {
   const anthropic = new Anthropic()
   const response = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 600,
+    model: override?.model ?? 'claude-haiku-4-5-20251001',
+    max_tokens: override?.maxTokens ?? 600,
     system: [
       {
         type: 'text',
-        text: SYSTEM_PROMPT,
+        text: override?.systemPrompt ?? SYSTEM_PROMPT,
         cache_control: { type: 'ephemeral' },
       },
     ],
@@ -181,16 +222,19 @@ async function main() {
   console.log(`📥 Fetching PR #${prNumber} context…`)
   const ctx = fetchPrContext(prNumber)
 
-  console.log('🤖 Asking Claude Haiku for a 3-sentence Hebrew draft…')
-  const draft = await generateDraft(ctx)
+  // Sign in before generating: the aiPrompts override read is admin-only.
+  console.log(`🔐 Signing in as ${email}…`)
+  await signInWithEmailAndPassword(auth, email, password)
+
+  const promptOverride = await fetchPromptOverride()
+
+  console.log('🤖 Asking Claude for a 3-sentence Hebrew draft…')
+  const draft = await generateDraft(ctx, promptOverride)
 
   if (!draft.titleHe.trim()) {
     console.log(`⏭️  PR #${prNumber} flagged as internal-only — no draft written.`)
     process.exit(0)
   }
-
-  console.log(`🔐 Signing in as ${email}…`)
-  await signInWithEmailAndPassword(auth, email, password)
 
   const version = readVersion()
   const existingId = await findExistingDraftId(dedupHash)
