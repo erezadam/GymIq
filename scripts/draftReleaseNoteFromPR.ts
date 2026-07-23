@@ -46,7 +46,7 @@ import { db, auth } from './firebase-config'
 // Verbatim copy of ALLOWED_MODELS[release_note_drafter] from
 // functions/src/shared/promptOverrides.ts (this script is self-contained, like
 // its SYSTEM_PROMPT copy). Kept in sync by tests/promptRegistrySync.spec.ts.
-const ALLOWED_RELEASE_NOTE_MODELS = ['claude-haiku-4-5-20251001']
+const ALLOWED_RELEASE_NOTE_MODELS = ['claude-haiku-4-5-20251001', 'claude-sonnet-4-5-20250929']
 
 const COLLECTION_NAME = 'releaseNotes'
 const AI_PROMPTS_COLLECTION = 'aiPrompts'
