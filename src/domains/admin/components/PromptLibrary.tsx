@@ -7,6 +7,8 @@ import {
   ChevronDown,
   ChevronUp,
   Braces,
+  Maximize2,
+  X,
 } from 'lucide-react'
 import { useAuthStore } from '@/domains/authentication/store'
 import {
@@ -56,6 +58,17 @@ export default function PromptLibrary() {
   const [savingId, setSavingId] = useState<AIPromptId | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [savedId, setSavedId] = useState<AIPromptId | null>(null)
+  const [fullscreenId, setFullscreenId] = useState<AIPromptId | null>(null)
+
+  // Close the fullscreen editor with Escape
+  useEffect(() => {
+    if (!fullscreenId) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFullscreenId(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [fullscreenId])
 
   useEffect(() => {
     loadAll()
@@ -286,7 +299,16 @@ export default function PromptLibrary() {
 
                 {/* System prompt */}
                 <div className="space-y-2">
-                  <label className="text-sm text-neon-gray-400">פרומפט מערכת (System Prompt)</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm text-neon-gray-400">פרומפט מערכת (System Prompt)</label>
+                    <button
+                      onClick={() => setFullscreenId(def.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-neon-gray-300 bg-neon-gray-800 hover:bg-neon-gray-700 transition-colors"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5" />
+                      <span>ערוך במסך מלא</span>
+                    </button>
+                  </div>
                   <textarea
                     value={state.systemPrompt}
                     onChange={(e) => updateField(def.id, { systemPrompt: e.target.value })}
@@ -345,6 +367,76 @@ export default function PromptLibrary() {
           </div>
         )
       })}
+
+      {/* Fullscreen prompt editor */}
+      {fullscreenId && states[fullscreenId] && (() => {
+        const def = AI_PROMPT_REGISTRY.find((d) => d.id === fullscreenId)!
+        const state = states[fullscreenId]!
+        const isSaving = savingId === fullscreenId
+
+        return (
+          <div className="fixed inset-0 z-50 bg-dark-bg flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3 border-b border-dark-border flex-shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-5 h-5 text-purple-400" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="font-semibold text-white truncate">{def.titleHe}</h2>
+                  <p className="text-neon-gray-400 text-xs" dir="ltr">
+                    {def.provider} · {state.model}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setFullscreenId(null)}
+                aria-label="סגור מסך מלא"
+                className="w-11 h-11 rounded-lg flex items-center justify-center text-neon-gray-300 hover:bg-white/10 transition-colors flex-shrink-0"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Editor */}
+            <textarea
+              value={state.systemPrompt}
+              onChange={(e) => updateField(fullscreenId, { systemPrompt: e.target.value })}
+              className="input-primary flex-1 w-full rounded-none border-0 text-sm sm:text-base leading-relaxed resize-none p-4 sm:p-6"
+              dir="rtl"
+              aria-label={`פרומפט מערכת במסך מלא — ${def.titleHe}`}
+            />
+
+            {/* Footer */}
+            <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3 border-t border-dark-border flex-shrink-0">
+              <button
+                onClick={() => setFullscreenId(null)}
+                className="px-4 py-2 rounded-lg text-sm text-neon-gray-300 bg-neon-gray-800 hover:bg-neon-gray-700 transition-colors"
+              >
+                חזרה
+              </button>
+              <div className="flex items-center gap-3">
+                {savedId === fullscreenId && (
+                  <span className="text-sm text-green-400">נשמר בהצלחה ✓</span>
+                )}
+                {saveError && <span className="text-sm text-red-400">{saveError}</span>}
+                <button
+                  onClick={() => handleSave(def)}
+                  disabled={isSaving}
+                  className="btn-primary flex items-center gap-2"
+                >
+                  {isSaving ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  <span>{isSaving ? 'שומר...' : 'שמור פרומפט'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased] - 2026-07-23
+
+### Added
+- **עורך מסך מלא בספריית הפרומפטים (`/admin/prompts`):** כפתור "ערוך במסך מלא" ליד ה-textarea פותח overlay על כל המסך — כותרת עם שם הפרומפט והמודל, textarea בגובה מלא, X ייעודי 44x44 + Escape, וכפתור שמירה (אותה לוגיקת save/validation של הכרטיס; ה-state משותף כך שעריכה במסך המלא נשמרת גם בחזרה לכרטיס). Tailwind בלבד.
+- **שומר דריפט לפרומפטים (`tests/promptRegistrySync.spec.ts`):** ההעתקים ב-`aiPromptRegistry.ts` חייבים להיות זהים byte-for-byte לברירות המחדל המובנות בצד השרת (4 פרומפטים: openaiClient / generateAnalysis / generateProgram / draftReleaseNoteFromPR). הטסט מחלץ את ה-template literal מהמקור, מפענח escapes ידנית (בלי eval), ומנרמל `${daysPerWeek}` ↔ `{{daysPerWeek}}`. אומת RED על סטייה מלאכותית וגם תפס בפועל סטייה אמיתית במהלך הפיתוח.
+
+### Changed
+- **פרומפט המאמן (workout_generation) — כלל 5 חדש:** "כשיש כמה תרגילים מתאימים לאותו שריר — העדף תרגילים שמופיעים בהיסטוריית הביצוע (exerciseHistory)". שכבת העדפה רכה בתוך הבריכה — לא סותר את סינון ה-performed (מבני, בלקוח) ולא את מצב 'מכל התרגילים'. בנוסף נוקו שאריות אנגלית בסעיף הפיצול ("per workout" → "בכל אימון"). עודכן בשני המקורות המסונכרנים (openaiClient.ts + aiPromptRegistry.ts). **דורש deploy ל-functions כדי להיכנס לתוקף** — אומת (קריאת admin ל-Firestore) שאין override ב-`aiPrompts/workout_generation`, כך שברירת המחדל המובנית היא הפרומפט האפקטיבי בפרודקשן.
+
+### Regression Prevention
+- ✅ חקירת הפרומפט האפקטיבי (23/07): נוסח רצפת הסטגנציה מ-16/07 (95%-105% + חובת עלייה ב-stagnant) שרד את העריכה בשני הקבצים; הרצפה הקשיחה נאכפת ממילא בקוד (`stagnationFloor.ts`) אחרי תשובת ה-LLM. סינון "רק שביצעתי" נאכף מבנית בלקוח (`aiTrainerService.buildContext`) ואינו תלוי בטקסט הפרומפט. `npm test` — ‏265 בדיקות ירוקות; `tsc` נקי (client + functions).
+
 ## [Unreleased] - 2026-07-16 (2)
 
 ### Fixed
