@@ -9,6 +9,8 @@ import {
   Braces,
   Maximize2,
   X,
+  Lock,
+  Pencil,
 } from 'lucide-react'
 import { useAuthStore } from '@/domains/authentication/store'
 import {
@@ -100,7 +102,9 @@ export default function PromptLibrary() {
 
   const validate = (def: AIPromptDefinition, state: PromptState): string | null => {
     if (!state.systemPrompt.trim()) return 'הפרומפט לא יכול להיות ריק'
-    if (!state.model.trim()) return 'שם המודל לא יכול להיות ריק'
+    if (!def.modelOptions.includes(state.model.trim())) {
+      return `המודל חייב להיות מרשימת המודלים הנתמכים: ${def.modelOptions.join(', ')}`
+    }
     const tokens = Number(state.maxTokens)
     if (!Number.isFinite(tokens) || tokens <= 0) return 'maxTokens חייב להיות מספר חיובי'
     for (const variable of def.templateVariables) {
@@ -256,17 +260,38 @@ export default function PromptLibrary() {
             {/* Card body */}
             {isOpen && (
               <div className="px-4 sm:px-6 pb-6 space-y-4 border-t border-dark-border pt-4">
+                {/* Group A: editable — saved and effective */}
+                <div className="flex items-center gap-2 pt-1">
+                  <Pencil className="w-4 h-4 text-primary" />
+                  <h3 className="text-sm font-semibold text-primary">בשליטתך — נשמר ומשפיע</h3>
+                </div>
+
                 {/* Model + maxTokens */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm text-neon-gray-400">מודל ({def.provider})</label>
-                    <input
-                      type="text"
+                    <select
                       value={state.model}
                       onChange={(e) => updateField(def.id, { model: e.target.value })}
                       className="input-primary w-full"
                       dir="ltr"
-                    />
+                      aria-label={`מודל — ${def.titleHe}`}
+                    >
+                      {def.modelOptions.map((model) => (
+                        <option key={model} value={model}>
+                          {model}
+                          {model === def.defaultModel ? ' (ברירת מחדל)' : ''}
+                        </option>
+                      ))}
+                      {!def.modelOptions.includes(state.model) && (
+                        <option value={state.model}>{state.model} (לא ברשימה — יוחלף בשמירה)</option>
+                      )}
+                    </select>
+                    {!def.modelOptions.includes(state.model) && (
+                      <p className="text-xs text-amber-400">
+                        המודל השמור אינו ברשימת המודלים הנתמכים — השרת מתעלם ממנו ורץ על ברירת המחדל. בחר מודל מהרשימה ושמור.
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm text-neon-gray-400">מקסימום טוקנים בתשובה</label>
@@ -316,12 +341,41 @@ export default function PromptLibrary() {
                     dir="rtl"
                     aria-label={`פרומפט מערכת — ${def.titleHe}`}
                   />
+                  {def.editorNoticeHe && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-300">{def.editorNoticeHe}</p>
+                    </div>
+                  )}
                 </div>
+
+                {/* Group B: locked in code — read-only guarantees */}
+                {def.codeEnforcedHe && def.codeEnforcedHe.length > 0 && (
+                  <div className="border-t border-dark-border pt-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-on-surface-variant" />
+                      <h3 className="text-sm font-semibold text-on-surface-variant">
+                        נעול בקוד — לא נערך כאן (הבטחות)
+                      </h3>
+                    </div>
+                    <p className="text-xs text-neon-gray-500">
+                      החוקים הבאים נאכפים בקוד המערכת. עריכת הפרומפט לא משנה ולא שוברת אותם.
+                    </p>
+                    <ul className="text-xs text-neon-gray-400 space-y-1 list-disc pr-4">
+                      {def.codeEnforcedHe.map((line) => (
+                        <li key={line}>{line}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 {/* Runtime context info */}
                 <div className="bg-neon-gray-800 rounded-lg p-3">
                   <p className="text-sm text-neon-gray-300 font-medium mb-1">
-                    נתונים שמצורפים אוטומטית בזמן ריצה (לא ניתנים לעריכה):
+                    מוזרק אוטומטית בזמן ריצה — לא נערך כאן:
+                  </p>
+                  <p className="text-xs text-neon-gray-500 mb-1">
+                    הנתונים הבאים מצורפים לכל בקשה כהודעת ההקשר של ה-AI, מעבר לטקסט הפרומפט שלמעלה.
                   </p>
                   <ul className="text-xs text-neon-gray-400 space-y-0.5 list-disc pr-4">
                     {def.runtimeContextHe.map((line) => (

@@ -16,6 +16,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import { AI_PROMPT_REGISTRY } from '@/domains/admin/data/aiPromptRegistry'
+import { ALLOWED_MODELS } from '../functions/src/shared/promptOverrides'
 
 const root = resolve(__dirname, '..')
 
@@ -107,5 +108,26 @@ describe('prompt registry stays in sync with built-in server defaults', () => {
       'const SYSTEM_PROMPT'
     )
     expect(registryPrompt('release_note_drafter')).toBe(serverPrompt)
+  })
+
+  it('every registry modelOptions list matches the server ALLOWED_MODELS allow-list', () => {
+    for (const def of AI_PROMPT_REGISTRY) {
+      expect(def.modelOptions, `modelOptions for ${def.id}`).toEqual([...ALLOWED_MODELS[def.id]])
+      expect(
+        def.modelOptions.includes(def.defaultModel),
+        `defaultModel of ${def.id} must be in its allow-list`
+      ).toBe(true)
+    }
+    expect(Object.keys(ALLOWED_MODELS).sort()).toEqual(
+      AI_PROMPT_REGISTRY.map((d) => d.id).sort()
+    )
+  })
+
+  it('the release-note script local allow-list copy matches ALLOWED_MODELS', () => {
+    const source = readFileSync(resolve(root, 'scripts/draftReleaseNoteFromPR.ts'), 'utf8')
+    const match = source.match(/const ALLOWED_RELEASE_NOTE_MODELS = (\[[^\]]*\])/)
+    expect(match, 'ALLOWED_RELEASE_NOTE_MODELS declaration missing from script').not.toBeNull()
+    const scriptList = JSON.parse(match![1].replace(/'/g, '"')) as string[]
+    expect(scriptList).toEqual([...ALLOWED_MODELS.release_note_drafter])
   })
 })

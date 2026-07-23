@@ -27,12 +27,29 @@ export interface AIPromptDefinition {
   descriptionHe: string
   provider: 'OpenAI' | 'Anthropic'
   defaultModel: string
+  /**
+   * Strict model allow-list rendered as the admin dropdown. Must stay identical
+   * to ALLOWED_MODELS in functions/src/shared/promptOverrides.ts (drift guard
+   * in tests/promptRegistrySync.spec.ts) — the server drops any model outside
+   * this list and falls back to the built-in default.
+   */
+  modelOptions: string[]
   defaultMaxTokens: number
   defaultSystemPrompt: string
   /** Placeholders the server substitutes at runtime — must be kept in an edited prompt. */
   templateVariables: AIPromptTemplateVariable[]
   /** What gets appended dynamically as the user-message at runtime (informational). */
   runtimeContextHe: string[]
+  /**
+   * Hard guarantees enforced in code (server/client logic) — editing the
+   * prompt text cannot change or break them. Shown read-only in the admin UI.
+   */
+  codeEnforcedHe?: string[]
+  /**
+   * Shown next to the prompt editor when the editable text contains a value
+   * the code overrides anyway (e.g. the weight range vs. the stagnation floor).
+   */
+  editorNoticeHe?: string
   sourceFile: string
 }
 
@@ -286,6 +303,7 @@ export const AI_PROMPT_REGISTRY: AIPromptDefinition[] = [
       'הפרומפט שבונה למתאמן אימונים מותאמים אישית (מסך "מאמן AI"). קובע את חוקי חלוקת הסטים, סדר התרגילים, עקביות הציוד והמלצות המשקל.',
     provider: 'OpenAI',
     defaultModel: 'gpt-4o-mini',
+    modelOptions: ['gpt-4o-mini', 'gpt-4o'],
     defaultMaxTokens: 8192,
     defaultSystemPrompt: WORKOUT_GENERATION_DEFAULT,
     templateVariables: [],
@@ -295,6 +313,16 @@ export const AI_PROMPT_REGISTRY: AIPromptDefinition[] = [
       'רשימת התרגילים הזמינים (לפי מקור התרגילים שנבחר) ורשימת השרירים',
       'תרגילים שנעשו אתמול, 5 אימונים אחרונים, והיסטוריית ביצוע עם דגלי סטגנציה',
     ],
+    codeEnforcedHe: [
+      'נבחרים רק תרגילים אמיתיים מהרשימה שנשלחה — מזהה לא מוכר נזרק ומושלם מתרגיל חלופי',
+      'כשמסומן "מומלץ להגדיל משקל" — ההמלצה לעולם לא תרד מתחת למשקל האחרון (רצפה נאכפת בשרת אחרי תשובת ה-AI)',
+      'מספר תרגילי הכוח נקבע לפי משך האימון (9 / 11 / 14) — חסר מושלם אוטומטית',
+      'תרגילי חימום וליבה נבחרים בנפרד בקוד — לא תופסים מקום של תרגילי כוח',
+      'תרגילים שנעשו אתמול לא נכללים — הרשימה מוזרקת אוטומטית',
+      'בריכת התרגילים נקבעת לפי בורר "מקור התרגילים" של המתאמן (מתוך שביצע / הכול) — סינון בקוד, לפני שה-AI רואה אותה',
+    ],
+    editorNoticeHe:
+      'שים לב: טווח המשקל שבטקסט (95%-105%) הוא הנחיה ל-AI בלבד — הוא לא שולט ברצפת המשקל בפועל. הרצפה במקרה סטגנציה נאכפת בקוד השרת וגוברת על כל ניסוח כאן.',
     sourceFile: 'functions/src/ai-trainer/openaiClient.ts',
   },
   {
@@ -304,6 +332,7 @@ export const AI_PROMPT_REGISTRY: AIPromptDefinition[] = [
       'הפרומפט שמנתח את היסטוריית האימונים (4-8 שבועות) ומחזיר חוזקות, חולשות והמלצות עם מספרים. קובע את חוקי הניתוח, שמות השרירים בעברית ופורמט הפלט.',
     provider: 'OpenAI',
     defaultModel: 'gpt-4o',
+    modelOptions: ['gpt-4o', 'gpt-4o-mini'],
     defaultMaxTokens: 4096,
     defaultSystemPrompt: TRAINING_ANALYSIS_DEFAULT,
     templateVariables: [],
@@ -322,6 +351,7 @@ export const AI_PROMPT_REGISTRY: AIPromptDefinition[] = [
       'הפרומפט שבונה למאמן תוכנית אימון שבועית למתאמן, על בסיס פרופיל, ניתוח אחרון ותוכנית קודמת. קובע את מבנה הימים, בחירת התרגילים ופורמט התוכנית.',
     provider: 'OpenAI',
     defaultModel: 'gpt-4o',
+    modelOptions: ['gpt-4o', 'gpt-4o-mini'],
     defaultMaxTokens: 8192,
     defaultSystemPrompt: PROGRAM_BUILDER_DEFAULT,
     templateVariables: [
@@ -345,6 +375,7 @@ export const AI_PROMPT_REGISTRY: AIPromptDefinition[] = [
       'הפרומפט שמנסח אוטומטית טיוטת עדכון גרסה בעברית אחרי כל פריסה לפרודקשן. הטיוטה נשמרת לאישור אדמין במסך "הודעות עדכון".',
     provider: 'Anthropic',
     defaultModel: 'claude-haiku-4-5-20251001',
+    modelOptions: ['claude-haiku-4-5-20251001'],
     defaultMaxTokens: 600,
     defaultSystemPrompt: RELEASE_NOTE_DEFAULT,
     templateVariables: [],
