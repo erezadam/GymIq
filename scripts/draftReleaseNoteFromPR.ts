@@ -43,6 +43,11 @@ import {
 } from 'firebase/firestore'
 import { db, auth } from './firebase-config'
 
+// Verbatim copy of ALLOWED_MODELS[release_note_drafter] from
+// functions/src/shared/promptOverrides.ts (this script is self-contained, like
+// its SYSTEM_PROMPT copy). Kept in sync by tests/promptRegistrySync.spec.ts.
+const ALLOWED_RELEASE_NOTE_MODELS = ['claude-haiku-4-5-20251001']
+
 const COLLECTION_NAME = 'releaseNotes'
 const AI_PROMPTS_COLLECTION = 'aiPrompts'
 const PROMPT_DOC_ID = 'release_note_drafter'
@@ -68,7 +73,14 @@ async function fetchPromptOverride(): Promise<PromptOverride | null> {
       override.systemPrompt = data.systemPrompt
     }
     if (typeof data.model === 'string' && data.model.trim()) {
-      override.model = data.model.trim()
+      const model = data.model.trim()
+      if (ALLOWED_RELEASE_NOTE_MODELS.includes(model)) {
+        override.model = model
+      } else {
+        console.warn(
+          `⚠️ aiPrompts/${PROMPT_DOC_ID} model "${model}" not in allow-list — using built-in default model`
+        )
+      }
     }
     if (typeof data.maxTokens === 'number' && data.maxTokens > 0) {
       override.maxTokens = Math.floor(data.maxTokens)

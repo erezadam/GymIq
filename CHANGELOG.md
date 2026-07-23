@@ -1,5 +1,30 @@
 # Changelog
 
+## [Unreleased] - 2026-07-23
+
+### Added
+- **עורך מסך מלא בספריית הפרומפטים (`/admin/prompts`):** כפתור "ערוך במסך מלא" ליד ה-textarea פותח overlay על כל המסך — כותרת עם שם הפרומפט והמודל, textarea בגובה מלא, X ייעודי 44x44 + Escape, וכפתור שמירה (אותה לוגיקת save/validation של הכרטיס; ה-state משותף כך שעריכה במסך המלא נשמרת גם בחזרה לכרטיס). Tailwind בלבד.
+- **שומר דריפט לפרומפטים (`tests/promptRegistrySync.spec.ts`):** ההעתקים ב-`aiPromptRegistry.ts` חייבים להיות זהים byte-for-byte לברירות המחדל המובנות בצד השרת (4 פרומפטים: openaiClient / generateAnalysis / generateProgram / draftReleaseNoteFromPR). הטסט מחלץ את ה-template literal מהמקור, מפענח escapes ידנית (בלי eval), ומנרמל `${daysPerWeek}` ↔ `{{daysPerWeek}}`. אומת RED על סטייה מלאכותית וגם תפס בפועל סטייה אמיתית במהלך הפיתוח.
+
+### Added (2) — מסך פרומפטים כן + בורר מודל (23/07, אחר צהריים)
+- **הפרדת "בשליטתך" מ"נעול בקוד" בספריית הפרומפטים:** כרטיס הפרומפט מחולק כעת לקבוצה נערכת (פרומפט/מודל/טוקנים, כותרת "בשליטתך — נשמר ומשפיע") ולקבוצת קריאה-בלבד "נעול בקוד — לא נערך כאן (הבטחות)" — רשימת `codeEnforcedHe` חדשה ברגיסטרי (לכרטיס המאמן: בחירה רק מהרשימה, רצפת הסטגנציה, ספירת תרגילים לפי משך, חימום/ליבה בנפרד, בלי תרגילי אתמול, סינון לפי בורר המקור). קטע "מוזרק אוטומטית בזמן ריצה" נוסח מחדש. נוספה אזהרת עורך (`editorNoticeHe`) ליד ה-textarea של המאמן: טווח ה-95%-105% שבטקסט אינו שולט ברצפת המשקל בפועל — סימון בלבד, אפס שינוי באכיפה.
+- **בורר מודל קשיח במקום שדה חופשי:** מקור-אמת יחיד `ALLOWED_MODELS` ב-`functions/src/shared/promptOverrides.ts` (אושר ע"י המשתמש — שמרני: `gpt-4o-mini`/`gpt-4o` לשלושת פרומפטי OpenAI; `claude-haiku-4-5-20251001` בלבד ל-release notes; בלי אופציית "מותאם אישית"). הרגיסטרי מחזיק `modelOptions` זהה (שומר הדריפט ב-`promptRegistrySync` אוכף שוויון, כולל העותק המקומי בסקריפט ה-release-notes — הוכח RED). **נפילה בטוחה בשרת:** `sanitizeOverrideModel` (טהור) זורק מודל שאינו ברשימה עם `logger.warn` וממשיך על ברירת המחדל — גם ב-`promptConfig.getPromptOverride` וגם ב-`draftReleaseNoteFromPR.ts`. ‏7 בדיקות התנהגותיות חדשות (`tests/promptModelAllowlist.spec.ts`). ‏UI: ‏dropdown ‏RTL-safe עם סימון ברירת מחדל; ערך legacy שאינו ברשימה מוצג עם אזהרה ונחסם בשמירה. **שים לב לפריסה: המודל נקרא בצד functions — ‏merge לבד לא מפעיל את זה; נדרש dispatch ידני של `hosting,functions`.**
+
+### Changed
+- **פרומפט המאמן (workout_generation) — כלל 5 חדש:** "כשיש כמה תרגילים מתאימים לאותו שריר — העדף תרגילים שמופיעים בהיסטוריית הביצוע (exerciseHistory)". שכבת העדפה רכה בתוך הבריכה — לא סותר את סינון ה-performed (מבני, בלקוח) ולא את מצב 'מכל התרגילים'. בנוסף נוקו שאריות אנגלית בסעיף הפיצול ("per workout" → "בכל אימון"). עודכן בשני המקורות המסונכרנים (openaiClient.ts + aiPromptRegistry.ts). **דורש deploy ל-functions כדי להיכנס לתוקף** — אומת (קריאת admin ל-Firestore) שאין override ב-`aiPrompts/workout_generation`, כך שברירת המחדל המובנית היא הפרומפט האפקטיבי בפרודקשן.
+
+### Regression Prevention
+- ✅ חקירת הפרומפט האפקטיבי (23/07): נוסח רצפת הסטגנציה מ-16/07 (95%-105% + חובת עלייה ב-stagnant) שרד את העריכה בשני הקבצים; הרצפה הקשיחה נאכפת ממילא בקוד (`stagnationFloor.ts`) אחרי תשובת ה-LLM. סינון "רק שביצעתי" נאכף מבנית בלקוח (`aiTrainerService.buildContext`) ואינו תלוי בטקסט הפרומפט. `npm test` — ‏265 בדיקות ירוקות; `tsc` נקי (client + functions).
+
+### מצב פריסה (בירור 23/07, מתוך GitHub Actions — לא בוצע deploy)
+- **ה-auto-deploy על push ל-main פורס hosting בלבד** (`inputs.target || 'hosting'` ב-`deploy.yml`); functions נפרסים רק ב-workflow_dispatch ידני.
+- פריסות functions מתועדות: **16/07 09:15 UTC** — dispatch ‏`hosting,functions` על `066ed89` (merge PR #152) → **רצפת הסטגנציה חיה בפרודקשן מאותו יום**; **23/07 08:20 UTC** — dispatch ‏`hosting,functions,firestore` על `76746fa` (merge PR #153, ספריית הפרומפטים + rules של `aiPrompts`). רביזיית ה-functions החיה (בהנחה שלא בוצע deploy מקומי מחוץ ל-CI): ‏`76746fa` = ‏main HEAD. **כלל 5 (העדפת היסטוריה, commit ‏`e28c3fc` בענף העבודה) עדיין לא ב-main ולא בפרודקשן.**
+
+### נדחה במודע (החלטות פתוחות — אין לגעת בלי PR נפרד ואימות מכשיר)
+- **כפילות כלל המשקל בשלושה מקורות:** system prompt (נערך במסך הניהול) + השורה הדינמית "⚠️ חובה: טווח X*0.95..." ב-`buildExerciseHistorySection` (לא נערכת) + האכיפה הקשיחה ב-`stagnationFloor.ts`. עריכת הטווח במסך לא תשנה את השורה הדינמית — סתירה פוטנציאלית. יישוב = PR נפרד ומתוחם, אחרי אימות מכשיר.
+- **מסך הניהול עורך את ה-system message בלבד:** ה-user message הדינמי (בריכה, היסטוריה, חלוקת שרירים, הוראת המשקל הדינמית) וההתנהגויות המבניות (סינון performed, רצפה, חימום/ליבה, ספירת תרגילים) חיים בקוד ואינם ניתנים לעריכה מהמסך. מוצג במסך כ"נתונים אוטומטיים" — מוגבלות מתועדת, לא באג.
+- **4 עותקי פרומפט כפולים** (registry בלקוח מול מקורות השרת/סקריפט) — סיכון הדריפט ממותן ע"י `tests/promptRegistrySync.spec.ts`; איחוד למקור יחיד לא תוכנן בשלב זה.
+
 ## [Unreleased] - 2026-07-16 (2)
 
 ### Fixed

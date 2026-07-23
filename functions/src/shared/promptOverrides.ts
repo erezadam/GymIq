@@ -21,6 +21,47 @@ export interface PromptOverride {
 }
 
 /**
+ * Single source of truth for the models each prompt may run on.
+ * The admin UI renders these as a strict dropdown (aiPromptRegistry mirrors
+ * this list — a vitest drift guard asserts the two stay identical), and the
+ * server drops any saved model that is not listed, falling back to the
+ * built-in default instead of crashing generation.
+ */
+export const ALLOWED_MODELS: Record<string, readonly string[]> = {
+  [PROMPT_IDS.workoutGeneration]: ['gpt-4o-mini', 'gpt-4o'],
+  [PROMPT_IDS.trainingAnalysis]: ['gpt-4o', 'gpt-4o-mini'],
+  [PROMPT_IDS.programBuilder]: ['gpt-4o', 'gpt-4o-mini'],
+  [PROMPT_IDS.releaseNoteDrafter]: ['claude-haiku-4-5-20251001'],
+}
+
+export interface OverrideModelLogger {
+  warn(message: string, meta?: Record<string, unknown>): void
+}
+
+/**
+ * Drop a saved model that is not in the prompt's allow-list.
+ * Fail-soft + never silent: the override's other fields survive, the model
+ * falls back to the built-in default at the call site, and the drop is logged.
+ */
+export function sanitizeOverrideModel(
+  promptId: string,
+  override: PromptOverride,
+  log: OverrideModelLogger
+): PromptOverride {
+  if (!override.model) return override
+  const allowed = ALLOWED_MODELS[promptId]
+  if (!allowed || allowed.includes(override.model)) return override
+
+  log.warn('aiPrompts override model not in allow-list — falling back to built-in default model', {
+    promptId,
+    savedModel: override.model,
+    allowedModels: allowed,
+  })
+  const { model: _dropped, ...rest } = override
+  return rest
+}
+
+/**
  * Validate raw Firestore data into a usable override.
  * Empty strings, non-positive numbers and wrong types are dropped so a
  * half-filled admin doc can never break generation — missing fields simply

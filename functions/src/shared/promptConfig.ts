@@ -9,7 +9,7 @@
 
 import * as admin from 'firebase-admin'
 import * as functions from 'firebase-functions'
-import { parsePromptOverride, type PromptOverride } from './promptOverrides'
+import { parsePromptOverride, sanitizeOverrideModel, type PromptOverride } from './promptOverrides'
 
 export const AI_PROMPTS_COLLECTION = 'aiPrompts'
 
@@ -26,8 +26,13 @@ export async function getPromptOverride(promptId: string): Promise<PromptOverrid
     const snap = await admin.firestore().collection(AI_PROMPTS_COLLECTION).doc(promptId).get()
     if (!snap.exists) return null
 
-    const override = parsePromptOverride(snap.data())
-    if (!override) return null
+    const parsed = parsePromptOverride(snap.data())
+    if (!parsed) return null
+
+    // Unknown model (e.g. legacy free-text value) → drop it, keep the rest,
+    // and log — the call site falls back to the built-in default model.
+    const override = sanitizeOverrideModel(promptId, parsed, functions.logger)
+    if (Object.keys(override).length === 0) return null
 
     functions.logger.info('AI prompt override applied from aiPrompts collection', {
       promptId,
