@@ -31,3 +31,6 @@ export { approveTrainerRequest } from './trainer-approval/approveRequest'
 
 // Export Admin functions
 export { updateUserEmail } from './admin/updateUserEmail'
+
+// Export AI Prompt Advisor (admin prompt library consultation)
+export { consultAIPrompt } from './ai-prompt-advisor/consultPrompt'

@@ -18,18 +18,28 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const getDocMock = vi.fn()
 const setDocMock = vi.fn(async () => undefined)
 const deleteDocMock = vi.fn(async () => undefined)
+const addDocMock = vi.fn(async () => ({ id: 'version-1' }))
+const getDocsMock = vi.fn(async () => ({ docs: [] }))
 
 vi.mock('firebase/firestore', () => ({
   doc: vi.fn(() => ({})),
+  collection: vi.fn(() => ({})),
   getDoc: getDocMock,
+  getDocs: getDocsMock,
   setDoc: setDocMock,
+  addDoc: addDocMock,
   deleteDoc: deleteDocMock,
+  query: vi.fn(),
+  orderBy: vi.fn(),
+  limit: vi.fn(),
 }))
 
 beforeEach(() => {
   getDocMock.mockReset()
   setDocMock.mockClear()
   deleteDocMock.mockClear()
+  addDocMock.mockClear()
+  getDocsMock.mockClear()
 })
 
 describe('saveAIPromptConfig', () => {
@@ -85,10 +95,67 @@ describe('getAIPromptConfig', () => {
 })
 
 describe('resetAIPromptConfig', () => {
-  it('deletes the override doc so the built-in default takes effect again', async () => {
+  it('deletes the override doc and records the reset in the version history', async () => {
     const { resetAIPromptConfig } = await import('../src/lib/firebase/aiPrompts')
-    await resetAIPromptConfig('workout_generation')
+    await resetAIPromptConfig('workout_generation', 'admin@gymiq.app')
     expect(deleteDocMock).toHaveBeenCalledTimes(1)
+
+    expect(addDocMock).toHaveBeenCalledTimes(1)
+    const [, versionPayload] = addDocMock.mock.calls[0] as unknown as [unknown, Record<string, unknown>]
+    expect(versionPayload.action).toBe('reset')
+    expect(versionPayload.savedByEmail).toBe('admin@gymiq.app')
+    expect(versionPayload.savedAt).toBeInstanceOf(Date)
+  })
+})
+
+describe('version history', () => {
+  it('every save appends a version doc with the saved state (audit + restore)', async () => {
+    const { saveAIPromptConfig } = await import('../src/lib/firebase/aiPrompts')
+    await saveAIPromptConfig(
+      'program_builder',
+      { systemPrompt: 'גרסה 2', model: 'gpt-4o', maxTokens: 8192 },
+      'admin@gymiq.app'
+    )
+
+    expect(addDocMock).toHaveBeenCalledTimes(1)
+    const [, versionPayload] = addDocMock.mock.calls[0] as unknown as [unknown, Record<string, unknown>]
+    expect(versionPayload.action).toBe('save')
+    expect(versionPayload.systemPrompt).toBe('גרסה 2')
+    expect(versionPayload.model).toBe('gpt-4o')
+    expect(versionPayload.maxTokens).toBe(8192)
+    expect(versionPayload.savedByEmail).toBe('admin@gymiq.app')
+    expect(versionPayload.savedAt).toBeInstanceOf(Date)
+    expect(Object.values(versionPayload)).not.toContain(undefined)
+  })
+
+  it('a history write failure does not fail the save itself (override already live)', async () => {
+    addDocMock.mockRejectedValueOnce(new Error('permission-denied'))
+    const { saveAIPromptConfig } = await import('../src/lib/firebase/aiPrompts')
+    await expect(
+      saveAIPromptConfig('workout_generation', { systemPrompt: 'פ', model: 'm', maxTokens: 1 })
+    ).resolves.toBeUndefined()
+    expect(setDocMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('getAIPromptVersions maps docs (newest-first query) including Timestamp savedAt', async () => {
+    const toDate = () => new Date('2026-07-23T10:00:00Z')
+    getDocsMock.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'v2',
+          data: () => ({ action: 'save', systemPrompt: 'ב', model: 'gpt-4o', maxTokens: 100, savedAt: { toDate }, savedByEmail: 'a@b.c' }),
+        },
+        { id: 'v1', data: () => ({ action: 'reset', savedAt: { toDate } }) },
+      ],
+    } as never)
+
+    const { getAIPromptVersions } = await import('../src/lib/firebase/aiPrompts')
+    const versions = await getAIPromptVersions('workout_generation')
+
+    expect(versions).toHaveLength(2)
+    expect(versions[0]).toMatchObject({ id: 'v2', action: 'save', systemPrompt: 'ב', model: 'gpt-4o' })
+    expect(versions[0].savedAt).toBeInstanceOf(Date)
+    expect(versions[1].action).toBe('reset')
   })
 })
 

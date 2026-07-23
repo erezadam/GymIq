@@ -1,18 +1,21 @@
 /**
  * promptLibraryScreen.spec.tsx — component tests for /admin/prompts.
  *
- * Renders the screen with a mocked aiPrompts lib and asserts behavior:
- * all 4 prompts render, editing + saving passes the edited values to
- * saveAIPromptConfig, and removing a required {{placeholder}} blocks the save.
+ * The screen now renders compact cards; clicking a card opens the full
+ * editor modal (PromptEditorModal — covered in depth by its own spec).
+ * Here we assert the list rendering, the card→modal flow, the placeholder
+ * validation gate, and the end-to-end save through the warning modal.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
-const { getConfigMock, saveConfigMock, resetConfigMock } = vi.hoisted(() => ({
+const { getConfigMock, saveConfigMock, resetConfigMock, versionsMock, consultMock } = vi.hoisted(() => ({
   getConfigMock: vi.fn(),
   saveConfigMock: vi.fn(async () => undefined),
   resetConfigMock: vi.fn(async () => undefined),
+  versionsMock: vi.fn(async () => []),
+  consultMock: vi.fn(),
 }))
 
 vi.mock('@/lib/firebase/aiPrompts', () => ({
@@ -20,6 +23,11 @@ vi.mock('@/lib/firebase/aiPrompts', () => ({
   getAIPromptConfig: getConfigMock,
   saveAIPromptConfig: saveConfigMock,
   resetAIPromptConfig: resetConfigMock,
+  getAIPromptVersions: versionsMock,
+}))
+
+vi.mock('@/domains/admin/services/promptAdvisorService', () => ({
+  consultAIPrompt: consultMock,
 }))
 
 vi.mock('@/domains/authentication/store', () => ({
@@ -31,6 +39,7 @@ import PromptLibrary from '@/domains/admin/components/PromptLibrary'
 beforeEach(() => {
   vi.clearAllMocks()
   getConfigMock.mockResolvedValue(null) // no overrides — defaults everywhere
+  versionsMock.mockResolvedValue([])
 })
 
 describe('PromptLibrary screen', () => {
@@ -48,16 +57,23 @@ describe('PromptLibrary screen', () => {
     expect(screen.getByText(/claude-haiku-4-5-20251001/)).toBeTruthy()
   })
 
-  it('editing the prompt and saving sends the edited values to Firestore', async () => {
+  it('clicking a card opens the full-prompt editor popup; saving goes through the warning modal', async () => {
     render(<PromptLibrary />)
     fireEvent.click(await screen.findByText('מאמן AI — יצירת אימונים'))
 
     const textarea = await screen.findByLabelText('פרומפט מערכת — מאמן AI — יצירת אימונים')
+    expect((textarea as HTMLTextAreaElement).value.length).toBeGreaterThan(100) // full prompt shown
+
     fireEvent.change(textarea, { target: { value: 'פרומפט ערוך לחלוטין' } })
+    fireEvent.click(screen.getByRole('button', { name: 'שמור' }))
 
-    fireEvent.click(screen.getByRole('button', { name: /שמור פרומפט/ }))
+    // Warning gate before anything is written.
+    await screen.findByText('עדכון מערכת')
+    expect(saveConfigMock).not.toHaveBeenCalled()
 
+    fireEvent.click(screen.getByRole('button', { name: /שמור ועדכן מערכת/ }))
     await waitFor(() => expect(saveConfigMock).toHaveBeenCalledTimes(1))
+
     const [id, payload, email] = saveConfigMock.mock.calls[0] as unknown as [
       string,
       { systemPrompt: string; model: string; maxTokens: number },
@@ -68,8 +84,6 @@ describe('PromptLibrary screen', () => {
     expect(payload.model).toBe('gpt-4o-mini')
     expect(payload.maxTokens).toBe(8192)
     expect(email).toBe('admin@gymiq.app')
-
-    await screen.findByText('נשמר בהצלחה ✓')
   })
 
   it('blocks saving program_builder when {{daysPerWeek}} was removed', async () => {
@@ -79,9 +93,10 @@ describe('PromptLibrary screen', () => {
     const textarea = await screen.findByLabelText('פרומפט מערכת — בונה תוכניות AI (מאמן)')
     fireEvent.change(textarea, { target: { value: 'פרומפט בלי המשתנה הנדרש' } })
 
-    fireEvent.click(screen.getByRole('button', { name: /שמור פרומפט/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'שמור' }))
 
     await screen.findByText(/חייב לכלול את המשתנה/)
+    expect(screen.queryByText('עדכון מערכת')).toBeNull() // warning never opened
     expect(saveConfigMock).not.toHaveBeenCalled()
   })
 
