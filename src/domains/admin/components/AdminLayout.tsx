@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { Dumbbell, LayoutDashboard, Users, Settings, LogOut, Menu, X, ArrowRight, Activity, Wrench, ClipboardList, Ribbon, Layers, FileText, BarChart3, Stethoscope } from 'lucide-react'
+import { Dumbbell, LayoutDashboard, Users, Settings, LogOut, Menu, X, ArrowRight, Activity, Wrench, ClipboardList, Ribbon, Layers, FileText, BarChart3, Stethoscope, Bot } from 'lucide-react'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/domains/authentication/store'
@@ -20,6 +20,7 @@ const navigation = [
   { name: 'משתמשים', href: '/admin/users', icon: Users },
   { name: 'ניתוח שימוש', href: '/admin/analytics', icon: BarChart3 },
   { name: 'הודעות עדכון', href: '/admin/release-notes', icon: FileText, draftsBadge: true },
+  { name: 'ספריית פרומפטים', href: '/admin/prompts', icon: Bot },
   { name: 'Diagnostics', href: '/admin/diagnose', icon: Stethoscope },
   { name: 'הגדרות', href: '/admin/settings', icon: Settings },
 ]

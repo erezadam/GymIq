@@ -6,6 +6,8 @@
 import * as admin from 'firebase-admin'
 import * as functions from 'firebase-functions'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
+import { getPromptOverride } from '../shared/promptConfig'
+import { PROMPT_IDS } from '../shared/promptOverrides'
 import type {
   AnalysisRequest,
   AnalysisResponse,
@@ -130,7 +132,8 @@ async function saveAnalysisToUserProfile(
     summary: string
   },
   workoutCount: number,
-  weeksAnalyzed: number
+  weeksAnalyzed: number,
+  modelUsed: string
 ): Promise<void> {
   const db = getDb()
 
@@ -145,7 +148,7 @@ async function saveAnalysisToUserProfile(
         workoutCount,
         weeksAnalyzed,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        model: 'gpt-4o',
+        model: modelUsed,
       })
     functions.logger.info('Analysis saved to user aiData subcollection', { userId })
   } catch (error: any) {
@@ -631,8 +634,10 @@ export const generateTrainingAnalysis = onCall(
       })
       // TODO: REMOVE — End debug logging
 
-      // Build prompts
-      const systemPrompt = buildSystemPrompt()
+      // Build prompts — admin prompt library override (aiPrompts/training_analysis)
+      // falls back to the built-in prompt/model when absent or unreadable.
+      const promptOverride = await getPromptOverride(PROMPT_IDS.trainingAnalysis)
+      const systemPrompt = promptOverride?.systemPrompt ?? buildSystemPrompt()
       const userPrompt = buildUserPrompt(profile, enrichedWorkouts, muscles, weeksAnalyzed)
 
       // TODO: REMOVE — Log prompt size
@@ -647,10 +652,11 @@ export const generateTrainingAnalysis = onCall(
       })
 
       // Call OpenAI
+      const modelUsed = promptOverride?.model ?? 'gpt-4o'
       const client = await getOpenAIClient()
       const completion = await client.chat.completions.create({
-        model: 'gpt-4o',
-        max_tokens: 4096,
+        model: modelUsed,
+        max_tokens: promptOverride?.maxTokens ?? 4096,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: systemPrompt },
@@ -684,7 +690,7 @@ export const generateTrainingAnalysis = onCall(
       await Promise.all([
         incrementAnalysisUsage(userId),
         saveAnalysisResult(userId, analysis, workouts.length, weeksAnalyzed),
-        saveAnalysisToUserProfile(userId, parsed, workouts.length, weeksAnalyzed),
+        saveAnalysisToUserProfile(userId, parsed, workouts.length, weeksAnalyzed, modelUsed),
       ])
 
       functions.logger.info('Training analysis completed', {

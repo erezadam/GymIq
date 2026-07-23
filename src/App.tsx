@@ -43,6 +43,7 @@ const AnalyticsTrainerDetail = lazy(
 const DiagnosticConsole = lazy(
   () => import('@/domains/admin/components/DiagnosticConsole'),
 )
+const PromptLibrary = lazy(() => import('@/domains/admin/components/PromptLibrary'))
 
 // User
 const MainLayout = lazy(() => import('@/design-system/layouts/MainLayout'))
@@ -157,6 +158,7 @@ function App() {
           <Route path="report-types" element={<ReportTypeManager />} />
           <Route path="users" element={<UsersList />} />
           <Route path="release-notes" element={<ReleaseNotesManager />} />
+          <Route path="prompts" element={<PromptLibrary />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="analytics" element={<UsageAnalytics />} />
           <Route path="analytics/trainee/:id" element={<AnalyticsTraineeDetail />} />
