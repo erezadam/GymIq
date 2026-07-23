@@ -27,11 +27,17 @@ export interface PromptOverride {
  * server drops any saved model that is not listed, falling back to the
  * built-in default instead of crashing generation.
  */
+// OpenAI list is limited to the chat.completions families that accept the
+// max_tokens + response_format:{json_object} shape this codebase sends.
+// gpt-5/o-series need max_completion_tokens — adding them requires a code
+// change, not just a list entry.
+const OPENAI_MODELS = ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-nano', 'gpt-4.1-mini', 'gpt-4.1'] as const
+
 export const ALLOWED_MODELS: Record<string, readonly string[]> = {
-  [PROMPT_IDS.workoutGeneration]: ['gpt-4o-mini', 'gpt-4o'],
-  [PROMPT_IDS.trainingAnalysis]: ['gpt-4o', 'gpt-4o-mini'],
-  [PROMPT_IDS.programBuilder]: ['gpt-4o', 'gpt-4o-mini'],
-  [PROMPT_IDS.releaseNoteDrafter]: ['claude-haiku-4-5-20251001'],
+  [PROMPT_IDS.workoutGeneration]: OPENAI_MODELS,
+  [PROMPT_IDS.trainingAnalysis]: OPENAI_MODELS,
+  [PROMPT_IDS.programBuilder]: OPENAI_MODELS,
+  [PROMPT_IDS.releaseNoteDrafter]: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-5-20250929'],
 }
 
 export interface OverrideModelLogger {
