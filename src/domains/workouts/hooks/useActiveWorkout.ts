@@ -41,6 +41,11 @@ import { validateWorkoutId, isNetworkError } from '@/utils/workoutValidation'
 import { determineWorkoutStatus, determineFinishAction } from '../utils/workoutStatus'
 
 // Equipment names in Hebrew
+// Shared copy for the last-exercise delete guard (incident 02/08/2026) — the
+// same message must appear from both the confirm entry point and the action itself
+const LAST_EXERCISE_DELETE_BLOCKED =
+  'אי אפשר למחוק את התרגיל האחרון — אפשר לצאת מהאימון או לסיים אותו'
+
 const equipmentNames: Record<string, string> = {
   barbell: 'מוט ברזל',
   dumbbell: 'משקולות',
@@ -1745,12 +1750,25 @@ export function useActiveWorkout() {
   // Delete an exercise from the workout
   const deleteExercise = useCallback(
     (exerciseId: string) => {
+      // Guard: deleting the last exercise would empty the workout, collapse the
+      // screen to the "no active workout" placeholder, and autosave an empty
+      // in_progress doc that shadows the original workout (incident 02/08/2026)
+      if (workout && workout.exercises.length <= 1) {
+        setConfirmModal({ type: null })
+        toast.error(LAST_EXERCISE_DELETE_BLOCKED)
+        return
+      }
+
       // Find the exercise to get its Firebase exerciseId
       const exerciseToDelete = workout?.exercises.find((ex) => ex.id === exerciseId)
 
       updateWorkout((prev) => {
         const exercise = prev.exercises.find((ex) => ex.id === exerciseId)
         if (!exercise) return prev
+
+        // Floor inside the reducer: the closure guard above can be bypassed by
+        // two rapid deletes racing a re-render — never let the array hit zero
+        if (prev.exercises.length <= 1) return prev
 
         const updatedExercises = prev.exercises.filter((ex) => ex.id !== exerciseId)
 
@@ -1773,9 +1791,17 @@ export function useActiveWorkout() {
   )
 
   // Show delete confirmation
-  const confirmDeleteExercise = useCallback((exerciseId: string) => {
-    setConfirmModal({ type: 'delete_exercise', exerciseId })
-  }, [])
+  const confirmDeleteExercise = useCallback(
+    (exerciseId: string) => {
+      // Don't offer a confirmation for an action deleteExercise will refuse
+      if (workout && workout.exercises.length <= 1) {
+        toast.error(LAST_EXERCISE_DELETE_BLOCKED)
+        return
+      }
+      setConfirmModal({ type: 'delete_exercise', exerciseId })
+    },
+    [workout]
+  )
 
   // Show exit confirmation
   const confirmExit = useCallback(() => {

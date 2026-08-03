@@ -116,6 +116,13 @@ function isNotSoftDeleted(data: any): boolean {
   return !data.deletedByTrainee
 }
 
+// Single source of truth for the "workout has no exercises" predicate — used by
+// the empty-overwrite guards (incident 02/08/2026). Treats a missing/non-array
+// exercises field the same as an empty one.
+export function hasNoExercises(exercises: unknown): boolean {
+  return !Array.isArray(exercises) || exercises.length === 0
+}
+
 // Save a workout to history
 export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'>): Promise<string> {
   const historyRef = collection(db, COLLECTION_NAME)
@@ -1319,6 +1326,27 @@ export async function getInProgressWorkout(userId: string): Promise<WorkoutHisto
     }
 
     const activeDoc = validDocs[0]
+
+    // A 0-exercise in_progress doc is a broken artifact (empty-overwrite incident
+    // 02/08/2026) — recovering it re-renders the blank screen forever. Soft-delete
+    // it (fire-and-forget) so it disappears from recovery AND from history lists —
+    // a 'cancelled' mark would surface a continuable empty card that reproduces
+    // the blank screen from history. Report no active workout.
+    const activeData = activeDoc.data()
+    if (hasNoExercises(activeData.exercises)) {
+      console.warn('⚠️ Skipping empty in_progress workout, soft-deleting:', activeDoc.id)
+      logDiagnostic(
+        'WORKOUT_RECOVERY_FOUND',
+        activeDoc.id,
+        { foundWorkoutId: activeDoc.id, foundCount: snapshot.size, skippedEmpty: true },
+        userId,
+      )
+      softDeleteWorkout(activeDoc.id, 'empty_in_progress_artifact').catch((err) =>
+        console.error('❌ Failed to soft-delete empty in_progress workout:', err)
+      )
+      return null
+    }
+
     console.log('✅ Found in_progress workout:', activeDoc.id)
     logDiagnostic(
       'WORKOUT_RECOVERY_FOUND',
@@ -1374,6 +1402,20 @@ export async function autoSaveWorkout(
   workoutId: string | null,
   workout: Omit<WorkoutHistoryEntry, 'id'>
 ): Promise<string> {
+  // Guard: never write an existing in-progress doc down to zero exercises —
+  // an empty overwrite makes the original workout unrecoverable (incident
+  // 02/08/2026). Must run before the payload build, which maps over exercises.
+  if (workoutId && hasNoExercises(workout.exercises)) {
+    console.warn('⛔ Auto-save blocked: refusing to empty existing workout', workoutId)
+    logDiagnostic(
+      'WORKOUT_AUTOSAVE',
+      workoutId,
+      { isUpdate: true, succeeded: false, blockedEmptyOverwrite: true, exerciseCount: 0 },
+      workout.userId,
+    )
+    return workoutId
+  }
+
   const cleanWorkout = removeUndefined({
     userId: workout.userId,
     name: workout.name || 'אימון',
