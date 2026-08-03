@@ -1,5 +1,6 @@
-// Fix script (incident 02/08/2026): mark empty in_progress workoutHistory docs
-// as cancelled so they stop being recovered as the active workout (blank screen).
+// Fix script (incident 02/08/2026): soft-delete empty in_progress workoutHistory
+// docs (deletedByTrainee) so they stop being recovered as the active workout
+// (blank screen) AND don't surface as continuable empty cards in history.
 // Backs up full docs to scripts/backups/ before writing. Verifies each doc is
 // still in_progress AND empty before touching it — aborts the doc otherwise.
 //
@@ -7,7 +8,7 @@
 // Apply:             npx tsx --env-file=.env.local scripts/fixEmptyInProgressWorkouts.ts --apply <docId...>
 import { db, auth } from './firebase-config'
 import { signInWithEmailAndPassword } from 'firebase/auth'
-import { doc, getDoc, updateDoc } from 'firebase/firestore'
+import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore'
 import { writeFileSync, mkdirSync } from 'fs'
 
 async function main() {
@@ -37,10 +38,13 @@ async function main() {
     }
     backup[id] = data
     if (apply) {
-      await updateDoc(doc(db, 'workoutHistory', id), { status: 'cancelled' })
-      console.log(`FIXED ${id}: in_progress → cancelled (user=${data.userId})`)
+      // Same shape softDeleteWorkout writes — hides the doc from recovery and history
+      await updateDoc(doc(db, 'workoutHistory', id), {
+        deletedByTrainee: { deletedAt: Timestamp.now(), reason: 'empty_in_progress_artifact' },
+      })
+      console.log(`FIXED ${id}: soft-deleted (user=${data.userId})`)
     } else {
-      console.log(`WOULD FIX ${id}: in_progress → cancelled (user=${data.userId})`)
+      console.log(`WOULD FIX ${id}: soft-delete (user=${data.userId})`)
     }
   }
 

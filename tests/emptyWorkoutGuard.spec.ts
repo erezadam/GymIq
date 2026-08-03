@@ -135,21 +135,33 @@ describe('getInProgressWorkout — empty-doc recovery guard', () => {
     }
   }
 
-  it('returns null for a 0-exercise in_progress doc and marks it cancelled', async () => {
+  it('returns null for a 0-exercise in_progress doc and soft-deletes it (not cancelled — a cancelled card would be continuable and reproduce the blank screen)', async () => {
     getDocsMock.mockResolvedValueOnce(inProgressSnapshot([]))
     const { getInProgressWorkout } = await import('../src/lib/firebase/workoutHistory')
     const result = await getInProgressWorkout('zehava-uid')
     expect(result).toBeNull()
-    // fire-and-forget cancel — flush microtasks before asserting
-    await Promise.resolve()
-    expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), { status: 'cancelled' })
+    // fire-and-forget soft-delete — allow the promise chain to run
+    await vi.waitFor(() => expect(updateDocMock).toHaveBeenCalled())
+    const payload = updateDocMock.mock.calls[0][1] as any
+    expect(payload.deletedByTrainee).toBeTruthy()
+    expect(payload.status).toBeUndefined()
   })
 
-  it('returns null when exercises field is missing entirely', async () => {
+  it('returns null and soft-deletes when exercises field is missing entirely', async () => {
     getDocsMock.mockResolvedValueOnce(inProgressSnapshot(undefined))
     const { getInProgressWorkout } = await import('../src/lib/firebase/workoutHistory')
     const result = await getInProgressWorkout('zehava-uid')
     expect(result).toBeNull()
+    await vi.waitFor(() => expect(updateDocMock).toHaveBeenCalled())
+    expect((updateDocMock.mock.calls[0][1] as any).deletedByTrainee).toBeTruthy()
+  })
+
+  it('autoSaveWorkout guard also blocks when exercises is missing/non-array (no TypeError)', async () => {
+    const { autoSaveWorkout } = await import('../src/lib/firebase/workoutHistory')
+    const broken = { ...baseWorkout([]), exercises: undefined } as any
+    const returnedId = await autoSaveWorkout('existing-id', broken)
+    expect(updateDocMock).not.toHaveBeenCalled()
+    expect(returnedId).toBe('existing-id')
   })
 
   it('recovers a normal in_progress doc with exercises (behavior preserved)', async () => {
