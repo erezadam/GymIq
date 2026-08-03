@@ -143,6 +143,8 @@ export interface WorkoutHistoryEntry {
   bundleId?: string // מזהה מקבץ אימונים AI (null לאימון יחיד)
   aiRecommendations?: Record<string, { weight: number; repRange: string; sets: number; reasoning?: string }> // המלצות AI לכל תרגיל
   aiExplanation?: string // הסבר AI למה נבחרו התרגילים באימון
+  // Pinned by trainee: surfaces at the top of the workouts list (below planned)
+  pinned?: boolean
   // Trainer program fields
   programId?: string // reference to trainingPrograms collection
   programDayLabel?: string // e.g., "יום A"
@@ -181,6 +183,8 @@ export interface WorkoutHistorySummary {
   source?: 'manual' | 'ai_trainer' | 'trainer_program' | 'self_standalone' // מקור האימון
   aiWorkoutNumber?: number // מספר סידורי של אימון AI
   bundleId?: string // מזהה מקבץ אימונים AI (null לאימון יחיד)
+  // Pinned by trainee: surfaces at the top of the workouts list (below planned)
+  pinned?: boolean
   // Trainer program fields
   programId?: string
   programDayLabel?: string

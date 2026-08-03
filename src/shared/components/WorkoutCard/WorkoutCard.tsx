@@ -14,6 +14,8 @@ import {
   Clock,
   Zap,
   Trash2,
+  Pin,
+  Pencil,
 } from 'lucide-react'
 import { getMuscleNameHe } from '@/utils/muscleTranslations'
 import { calculateExerciseVolumeFromHistory } from '@/lib/firebase/workoutHistory'
@@ -42,6 +44,9 @@ export interface WorkoutCardProps {
   onToggleExpand: () => void
   onDeleteClick: (e: React.MouseEvent) => void
   onContinueClick: () => void
+  // Rename + pin controls (trainee workouts screen only — omitted elsewhere)
+  onRenameClick?: (e: React.MouseEvent) => void
+  onPinToggle?: (e: React.MouseEvent) => void
   getStatusBadge: (status: WorkoutCompletionStatus) => React.ReactNode
   formatDate: (date: Date) => string
   formatDuration: (minutes: number) => string
@@ -60,6 +65,8 @@ export function WorkoutCard({
   onToggleExpand,
   onDeleteClick,
   onContinueClick,
+  onRenameClick,
+  onPinToggle,
   getStatusBadge,
   formatDate,
   formatDuration,
@@ -111,14 +118,38 @@ export function WorkoutCard({
               </p>
             </div>
           </div>
-          {/* Delete button */}
-          <button
-            onClick={onDeleteClick}
-            className="p-2 text-text-muted hover:text-red-400 transition-colors"
-            aria-label="מחק אימון"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
+          {/* Action buttons */}
+          <div className="flex items-center">
+            {onPinToggle && (
+              <button
+                onClick={onPinToggle}
+                className={`p-2 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors ${
+                  workout.pinned
+                    ? 'text-primary-400 hover:text-text-muted'
+                    : 'text-text-muted hover:text-primary-400'
+                }`}
+                aria-label={workout.pinned ? 'בטל קיבוע אימון' : 'קבע אימון בראש הרשימה'}
+              >
+                <Pin className={`w-5 h-5 ${workout.pinned ? 'fill-current' : ''}`} />
+              </button>
+            )}
+            {onRenameClick && (
+              <button
+                onClick={onRenameClick}
+                className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-text-muted hover:text-primary-400 transition-colors"
+                aria-label="ערוך שם אימון"
+              >
+                <Pencil className="w-5 h-5" />
+              </button>
+            )}
+            <button
+              onClick={onDeleteClick}
+              className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-text-muted hover:text-red-400 transition-colors"
+              aria-label="מחק אימון"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
 

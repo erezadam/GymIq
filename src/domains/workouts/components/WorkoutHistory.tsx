@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Calendar, Dumbbell, CheckCircle, AlertCircle, XCircle, Play, X, ArrowRight, Trash2, ClipboardEdit } from 'lucide-react'
+import { Calendar, Dumbbell, CheckCircle, AlertCircle, XCircle, Play, X, ArrowRight, Trash2, ClipboardEdit, Pin, Pencil } from 'lucide-react'
 // Note: Trophy, ChevronDown, ChevronUp, Clock, Zap moved to WorkoutCard
 import { getUserWorkoutHistory, getWorkoutById, updateWorkoutHistory, softDeleteWorkout } from '@/lib/firebase/workoutHistory'
 import { getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
@@ -14,6 +14,7 @@ import { AIBundleCard } from './ai-trainer/AIBundleCard'
 import { TrainerProgramCard } from '@/domains/trainer/components/ProgramView/TrainerProgramCard'
 import { useTraineeProgram } from '@/domains/trainer/hooks/useTraineeProgram'
 import { deduplicateWorkouts } from '../utils/deduplicateWorkouts'
+import { partitionWorkouts } from '../utils/partitionWorkouts'
 import type { WorkoutHistorySummary, WorkoutHistoryEntry, WorkoutCompletionStatus } from '../types'
 
 // Confirmation dialog for continuing workout
@@ -65,6 +66,10 @@ export default function WorkoutHistory() {
   const [deleteReasonDialog, setDeleteReasonDialog] = useState<{
     isOpen: boolean; workout: WorkoutHistorySummary | null; selectedReason: string
   }>({ isOpen: false, workout: null, selectedReason: '' })
+  const [renameDialog, setRenameDialog] = useState<{
+    isOpen: boolean; workout: WorkoutHistorySummary | null; newName: string
+  }>({ isOpen: false, workout: null, newName: '' })
+  const [isSavingRename, setIsSavingRename] = useState(false)
   const [dynamicMuscleNames, setDynamicMuscleNames] = useState<Record<string, string>>({})
   const [bandNameMap, setBandNameMap] = useState<Record<string, string>>({})
 
@@ -110,7 +115,7 @@ export default function WorkoutHistory() {
 
     setLoadError(false)
     try {
-      const history = await getUserWorkoutHistory(user.uid)
+      const history = await getUserWorkoutHistory(user.uid, 50, false, true)
 
       // Dedup criterion: programId + programDayLabel + same calendar day.
       // Ad-hoc workouts (no programId) are never deduplicated.
@@ -156,6 +161,58 @@ export default function WorkoutHistory() {
       day: 'numeric',
       month: 'short',
     })
+  }
+
+  // Toggle pin state — optimistic update, revert on failure
+  const handlePinToggle = async (e: React.MouseEvent, workout: WorkoutHistorySummary) => {
+    e.stopPropagation() // Prevent card expansion
+    if (isImpersonating) { toast.error('לא ניתן לבצע שינויים במצב צפייה'); return }
+
+    const newPinned = !workout.pinned
+    setWorkouts((prev) => prev.map((w) => (w.id === workout.id ? { ...w, pinned: newPinned } : w)))
+    try {
+      await updateWorkoutHistory(workout.id, { pinned: newPinned })
+      toast.success(newPinned ? 'האימון קובע בראש הרשימה' : 'הקיבוע בוטל')
+    } catch (error) {
+      console.error('Failed to toggle pin:', error)
+      setWorkouts((prev) => prev.map((w) => (w.id === workout.id ? { ...w, pinned: !newPinned } : w)))
+      toast.error('שגיאה בעדכון הקיבוע')
+    }
+  }
+
+  // Open rename dialog
+  const handleRenameClick = (e: React.MouseEvent, workout: WorkoutHistorySummary) => {
+    e.stopPropagation() // Prevent card expansion
+    if (isImpersonating) { toast.error('לא ניתן לבצע שינויים במצב צפייה'); return }
+    setRenameDialog({ isOpen: true, workout, newName: workout.name })
+  }
+
+  // Save the new workout name — optimistic update, revert on failure
+  const handleRenameConfirm = async () => {
+    if (isSavingRename) return // Enter key has no disabled state — guard double submit
+    if (isImpersonating) { toast.error('לא ניתן לבצע שינויים במצב צפייה'); return }
+    const workout = renameDialog.workout
+    const trimmed = renameDialog.newName.trim()
+    if (!workout || !trimmed) return
+    if (trimmed === workout.name) {
+      setRenameDialog({ isOpen: false, workout: null, newName: '' })
+      return
+    }
+
+    setIsSavingRename(true)
+    const previousName = workout.name
+    setWorkouts((prev) => prev.map((w) => (w.id === workout.id ? { ...w, name: trimmed } : w)))
+    try {
+      await updateWorkoutHistory(workout.id, { name: trimmed })
+      toast.success('שם האימון עודכן')
+      setRenameDialog({ isOpen: false, workout: null, newName: '' })
+    } catch (error) {
+      console.error('Failed to rename workout:', error)
+      setWorkouts((prev) => prev.map((w) => (w.id === workout.id ? { ...w, name: previousName } : w)))
+      toast.error('שגיאה בעדכון שם האימון')
+    } finally {
+      setIsSavingRename(false)
+    }
   }
 
   // Handle delete button click
@@ -693,69 +750,12 @@ export default function WorkoutHistory() {
     }
   }
 
-  // Filter and sort workouts, group AI bundles
-  const { plannedWorkouts, otherWorkouts, aiBundles, singleAIWorkouts } = useMemo(() => {
-    const now = new Date()
-    const twoWeeksAgo = new Date()
-    twoWeeksAgo.setDate(now.getDate() - 14)
-    twoWeeksAgo.setHours(0, 0, 0, 0)
-
-    // Filter: planned always shown, others only from last 2 weeks
-    const filtered = workouts.filter(workout => {
-      if (workout.status === 'planned') return true
-      const workoutDate = new Date(workout.date)
-      return workoutDate >= twoWeeksAgo
-    })
-
-    // Group AI workouts by bundleId
-    const bundleMap = new Map<string, WorkoutHistorySummary[]>()
-    const nonBundledWorkouts: WorkoutHistorySummary[] = []
-    const singleAI: WorkoutHistorySummary[] = []
-
-    filtered.forEach(workout => {
-      // Completed AI workouts show in "שבועיים אחרונים" like regular workouts
-      const isCompletedAI = workout.source === 'ai_trainer' && workout.status === 'completed'
-
-      if (isCompletedAI) {
-        nonBundledWorkouts.push(workout)
-      } else if (workout.bundleId) {
-        // Part of a bundle (non-completed)
-        const existing = bundleMap.get(workout.bundleId) || []
-        existing.push(workout)
-        bundleMap.set(workout.bundleId, existing)
-      } else if (workout.source === 'ai_trainer') {
-        // Single AI workout (non-completed, no bundle)
-        singleAI.push(workout)
-      } else {
-        // Regular workout
-        nonBundledWorkouts.push(workout)
-      }
-    })
-
-    // Convert bundle map to array, filter out empty bundles (all completed)
-    const bundles = Array.from(bundleMap.entries())
-      .map(([bundleId, bundleWorkouts]) => ({
-        bundleId,
-        workouts: bundleWorkouts.sort((a, b) => (a.aiWorkoutNumber || 0) - (b.aiWorkoutNumber || 0)),
-      }))
-      .filter(bundle => bundle.workouts.some(w => w.status !== 'completed'))
-
-    // Separate planned from others (non-AI workouts)
-    const planned = nonBundledWorkouts
-      .filter(w => w.status === 'planned')
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-
-    const others = nonBundledWorkouts
-      .filter(w => w.status !== 'planned')
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-
-    return {
-      plannedWorkouts: planned,
-      otherWorkouts: others,
-      aiBundles: bundles,
-      singleAIWorkouts: singleAI.filter(w => w.status !== 'completed'),
-    }
-  }, [workouts])
+  // Filter and sort workouts, group AI bundles — pure logic lives in
+  // partitionWorkouts.ts so it's behaviorally testable
+  const { plannedWorkouts, pinnedWorkouts, otherWorkouts, aiBundles, singleAIWorkouts } = useMemo(
+    () => partitionWorkouts(workouts),
+    [workouts]
+  )
 
   /* STATS CALCULATION - COMMENTED OUT FOR FUTURE USE
    * To restore stats cubes, uncomment this block and add Flame to lucide-react imports
@@ -937,6 +937,7 @@ export default function WorkoutHistory() {
                 onToggleExpand={() => toggleWorkoutExpanded(workout.id)}
                 onDeleteClick={(e) => handleDeleteClick(e, workout)}
                 onContinueClick={() => handleContinueClick(workout)}
+                onRenameClick={(e) => handleRenameClick(e, workout)}
                 getStatusBadge={getStatusBadge}
                 formatDate={formatDate}
                 formatDuration={formatDuration}
@@ -948,7 +949,46 @@ export default function WorkoutHistory() {
       )}
 
       {/* Separator if both sections exist */}
-      {plannedWorkouts.length > 0 && otherWorkouts.length > 0 && (
+      {plannedWorkouts.length > 0 && (pinnedWorkouts.length > 0 || otherWorkouts.length > 0) && (
+        <div className="border-t border-dark-border" />
+      )}
+
+      {/* Pinned workouts section - directly below planned */}
+      {pinnedWorkouts.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold text-primary-400 mb-3 flex items-center gap-2">
+            <Pin className="w-5 h-5" />
+            אימונים נעוצים
+          </h2>
+          <div className="space-y-3">
+            {pinnedWorkouts.map((workout) => (
+              <WorkoutCard
+                key={workout.id}
+                workout={workout}
+                type="regular"
+                isExpanded={expandedWorkoutId === workout.id}
+                statusConfig={getStatusConfig(workout.status)}
+                expandedWorkoutDetails={expandedWorkoutDetails}
+                loadingDetails={loadingDetails}
+                dynamicMuscleNames={dynamicMuscleNames}
+                bandNameMap={bandNameMap}
+                onToggleExpand={() => toggleWorkoutExpanded(workout.id)}
+                onDeleteClick={(e) => handleDeleteClick(e, workout)}
+                onContinueClick={() => handleContinueClick(workout)}
+                onRenameClick={(e) => handleRenameClick(e, workout)}
+                onPinToggle={(e) => handlePinToggle(e, workout)}
+                getStatusBadge={getStatusBadge}
+                formatDate={formatDate}
+                formatDuration={formatDuration}
+                estimateCalories={estimateCalories}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Separator between pinned and recent */}
+      {pinnedWorkouts.length > 0 && otherWorkouts.length > 0 && (
         <div className="border-t border-dark-border" />
       )}
 
@@ -971,6 +1011,8 @@ export default function WorkoutHistory() {
                 onToggleExpand={() => toggleWorkoutExpanded(workout.id)}
                 onDeleteClick={(e) => handleDeleteClick(e, workout)}
                 onContinueClick={() => handleContinueClick(workout)}
+                onRenameClick={(e) => handleRenameClick(e, workout)}
+                onPinToggle={(e) => handlePinToggle(e, workout)}
                 getStatusBadge={getStatusBadge}
                 formatDate={formatDate}
                 formatDuration={formatDuration}
@@ -1103,6 +1145,68 @@ export default function WorkoutHistory() {
                   className="flex-1 py-3 px-4 bg-red-500 hover:bg-red-600 text-white font-medium rounded-xl transition-colors"
                 >
                   מחק
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rename Workout Dialog */}
+      {renameDialog.isOpen && renameDialog.workout && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in"
+          onClick={() => setRenameDialog({ isOpen: false, workout: null, newName: '' })}
+        >
+          <div
+            className="bg-dark-surface rounded-2xl max-w-sm w-full shadow-xl animate-scale-in relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              {/* Close button */}
+              <button
+                onClick={() => setRenameDialog({ isOpen: false, workout: null, newName: '' })}
+                className="absolute top-2 right-2 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-text-muted hover:text-text-primary"
+                aria-label="סגור"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Icon */}
+              <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center bg-primary-400/20">
+                <Pencil className="w-8 h-8 text-primary-400" />
+              </div>
+
+              <h3 className="text-xl font-bold text-text-primary mb-4 text-center">
+                עריכת שם אימון
+              </h3>
+
+              <input
+                type="text"
+                dir="rtl"
+                value={renameDialog.newName}
+                onChange={(e) => setRenameDialog((prev) => ({ ...prev, newName: e.target.value }))}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleRenameConfirm() }}
+                maxLength={60}
+                autoFocus
+                placeholder="שם האימון"
+                className="w-full px-4 py-3 bg-dark-card border border-dark-border rounded-xl text-text-primary placeholder:text-text-muted focus:outline-none focus:border-primary-400 mb-6"
+              />
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setRenameDialog({ isOpen: false, workout: null, newName: '' })}
+                  className="flex-1 py-3 px-4 bg-dark-card hover:bg-dark-border text-text-primary font-medium rounded-xl transition-colors"
+                >
+                  ביטול
+                </button>
+                <button
+                  onClick={handleRenameConfirm}
+                  disabled={!renameDialog.newName.trim() || isSavingRename}
+                  className="flex-1 py-3 px-4 bg-primary-400 hover:bg-primary-500 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSavingRename ? 'שומר...' : 'שמור'}
                 </button>
               </div>
             </div>

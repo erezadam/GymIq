@@ -55,6 +55,7 @@ function toWorkoutHistory(id: string, data: any): WorkoutHistoryEntry {
     bundleId: data.bundleId,
     aiRecommendations: data.aiRecommendations,
     aiExplanation: data.aiExplanation,
+    pinned: data.pinned,
     // Trainer program fields
     programId: data.programId,
     programDayLabel: data.programDayLabel,
@@ -101,6 +102,8 @@ function toSummary(entry: WorkoutHistoryEntry): WorkoutHistorySummary {
     source: entry.source,
     aiWorkoutNumber: entry.aiWorkoutNumber,
     bundleId: entry.bundleId,
+    // Pinned by trainee
+    pinned: entry.pinned,
     // Trainer program fields
     programId: entry.programId,
     programDayLabel: entry.programDayLabel,
@@ -240,7 +243,8 @@ export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'
 export async function getUserWorkoutHistory(
   userId: string,
   limitCount: number = 50,
-  includeDeleted: boolean = false
+  includeDeleted: boolean = false,
+  includePinnedBeyondLimit: boolean = false
 ): Promise<WorkoutHistorySummary[]> {
   console.log('📖 getUserWorkoutHistory called for userId:', userId)
   const historyRef = collection(db, COLLECTION_NAME)
@@ -251,10 +255,33 @@ export async function getUserWorkoutHistory(
     limit(limitCount)
   )
 
+  // Opt-in (trainee workouts screen only): pinned workouts must always appear,
+  // even when older than the most recent `limitCount` docs — fetched in parallel
+  // (equality-only query, no composite index needed) and merged by id. Opt-in so
+  // other callers (AI context, trainer views) keep pure date-window semantics.
+  // Failure here degrades gracefully: the main list still loads, old pinned
+  // docs just fall out of view.
+  const pinnedQ = includePinnedBeyondLimit
+    ? query(historyRef, where('userId', '==', userId), where('pinned', '==', true))
+    : null
+
   try {
-    const snapshot = await getDocs(q)
+    const [snapshot, pinnedSnapshot] = await Promise.all([
+      getDocs(q),
+      pinnedQ
+        ? getDocs(pinnedQ).catch(err => {
+            console.error('⚠️ Pinned workouts query failed (continuing without):', err)
+            return null
+          })
+        : Promise.resolve(null),
+    ])
     console.log('📖 Found', snapshot.docs.length, 'workouts')
-    const docs = includeDeleted ? snapshot.docs : snapshot.docs.filter(d => isNotSoftDeleted(d.data()))
+    const seenIds = new Set(snapshot.docs.map(d => d.id))
+    const mergedDocs = [
+      ...snapshot.docs,
+      ...(pinnedSnapshot?.docs.filter(d => !seenIds.has(d.id)) ?? []),
+    ]
+    const docs = includeDeleted ? mergedDocs : mergedDocs.filter(d => isNotSoftDeleted(d.data()))
     const results = docs.map(doc => {
       const entry = toWorkoutHistory(doc.id, doc.data())
       return toSummary(entry)
@@ -1217,6 +1244,8 @@ export async function updateWorkoutHistory(
     status: string
     startTime: Date
     date: Date
+    name: string
+    pinned: boolean
   }>
 ): Promise<void> {
   const docRef = doc(db, COLLECTION_NAME, workoutId)
@@ -1233,6 +1262,16 @@ export async function updateWorkoutHistory(
 
   if (updates.date) {
     updateData.date = Timestamp.fromDate(updates.date)
+  }
+
+  // Explicit !== undefined checks: renaming to any string and pinned:false
+  // (unpin) must both reach Firestore
+  if (updates.name !== undefined) {
+    updateData.name = updates.name
+  }
+
+  if (updates.pinned !== undefined) {
+    updateData.pinned = updates.pinned
   }
 
   console.log('📝 Updating workout:', workoutId, updateData)

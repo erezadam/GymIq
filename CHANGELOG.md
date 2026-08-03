@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased] - 2026-08-03
+
+### Fixed
+- **אימון נעלם + מסך ריק אחרי מחיקת תרגיל אחרון (תקרית 02/08, zehava@assa-adam.com, PR #157):** מחיקת התרגיל האחרון באימון פעיל (במקרה הזה אימון AI) רוקנה את מערך התרגילים → המסך קרס ל-placeholder "אין אימון פעיל" → ה-autosave דרס את המסמך המקורי ב-Firestore כאימון `in_progress` ריק שנעלם מההיסטוריה ושוחזר כמסך ריק בכל טעינה. תוקן בשלוש שכבות: (1) `deleteExercise`/`confirmDeleteExercise` חוסמים מחיקת תרגיל אחרון (toast + רצפה בתוך ה-reducer נגד לחיצה כפולה מהירה); (2) `autoSaveWorkout` מסרב לעדכן מסמך קיים לאפס תרגילים (פרדיקט משותף `hasNoExercises`, guard לפני בניית ה-payload); (3) `getInProgressWorkout` מדלג על מסמך ריק ועושה לו **soft-delete** (לא `cancelled` — ממצא code-review: כרטיס cancelled ריק ניתן להמשכה ומשחזר את הבאג מההיסטוריה). סקריפטים: `scripts/findEmptyInProgressWorkouts.ts` (read-only) מצא 2 מסמכים פגועים בפרודקשן; `scripts/fixEmptyInProgressWorkouts.ts` (dry-run default + גיבוי) ממתין לאישור הרצה. 9 בדיקות התנהגותיות חדשות (`tests/emptyWorkoutGuard.spec.ts`), אומתו RED ללא התיקון.
+
+### Added
+- **עריכת שם + קיבוע אימונים במסך האימונים של המתאמן (PR #158):** אייקון עיפרון על כרטיס אימון פותח דיאלוג עריכת שם (RTL, Enter שומר, שם ריק חסום, guard נגד שליחה כפולה); אייקון נעץ מקבע/משחרר. סדר הרשימה: מתוכננים (ללא שינוי) → **אימונים נעוצים** (עוקפים את חלון השבועיים, ממוינים לפי ביצוע אחרון) → שבועיים אחרונים. שדה חדש `pinned?: boolean` ב-`workoutHistory`; `updateWorkoutHistory` הורחב ל-`name`/`pinned` (בדיקת `!== undefined` כדי ש-unpin יגיע ל-Firestore). `getUserWorkoutHistory` ממזג שאילתת pinned מקבילה **ב-opt-in בלבד** (`includePinnedBeyondLimit`, ממצא code-review — כדי לא לזהם את הקשר ה-AI ותצוגות המאמן) כך שאימון נעוץ ישן מחלון 50 המסמכים עדיין נטען. לוגיקת המיון חולצה ל-`partitionWorkouts.ts` (טהורה). שתי הפעולות חסומות במצב impersonation, עדכון אופטימי עם revert. מתאמן בלבד — מודול המאמן לא נגע (החלטה מפורשת). 12 בדיקות התנהגותיות (`tests/workoutPinRename.spec.ts`). ללא rules/index חדשים (שאילתת equality-only).
+
 ## [Unreleased] - 2026-07-23 (3)
 
 ### Changed
