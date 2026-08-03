@@ -115,7 +115,7 @@ export default function WorkoutHistory() {
 
     setLoadError(false)
     try {
-      const history = await getUserWorkoutHistory(user.uid)
+      const history = await getUserWorkoutHistory(user.uid, 50, false, true)
 
       // Dedup criterion: programId + programDayLabel + same calendar day.
       // Ad-hoc workouts (no programId) are never deduplicated.
@@ -189,6 +189,7 @@ export default function WorkoutHistory() {
 
   // Save the new workout name — optimistic update, revert on failure
   const handleRenameConfirm = async () => {
+    if (isSavingRename) return // Enter key has no disabled state — guard double submit
     if (isImpersonating) { toast.error('לא ניתן לבצע שינויים במצב צפייה'); return }
     const workout = renameDialog.workout
     const trimmed = renameDialog.newName.trim()

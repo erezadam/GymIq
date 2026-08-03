@@ -243,7 +243,8 @@ export async function saveWorkoutHistory(workout: Omit<WorkoutHistoryEntry, 'id'
 export async function getUserWorkoutHistory(
   userId: string,
   limitCount: number = 50,
-  includeDeleted: boolean = false
+  includeDeleted: boolean = false,
+  includePinnedBeyondLimit: boolean = false
 ): Promise<WorkoutHistorySummary[]> {
   console.log('📖 getUserWorkoutHistory called for userId:', userId)
   const historyRef = collection(db, COLLECTION_NAME)
@@ -254,23 +255,25 @@ export async function getUserWorkoutHistory(
     limit(limitCount)
   )
 
-  // Pinned workouts must always appear, even when older than the most recent
-  // `limitCount` docs — fetched in parallel (equality-only query, no composite
-  // index needed) and merged by id. Failure here degrades gracefully: the main
-  // list still loads, old pinned docs just fall out of view.
-  const pinnedQ = query(
-    historyRef,
-    where('userId', '==', userId),
-    where('pinned', '==', true)
-  )
+  // Opt-in (trainee workouts screen only): pinned workouts must always appear,
+  // even when older than the most recent `limitCount` docs — fetched in parallel
+  // (equality-only query, no composite index needed) and merged by id. Opt-in so
+  // other callers (AI context, trainer views) keep pure date-window semantics.
+  // Failure here degrades gracefully: the main list still loads, old pinned
+  // docs just fall out of view.
+  const pinnedQ = includePinnedBeyondLimit
+    ? query(historyRef, where('userId', '==', userId), where('pinned', '==', true))
+    : null
 
   try {
     const [snapshot, pinnedSnapshot] = await Promise.all([
       getDocs(q),
-      getDocs(pinnedQ).catch(err => {
-        console.error('⚠️ Pinned workouts query failed (continuing without):', err)
-        return null
-      }),
+      pinnedQ
+        ? getDocs(pinnedQ).catch(err => {
+            console.error('⚠️ Pinned workouts query failed (continuing without):', err)
+            return null
+          })
+        : Promise.resolve(null),
     ])
     console.log('📖 Found', snapshot.docs.length, 'workouts')
     const seenIds = new Set(snapshot.docs.map(d => d.id))

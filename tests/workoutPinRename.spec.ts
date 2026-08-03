@@ -92,7 +92,7 @@ describe('getUserWorkoutHistory — pinned merge', () => {
       .mockResolvedValueOnce({ docs: [docOf('recent', baseDoc()), docOf('both', baseDoc({ pinned: true }))] })
       .mockResolvedValueOnce({ docs: [docOf('both', baseDoc({ pinned: true })), docOf('old-pinned', baseDoc({ pinned: true, date: ts('2026-01-01T10:00:00') }))] })
     const { getUserWorkoutHistory } = await import('../src/lib/firebase/workoutHistory')
-    const result = await getUserWorkoutHistory('u1')
+    const result = await getUserWorkoutHistory('u1', 50, false, true)
     const ids = result.map(w => w.id)
     expect(ids).toContain('old-pinned')
     expect(ids.filter(id => id === 'both')).toHaveLength(1)
@@ -104,7 +104,15 @@ describe('getUserWorkoutHistory — pinned merge', () => {
       .mockResolvedValueOnce({ docs: [docOf('recent', baseDoc())] })
       .mockRejectedValueOnce(new Error('index missing'))
     const { getUserWorkoutHistory } = await import('../src/lib/firebase/workoutHistory')
+    const result = await getUserWorkoutHistory('u1', 50, false, true)
+    expect(result.map(w => w.id)).toEqual(['recent'])
+  })
+
+  it('default call (other callers) does NOT run the pinned query — semantics unchanged', async () => {
+    getDocsMock.mockResolvedValueOnce({ docs: [docOf('recent', baseDoc())] })
+    const { getUserWorkoutHistory } = await import('../src/lib/firebase/workoutHistory')
     const result = await getUserWorkoutHistory('u1')
+    expect(getDocsMock).toHaveBeenCalledTimes(1)
     expect(result.map(w => w.id)).toEqual(['recent'])
   })
 
@@ -115,7 +123,7 @@ describe('getUserWorkoutHistory — pinned merge', () => {
         docs: [docOf('deleted-pinned', baseDoc({ pinned: true, deletedByTrainee: { deletedAt: ts('2026-07-01T00:00:00') } }))],
       })
     const { getUserWorkoutHistory } = await import('../src/lib/firebase/workoutHistory')
-    const result = await getUserWorkoutHistory('u1')
+    const result = await getUserWorkoutHistory('u1', 50, false, true)
     expect(result).toHaveLength(0)
   })
 })
