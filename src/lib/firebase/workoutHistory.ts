@@ -1319,6 +1319,25 @@ export async function getInProgressWorkout(userId: string): Promise<WorkoutHisto
     }
 
     const activeDoc = validDocs[0]
+
+    // A 0-exercise in_progress doc is a broken artifact (empty-overwrite incident
+    // 02/08/2026) — recovering it re-renders the blank screen forever. Mark it
+    // cancelled (fire-and-forget) and report no active workout.
+    const activeData = activeDoc.data()
+    if (!Array.isArray(activeData.exercises) || activeData.exercises.length === 0) {
+      console.warn('⚠️ Skipping empty in_progress workout, marking cancelled:', activeDoc.id)
+      logDiagnostic(
+        'WORKOUT_RECOVERY_FOUND',
+        activeDoc.id,
+        { foundWorkoutId: activeDoc.id, foundCount: snapshot.size, skippedEmpty: true },
+        userId,
+      )
+      updateDoc(doc(db, COLLECTION_NAME, activeDoc.id), { status: 'cancelled' }).catch((err) =>
+        console.error('❌ Failed to cancel empty in_progress workout:', err)
+      )
+      return null
+    }
+
     console.log('✅ Found in_progress workout:', activeDoc.id)
     logDiagnostic(
       'WORKOUT_RECOVERY_FOUND',
@@ -1435,6 +1454,19 @@ export async function autoSaveWorkout(
     completedExerciseCount,
   }
   const isUpdate = workoutId !== null
+
+  // Guard: never write an existing in-progress doc down to zero exercises —
+  // an empty overwrite makes the original workout unrecoverable (incident 02/08/2026)
+  if (workoutId && workout.exercises.length === 0) {
+    console.warn('⛔ Auto-save blocked: refusing to empty existing workout', workoutId)
+    logDiagnostic(
+      'WORKOUT_AUTOSAVE',
+      workoutId,
+      { ...basePayload, isUpdate: true, succeeded: false, blockedEmptyOverwrite: true },
+      workout.userId,
+    )
+    return workoutId
+  }
 
   try {
     if (workoutId) {

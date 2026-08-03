@@ -1745,6 +1745,15 @@ export function useActiveWorkout() {
   // Delete an exercise from the workout
   const deleteExercise = useCallback(
     (exerciseId: string) => {
+      // Guard: deleting the last exercise would empty the workout, collapse the
+      // screen to the "no active workout" placeholder, and autosave an empty
+      // in_progress doc that shadows the original workout (incident 02/08/2026)
+      if (workout && workout.exercises.length <= 1) {
+        setConfirmModal({ type: null })
+        toast.error('אי אפשר למחוק את התרגיל האחרון — אפשר לצאת מהאימון או לסיים אותו')
+        return
+      }
+
       // Find the exercise to get its Firebase exerciseId
       const exerciseToDelete = workout?.exercises.find((ex) => ex.id === exerciseId)
 
@@ -1773,9 +1782,17 @@ export function useActiveWorkout() {
   )
 
   // Show delete confirmation
-  const confirmDeleteExercise = useCallback((exerciseId: string) => {
-    setConfirmModal({ type: 'delete_exercise', exerciseId })
-  }, [])
+  const confirmDeleteExercise = useCallback(
+    (exerciseId: string) => {
+      // Don't offer a confirmation for an action deleteExercise will refuse
+      if (workout && workout.exercises.length <= 1) {
+        toast.error('אי אפשר למחוק את התרגיל האחרון — אפשר לצאת מהאימון או לסיים אותו')
+        return
+      }
+      setConfirmModal({ type: 'delete_exercise', exerciseId })
+    },
+    [workout]
+  )
 
   // Show exit confirmation
   const confirmExit = useCallback(() => {
