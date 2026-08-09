@@ -13,6 +13,7 @@ import type { Exercise } from '@/domains/exercises/types'
 import type { ProgramExercise } from '@/domains/trainer/types'
 import {
   useMuscleAnalysis,
+  sumAnalysisTotals,
   MIN_SETS,
   MIN_AVG_REPS,
   type MuscleRow,
@@ -40,6 +41,8 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
   const [saveError, setSaveError] = useState<string | null>(null)
 
   const { loading, rows, summaryRows, weekRange, error } = useMuscleAnalysis(traineeId, weekMode, customStart, customEnd)
+  const summaryTotals = sumAnalysisTotals(summaryRows)
+  const detailTotals = sumAnalysisTotals(rows)
 
   // Handle "+" click — open ExerciseLibrary filtered by muscle
   const handleAddExercises = (row: MuscleRow) => {
@@ -393,6 +396,14 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
                 </tr>
               </thead>
               <tbody>
+                <tr className="border-b border-dark-border bg-primary/10">
+                  <td className="py-2.5 pr-2 text-text-primary font-bold">סה״כ</td>
+                  <td className="py-2.5 text-text-primary font-bold">
+                    {Number.isInteger(summaryTotals.sets) ? summaryTotals.sets : summaryTotals.sets.toFixed(1)}
+                    {summaryTotals.minutes > 0 && <span className="text-on-surface-variant font-medium"> + {summaryTotals.minutes} דק׳</span>}
+                  </td>
+                  <td className="py-2.5 pl-2 text-center text-text-primary font-bold">{summaryTotals.reps}</td>
+                </tr>
                 {summaryRows.map((row, i) => (
                   <tr key={row.category} className={i % 2 === 0 ? 'bg-dark-card/40' : ''}>
                     <td className="py-2.5 pr-2 text-text-primary font-medium">{row.categoryHe}</td>
@@ -444,6 +455,15 @@ export function MuscleAnalysisTab({ traineeId }: MuscleAnalysisTabProps) {
                 </tr>
               </thead>
               <tbody>
+                <tr className="border-b border-dark-border bg-primary/10">
+                  <td colSpan={2} className="py-2.5 pr-2 text-text-primary font-bold">סה״כ</td>
+                  <td className="py-2.5 text-text-primary font-bold">
+                    {Number.isInteger(detailTotals.sets) ? detailTotals.sets : detailTotals.sets.toFixed(1)}
+                    {detailTotals.minutes > 0 && <span className="text-on-surface-variant font-medium"> + {detailTotals.minutes} דק׳</span>}
+                  </td>
+                  <td className="py-2.5 text-center text-text-primary font-bold">{detailTotals.reps}</td>
+                  <td className="py-2.5 pl-2"></td>
+                </tr>
                 {rows.map((row, i) => (
                   <tr key={row.primaryMuscle} className={i % 2 === 0 ? 'bg-dark-card/40' : ''}>
                     <td className="py-2.5 pr-2 text-text-primary font-medium">{row.categoryHe}</td>
