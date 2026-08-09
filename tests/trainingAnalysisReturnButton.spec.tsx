@@ -29,7 +29,8 @@ vi.mock('@/domains/workouts/store', () => ({
   useWorkoutBuilderStore: () => ({ selectedExercises: [], clearWorkout: vi.fn() }),
 }))
 
-vi.mock('@/domains/workouts/hooks/useMuscleAnalysis', () => ({
+vi.mock('@/domains/workouts/hooks/useMuscleAnalysis', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/domains/workouts/hooks/useMuscleAnalysis')>()),
   useMuscleAnalysis: () => ({
     loading: false,
     rows: [],
@@ -37,8 +38,6 @@ vi.mock('@/domains/workouts/hooks/useMuscleAnalysis', () => ({
     weekRange: { startStr: '14/06/2026', endStr: '18/06/2026' },
     error: null,
   }),
-  MIN_SETS: 10,
-  MIN_AVG_REPS: 5,
 }))
 
 vi.mock('@/domains/workouts/services/analysisService', () => ({

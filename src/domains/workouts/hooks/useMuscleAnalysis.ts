@@ -24,6 +24,7 @@ export interface MuscleRow {
   primaryMuscle: string
   primaryMuscleHe: string
   totalSets: number
+  totalReps: number
   avgReps: number
   setsGreen: boolean
   repsGreen: boolean
@@ -37,6 +38,7 @@ export interface SummaryRow {
   category: string
   categoryHe: string
   totalSets: number
+  totalReps: number
   avgReps: number
   setsGreen: boolean
   repsGreen: boolean
@@ -46,6 +48,35 @@ export interface SummaryRow {
 }
 
 export type WeekMode = 'last' | 'current' | 'custom'
+
+export interface AnalysisTotals {
+  sets: number
+  reps: number
+  minutes: number
+}
+
+/** Sums sets/reps across strength rows and minutes across cardio rows,
+ *  matching what each table row actually displays. */
+export function sumAnalysisTotals(
+  rows: Array<Pick<MuscleRow, 'totalSets' | 'totalReps' | 'isCardio' | 'totalMinutes'>>,
+): AnalysisTotals {
+  let sets = 0
+  let reps = 0
+  let minutes = 0
+  for (const row of rows) {
+    if (row.isCardio) {
+      minutes += row.totalMinutes || 0
+    } else {
+      sets += row.totalSets
+      reps += row.totalReps
+    }
+  }
+  return {
+    sets: Math.round(sets * 10) / 10,
+    reps: Math.round(reps),
+    minutes: Math.round(minutes),
+  }
+}
 
 export const fmt = (d: Date) =>
   `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
@@ -155,7 +186,9 @@ export function useMuscleAnalysis(
         const normalizeMuscleId = (id: string): string => normalizeId.get(id) || id
 
         // Accumulate sets and reps by primaryMuscle
-        const muscleData = new Map<string, { sets: number; reps: number; repsCount: number }>()
+        // repsAll sums every completed rep (for table totals); reps/repsCount only
+        // count sets with reps > 5 so the displayed average isn't skewed by warmups
+        const muscleData = new Map<string, { sets: number; reps: number; repsCount: number; repsAll: number }>()
         const cardioData = new Map<string, { totalMinutes: number; zoneSum: number; zoneCount: number }>()
         const exercisesByMuscle = new Map<string, Map<string, { name: string; sets: number; reps: number; repsCount: number }>>()
 
@@ -190,9 +223,10 @@ export function useMuscleAnalysis(
             for (const set of exercise.sets) {
               if (!set.completed) continue
 
-              const existing = muscleData.get(primaryMuscle) || { sets: 0, reps: 0, repsCount: 0 }
+              const existing = muscleData.get(primaryMuscle) || { sets: 0, reps: 0, repsCount: 0, repsAll: 0 }
               existing.sets++
               const reps = set.actualReps || set.targetReps || 0
+              if (reps > 0) existing.repsAll += reps
               if (reps > 5) {
                 existing.reps += reps
                 existing.repsCount++
@@ -215,7 +249,7 @@ export function useMuscleAnalysis(
               // so that secondary credit doesn't distort the average reps
               const credits = exDef?.secondaryMuscleCredits || []
               for (const muscleId of credits) {
-                const ex2 = muscleData.get(muscleId) || { sets: 0, reps: 0, repsCount: 0 }
+                const ex2 = muscleData.get(muscleId) || { sets: 0, reps: 0, repsCount: 0, repsAll: 0 }
                 ex2.sets += 0.5
                 muscleData.set(muscleId, ex2)
               }
@@ -261,6 +295,7 @@ export function useMuscleAnalysis(
               primaryMuscle: primary.id,
               primaryMuscleHe: primary.nameHe,
               totalSets,
+              totalReps: data?.repsAll || 0,
               avgReps,
               setsGreen: totalSets >= MIN_SETS,
               repsGreen: avgReps >= MIN_AVG_REPS,
@@ -277,10 +312,11 @@ export function useMuscleAnalysis(
 
             if (hasParentData && primary.subMuscles.length > 0) {
               const firstSubId = primary.subMuscles[0].id
-              const subData = muscleData.get(firstSubId) || { sets: 0, reps: 0, repsCount: 0 }
+              const subData = muscleData.get(firstSubId) || { sets: 0, reps: 0, repsCount: 0, repsAll: 0 }
               subData.sets += parentData?.sets || 0
               subData.reps += parentData?.reps || 0
               subData.repsCount += parentData?.repsCount || 0
+              subData.repsAll += parentData?.repsAll || 0
               muscleData.set(firstSubId, subData)
 
               if (parentCardio) {
@@ -324,6 +360,7 @@ export function useMuscleAnalysis(
                 primaryMuscle: sub.id,
                 primaryMuscleHe: sub.nameHe,
                 totalSets,
+                totalReps: data?.repsAll || 0,
                 avgReps,
                 setsGreen: totalSets >= MIN_SETS,
                 repsGreen: avgReps >= MIN_AVG_REPS,
@@ -344,10 +381,11 @@ export function useMuscleAnalysis(
         setRows(result)
 
         // Build summary rows
-        const summaryMap = new Map<string, { categoryHe: string; sets: number; reps: number; repsCount: number; isCardio: boolean; totalMinutes: number; zoneSum: number; zoneCount: number }>()
+        const summaryMap = new Map<string, { categoryHe: string; sets: number; reps: number; repsCount: number; repsAll: number; isCardio: boolean; totalMinutes: number; zoneSum: number; zoneCount: number }>()
         for (const row of result) {
-          const existing = summaryMap.get(row.category) || { categoryHe: row.categoryHe, sets: 0, reps: 0, repsCount: 0, isCardio: false, totalMinutes: 0, zoneSum: 0, zoneCount: 0 }
+          const existing = summaryMap.get(row.category) || { categoryHe: row.categoryHe, sets: 0, reps: 0, repsCount: 0, repsAll: 0, isCardio: false, totalMinutes: 0, zoneSum: 0, zoneCount: 0 }
           existing.sets += row.totalSets
+          existing.repsAll += row.totalReps
           if (row.isCardio) {
             existing.isCardio = true
             existing.totalMinutes += row.totalMinutes || 0
@@ -369,6 +407,7 @@ export function useMuscleAnalysis(
             category,
             categoryHe: data.categoryHe,
             totalSets,
+            totalReps: data.repsAll,
             avgReps,
             setsGreen: totalSets >= MIN_SETS,
             repsGreen: avgReps >= MIN_AVG_REPS,
