@@ -78,84 +78,88 @@ export function WorkoutCard({
     <div
       className={`rounded-xl transition-colors border-2 ${statusConfig.bgClass} ${statusConfig.borderClass}`}
     >
-      {/* Card Header - clickable to expand */}
-      <div className="p-4 cursor-pointer" onClick={onToggleExpand}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button className="p-1">
-              {isExpanded ? (
-                <ChevronUp className="w-5 h-5 text-text-muted" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-text-muted" />
-              )}
-            </button>
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${statusConfig.iconBgClass}`}>
-              <Dumbbell className={`w-6 h-6 ${statusConfig.iconTextClass}`} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-medium text-text-primary">{workout.name}</p>
-                {getStatusBadge(workout.status)}
-                {showDetailedStats && workout.personalRecords > 0 && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 bg-yellow-400/20 rounded-full">
-                    <Trophy className="w-3 h-3 text-yellow-400" />
-                    <span className="text-yellow-400 text-xs">{workout.personalRecords} PR</span>
-                  </span>
-                )}
-              </div>
-              {workout.muscleGroups && workout.muscleGroups.length > 0 && (
-                <p className="text-red-400 text-sm mt-1">
-                  {workout.muscleGroups
-                    .map((muscle) => getMuscleNameHe(muscle, dynamicMuscleNames))
-                    .filter((name, index, self) => self.indexOf(name) === index)
-                    .join(' • ')}
-                </p>
-              )}
-              <p className="text-text-muted text-sm mt-1">
-                {showDetailedStats
-                  ? `${formatDate(workout.date)} • ${workout.duration} דקות • ${workout.completedExercises}/${workout.totalExercises} תרגילים`
-                  : `${formatDate(workout.date)} • ${workout.totalExercises} תרגילים`}
-              </p>
-            </div>
-          </div>
-          {/* Action buttons */}
-          <div className="flex items-center">
-            {onPinToggle && (
-              <button
-                onClick={onPinToggle}
-                className={`p-2 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors ${
-                  workout.pinned
-                    ? 'text-primary-400 hover:text-text-muted'
-                    : 'text-text-muted hover:text-primary-400'
-                }`}
-                aria-label={workout.pinned ? 'בטל קיבוע אימון' : 'קבע אימון בראש הרשימה'}
-              >
-                <Pin className={`w-5 h-5 ${workout.pinned ? 'fill-current' : ''}`} />
-              </button>
-            )}
-            {onRenameClick && (
-              <button
-                onClick={onRenameClick}
-                className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-text-muted hover:text-primary-400 transition-colors"
-                aria-label="ערוך שם אימון"
-              >
-                <Pencil className="w-5 h-5" />
-              </button>
-            )}
-            <button
-              onClick={onDeleteClick}
-              className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-text-muted hover:text-red-400 transition-colors"
-              aria-label="מחק אימון"
-            >
-              <Trash2 className="w-5 h-5" />
-            </button>
-          </div>
+      {/* Card Header - compact single row, clickable to expand */}
+      <div className="px-3 py-3 cursor-pointer" onClick={onToggleExpand}>
+        <div className="flex items-center gap-2 min-h-[44px]">
+          {isExpanded ? (
+            <ChevronUp className="w-5 h-5 text-text-muted shrink-0" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-text-muted shrink-0" />
+          )}
+          {workout.pinned && (
+            <Pin className="w-4 h-4 text-primary-400 fill-current shrink-0" />
+          )}
+          <p className="font-medium text-text-primary truncate flex-1 min-w-0">{workout.name}</p>
+          <span className="text-text-muted text-xs whitespace-nowrap shrink-0">
+            {formatDate(workout.date)}
+          </span>
+          <span className="shrink-0">{getStatusBadge(workout.status)}</span>
         </div>
       </div>
 
       {/* Expanded Content */}
       {isExpanded && (
         <div className="px-4 pb-4 border-t border-dark-border/50 pt-4 space-y-4">
+          {/* Summary details (moved out of the collapsed header to save space) */}
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${statusConfig.iconBgClass}`}>
+                <Dumbbell className={`w-4 h-4 ${statusConfig.iconTextClass}`} />
+              </div>
+              {showDetailedStats && workout.personalRecords > 0 && (
+                <span className="flex items-center gap-1 px-2 py-0.5 bg-yellow-400/20 rounded-full">
+                  <Trophy className="w-3 h-3 text-yellow-400" />
+                  <span className="text-yellow-400 text-xs">{workout.personalRecords} PR</span>
+                </span>
+              )}
+              {/* Action buttons */}
+              <div className="flex items-center mr-auto">
+                {onPinToggle && (
+                  <button
+                    onClick={onPinToggle}
+                    className={`p-2 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors ${
+                      workout.pinned
+                        ? 'text-primary-400 hover:text-text-muted'
+                        : 'text-text-muted hover:text-primary-400'
+                    }`}
+                    aria-label={workout.pinned ? 'בטל קיבוע אימון' : 'קבע אימון בראש הרשימה'}
+                  >
+                    <Pin className={`w-5 h-5 ${workout.pinned ? 'fill-current' : ''}`} />
+                  </button>
+                )}
+                {onRenameClick && (
+                  <button
+                    onClick={onRenameClick}
+                    className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-text-muted hover:text-primary-400 transition-colors"
+                    aria-label="ערוך שם אימון"
+                  >
+                    <Pencil className="w-5 h-5" />
+                  </button>
+                )}
+                <button
+                  onClick={onDeleteClick}
+                  className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-text-muted hover:text-red-400 transition-colors"
+                  aria-label="מחק אימון"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            {workout.muscleGroups && workout.muscleGroups.length > 0 && (
+              <p className="text-red-400 text-sm mt-1">
+                {workout.muscleGroups
+                  .map((muscle) => getMuscleNameHe(muscle, dynamicMuscleNames))
+                  .filter((name, index, self) => self.indexOf(name) === index)
+                  .join(' • ')}
+              </p>
+            )}
+            <p className="text-text-muted text-sm mt-1">
+              {showDetailedStats
+                ? `${formatDate(workout.date)} • ${workout.duration} דקות • ${workout.completedExercises}/${workout.totalExercises} תרגילים`
+                : `${formatDate(workout.date)} • ${workout.totalExercises} תרגילים`}
+            </p>
+          </div>
+
           {/* Stats: Time and Calories */}
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center p-3 bg-dark-card/50 rounded-xl">
