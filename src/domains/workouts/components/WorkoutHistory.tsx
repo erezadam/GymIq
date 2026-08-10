@@ -447,6 +447,41 @@ export default function WorkoutHistory() {
       // Clear any existing workout in the store
       clearWorkout()
 
+      // Prototype gate (pinned workout): a pinned workout is a reusable
+      // template. Confirming it ALWAYS starts a fresh run as a NEW document,
+      // regardless of the pinned doc's status — the pinned doc itself is never
+      // written to (no status flip, no continuation keys, no doc-id seeding).
+      // The engine's init gate then discards any stale firebaseId (builder
+      // path) and the first autosave creates the new run doc via addDoc.
+      if (workoutSummary.pinned) {
+        console.log('📌 Pinned prototype - starting fresh run, source doc untouched:', workoutSummary.id)
+
+        fullWorkout.exercises.forEach(exercise => {
+          const details = exerciseDetailsMap.get(exercise.exerciseId)
+          // The new run opens with as many EMPTY sets as were actually
+          // performed in the prototype; zero performed → engine default (1).
+          const performedSetCount = (exercise.sets || []).filter(set => set.completed).length
+          addExercise({
+            exerciseId: exercise.exerciseId,
+            exerciseName: details?.name || exercise.exerciseName,
+            exerciseNameHe: details?.nameHe || exercise.exerciseNameHe || '',
+            imageUrl: details?.imageUrl || exercise.imageUrl || '',
+            videoWebpUrl: details?.videoWebpUrl ?? exercise.videoWebpUrl,
+            primaryMuscle: details?.primaryMuscle || '',
+            category: details?.category || '',
+            equipment: details?.equipment || '',
+            complexity: details?.complexity,
+            reportType: details?.reportType,
+            ...(performedSetCount > 0 && { customSetCount: performedSetCount }),
+            ...(exercise.sectionTitle && { sectionTitle: exercise.sectionTitle }),
+          })
+        })
+
+        setContinueDialog({ isOpen: false, workout: null })
+        navigate('/workout/session')
+        return
+      }
+
       // Check if this is an in_progress/cancelled/partial workout with no reported sets
       if ((workoutSummary.status === 'in_progress' || workoutSummary.status === 'partial' || workoutSummary.status === 'cancelled') && !hasReportedSets(fullWorkout)) {
         console.log('📋 Detected workout with no reported sets, status:', workoutSummary.status)

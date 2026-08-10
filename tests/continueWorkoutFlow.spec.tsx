@@ -423,3 +423,136 @@ describe('continue-workout flow — which Firestore doc does the save target (be
     expect(localStorage.getItem(FIREBASE_ID_KEY)).toBe('newly-created-doc-id')
   })
 })
+
+// ============================================================================
+// PR-1 — pinned prototype gate (additions only; existing tests untouched)
+// ============================================================================
+
+// Entry with N completed sets (+ one uncompleted set to prove the gate counts
+// PERFORMED sets, not total sets).
+function makeEntryWithPerformedSets(status: WorkoutCompletionStatus, performedSetCount: number) {
+  const completedSets = Array.from({ length: performedSetCount }, () => ({
+    type: 'normal',
+    targetReps: 10,
+    targetWeight: 20,
+    actualReps: 10,
+    actualWeight: 20,
+    completed: true,
+  }))
+  const entry = makeEntry(status)
+  entry.exercises[0].sets = [
+    ...completedSets,
+    { type: 'normal', targetReps: 10, targetWeight: 20, actualReps: 0, actualWeight: 0, completed: false },
+  ]
+  return entry
+}
+
+// Generic stage-1 driver that accepts explicit fixtures (pinned variants).
+async function driveContinueWith(
+  summary: ReturnType<typeof makeSummary> & { pinned?: boolean },
+  entry: ReturnType<typeof makeEntry>,
+) {
+  getUserWorkoutHistoryMock.mockResolvedValue([summary])
+  getWorkoutByIdMock.mockResolvedValue(entry)
+
+  const view = render(<WorkoutHistory />)
+  const continueBtn = await screen.findByTestId(`continue-${ORIGINAL_DOC_ID}`)
+  fireEvent.click(continueBtn)
+  const confirmBtn = await screen.findByText('אישור')
+  fireEvent.click(confirmBtn)
+  await waitFor(() => {
+    expect(navigateMock).toHaveBeenCalledWith('/workout/session')
+  })
+  view.unmount()
+}
+
+describe('pinned prototype gate — pinned workouts always start a fresh run (behavioral)', () => {
+  it('PINNED + completed: a NEW doc is created and the prototype doc is never written to', async () => {
+    await driveContinueWith({ ...makeSummary('completed'), pinned: true }, makeEntry('completed'))
+
+    // No write of any kind to the prototype from the history screen…
+    expect(updateWorkoutHistoryMock).not.toHaveBeenCalled()
+    // …and no continuation keys seeded (those would route writes to it).
+    expect(localStorage.getItem('continueWorkoutId')).toBeNull()
+    expect(localStorage.getItem('continueWorkoutData')).toBeNull()
+
+    await mountEngineAndWaitForSave()
+
+    const targets = autoSaveWorkoutMock.mock.calls.map((c) => c[0])
+    expect(targets[0]).toBeNull()                    // addDoc → NEW document
+    expect(targets).not.toContain(ORIGINAL_DOC_ID)   // prototype never a target
+  })
+
+  it('PINNED + planned: a NEW doc is created and the prototype STAYS planned (no status flip)', async () => {
+    await driveContinueWith({ ...makeSummary('planned'), pinned: true }, makeEntry('planned'))
+
+    // The planned branch's status flip must NOT run for a pinned workout —
+    // zero updateWorkoutHistory calls means the doc's status is untouched.
+    expect(updateWorkoutHistoryMock).not.toHaveBeenCalled()
+    expect(localStorage.getItem('continueWorkoutId')).toBeNull()
+    expect(localStorage.getItem('continueWorkoutMode')).toBeNull()
+
+    await mountEngineAndWaitForSave()
+
+    const targets = autoSaveWorkoutMock.mock.calls.map((c) => c[0])
+    expect(targets[0]).toBeNull()
+    expect(targets).not.toContain(ORIGINAL_DOC_ID)
+  })
+
+  it('PINNED + cancelled: a NEW doc is created and the prototype doc is never written to', async () => {
+    await driveContinueWith({ ...makeSummary('cancelled'), pinned: true }, makeEntry('cancelled'))
+
+    expect(updateWorkoutHistoryMock).not.toHaveBeenCalled()
+    expect(localStorage.getItem('continueWorkoutId')).toBeNull()
+    expect(localStorage.getItem('continueWorkoutData')).toBeNull()
+
+    await mountEngineAndWaitForSave()
+
+    const targets = autoSaveWorkoutMock.mock.calls.map((c) => c[0])
+    expect(targets[0]).toBeNull()
+    expect(targets).not.toContain(ORIGINAL_DOC_ID)
+  })
+
+  it('PINNED with 4 performed sets: the new run opens with 4 EMPTY sets (not 1, not prefilled)', async () => {
+    // 4 completed sets + 1 uncompleted in the prototype → run must open with 4.
+    await driveContinueWith(
+      { ...makeSummary('completed'), pinned: true },
+      makeEntryWithPerformedSets('completed', 4),
+    )
+    await mountEngineAndWaitForSave()
+
+    // The payload handed to the save layer carries the run's actual sets.
+    const payload = autoSaveWorkoutMock.mock.calls[0][1]
+    expect(payload.exercises[0].sets).toHaveLength(4)
+    // All sets open EMPTY — no weights/reps copied from the prototype.
+    for (const set of payload.exercises[0].sets) {
+      expect(set.actualReps).toBe(0)
+      expect(set.actualWeight).toBe(0)
+    }
+  })
+
+  it('NOT pinned + in_progress: existing behavior preserved — the ORIGINAL doc is updated', async () => {
+    await driveContinueWith(makeSummary('in_progress'), makeEntry('in_progress'))
+
+    expect(localStorage.getItem('continueWorkoutId')).toBe(ORIGINAL_DOC_ID)
+
+    await mountEngineAndWaitForSave()
+
+    expect(autoSaveWorkoutMock).toHaveBeenCalledWith(ORIGINAL_DOC_ID, expect.any(Object))
+    const targets = autoSaveWorkoutMock.mock.calls.map((c) => c[0])
+    expect(targets).not.toContain(null)
+  })
+
+  it('NOT pinned + completed: existing behavior preserved — a NEW doc, original untouched', async () => {
+    await driveContinueWith(makeSummary('completed'), makeEntry('completed'))
+
+    expect(updateWorkoutHistoryMock).not.toHaveBeenCalled()
+    expect(localStorage.getItem('continueWorkoutId')).toBeNull()
+
+    await mountEngineAndWaitForSave()
+
+    expect(autoSaveWorkoutMock).toHaveBeenCalledWith(null, expect.any(Object))
+    const targets = autoSaveWorkoutMock.mock.calls.map((c) => c[0])
+    expect(targets).not.toContain(ORIGINAL_DOC_ID)
+  })
+})
