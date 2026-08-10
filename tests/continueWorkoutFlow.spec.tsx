@@ -398,23 +398,28 @@ describe('continue-workout flow — which Firestore doc does the save target (be
     expect(autoSaveWorkoutMock).toHaveBeenCalledWith(ORIGINAL_DOC_ID, expect.any(Object))
   })
 
-  it('6. SURVIVOR-ID scenario: continuing a COMPLETED workout while a stale firebaseId from a previous session sits in localStorage — records the observed save target', async () => {
-    // ⚠️ Deliberately NON-OPINIONATED (per PR-0 instructions): this test does
-    // not assert which target is "correct". It runs the real flow and RECORDS
-    // the observed save target so the architect can decide. The only hard
-    // assertion is that a save happened at all.
+  it('6. continuing a COMPLETED workout DISCARDS a stale firebaseId from a previous session: the save creates a NEW doc, never targets the survivor id, and the local key ends up holding the new id', async () => {
+    // Locked-in guarantee (architect decision, PR-0): the prototype-workout
+    // feature's core assumption is that continuing a completed workout ALWAYS
+    // writes to a fresh document. The guard lives in the init gate at
+    // useActiveWorkout.ts:973-976 (discard stale firebaseIdKey when not a
+    // tab-close recovery). If anyone changes that branch, this test is the
+    // only alarm — it must fail loudly, not observe silently.
     localStorage.setItem(FIREBASE_ID_KEY, 'stale-id-from-previous-session')
 
     await driveContinueThroughUI('completed')
     await mountEngineAndWaitForSave()
 
     const observedTargets = autoSaveWorkoutMock.mock.calls.map((c) => c[0])
-    // Raw evidence for the report — printed to the test output.
-    console.log('[TEST-6 OBSERVED] autoSaveWorkout call targets:', JSON.stringify(observedTargets))
-    console.log('[TEST-6 OBSERVED] localStorage firebaseIdKey after init:', JSON.stringify(localStorage.getItem(FIREBASE_ID_KEY)))
-    console.log('[TEST-6 OBSERVED] stale id used as write target:', observedTargets.includes('stale-id-from-previous-session'))
-    console.log('[TEST-6 OBSERVED] new doc created (null target):', observedTargets.includes(null))
 
-    expect(autoSaveWorkoutMock).toHaveBeenCalled()
+    // (a) The survivor id is never a write target — in ANY save call.
+    expect(observedTargets).not.toContain('stale-id-from-previous-session')
+
+    // (b) The first autosave runs with a null id → addDoc → NEW document.
+    expect(observedTargets[0]).toBeNull()
+
+    // (c) The local firebaseId key now holds the NEW doc id, not the survivor.
+    //     (The autoSaveWorkout mock resolves 'newly-created-doc-id'.)
+    expect(localStorage.getItem(FIREBASE_ID_KEY)).toBe('newly-created-doc-id')
   })
 })
