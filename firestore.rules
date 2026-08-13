@@ -21,6 +21,20 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['trainer', 'admin'];
     }
 
+    // ---- Shared ownership helpers (Stage 3) ----
+    // True when an update does NOT touch any of the given ownership/identity
+    // keys — i.e. the caller cannot reassign the doc to a different owner.
+    function keysImmutable(keys) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(keys);
+    }
+
+    // True when `traineeId` is a trainee currently linked to the caller (their
+    // recorded trainer). Same check already used by the trainer read/update
+    // rules — centralized here so create paths enforce it too.
+    function isMyTrainee(traineeId) {
+      return get(/databases/$(database)/documents/users/$(traineeId)).data.trainerId == request.auth.uid;
+    }
+
     // ============ USERS ============
     match /users/{userId} {
       // Users can read their own profile
@@ -179,9 +193,12 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
         request.resource.data.userId == request.auth.uid;
 
-      // Users can update their own workout sessions
+      // Users can update their own workout sessions.
+      // userId is an ownership field — it must stay pinned to the current owner
+      // (an owner cannot reassign the doc to another user).
       allow update: if isAuthenticated() &&
-        resource.data.userId == request.auth.uid;
+        resource.data.userId == request.auth.uid &&
+        keysImmutable(['userId']);
 
       // Users can delete their own workout sessions
       allow delete: if isAuthenticated() &&
@@ -204,9 +221,11 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
         request.resource.data.userId == request.auth.uid;
 
-      // Users can update their own workout history
+      // Users can update their own workout history.
+      // userId is pinned — an owner cannot reassign the doc to another user.
       allow update: if isAuthenticated() &&
-        resource.data.userId == request.auth.uid;
+        resource.data.userId == request.auth.uid &&
+        keysImmutable(['userId']);
 
       // Users can delete their own workout history
       allow delete: if isAuthenticated() &&
@@ -214,17 +233,22 @@ service cloud.firestore {
 
       // Trainers can only read workout history of their own trainees
       allow read: if isTrainer() &&
-        get(/databases/$(database)/documents/users/$(resource.data.userId)).data.trainerId == request.auth.uid;
+        isMyTrainee(resource.data.userId);
 
-      // Trainers can create/update workouts they report for trainees
+      // Trainers can create workouts they report — only for their own trainees.
       allow create: if isTrainer() &&
-        request.resource.data.reportedBy == request.auth.uid;
+        request.resource.data.reportedBy == request.auth.uid &&
+        isMyTrainee(request.resource.data.userId);
+      // Trainers can update workouts they reported; ownership fields stay pinned.
       allow update: if isTrainer() &&
-        resource.data.reportedBy == request.auth.uid;
+        resource.data.reportedBy == request.auth.uid &&
+        keysImmutable(['userId', 'reportedBy']);
 
-      // Trainers can edit workouts of their trainees (workout editing feature)
+      // Trainers can edit workouts of their trainees (workout editing feature);
+      // ownership fields stay pinned.
       allow update: if isTrainer() &&
-        get(/databases/$(database)/documents/users/$(resource.data.userId)).data.trainerId == request.auth.uid;
+        isMyTrainee(resource.data.userId) &&
+        keysImmutable(['userId', 'reportedBy']);
     }
 
     // ============ WORKOUT TEMPLATES ============
@@ -236,8 +260,14 @@ service cloud.firestore {
       // Trainers and admins can create templates
       allow create: if isTrainer();
 
-      // Only template owner or admin can update/delete
-      allow update, delete: if isAuthenticated() &&
+      // Only template owner or admin can update; createdBy stays pinned
+      // (an owner cannot reassign the template to another user).
+      allow update: if isAuthenticated() &&
+        (resource.data.createdBy == request.auth.uid || isAdmin()) &&
+        keysImmutable(['createdBy']);
+
+      // Only template owner or admin can delete
+      allow delete: if isAuthenticated() &&
         (resource.data.createdBy == request.auth.uid || isAdmin());
     }
 
@@ -268,17 +298,23 @@ service cloud.firestore {
       // below documents the state machine for direct client writes; we keep
       // it so trainer-side rejection works without a CF round-trip.
 
+      // The relationship's two identity fields (trainerId/traineeId) are pinned
+      // across every client update below — a state transition must never
+      // reassign the relationship to a different party.
+
       // (1) Trainer rejects a pending request: pending → rejected.
       allow update: if isAuthenticated() &&
         resource.data.trainerId == request.auth.uid &&
         resource.data.status == 'pending' &&
-        request.resource.data.status == 'rejected';
+        request.resource.data.status == 'rejected' &&
+        keysImmutable(['trainerId', 'traineeId']);
 
       // (2) Trainee cancels their own pending request: pending → cancelled.
       allow update: if isAuthenticated() &&
         resource.data.traineeId == request.auth.uid &&
         resource.data.status == 'pending' &&
-        request.resource.data.status == 'cancelled';
+        request.resource.data.status == 'cancelled' &&
+        keysImmutable(['trainerId', 'traineeId']);
 
       // (3) Either party manages an active/paused relationship.
       //     Covers pause, resume, end, and notes — all existing behavior.
@@ -287,7 +323,8 @@ service cloud.firestore {
         (resource.data.trainerId == request.auth.uid ||
          resource.data.traineeId == request.auth.uid) &&
         resource.data.status in ['active', 'paused'] &&
-        request.resource.data.status in ['active', 'paused', 'ended'];
+        request.resource.data.status in ['active', 'paused', 'ended'] &&
+        keysImmutable(['trainerId', 'traineeId']);
 
       // (4) Notes-only update on an ended relationship (preserves
       //     updateRelationshipNotes after disconnect).
@@ -295,7 +332,8 @@ service cloud.firestore {
         (resource.data.trainerId == request.auth.uid ||
          resource.data.traineeId == request.auth.uid) &&
         resource.data.status == 'ended' &&
-        request.resource.data.status == 'ended';
+        request.resource.data.status == 'ended' &&
+        keysImmutable(['trainerId', 'traineeId']);
 
       // ---- DELETE ----
       // Either party can delete (existing broad rule, preserved).
@@ -315,9 +353,11 @@ service cloud.firestore {
          resource.data.traineeId == request.auth.uid ||
          isAdmin());
 
-      // Trainers can create programs for their trainees
+      // Trainers can create programs for their trainees — the target trainee
+      // must be linked to this trainer (not an arbitrary user).
       allow create: if isTrainer() &&
-        request.resource.data.trainerId == request.auth.uid;
+        request.resource.data.trainerId == request.auth.uid &&
+        isMyTrainee(request.resource.data.traineeId);
 
       // Trainees can create their OWN standalone workouts (self-built)
       // - Must be a standalone (not a multi-day program)
@@ -328,9 +368,11 @@ service cloud.firestore {
         request.resource.data.type == 'standalone' &&
         request.resource.data.createdByTrainee == true;
 
-      // Trainer or admin can update programs
+      // Trainer or admin can update programs; ownership/assignment fields stay
+      // pinned (a program cannot be reassigned to a different trainer/trainee).
       allow update: if isAuthenticated() &&
-        (resource.data.trainerId == request.auth.uid || isAdmin());
+        (resource.data.trainerId == request.auth.uid || isAdmin()) &&
+        keysImmutable(['trainerId', 'traineeId']);
 
       // Trainee can only update disconnectedByTrainee field (soft delete)
       allow update: if isAuthenticated() &&
@@ -356,9 +398,10 @@ service cloud.firestore {
          resource.data.trainerId == request.auth.uid ||
          isAdmin());
 
-      // Trainers can create messages
+      // Trainers can create messages — only to a trainee linked to them.
       allow create: if isTrainer() &&
-        request.resource.data.trainerId == request.auth.uid;
+        request.resource.data.trainerId == request.auth.uid &&
+        isMyTrainee(request.resource.data.traineeId);
 
       // Trainee can only update isRead/readAt/replies
       allow update: if isAuthenticated() &&
@@ -366,9 +409,11 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['isRead', 'readAt', 'replies']);
 
-      // Trainer can update their own messages (edit, add replies)
+      // Trainer can update their own messages (edit, add replies); the
+      // trainer/trainee assignment stays pinned.
       allow update: if isAuthenticated() &&
-        (resource.data.trainerId == request.auth.uid || isAdmin());
+        (resource.data.trainerId == request.auth.uid || isAdmin()) &&
+        keysImmutable(['trainerId', 'traineeId']);
 
       // Trainer or admin can delete messages
       allow delete: if isAuthenticated() &&
