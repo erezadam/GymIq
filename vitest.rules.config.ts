@@ -11,5 +11,10 @@ export default defineConfig({
     globals: true,
     testTimeout: 20000,
     hookTimeout: 60000,
+    // All rules test files share ONE emulator; each file's beforeEach calls
+    // clearFirestore(). Running files in parallel lets one file wipe another's
+    // seed mid-test. Force sequential execution so seeds stay isolated.
+    fileParallelism: false,
+    poolOptions: { forks: { singleFork: true } },
   },
 })
