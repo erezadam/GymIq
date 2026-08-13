@@ -1,13 +1,49 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+
+    // Role of the *caller* (their own users doc always exists once authenticated,
+    // so this is safe — unlike looking up an as-yet-uncreated target doc during
+    // trainee registration).
+    function callerRole() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role;
+    }
+    function isAdmin() {
+      return request.auth != null && callerRole() == 'admin';
+    }
+    function isTrainerOrAdmin() {
+      return request.auth != null && callerRole() in ['trainer', 'admin'];
+    }
+    function isValidImage(maxBytes) {
+      return request.resource.contentType.matches('image/.*') &&
+             request.resource.size < maxBytes;
+    }
+
+    // Trainee profile photos. Files are named `{traineeId}_{ts}.jpg`.
+    // Uploads are performed by the trainee's trainer (TraineeAvatar /
+    // registration) or the trainee themselves. Reads stay open to any
+    // authenticated user: both the trainee and their trainer legitimately view
+    // the photo, and profile photos are low-sensitivity — narrowing reads
+    // further would require parsing the id + a target-doc lookup with no real
+    // gain. Writes are the actual exposure and are now restricted.
+    //
+    // FOLLOW-UP (needs migration approval): move to
+    // `trainee-photos/{traineeId}/{file}` and scope writes to that exact
+    // trainee (self or their recorded trainer) instead of any trainer. The flat
+    // filename cannot express per-trainee ownership without a target-doc lookup
+    // that is fragile during registration, so the full fix is deferred.
     match /trainee-photos/{fileName} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow write: if isValidImage(5 * 1024 * 1024) &&
+        (isTrainerOrAdmin() ||
+         fileName.split('_')[0] == request.auth.uid); // trainee editing own photo
     }
+
+    // Exercise-set illustrations are system catalog content, edited only from
+    // the admin ExerciseSetManager. Public (authenticated) read, admin-only write.
     match /exercise-sets/{fileName} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow write: if isAdmin() && isValidImage(10 * 1024 * 1024);
     }
   }
 }
