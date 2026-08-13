@@ -1,5 +1,18 @@
 # Changelog
 
+## [Unreleased] - 2026-08-13
+
+### Security
+- **סגירת 9 פערי הרשאה — Cloud Functions + Firestore rules + Storage rules (סריקת אבטחה, PR אחד / 5 commits מבודדים לגלגול-אחורה).** באפליקציה הלקוח כותב ישירות ל-Firestore, ולכן ה-rules הם שכבת האכיפה. כל 9 הממצאים אומתו מול הקוד בשלב 0 (אף אחד לא הופרך), ולכולם נכתבו בדיקות התנהגותיות עם **אדום-לפני-ירוק** מוכח.
+  - **`sendWelcomeEmail` (Critical, finding 1):** הפונקציה רצה ללא **שום** בדיקת auth — כל קורא (גם לא-מאומת) יכל לייצר קישור איפוס-סיסמה אמיתי לכל מייל ולשלוח מייל ממותג מהדומיין (פישינג / שריפת מכסת Resend / enumeration). תוקן: דחיית לא-מאומת לפני כל תופעת לוואי; הרשאה (בעל החשבון / המאמן הרשום שלו / אדמין); **היעד נגזר בשרת מ-`users/{traineeId}` ומרשומת ה-Auth — לא מפרמטר טקסט של הקורא**; rate-limit לכל יעד (3/יום) ולכל קורא (50/יום, collection `welcomeEmailUsage` deny-all, fail-closed); audit-log לכל דחייה. שני הקוראים בלקוח עברו להעביר `traineeId` בלבד.
+  - **הסלמת role ב-`users` (Critical, finding 2):** לחוקי ה-`create` לא הייתה ולידציה על שדות — כל משתמש מאומת (או מאמן) יכל ליצור מסמך עם `role:'admin'`. תוקן: `create` כופה `role=='user'` ו-`uid==id`; `create` ע"י מאמן כופה בנוסף `trainerId==caller`; עדכון-עצמי עבר לרשימת-היתר סגורה (`hasOnly`) — `role/uid/email/createdAt` לעולם לא נכתבים עצמית.
+  - **נעילת שדות בעלות (findings 3-7 + 2 מעבר לרשימה):** תבנית אחת דרך helpers משותפים (`keysImmutable`, `isMyTrainee`) — `userId`/`traineeId`/`trainerId`/`reportedBy`/`createdBy` ננעלים ב-update, ו-`create` ע"י מאמן מוגבל למתאמן מקושר. הוחל על `workoutHistory`, `workoutSessions`, `trainingPrograms`, `trainerMessages`, ובנוסף (נמצא בסריקה) `workoutTemplates.createdBy` ו-`trainerRelationships`.
+  - **שיוך-עצמי למאמן (finding 8):** עדכון-עצמי של `users` חסם רק `role` ולא `trainerId` — משתמש יכל לשייך עצמו לכל מאמן בלי אישור. תוקן: `trainerId` בעדכון-עצמי ניתן רק ל-**null** (ניתוק); שיוך למאמן נשאר בלעדית דרך ה-CF `approveTrainerRequest`.
+  - **Storage (finding 9):** `trainee-photos/` ו-`exercise-sets/` היו קריאה+כתיבה לכל מחובר. תוקן: `exercise-sets` — כתיבת אדמין בלבד; `trainee-photos` — כתיבת מאמן/אדמין או המתאמן עצמו (לפי prefix); הגבלת `image/*` + גודל. **תפקיד הקורא נבדק דרך `firestore.get` על מסמך הקורא עצמו** (תמיד קיים) ולא על מסמך היעד (עלול לא להתקיים בזמן רישום).
+- **בדיקות (merge gate):** `npm run test:rules` (32, emulator + `@firebase/rules-unit-testing`), `npm run test:rules:redcheck` (14 exploits אדומים מול החוקים הישנים), `npm run test:functions` (6). סוויטה ראשית 308/308, build ירוק.
+- **שינוי התנהגות לתשומת לב:** לוגיקת "המשתמש הראשון = אדמין" בצד הלקוח (`auth.ts` `isFirstUser`) כבר לא מותרת ע"י ה-rules. פרודקשן לא מושפע (קיים אדמין); בהתקנה חדשה יש לקדם אדמין ראשון דרך Admin SDK/console.
+- **מודע ולא בוצע (דורש החלטה/מיגרציה):** מעבר ל-custom claims למודל ה-role; restructure של `trainee-photos/{traineeId}/` + מיגרציית קבצים; שאלה האם לחסום `update` על אימון שהושלם; App Check על ה-Callables (אין תשתית App Check כלל בפרויקט).
+
 ## [Unreleased] - 2026-08-03
 
 ### Fixed

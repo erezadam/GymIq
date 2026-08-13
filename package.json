@@ -13,6 +13,9 @@
     "smart-mobile": "claude chat 'הפעל: mobile-rtl + project-control'",
     "smart-data": "claude chat 'הפעל: firebase-data + project-control'",
     "test": "vitest run",
+    "test:functions": "vitest run --config vitest.functions.config.ts",
+    "test:rules": "firebase emulators:exec --only firestore,storage --project gymiq-rules-test \"vitest run --config vitest.rules.config.ts\"",
+    "test:rules:redcheck": "RULES_FILE=/tmp/old.firestore.rules STORAGE_RULES_FILE=/tmp/old.storage.rules firebase emulators:exec --only firestore,storage --project gymiq-rules-test \"vitest run --config vitest.rules.config.ts\"",
     "smart-test": "npm test && ./scripts/verify.sh --after",
     "smart-deploy": "claude chat 'הפעל: deployment'",
     "migrate:release-notes": "npx tsx scripts/migrateLastSeenReleaseNotes.ts",
@@ -44,6 +47,7 @@
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@types/node": "^25.2.1",
