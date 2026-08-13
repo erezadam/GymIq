@@ -81,11 +81,11 @@ export function NotesModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       onClick={handleBackdropClick}
       dir="rtl"
     >
-      <div className="w-full sm:max-w-md bg-dark-surface rounded-t-2xl sm:rounded-2xl shadow-modal animate-slide-up">
+      <div className="w-full max-w-md max-h-[85vh] overflow-y-auto bg-dark-surface rounded-2xl shadow-modal animate-slide-up">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-dark-border">
           <h3 className="text-lg font-semibold text-text-primary">
