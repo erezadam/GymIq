@@ -29,18 +29,42 @@ service cloud.firestore {
       // Allow checking if collection is empty (for first user = admin logic)
       allow list: if isAuthenticated();
 
-      // Users can create their own profile on registration
-      allow create: if isOwner(userId);
+      // Users can create their own profile on registration.
+      // role is forced to the trainee default and cannot be self-assigned; the
+      // record id must equal the uid field (no identity forgery). Promotion to
+      // trainer/admin happens only through a managed server path (Admin SDK).
+      // NOTE: the legacy client-side "first user = admin" bootstrap is no longer
+      // permitted here — the first admin of a fresh deployment must be promoted
+      // out-of-band (Admin SDK / console). Production is unaffected (an admin
+      // already exists and the collection is never empty again).
+      allow create: if isOwner(userId) &&
+        request.resource.data.role == 'user' &&
+        request.resource.data.uid == userId;
 
-      // Trainers can create user profiles (for trainee registration)
-      allow create: if isTrainer();
+      // Trainers can create trainee profiles. Same constraints: role is forced
+      // to 'user' (a trainer cannot mint an admin or another trainer), the new
+      // doc must belong to this trainer, and uid must match the record id.
+      allow create: if isTrainer() &&
+        request.resource.data.role == 'user' &&
+        request.resource.data.uid == userId &&
+        request.resource.data.trainerId == request.auth.uid;
 
-      // Users can update their own profile (but not role)
+      // Users can update ONLY the closed allow-list of self-editable fields.
+      // role/uid/email/createdAt are never self-writable (identity + privilege).
+      // trainerId may only be CLEARED (self-disconnect) — self-assigning a real
+      // trainer is impossible; that transition is the approveTrainerRequest CF.
       allow update: if isOwner(userId) &&
-        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'firstName', 'lastName', 'displayName', 'phoneNumber', 'city',
+          'age', 'height', 'weight', 'bodyFatPercentage', 'trainingGoals',
+          'injuriesOrLimitations', 'photoURL', 'trainerProfile',
+          'lastSeenReleaseNotesAt', 'trainerId', 'updatedAt'
+        ]) &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['trainerId'])
+          || request.resource.data.trainerId == null);
 
-      // Trainers can update their own trainee profiles (specific fields only, not role)
-      // Scoped to trainees linked via trainerId field
+      // Trainers can update their own trainee profiles (specific fields only,
+      // never role/email/uid). Scoped to trainees linked via trainerId.
       allow update: if isTrainer() &&
         resource.data.trainerId == request.auth.uid &&
         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'email', 'uid']));
