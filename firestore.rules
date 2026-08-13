@@ -378,6 +378,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ============ WELCOME EMAIL USAGE (Rate Limiting) ============
+    match /welcomeEmailUsage/{usageId} {
+      // No direct client reads or writes — only via the sendWelcomeEmail
+      // Cloud Function (Admin SDK), which enforces per-target/per-caller caps.
+      allow read, write: if false;
+    }
+
     // ============ RELEASE NOTES ("What's New") ============
     // Published notes are readable by any authenticated user.
     // Admins can additionally read drafts/archived (needed for the admin UI

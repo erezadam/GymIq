@@ -44,11 +44,8 @@ export function TraineeCard({ trainee }: TraineeCardProps) {
     setEmailStatus('sending')
     try {
       const sendWelcomeEmail = httpsCallable(functions, 'sendWelcomeEmail')
-      await sendWelcomeEmail({
-        traineeEmail: relationship.traineeEmail,
-        traineeName: relationship.traineeName,
-        trainerName: relationship.trainerName,
-      })
+      // Recipient/email/names are resolved server-side from the trainee record.
+      await sendWelcomeEmail({ traineeId: relationship.traineeId })
       setEmailStatus('sent')
       setTimeout(() => setEmailStatus('idle'), 3000)
     } catch (error) {

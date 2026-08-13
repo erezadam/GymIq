@@ -102,11 +102,8 @@ export const traineeAccountService = {
       // Cloud Function generates the password reset link via Admin SDK and sends branded email
       try {
         const sendWelcomeEmail = httpsCallable(functions, 'sendWelcomeEmail')
-        await sendWelcomeEmail({
-          traineeEmail: data.email,
-          traineeName: `${data.firstName} ${data.lastName}`,
-          trainerName,
-        })
+        // Recipient/email/names are resolved server-side from the trainee record.
+        await sendWelcomeEmail({ traineeId: credential.user.uid })
       } catch (emailError) {
         // Email failure should not block trainee creation
         console.error('Failed to send welcome email:', emailError)
