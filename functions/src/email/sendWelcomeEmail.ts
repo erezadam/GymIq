@@ -182,13 +182,12 @@ function displayNameFromDoc(data: FirebaseFirestore.DocumentData | undefined, fa
   return name || fallback
 }
 
-export const sendWelcomeEmail = onCall(
+// Exported for behavioral testing (mock admin, assert rejections happen before
+// any side effect). The onCall wrapper below delegates straight to it.
+export async function handleSendWelcomeEmail(
+  request: { auth?: { uid: string } | null; data: unknown }
+): Promise<{ success: true }> {
   {
-    secrets: ['RESEND_API_KEY'],
-    timeoutSeconds: 30,
-    memory: '256MiB',
-  },
-  async (request) => {
     // 1) Authentication — no side effect happens before this.
     if (!request.auth) {
       functions.logger.warn('sendWelcomeEmail rejected: unauthenticated')
@@ -315,4 +314,13 @@ export const sendWelcomeEmail = onCall(
       throw new HttpsError('internal', 'Failed to send welcome email')
     }
   }
+}
+
+export const sendWelcomeEmail = onCall(
+  {
+    secrets: ['RESEND_API_KEY'],
+    timeoutSeconds: 30,
+    memory: '256MiB',
+  },
+  (request) => handleSendWelcomeEmail(request as { auth?: { uid: string } | null; data: unknown })
 )
