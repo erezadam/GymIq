@@ -45,6 +45,10 @@ export interface AITrainerRequest {
   workoutStructure: WorkoutStructure
   splitStartWith?: SplitStartWith  // For split with 3 or 5 workouts
   exerciseSource?: ExerciseSource  // 'performed' (default) | 'all' — consumed in PR-2
+  // Equipment selection. Absent / empty / includes 'all' → no filtering (today's
+  // behavior). A partial selection narrows the pool client-side (graviton matched
+  // by assistance type). 'graviton' is NOT an equipment id.
+  equipmentFilter?: string[]
 }
 
 // Exercise in AI-generated workout
@@ -104,6 +108,13 @@ export interface AITrainerResponse {
   workouts: AIGeneratedWorkout[]
   error?: string
   usedFallback?: boolean
+  // Set when a warmup was requested but no cardio survived the equipment filter,
+  // so the client can explain why no warmup was added. Only meaningful under a
+  // partial equipment filter.
+  warmupSkippedNoCardio?: boolean
+  // How many (non-warmup) exercises were actually built — may be fewer than the
+  // target when a partial equipment filter leaves too few exercises.
+  builtExerciseCount?: number
 }
 
 // Calculate exercise count based on duration (NOT including warmup)

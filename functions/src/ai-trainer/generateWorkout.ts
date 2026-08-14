@@ -23,6 +23,7 @@ import type {
 
 import { SUB_MUSCLE_TO_PARENT } from './muscleMapping'
 import { applyStagnationFloor } from './stagnationFloor'
+import { isPartialEquipmentFilter, presentParentMuscleIds, shouldReportWarmupSkipped } from './equipmentFilter'
 
 /**
  * Fetch the latest AI analysis for a user (if exists and not older than 30 days)
@@ -595,6 +596,16 @@ export const generateAIWorkout = onCall(
         throw new HttpsError('internal', 'No muscles data available')
       }
 
+      // Equipment filter (client-authoritative pool): when a partial selection is
+      // active, narrow the muscle list to muscles that still have an exercise in
+      // the already-filtered pool, so muscle-selection can't target an empty
+      // muscle. Without a partial filter this is skipped — behavior unchanged.
+      const partialEquipmentFilter = isPartialEquipmentFilter(data.request.equipmentFilter)
+      if (partialEquipmentFilter) {
+        const present = presentParentMuscleIds(data.availableExercises, SUB_MUSCLE_TO_PARENT)
+        muscles = muscles.filter((m) => present.has(m.id))
+      }
+
       // Create exercise map for quick lookup
       const exerciseMap = new Map<string, ExerciseSummary>()
       data.availableExercises.forEach((ex) => exerciseMap.set(ex.id, ex))
@@ -635,6 +646,15 @@ export const generateAIWorkout = onCall(
       const warmupExercise = cardioPool.length > 0
         ? cardioPool[Math.floor(Math.random() * cardioPool.length)]
         : null
+
+      // A requested warmup is skipped when a partial equipment filter left no
+      // cardio in the pool. Reported to the client; no fallback to an unfiltered
+      // pool. (When warmupExercise is null the warmup is simply not injected.)
+      const warmupSkippedNoCardio = shouldReportWarmupSkipped(
+        data.request.warmupDuration > 0,
+        partialEquipmentFilter,
+        cardioPool.length
+      )
 
       const corePool = data.availableExercises.filter(ex => {
         const parent = SUB_MUSCLE_TO_PARENT[ex.primaryMuscle] ?? ex.primaryMuscle
@@ -744,10 +764,20 @@ export const generateAIWorkout = onCall(
       // Increment usage count
       await incrementUsage(userId)
 
+      // How many non-warmup exercises were actually built (may be fewer than the
+      // target when a partial filter left too few exercises — we build what we can
+      // and never invent exercises or relax the filter).
+      const builtExerciseCount = workouts.reduce(
+        (sum, w) => sum + w.exercises.filter((e) => !e.isWarmup).length,
+        0
+      )
+
       functions.logger.info('AI Workout generation completed', {
         userId,
         workoutCount: workouts.length,
         usedFallback,
+        warmupSkippedNoCardio,
+        builtExerciseCount,
       })
 
       return {
@@ -758,6 +788,8 @@ export const generateAIWorkout = onCall(
           remaining: rateLimitResult.remaining - 1,
           resetAt: rateLimitResult.resetAt.toISOString(),
         },
+        warmupSkippedNoCardio,
+        builtExerciseCount,
       }
     } catch (error: any) {
       functions.logger.error('AI Workout generation failed', {
