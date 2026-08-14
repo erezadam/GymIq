@@ -10,6 +10,7 @@ import { ExerciseMedia } from '@/shared/components/ExerciseMedia'
 import { useWorkoutBuilderStore } from '@/domains/workouts/store'
 import { getMuscles, getMuscleIdToNameHeMap } from '@/lib/firebase/muscles'
 import { getEquipment } from '@/lib/firebase/equipment'
+import { buildEquipmentOptions, isEquipmentOptionEmpty } from '../utils'
 import { MuscleIcon } from '@/shared/components/MuscleIcon'
 import RecommendedSets from './RecommendedSets'
 import QuickPlanExerciseList from './QuickPlanExerciseList'
@@ -214,13 +215,7 @@ export function ExerciseLibrary({
         setExercises(exercisesData)
         setMuscles([...musclesData].sort((a, b) => a.nameHe.trim().localeCompare(b.nameHe.trim(), 'he')))
         setDynamicMuscleNames(muscleNamesMapping)
-        setEquipmentOptions([
-          { id: 'all', label: 'הכל' },
-          ...[
-            ...equipmentData.map((eq) => ({ id: eq.id, label: eq.nameHe })),
-            { id: 'graviton', label: 'גרביטון' },
-          ].sort((a, b) => a.label.trim().localeCompare(b.label.trim(), 'he')),
-        ])
+        setEquipmentOptions(buildEquipmentOptions(equipmentData))
       } catch (error) {
         if (!cancelled) console.error('Failed to load data:', error)
       } finally {
@@ -1161,7 +1156,7 @@ export function ExerciseLibrary({
             <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-hide">
               {equipmentOptions.map((eq) => {
                 const isSelected = selectedEquipment === eq.id
-                const isEmpty = !isSelected && eq.id !== 'all' && (availableCountsByEquipment.get(eq.id) || 0) === 0
+                const isEmpty = isEquipmentOptionEmpty(eq.id, isSelected, availableCountsByEquipment.get(eq.id))
                 return (
                 <button
                   key={eq.id}
