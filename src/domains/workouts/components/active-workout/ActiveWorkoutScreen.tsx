@@ -16,6 +16,7 @@ import { WorkoutSummaryModal } from './WorkoutSummaryModal'
 import { RestTimer } from './RestTimer'
 import { WeightIncreasePopup } from './WeightIncreasePopup'
 import { calculateExerciseVolume } from '@/lib/firebase/workoutHistory'
+import { withWarmupSection, WARMUP_SECTION_KEY } from '../../utils/warmupSection'
 
 export default function ActiveWorkoutScreen() {
   const navigate = useNavigate()
@@ -273,18 +274,23 @@ export default function ActiveWorkoutScreen() {
 
       {/* Exercises grouped by muscle or equipment */}
       <div className="active-workout-content" style={{ paddingBottom: '80px' }}>
-        {(sortBy === 'muscle'
-          ? exercisesByMuscle
-          : exercisesByEquipment.map((g) => ({
-              muscleGroup: g.equipment,
-              muscleGroupHe: g.equipmentHe,
-              exercises: g.exercises,
-            }))
+        {withWarmupSection(
+          sortBy === 'muscle'
+            ? exercisesByMuscle
+            : exercisesByEquipment.map((g) => ({
+                muscleGroup: g.equipment,
+                muscleGroupHe: g.equipmentHe,
+                exercises: g.exercises,
+              }))
         ).map((group) => (
           <MuscleGroupSection
             key={group.muscleGroupHe}
             group={group}
-            weeklyMuscleSets={sortBy === 'muscle' ? weeklyMuscleSets : undefined}
+            weeklyMuscleSets={
+              sortBy === 'muscle' && group.muscleGroup !== WARMUP_SECTION_KEY
+                ? weeklyMuscleSets
+                : undefined
+            }
             onToggleExercise={handleToggleExercise}
             onAddSet={handleAddSet}
             onUpdateSet={updateSet}
