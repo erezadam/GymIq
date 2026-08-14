@@ -69,6 +69,10 @@ export interface GenerateWorkoutRequest {
     workoutStructure: WorkoutStructure
     splitStartWith?: SplitStartWith
     exerciseSource?: ExerciseSource
+    // Equipment selection. Absent / empty / includes 'all' → no filtering. The
+    // pool is filtered client-side; the server uses this flag to narrow the
+    // muscle list to the filtered pool and to report a skipped warmup.
+    equipmentFilter?: string[]
   }
   availableExercises: ExerciseSummary[]
   muscles: MuscleSummary[]
@@ -146,6 +150,11 @@ export interface GenerateWorkoutResponse {
     remaining: number
     resetAt: string
   }
+  // Warmup was requested but no cardio survived the equipment filter, so none was
+  // injected. Only meaningful under a partial equipment filter.
+  warmupSkippedNoCardio?: boolean
+  // How many (non-warmup) exercises were actually built across the workouts.
+  builtExerciseCount?: number
 }
 
 // Rate limit check result

@@ -12,6 +12,7 @@ import { app } from '@/lib/firebase/config'
 import type { Exercise } from '@/domains/exercises/types'
 import type { WorkoutHistoryEntry } from '@/domains/workouts/types'
 import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
+import { filterExercisesByEquipment, isPartialEquipmentFilter } from '@/domains/workouts/utils/equipmentPoolFilter'
 import {
   AITrainerRequest,
   AITrainerResponse,
@@ -34,6 +35,8 @@ interface CloudFunctionResponse {
     remaining: number
     resetAt: string
   }
+  warmupSkippedNoCardio?: boolean
+  builtExerciseCount?: number
 }
 
 // Initialize Firebase Functions
@@ -224,12 +227,19 @@ async function buildContext(request: AITrainerRequest): Promise<AITrainerContext
   // performed-only behavior unchanged — same filter as before, cardio exemption
   // included. Client-authoritative by design: the server consumes whatever pool
   // we send and never recomputes the performed set.
-  const availableExercises = request.exerciseSource === 'all'
+  const sourceFilteredExercises = request.exerciseSource === 'all'
     ? exercises
     : exercises.filter(ex => {
         const isCardio = (ex.primaryMuscle as string) === 'cardio' || ex.category === 'cardio'
         return isCardio || performedExerciseIds.has(ex.id)
       })
+
+  // Equipment filter (client-authoritative). Applied AFTER the source filter, to
+  // its result. Absent / empty / 'all' → unchanged. Unlike the source filter,
+  // this has NO cardio exemption — a cardio whose equipment isn't selected is
+  // removed, which is what enables the "no cardio after filter" edge case.
+  // Graviton is matched here (full Exercise carries assistanceTypes).
+  const availableExercises = filterExercisesByEquipment(sourceFilteredExercises, request.equipmentFilter)
 
   console.log(`📊 Loaded ${exercises.length} exercises, ${muscles.length} muscles`)
   console.log(
@@ -546,6 +556,8 @@ export async function generateAIWorkouts(
         success: true,
         workouts: cloudResult.workouts,
         usedFallback: cloudResult.usedFallback,
+        warmupSkippedNoCardio: cloudResult.warmupSkippedNoCardio,
+        builtExerciseCount: cloudResult.builtExerciseCount,
       }
     }
 
@@ -585,10 +597,21 @@ export async function generateAIWorkouts(
       console.log(`💾 Saved "${workout.name}" (${workout.exercises.length} exercises) → ID: ${id}`)
     }
 
+    // Same edge-case reporting as the Cloud path, computed on the filtered pool.
+    const partialEquip = isPartialEquipmentFilter(request.equipmentFilter)
+    const hasCardio = context.availableExercises.some(
+      ex => (ex.primaryMuscle as string) === 'cardio' || ex.category === 'cardio'
+    )
+    const builtExerciseCount = workouts.reduce(
+      (sum, w) => sum + w.exercises.filter(e => !e.isWarmup).length, 0
+    )
+
     return {
       success: true,
       workouts,
       usedFallback: true,
+      warmupSkippedNoCardio: request.warmupDuration > 0 && partialEquip && !hasCardio,
+      builtExerciseCount,
     }
 
   } catch (error: any) {
