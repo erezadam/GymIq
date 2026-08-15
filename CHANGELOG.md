@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased] - 2026-08-15 (3)
+
+### Changed
+- **מגבלת תכנון AI יומית: 1 → 3 ליום לכל מתאמן.** `DAILY_LIMIT` ב-`functions/src/ai-trainer/rateLimiter.ts` (אוסף `aiTrainerUsage`, מחולל אימוני מאמן ה-AI). ה-`remaining` שמוחזר ללקוח מתעדכן אוטומטית. ⚠️ שינוי ב-Cloud Function → דורש deploy של `functions:generateAIWorkout` (מעבר ל-hosting). אין שינוי UI/טסטים.
+
 ## [Unreleased] - 2026-08-15 (2)
 
 ### Fixed
