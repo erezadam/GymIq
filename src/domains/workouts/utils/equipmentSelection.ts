@@ -58,10 +58,12 @@ export function isAllSelected(selected: Set<string>, selectableIds: string[]): b
 }
 
 /**
- * Clicking "all" selects every item. Clicking a single item toggles it. When the
- * user manually re-selects every item the state is (by isAllSelected) equivalent
- * to "all"; removing any single item drops the "all" state. Disabled/empty items
- * are prevented from toggling at the UI layer.
+ * Selection rules (matches the user's single-select-then-refine mental model):
+ * - Clicking "all" selects every item.
+ * - Clicking an item while everything is selected selects ONLY that item — so
+ *   "click סמית'" means "just Smith", not "everything except Smith".
+ * - Otherwise clicking an item toggles it in/out; re-selecting every item is
+ *   again equivalent to "all". Disabled/empty items don't toggle (UI layer).
  */
 export function toggleEquipment(
   selected: Set<string>,
@@ -69,6 +71,8 @@ export function toggleEquipment(
   selectableIds: string[]
 ): Set<string> {
   if (optionId === ALL_OPTION_ID) return new Set(selectableIds)
+  // From the "all selected" state, the first item click narrows to just that item.
+  if (isAllSelected(selected, selectableIds)) return new Set([optionId])
   const next = new Set(selected)
   if (next.has(optionId)) next.delete(optionId)
   else next.add(optionId)
