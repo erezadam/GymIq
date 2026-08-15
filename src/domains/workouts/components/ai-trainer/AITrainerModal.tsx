@@ -4,12 +4,25 @@
  * New logic: bodyRegion-based splits, 10 sets/muscle/week
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { X, Loader2, Sparkles } from 'lucide-react'
 import { useEffectiveUser } from '@/domains/authentication/hooks/useEffectiveUser'
 import { generateAIWorkouts } from '@/domains/workouts/services/aiTrainerService'
 import { getDistinctPerformedExerciseIds } from '@/lib/firebase/workoutHistory'
+import { getExercises } from '@/lib/firebase/exercises'
+import { getEquipment } from '@/lib/firebase/equipment'
+import { buildEquipmentOptions, isEquipmentOptionEmpty, type EquipmentOption } from '@/domains/exercises/utils'
+import {
+  equipmentSelectableIds,
+  equipmentAvailabilityCounts,
+  isAllSelected,
+  toggleEquipment,
+  equipmentFilterForRequest,
+  availableStrengthCount,
+  isCardioExercise,
+} from '@/domains/workouts/utils/equipmentSelection'
+import type { Exercise } from '@/domains/exercises/types'
 import type { AITrainerRequest, WorkoutStructure, SplitStartWith, ExerciseSource, AIGeneratedWorkout } from '@/domains/workouts/services/aiTrainer.types'
 import { getExerciseCount } from '@/domains/workouts/services/aiTrainer.types'
 
@@ -68,6 +81,19 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
   // data the modal loads on open.
   const [distinctExerciseCount, setDistinctExerciseCount] = useState<number | null>(null)
 
+  // Equipment multi-select. Availability is derived from the trainer's pool
+  // (which the exercise-source selector affects), not the whole library.
+  const [exercises, setExercises] = useState<Exercise[]>([])
+  const [performedIds, setPerformedIds] = useState<Set<string>>(new Set())
+  const [equipmentOptions, setEquipmentOptions] = useState<EquipmentOption[]>([])
+  // The selected equipment option ids (excluding the "all" toggle). Default: all.
+  const [selectedEquipment, setSelectedEquipment] = useState<Set<string>>(new Set())
+
+  // Scarcity alert (too few strength exercises under the selection).
+  const [scarcityCount, setScarcityCount] = useState<number | null>(null)
+  // Warmup skipped because the filter left no cardio (from the function response).
+  const [warmupSkippedNoCardio, setWarmupSkippedNoCardio] = useState(false)
+
   // On open, derive the distinct-exercise count. Reset to null up-front (and on
   // close) so the loading state — not a stale form — renders while the check
   // runs; this avoids a one-frame flash of the config form before the gate
@@ -75,14 +101,33 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
   // threshold, so the neutral block state is shown rather than crashing.
   useEffect(() => {
     setDistinctExerciseCount(null)
+    setScarcityCount(null)
+    setWarmupSkippedNoCardio(false)
     if (!isOpen) return
 
     let cancelled = false
 
     const run = async () => {
+      // Library + equipment (independent of the user). Failures degrade to an
+      // empty pool / default equipment rather than crashing the modal.
+      try {
+        const [exs, equip] = await Promise.all([getExercises(), getEquipment()])
+        if (!cancelled) {
+          setExercises(exs)
+          const opts = buildEquipmentOptions(equip)
+          setEquipmentOptions(opts)
+          // Default selection: everything (equivalent to "all" → no filter sent).
+          setSelectedEquipment(new Set(equipmentSelectableIds(opts)))
+        }
+      } catch (e) {
+        console.error('Failed to load exercises/equipment for AI modal:', e)
+      }
+
+      // Entry gate + the performed set (used for 'performed'-mode availability).
       try {
         if (!user?.uid) {
           if (!cancelled) {
+            setPerformedIds(new Set())
             setDistinctExerciseCount(0)
             // Below threshold → default to the full library; 'performed' is locked.
             setExerciseSource('all')
@@ -91,6 +136,7 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
         }
         const ids = await getDistinctPerformedExerciseIds(user.uid)
         if (!cancelled) {
+          setPerformedIds(ids)
           setDistinctExerciseCount(ids.size)
           // Threshold-based default, set once per open. Subsequent manual choices
           // are preserved because this effect only re-runs on open / user change.
@@ -99,6 +145,7 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
       } catch (err) {
         console.error('Failed to derive distinct exercise count:', err)
         if (!cancelled) {
+          setPerformedIds(new Set())
           setDistinctExerciseCount(0)
           setExerciseSource('all')
         }
@@ -126,16 +173,54 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
     distinctExerciseCount < MIN_DISTINCT_EXERCISES
   const exercisesRemaining = Math.max(0, MIN_DISTINCT_EXERCISES - (distinctExerciseCount ?? 0))
 
-  // Generate workout
-  const handleGenerate = async () => {
+  // The trainer's available pool, respecting the exercise-source selector (same
+  // rule as buildContext: 'all' → whole library; 'performed' → performed + all
+  // cardio). Equipment availability/dimming derives from THIS pool, so switching
+  // the source updates the counts.
+  const sourcePool = useMemo(() => {
+    if (exerciseSource === 'all') return exercises
+    return exercises.filter((ex) => isCardioExercise(ex) || performedIds.has(ex.id))
+  }, [exerciseSource, exercises, performedIds])
+
+  const selectableEquipmentIds = useMemo(
+    () => equipmentSelectableIds(equipmentOptions),
+    [equipmentOptions]
+  )
+  const equipmentCounts = useMemo(
+    () => equipmentAvailabilityCounts(sourcePool, equipmentOptions),
+    [sourcePool, equipmentOptions]
+  )
+  const allEquipmentSelected = isAllSelected(selectedEquipment, selectableEquipmentIds)
+
+  // Generate — first guard against too few strength exercises under the current
+  // equipment selection. When enough, proceed; otherwise show the scarcity alert.
+  const handleGenerate = () => {
     if (!user?.uid) {
       setError('יש להתחבר כדי ליצור אימון')
       return
     }
+    // Scarcity check only when the pool actually loaded — a failed/absent library
+    // load must NOT block generation (the service loads its own exercises).
+    if (exercises.length > 0) {
+      const strengthAvailable = availableStrengthCount(sourcePool, selectedEquipment, selectableEquipmentIds)
+      if (strengthAvailable < exerciseCount) {
+        setScarcityCount(strengthAvailable)
+        return
+      }
+    }
+    void proceedGenerate()
+  }
 
+  const proceedGenerate = async () => {
+    if (!user?.uid) return
     try {
+      setScarcityCount(null)
       setIsGenerating(true)
       setError(null)
+
+      // Send the equipment field only for a partial selection; "all" sends nothing
+      // so behavior stays identical to today.
+      const equipmentFilter = equipmentFilterForRequest(selectedEquipment, selectableEquipmentIds)
 
       const request: AITrainerRequest = {
         numWorkouts,
@@ -144,9 +229,8 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
         userId: user.uid,
         workoutStructure,
         exerciseSource,
-        ...(showSplitStartSelection && {
-          splitStartWith,
-        }),
+        ...(showSplitStartSelection && { splitStartWith }),
+        ...(equipmentFilter && { equipmentFilter }),
       }
 
       console.log('🤖 Generating workout with:', request)
@@ -160,10 +244,14 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
 
       console.log(`✅ Created ${result.workouts.length} workouts`)
 
+      const skipped = result.warmupSkippedNoCardio === true
+      setWarmupSkippedNoCardio(skipped)
+
       // Check if we have AI explanations
       const hasExplanations = result.workouts.some(w => w.aiExplanation)
 
-      if (hasExplanations) {
+      // Show the popup when there's an explanation OR a warmup notice to convey.
+      if (hasExplanations || skipped) {
         setGeneratedWorkouts(result.workouts)
         setShowExplanation(true)
       } else {
@@ -295,6 +383,49 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
             </p>
           )}
         </div>
+
+        {/* Equipment selector (multi-select). Default: all selected → no field
+            sent. Availability derives from the source-filtered pool; an option
+            with zero available exercises is dimmed and truly disabled. */}
+        {equipmentOptions.length > 0 && (
+          <div className="mb-5">
+            <label className="block text-sm font-semibold text-white mb-2.5">
+              ציוד זמין
+            </label>
+            <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+              {equipmentOptions.map((opt) => {
+                const selected =
+                  opt.id === 'all'
+                    ? allEquipmentSelected
+                    : selectedEquipment.has(opt.id)
+                const empty =
+                  opt.id !== 'all' &&
+                  isEquipmentOptionEmpty(opt.id, false, equipmentCounts.get(opt.id))
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    disabled={empty}
+                    onClick={() =>
+                      setSelectedEquipment(
+                        toggleEquipment(selectedEquipment, opt.id, selectableEquipmentIds)
+                      )
+                    }
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-lg border text-xs whitespace-nowrap transition-all ${
+                      empty
+                        ? 'border-white/10 bg-white/5 text-gray-600 opacity-40 cursor-not-allowed'
+                        : selected
+                          ? 'border-teal-400/50 bg-teal-400/15 text-teal-400 font-semibold cursor-pointer'
+                          : 'border-white/10 bg-white/5 text-gray-400 cursor-pointer'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Number of workouts */}
         <div className="mb-5">
@@ -484,6 +615,37 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
         )}
       </div>
 
+      {/* Scarcity alert — too few strength exercises under the current equipment
+          selection. Continue proceeds; cancel returns to the selector inside the
+          modal with all choices preserved (it only dismisses this overlay). */}
+      {scarcityCount !== null && (
+        <div
+          className="confirmation-modal fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[360px] w-[90%] p-5 rounded-2xl shadow-2xl z-[102] bg-[#1F2937]"
+          onClick={(e) => e.stopPropagation()}
+          dir="rtl"
+        >
+          <h3 className="text-lg font-bold text-white mb-2 text-center">מעט תרגילים לציוד שנבחר</h3>
+          <p className="text-sm text-gray-300 leading-relaxed text-center mb-5">
+            תחת בחירת הציוד יש רק {scarcityCount} תרגילי כוח זמינים, והאימון במשך שנבחר דורש {exerciseCount}.
+            אפשר להמשיך בכל זאת (ייבנה אימון קצר יותר) או לחזור ולשנות את בחירת הציוד.
+          </p>
+          <button
+            type="button"
+            onClick={() => void proceedGenerate()}
+            className="w-full py-3 rounded-xl border-none text-white text-sm font-bold cursor-pointer mb-2.5 bg-gradient-to-br from-pink-500 to-violet-500"
+          >
+            המשך בכל זאת
+          </button>
+          <button
+            type="button"
+            onClick={() => setScarcityCount(null)}
+            className="w-full py-3 rounded-xl border border-white/10 bg-transparent text-gray-300 text-sm font-medium cursor-pointer"
+          >
+            חזרה לבחירת ציוד
+          </button>
+        </div>
+      )}
+
       {/* AI Explanation Popup */}
       {showExplanation && generatedWorkouts.length > 0 && (
         <div
@@ -504,6 +666,15 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
               הנה ההסבר של ה-AI לבחירות שלו
             </p>
           </div>
+
+          {/* Warmup skipped because no cardio survived the equipment filter. */}
+          {warmupSkippedNoCardio && (
+            <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-3.5 mb-5">
+              <p className="text-sm leading-relaxed text-gray-200 m-0">
+                לא הוספנו חימום כי אין תרגיל אירובי (קרדיו) שמתאים לבחירת הציוד שלך. אפשר להוסיף גומייה/מכשיר קרדיו לבחירה, או להוסיף חימום ידני באימון.
+              </p>
+            </div>
+          )}
 
           {/* Built-from-performed-exercises note — only when the plan was actually
               built from the performed pool ('performed' mode). In 'all' mode the
