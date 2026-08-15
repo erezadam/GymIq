@@ -34,17 +34,22 @@ describe('equipmentSelection — pure logic', () => {
     expect(SELECTABLE).toEqual(['dumbbell', 'machine', 'graviton'])
   })
 
-  it('clicking "all" selects everything; a single item toggles; manual-all === all', () => {
+  it('first item click from "all" narrows to only that item; then toggles; "all" resets', () => {
     let sel = new Set(SELECTABLE)
     expect(isAllSelected(sel, SELECTABLE)).toBe(true)
-    // remove one → no longer "all"
+    // From "all", clicking one item selects ONLY it (not "all except it").
     sel = toggleEquipment(sel, 'machine', SELECTABLE)
-    expect(sel.has('machine')).toBe(false)
-    expect(isAllSelected(sel, SELECTABLE)).toBe(false)
-    // re-add it manually → equivalent to "all" again
+    expect([...sel]).toEqual(['machine'])
+    // Now clicking another item adds it (multi-select from here on).
+    sel = toggleEquipment(sel, 'graviton', SELECTABLE)
+    expect([...sel].sort()).toEqual(['graviton', 'machine'])
+    // Clicking a selected item removes it.
     sel = toggleEquipment(sel, 'machine', SELECTABLE)
+    expect([...sel]).toEqual(['graviton'])
+    // Re-selecting everything is equivalent to "all".
+    sel = toggleEquipment(new Set(['dumbbell', 'machine']), 'graviton', SELECTABLE)
     expect(isAllSelected(sel, SELECTABLE)).toBe(true)
-    // clicking "all" from a partial state selects everything
+    // Clicking "all" from any state selects everything.
     sel = toggleEquipment(new Set(['dumbbell']), 'all', SELECTABLE)
     expect(isAllSelected(sel, SELECTABLE)).toBe(true)
   })
@@ -146,17 +151,14 @@ describe('AITrainerModal — equipment selector', () => {
     expect(generateMock.mock.calls[0][0]).not.toHaveProperty('equipmentFilter')
   })
 
-  it('partial selection → equipmentFilter sent as marked', async () => {
+  it('partial selection → equipmentFilter sent as marked (click = select only that)', async () => {
     await openModal()
-    fireEvent.click(screen.getByRole('button', { name: 'מכשירים' })) // deselect machine
+    // From the default "all", clicking machine narrows to ONLY machine.
+    fireEvent.click(screen.getByRole('button', { name: 'מכשירים' }))
     fireEvent.click(generateBtn())
     await waitFor(() => expect(generateMock).toHaveBeenCalled())
     const req = generateMock.mock.calls[0][0]
-    expect(req.equipmentFilter).toBeDefined()
-    // machine was deselected; the empty (disabled) option stays selected by
-    // default and is harmless (no exercise matches it).
-    expect([...req.equipmentFilter].sort()).toEqual(['dumbbell', 'empty_eq', 'graviton'])
-    expect(req.equipmentFilter).not.toContain('machine')
+    expect(req.equipmentFilter).toEqual(['machine'])
   })
 
   it('an option with zero available exercises is disabled', async () => {
@@ -166,9 +168,8 @@ describe('AITrainerModal — equipment selector', () => {
 
   it('scarcity alert appears only when too few strength exercises, and cancel preserves the selection', async () => {
     await openModal()
-    // Keep only graviton (1 strength exercise) → below the 9 required for 60 min.
-    fireEvent.click(screen.getByRole('button', { name: 'משקולת יד' }))
-    fireEvent.click(screen.getByRole('button', { name: 'מכשירים' }))
+    // Click graviton from "all" → only graviton (1 strength) → below the 9 required.
+    fireEvent.click(screen.getByRole('button', { name: 'גרביטון' }))
     fireEvent.click(generateBtn())
     // Alert shown, generation NOT started.
     await screen.findByText(/מעט תרגילים לציוד שנבחר/)
@@ -177,8 +178,7 @@ describe('AITrainerModal — equipment selector', () => {
     fireEvent.click(screen.getByRole('button', { name: 'חזרה לבחירת ציוד' }))
     await waitFor(() => expect(screen.queryByText(/מעט תרגילים לציוד שנבחר/)).toBeNull())
     expect(generateMock).not.toHaveBeenCalled()
-    // The equipment buttons are still there (modal stayed open) and re-selecting
-    // machine restores a valid selection.
+    // Modal stayed open; adding machine (12 strength) makes it valid → generates.
     fireEvent.click(screen.getByRole('button', { name: 'מכשירים' }))
     fireEvent.click(generateBtn())
     await waitFor(() => expect(generateMock).toHaveBeenCalled())
