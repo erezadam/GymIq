@@ -1,5 +1,10 @@
 # Changelog
 
+## [2026-08-16] — נפרס לפרודקשן ✅
+
+- **פריסה:** PR #172 מוזג ל-main (`0b5f118`), `hosting,functions` נפרס בהצלחה. revision חדש `generateaiworkout-00041-faf` (קודם `00040-ziw`). כרטיס גלגול: `docs/rollback/2026-08-16-generateAIWorkout.md`.
+- **ממתין:** אימות runtime — שורת `Exercise pool shuffled for GPT prompt` ביצירה הראשונה + 3 יצירות בחשבון בדיקה. PR-2 (בורר ציוד, #173) לא מוזג — ממתין לאימות מכשיר.
+
 ## [Unreleased] - 2026-08-16
 
 ### Fixed

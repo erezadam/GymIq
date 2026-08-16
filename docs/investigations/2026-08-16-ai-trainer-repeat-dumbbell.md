@@ -202,5 +202,7 @@ $ diff code_systemPrompt.txt prod_systemPrompt.txt
 - ✅ `npm test` — 347 טסטים עוברים (41 קבצים).
 - ✅ `npm run build` — ירוק.
 - ✅ `npx tsc -p functions/tsconfig.json --noEmit` — ירוק.
-- ⏳ **אימות במכשיר — ממתין ל-deploy ואישור משתמש.** התיקון בשרת; אימות end-to-end דורש deploy של `functions:generateAIWorkout` ואז 3 יצירות רצופות בחשבון בדיקה (zehava מיצתה מכסת 3/יום) שמראות התפלגות ציוד שונה. עד אז: **fix candidate**.
+- ✅ **נפרס לפרודקשן (16/08/2026, אחרי אישור מפורש):** PR #172 מוזג ל-main (`0b5f118`); פריסת `hosting,functions` הצליחה; revision חדש **`generateaiworkout-00041-faf`** משרת 100% (קודם: `00040-ziw`). כרטיס גלגול: `docs/rollback/2026-08-16-generateAIWorkout.md`.
+- ⏳ **אימות runtime של הלוג + 3 יצירות — ממתין ליצירה הראשונה בחשבון בדיקה.** הסימן: שורת `Exercise pool shuffled for GPT prompt` בקריאה הראשונה. טרם הופיעה (לא בוצעה יצירה מאז הפריסה). אם לא תופיע בקריאה ראשונה — לעצור ולגלגל לפי הכרטיס.
+- ⏳ **אימות במכשיר (PR-2) — ממתין.** התיקון בשרת; אימות end-to-end דורש deploy של `functions:generateAIWorkout` ואז 3 יצירות רצופות בחשבון בדיקה (zehava מיצתה מכסת 3/יום) שמראות התפלגות ציוד שונה. עד אז: **fix candidate**.
   - הראיה שהמנגנון עובד קיימת כבר מהניסוי המבודד (נספח ב׳): ערבוב → 0% חפיפה + גיוון ציוד.
