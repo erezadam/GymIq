@@ -32,6 +32,58 @@ async function getClient(): Promise<any> {
 }
 
 /**
+ * Shuffle the pool AND build the index↔id maps from the SAME shuffled array, so
+ * the prompt the model sees and the map used to resolve its answer can never
+ * diverge. Returns everything a caller needs: the shuffled list to stream into
+ * the prompt, and both directions of the index map. Keeping this in one function
+ * is the integrity guarantee — there is no way to build the prompt from one order
+ * and resolve indices against another.
+ */
+export function buildPromptExerciseIndex(filteredExercises: ExerciseSummary[]): {
+  promptExercises: ExerciseSummary[]
+  indexToId: Map<number, string>
+  idToIndex: Map<string, number>
+} {
+  const promptExercises = shufflePool(filteredExercises)
+  const indexToId = new Map<number, string>()
+  const idToIndex = new Map<string, number>()
+  promptExercises.forEach((ex, i) => {
+    const idx = i + 1
+    indexToId.set(idx, ex.id)
+    idToIndex.set(ex.id, idx)
+  })
+  return { promptExercises, indexToId, idToIndex }
+}
+
+/**
+ * Remap GPT's numeric indices back to real Firestore ids IN PLACE, using the map
+ * built from the shuffled prompt order. An index GPT invents (out of range) is
+ * left untouched and counted as failed → downstream validation drops it. This is
+ * the ONLY place indices become ids; it must always receive the indexToId from
+ * buildPromptExerciseIndex for the same call.
+ */
+export function remapWorkoutIndicesToIds(
+  workouts: { exercises: { exerciseId: string | number }[] }[],
+  indexToId: Map<number, string>
+): { remapped: number; failed: number } {
+  let remapped = 0
+  let failed = 0
+  for (const workout of workouts) {
+    for (const ex of workout.exercises) {
+      const idx = Number(ex.exerciseId)
+      if (!isNaN(idx) && indexToId.has(idx)) {
+        ex.exerciseId = indexToId.get(idx)!
+        remapped++
+      } else {
+        // GPT returned something unexpected — leave as-is for downstream validation
+        failed++
+      }
+    }
+  }
+  return { remapped, failed }
+}
+
+/**
  * Generate workouts with muscle assignments and 10 sets/muscle/week logic
  * Returns null if GPT fails
  */
@@ -48,25 +100,17 @@ export async function callGPTForWorkouts(
   try {
     const client = await getClient()
 
-    // Shuffle the pool at the point it is packed into the prompt. The pool arrives
-    // sorted (getExercises → orderBy('name')); a fixed order makes the model anchor
-    // on the same early items every call (see poolShuffle.ts / the 2026-08-16
-    // investigation). Shuffling a COPY here — not in getExercises, not in the client
-    // — breaks that position bias for every user immediately, including stale PWA
-    // clients. The idx map below is derived from this shuffled order, so remapping
-    // back to real IDs stays correct.
-    const promptExercises = shufflePool(filteredExercises)
+    // Shuffle the pool at the point it is packed into the prompt, and build the
+    // index↔id maps from that same shuffled array. The pool arrives sorted
+    // (getExercises → orderBy('name')); a fixed order makes the model anchor on the
+    // same early items every call (see poolShuffle.ts / the 2026-08-16
+    // investigation). Shuffling here — not in getExercises, not in the client —
+    // breaks that position bias for every user immediately, including stale PWA
+    // clients. buildPromptExerciseIndex keeps the prompt order and the remap map in
+    // lockstep, so GPT's indices can only ever resolve against the list it saw.
+    const { promptExercises, indexToId, idToIndex } = buildPromptExerciseIndex(filteredExercises)
     functions.logger.info('Exercise pool shuffled for GPT prompt', {
       size: promptExercises.length,
-    })
-
-    // Build index-to-ID mapping so GPT works with simple numbers instead of long Firestore IDs
-    const indexToId = new Map<number, string>()
-    const idToIndex = new Map<string, number>()
-    promptExercises.forEach((ex, i) => {
-      const idx = i + 1
-      indexToId.set(idx, ex.id)
-      idToIndex.set(ex.id, idx)
     })
 
     // Admin prompt library override (aiPrompts/workout_generation) — falls
@@ -102,21 +146,12 @@ export async function callGPTForWorkouts(
       return null
     }
 
-    // Remap numeric indices back to real Firestore IDs
-    let remappedCount = 0
-    let failedCount = 0
-    for (const workout of parsed.workouts) {
-      for (const ex of workout.exercises) {
-        const idx = Number(ex.exerciseId)
-        if (!isNaN(idx) && indexToId.has(idx)) {
-          ex.exerciseId = indexToId.get(idx)!
-          remappedCount++
-        } else {
-          // GPT returned something unexpected — leave as-is for downstream validation
-          failedCount++
-        }
-      }
-    }
+    // Remap numeric indices back to real Firestore IDs, against the SAME map the
+    // prompt order was built from (buildPromptExerciseIndex above).
+    const { remapped: remappedCount, failed: failedCount } = remapWorkoutIndicesToIds(
+      parsed.workouts,
+      indexToId,
+    )
 
     functions.logger.info('GPT workouts generated', {
       workoutCount: parsed.workouts.length,
