@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased] - 2026-08-16
+
+### Fixed
+- **מאמן ה-AI — אימונים חוזרים וחד-גוניים ("הכל משקולות") נגרמו מהטיית-מיקום בסדר הבריכה.** תחקיר מלא ב-`docs/investigations/2026-08-16-ai-trainer-repeat-dumbbell.md`. שורש: בריכת התרגילים מגיעה לפרומפט ממוינת (`getExercises` → `orderBy('name')`), ו-gpt-4.1 עוגן על אותם תרגילים מוקדמים בכל יצירה. ניסוי מבודד: סדר קבוע → ~67% חפיפה + ~100% dumbbell; סדר מעורבב → 0% חפיפה + גיוון ציוד, **בלי שינוי מילה בפרומפט**. תיקון: `shufflePool()` (מודול חדש `functions/src/ai-trainer/poolShuffle.ts`) מוחל על **עותק** של הבריכה ב-`callGPTForWorkouts`, בנקודת אריזת הפרומפט בלבד. **לא** ב-`getExercises` (משרת כל רשימה שהמשתמש רואה) ו**לא** בלקוח (PWA עם bundle ישן) — בשרת, חל מיידית על כל המשתמשים. נוסף לוג `Exercise pool shuffled for GPT prompt` (עם `size`) לאימות מהפרודקשן. ⚠️ שינוי ב-Cloud Function → דורש deploy של `functions:generateAIWorkout`. ללא שינוי בכלל עקביות-הציוד, ללא temperature (model-agnostic), ללא אילוץ אנטי-חזרתיות — משתנה אחד בכל פעם. טסט רגרסיה `tests/poolShuffle.spec.ts` (נכשל אם הבריכה ממוינת או אם שתי קריאות מייצרות אותו סדר). functions tsc ירוק, 347 טסטים עוברים, build ירוק. **סטטוס: fix candidate — ממתין לאימות במכשיר אחרי deploy** (3 יצירות רצופות עם התפלגות ציוד שונה).
+- **שלמות מיפוי האינדקסים (גייט חוסם לפני פריסה):** אחרי הערבוב, אומת שתשובת GPT נפתרת מול אותו מערך מעורבב שממנו נבנה הפרומפט. חולצו `buildPromptExerciseIndex` + `remapWorkoutIndicesToIds` (openaiClient, רפקטור שומר-התנהגות) כך שהפרומפט והמפה מאותו מערך; `remapWorkoutIndicesToIds` היא הנקודה היחידה שפותרת idx→id, ומכאן הכל לפי real id. טסט `tests/aiTrainerIndexIntegrity.spec.ts` (3 בדיקות, פרמוטציה הפוכה) — **הוכח RED** מול הזרקת הבאג. 350 טסטים עוברים.
+- **מיפוי נלווה (דיווח בלבד, ללא תיקון):** אותה הטיית-מיקום קיימת ב-`ai-program` (תוכניות מאמן→מתאמן) — מזרים את מלוא הקטלוג (~165) לבחירה אקטיבית בסדר קבוע (`fetchExercises`, ללא `orderBy`, `generateProgram.ts:341-362`). הנתיב החמור. `ai-analysis` **אינו** חשוף (מסכם ביצועי עבר, לא בוחר מרשימה). מתועד בתחקיר; לא תוקן.
+
 ## [Unreleased] - 2026-08-15 (3)
 
 ### Changed

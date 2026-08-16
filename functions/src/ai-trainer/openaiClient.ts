@@ -6,6 +6,7 @@
 import * as functions from 'firebase-functions'
 import { getPromptOverride } from '../shared/promptConfig'
 import { PROMPT_IDS } from '../shared/promptOverrides'
+import { buildPromptExerciseIndex, remapWorkoutIndicesToIds } from './poolShuffle'
 import type {
   GenerateWorkoutRequest,
   ClaudeFullResponse,
@@ -47,20 +48,24 @@ export async function callGPTForWorkouts(
   try {
     const client = await getClient()
 
-    // Build index-to-ID mapping so GPT works with simple numbers instead of long Firestore IDs
-    const indexToId = new Map<number, string>()
-    const idToIndex = new Map<string, number>()
-    filteredExercises.forEach((ex, i) => {
-      const idx = i + 1
-      indexToId.set(idx, ex.id)
-      idToIndex.set(ex.id, idx)
+    // Shuffle the pool at the point it is packed into the prompt, and build the
+    // index↔id maps from that same shuffled array. The pool arrives sorted
+    // (getExercises → orderBy('name')); a fixed order makes the model anchor on the
+    // same early items every call (see poolShuffle.ts / the 2026-08-16
+    // investigation). Shuffling here — not in getExercises, not in the client —
+    // breaks that position bias for every user immediately, including stale PWA
+    // clients. buildPromptExerciseIndex keeps the prompt order and the remap map in
+    // lockstep, so GPT's indices can only ever resolve against the list it saw.
+    const { promptExercises, indexToId, idToIndex } = buildPromptExerciseIndex(filteredExercises)
+    functions.logger.info('Exercise pool shuffled for GPT prompt', {
+      size: promptExercises.length,
     })
 
     // Admin prompt library override (aiPrompts/workout_generation) — falls
     // back to the built-in prompt/model when absent or unreadable.
     const override = await getPromptOverride(PROMPT_IDS.workoutGeneration)
     const systemPrompt = override?.systemPrompt ?? buildSystemPrompt()
-    const userPrompt = buildUserPrompt(data, stagnantExerciseIds, muscles, assignments, filteredExercises, lastAnalysisSection, idToIndex, warmupExercise, coreExercise)
+    const userPrompt = buildUserPrompt(data, stagnantExerciseIds, muscles, assignments, promptExercises, lastAnalysisSection, idToIndex, warmupExercise, coreExercise)
 
     functions.logger.info('Calling GPT for workout generation', {
       numWorkouts: data.request.numWorkouts,
@@ -89,21 +94,12 @@ export async function callGPTForWorkouts(
       return null
     }
 
-    // Remap numeric indices back to real Firestore IDs
-    let remappedCount = 0
-    let failedCount = 0
-    for (const workout of parsed.workouts) {
-      for (const ex of workout.exercises) {
-        const idx = Number(ex.exerciseId)
-        if (!isNaN(idx) && indexToId.has(idx)) {
-          ex.exerciseId = indexToId.get(idx)!
-          remappedCount++
-        } else {
-          // GPT returned something unexpected — leave as-is for downstream validation
-          failedCount++
-        }
-      }
-    }
+    // Remap numeric indices back to real Firestore IDs, against the SAME map the
+    // prompt order was built from (buildPromptExerciseIndex above).
+    const { remapped: remappedCount, failed: failedCount } = remapWorkoutIndicesToIds(
+      parsed.workouts,
+      indexToId,
+    )
 
     functions.logger.info('GPT workouts generated', {
       workoutCount: parsed.workouts.length,

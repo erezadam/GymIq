@@ -1,0 +1,342 @@
+{
+ "fixed": [
+  [
+   {
+    "id": "eY2MblJj94vJtV6A0Zlz",
+    "eq": "dumbbell",
+    "nameHe": "חתירה בהטיית גו (Bent Over Row)",
+    "muscle": "lats"
+   },
+   {
+    "id": "Xoh0Dwe168xMDsDpkNgb",
+    "eq": "dumbbell",
+    "nameHe": "חתירה עם משקולת יד בהטיית גו-ספסל, יד-יד",
+    "muscle": "lats"
+   },
+   {
+    "id": "RLkPUj6WGQhlyHcr023o",
+    "eq": "dumbbell",
+    "nameHe": "חתירה בעמידה ישרה עם משקולות יד",
+    "muscle": "rear_delt"
+   },
+   {
+    "id": "uEttMMdBAEBLszuPTXCJ",
+    "eq": "dumbbell",
+    "nameHe": "לחיצת חזה בשכיבה ישרה  כנגד משקולות",
+    "muscle": "mid_chest"
+   },
+   {
+    "id": "hn1ltVslyPx9RX0u94xV",
+    "eq": "dumbbell",
+    "nameHe": "פרפר בשכיבה עם משקולות יד",
+    "muscle": "mid_chest"
+   },
+   {
+    "id": "UqdqbbxXZFJ0hxJ8uZRQ",
+    "eq": "dumbbell",
+    "nameHe": "כפיפת  כתף  קדימה עם משקולות יד",
+    "muscle": "front_delt"
+   },
+   {
+    "id": "TaVCi6SMnlGPU44STvqB",
+    "eq": "dumbbell",
+    "nameHe": "לחיצת כתפיים בישיבה עם משקולות יד",
+    "muscle": "side_delt"
+   },
+   {
+    "id": "XnmEnDFS42PVHmcRoUip",
+    "eq": "dumbbell",
+    "nameHe": "כפיפת מרפקים בישיבה בשיפוע (Incline Curl)",
+    "muscle": "biceps"
+   },
+   {
+    "id": "gxW8cKebZWGeMWkaF2OC",
+    "eq": "cable_machine",
+    "nameHe": "כפיפת מרפקים בפולי תחתון",
+    "muscle": "biceps"
+   }
+  ],
+  [
+   {
+    "id": "eY2MblJj94vJtV6A0Zlz",
+    "eq": "dumbbell",
+    "nameHe": "חתירה בהטיית גו (Bent Over Row)",
+    "muscle": "lats"
+   },
+   {
+    "id": "Xoh0Dwe168xMDsDpkNgb",
+    "eq": "dumbbell",
+    "nameHe": "חתירה עם משקולת יד בהטיית גו-ספסל, יד-יד",
+    "muscle": "lats"
+   },
+   {
+    "id": "RLkPUj6WGQhlyHcr023o",
+    "eq": "dumbbell",
+    "nameHe": "חתירה בעמידה ישרה עם משקולות יד",
+    "muscle": "rear_delt"
+   },
+   {
+    "id": "uEttMMdBAEBLszuPTXCJ",
+    "eq": "dumbbell",
+    "nameHe": "לחיצת חזה בשכיבה ישרה  כנגד משקולות",
+    "muscle": "mid_chest"
+   },
+   {
+    "id": "hn1ltVslyPx9RX0u94xV",
+    "eq": "dumbbell",
+    "nameHe": "פרפר בשכיבה עם משקולות יד",
+    "muscle": "mid_chest"
+   },
+   {
+    "id": "UqdqbbxXZFJ0hxJ8uZRQ",
+    "eq": "dumbbell",
+    "nameHe": "כפיפת  כתף  קדימה עם משקולות יד",
+    "muscle": "front_delt"
+   },
+   {
+    "id": "Hodjqpz9FeabtDsq853v",
+    "eq": "dumbbell",
+    "nameHe": "הרחקת כתף בעמידה עם משקולות יד",
+    "muscle": "side_delt"
+   },
+   {
+    "id": "XnmEnDFS42PVHmcRoUip",
+    "eq": "dumbbell",
+    "nameHe": "כפיפת מרפקים בישיבה בשיפוע (Incline Curl)",
+    "muscle": "biceps"
+   },
+   {
+    "id": "NvtGnQEnGkpiaJtAum4h",
+    "eq": "dumbbell",
+    "nameHe": "פשיטת מרפק מעל הראש עם משקולת יד",
+    "muscle": "triceps"
+   }
+  ],
+  [
+   {
+    "id": "eY2MblJj94vJtV6A0Zlz",
+    "eq": "dumbbell",
+    "nameHe": "חתירה בהטיית גו (Bent Over Row)",
+    "muscle": "lats"
+   },
+   {
+    "id": "Xoh0Dwe168xMDsDpkNgb",
+    "eq": "dumbbell",
+    "nameHe": "חתירה עם משקולת יד בהטיית גו-ספסל, יד-יד",
+    "muscle": "lats"
+   },
+   {
+    "id": "RLkPUj6WGQhlyHcr023o",
+    "eq": "dumbbell",
+    "nameHe": "חתירה בעמידה ישרה עם משקולות יד",
+    "muscle": "rear_delt"
+   },
+   {
+    "id": "uEttMMdBAEBLszuPTXCJ",
+    "eq": "dumbbell",
+    "nameHe": "לחיצת חזה בשכיבה ישרה  כנגד משקולות",
+    "muscle": "mid_chest"
+   },
+   {
+    "id": "hn1ltVslyPx9RX0u94xV",
+    "eq": "dumbbell",
+    "nameHe": "פרפר בשכיבה עם משקולות יד",
+    "muscle": "mid_chest"
+   },
+   {
+    "id": "vTnBmyUqMoN5ikXdKONL",
+    "eq": "dumbbell",
+    "nameHe": "לחיצת כתפיים באחיזה צרה עם משקולות יד",
+    "muscle": "front_delt"
+   },
+   {
+    "id": "Hodjqpz9FeabtDsq853v",
+    "eq": "dumbbell",
+    "nameHe": "הרחקת כתף בעמידה עם משקולות יד",
+    "muscle": "side_delt"
+   },
+   {
+    "id": "XnmEnDFS42PVHmcRoUip",
+    "eq": "dumbbell",
+    "nameHe": "כפיפת מרפקים בישיבה בשיפוע (Incline Curl)",
+    "muscle": "biceps"
+   },
+   {
+    "id": "NvtGnQEnGkpiaJtAum4h",
+    "eq": "dumbbell",
+    "nameHe": "פשיטת מרפק מעל הראש עם משקולת יד",
+    "muscle": "triceps"
+   }
+  ]
+ ],
+ "shuffled": [
+  [
+   {
+    "id": "BwVQyCeg3DqNPFqdJser",
+    "eq": "puli",
+    "nameHe": "משיכת פולי עליון באחיזה רחבה לפנים",
+    "muscle": "lats"
+   },
+   {
+    "id": "4mAbkf0hesykvFmFSD8k",
+    "eq": "puli",
+    "nameHe": "משיכת פולי עליון אחיזה אמצעית",
+    "muscle": "lats"
+   },
+   {
+    "id": "mcoW0pzyAWBcd5C1dXad",
+    "eq": "puli",
+    "nameHe": "משיכת פולי עליון באחיזה צרה",
+    "muscle": "lats"
+   },
+   {
+    "id": "gxW8cKebZWGeMWkaF2OC",
+    "eq": "cable_machine",
+    "nameHe": "כפיפת מרפקים בפולי תחתון",
+    "muscle": "biceps"
+   },
+   {
+    "id": "4xIO6RSxSBBwOBS4QXNL",
+    "eq": "cable_machine",
+    "nameHe": "פשיטת מרפקים בפולי מעל הראש (Overhead)",
+    "muscle": "triceps"
+   },
+   {
+    "id": "XFx4AtVbfQZs92RDE0Cf",
+    "eq": "cable_machine",
+    "nameHe": "ידיים  אחורית פולי עליון ",
+    "muscle": "triceps"
+   },
+   {
+    "id": "hdJjAx3KMp5XbuQ7UNfW",
+    "eq": "cable_machine",
+    "nameHe": "פרפר בכבל קרוס (High to Low)",
+    "muscle": "mid_chest"
+   },
+   {
+    "id": "Xriss1E6kkY8nSnmyWKi",
+    "eq": "cable_machine",
+    "nameHe": "פרפר בכבל קרוס (Middle)",
+    "muscle": "mid_chest"
+   },
+   {
+    "id": "oE3M2FaQeaMU5hTeOkOj",
+    "eq": "cable_machine",
+    "nameHe": "הרחקת כתף בפולי תחתון בעמידה",
+    "muscle": "side_delt"
+   }
+  ],
+  [
+   {
+    "id": "eY2MblJj94vJtV6A0Zlz",
+    "eq": "dumbbell",
+    "nameHe": "חתירה בהטיית גו (Bent Over Row)",
+    "muscle": "lats"
+   },
+   {
+    "id": "Xoh0Dwe168xMDsDpkNgb",
+    "eq": "dumbbell",
+    "nameHe": "חתירה עם משקולת יד בהטיית גו-ספסל, יד-יד",
+    "muscle": "lats"
+   },
+   {
+    "id": "uEttMMdBAEBLszuPTXCJ",
+    "eq": "dumbbell",
+    "nameHe": "לחיצת חזה בשכיבה ישרה  כנגד משקולות",
+    "muscle": "mid_chest"
+   },
+   {
+    "id": "hn1ltVslyPx9RX0u94xV",
+    "eq": "dumbbell",
+    "nameHe": "פרפר בשכיבה עם משקולות יד",
+    "muscle": "mid_chest"
+   },
+   {
+    "id": "TaVCi6SMnlGPU44STvqB",
+    "eq": "dumbbell",
+    "nameHe": "לחיצת כתפיים בישיבה עם משקולות יד",
+    "muscle": "side_delt"
+   },
+   {
+    "id": "Hodjqpz9FeabtDsq853v",
+    "eq": "dumbbell",
+    "nameHe": "הרחקת כתף בעמידה עם משקולות יד",
+    "muscle": "side_delt"
+   },
+   {
+    "id": "7DM48GgbgQpfOsehSBUB",
+    "eq": "dumbbell",
+    "nameHe": "פשיטת מרפקים בשכיבה עם משקולות יד",
+    "muscle": "triceps"
+   },
+   {
+    "id": "Fbw48H0eQfwvkmuye8o8",
+    "eq": "dumbbell",
+    "nameHe": "לחיצת חזה צרה במשקולות יד",
+    "muscle": "triceps"
+   },
+   {
+    "id": "XnmEnDFS42PVHmcRoUip",
+    "eq": "dumbbell",
+    "nameHe": "כפיפת מרפקים בישיבה בשיפוע (Incline Curl)",
+    "muscle": "biceps"
+   }
+  ],
+  [
+   {
+    "id": "4mAbkf0hesykvFmFSD8k",
+    "eq": "puli",
+    "nameHe": "משיכת פולי עליון אחיזה אמצעית",
+    "muscle": "lats"
+   },
+   {
+    "id": "BwVQyCeg3DqNPFqdJser",
+    "eq": "puli",
+    "nameHe": "משיכת פולי עליון באחיזה רחבה לפנים",
+    "muscle": "lats"
+   },
+   {
+    "id": "KItcETHzIHJXCGt4duOM",
+    "eq": "cable_machine",
+    "nameHe": "חתירה בפולי תחתון בישיבה",
+    "muscle": "lats"
+   },
+   {
+    "id": "gxW8cKebZWGeMWkaF2OC",
+    "eq": "cable_machine",
+    "nameHe": "כפיפת מרפקים בפולי תחתון",
+    "muscle": "biceps"
+   },
+   {
+    "id": "Xriss1E6kkY8nSnmyWKi",
+    "eq": "cable_machine",
+    "nameHe": "פרפר בכבל קרוס (Middle)",
+    "muscle": "mid_chest"
+   },
+   {
+    "id": "XFx4AtVbfQZs92RDE0Cf",
+    "eq": "cable_machine",
+    "nameHe": "ידיים  אחורית פולי עליון ",
+    "muscle": "triceps"
+   },
+   {
+    "id": "oE3M2FaQeaMU5hTeOkOj",
+    "eq": "cable_machine",
+    "nameHe": "הרחקת כתף בפולי תחתון בעמידה",
+    "muscle": "side_delt"
+   },
+   {
+    "id": "15EoZ3DZm4pMas9pEb8c",
+    "eq": "cable_machine",
+    "nameHe": "משיכת לפנים ",
+    "muscle": "rear_delt"
+   },
+   {
+    "id": "pPEBBNhgMbC5yvgupahV",
+    "eq": "cable_machine",
+    "nameHe": "פשיטת מרפק  מעל הראש ביד אחת ",
+    "muscle": "triceps"
+   }
+  ]
+ ]
+}
