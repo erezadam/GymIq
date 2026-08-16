@@ -6,6 +6,7 @@
 import * as functions from 'firebase-functions'
 import { getPromptOverride } from '../shared/promptConfig'
 import { PROMPT_IDS } from '../shared/promptOverrides'
+import { shufflePool } from './poolShuffle'
 import type {
   GenerateWorkoutRequest,
   ClaudeFullResponse,
@@ -47,10 +48,22 @@ export async function callGPTForWorkouts(
   try {
     const client = await getClient()
 
+    // Shuffle the pool at the point it is packed into the prompt. The pool arrives
+    // sorted (getExercises → orderBy('name')); a fixed order makes the model anchor
+    // on the same early items every call (see poolShuffle.ts / the 2026-08-16
+    // investigation). Shuffling a COPY here — not in getExercises, not in the client
+    // — breaks that position bias for every user immediately, including stale PWA
+    // clients. The idx map below is derived from this shuffled order, so remapping
+    // back to real IDs stays correct.
+    const promptExercises = shufflePool(filteredExercises)
+    functions.logger.info('Exercise pool shuffled for GPT prompt', {
+      size: promptExercises.length,
+    })
+
     // Build index-to-ID mapping so GPT works with simple numbers instead of long Firestore IDs
     const indexToId = new Map<number, string>()
     const idToIndex = new Map<string, number>()
-    filteredExercises.forEach((ex, i) => {
+    promptExercises.forEach((ex, i) => {
       const idx = i + 1
       indexToId.set(idx, ex.id)
       idToIndex.set(ex.id, idx)
@@ -60,7 +73,7 @@ export async function callGPTForWorkouts(
     // back to the built-in prompt/model when absent or unreadable.
     const override = await getPromptOverride(PROMPT_IDS.workoutGeneration)
     const systemPrompt = override?.systemPrompt ?? buildSystemPrompt()
-    const userPrompt = buildUserPrompt(data, stagnantExerciseIds, muscles, assignments, filteredExercises, lastAnalysisSection, idToIndex, warmupExercise, coreExercise)
+    const userPrompt = buildUserPrompt(data, stagnantExerciseIds, muscles, assignments, promptExercises, lastAnalysisSection, idToIndex, warmupExercise, coreExercise)
 
     functions.logger.info('Calling GPT for workout generation', {
       numWorkouts: data.request.numWorkouts,
