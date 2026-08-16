@@ -184,6 +184,19 @@ $ diff code_systemPrompt.txt prod_systemPrompt.txt
 
 **מסקנה:** `ai-program` חשוף לאותה הטיה (סדר קבוע → עיגון על תרגילים מוקדמים), וההשלכה חמורה יותר כי הוא בונה תוכניות שמאמן מקצה למתאמנים. הסדר שם הוא doc-id (לא אלפביתי) אך עדיין קבוע ולא-מעורבב בנקודת האריזה. `ai-analysis` **אינו** חשוף (אין בחירה מרשימה). **לא תוקן — מיפוי בלבד.**
 
+# משימה 1 — שלמות מיפוי האינדקסים (גייט חוסם, PR-1)
+**שאלה:** אחרי הערבוב האינדקסים השתנו — האם תשובת GPT נפתרת מול **אותו** מערך מעורבב שממנו נבנה הפרומפט?
+
+**מעקב הנתיב (מהערבוב עד השמירה):**
+1. `callGPTForWorkouts` → `buildPromptExerciseIndex(filteredExercises)` מערבב **ובונה את מפת idx↔id מאותו מערך מעורבב** (`promptExercises`). גם `buildUserPrompt` וגם המפה נגזרים מ-`promptExercises` — צימוד מובנה.
+2. GPT מחזיר `exerciseId`=idx לתוך הרשימה המעורבבת.
+3. `remapWorkoutIndicesToIds(parsed.workouts, indexToId)` — **הנקודה היחידה** שפותרת idx→id, מול אותה `indexToId`.
+4. מכאן הכל לפי **מזהה אמיתי**: `convertClaudeResponse`/`exerciseMap` (ממופתח לפי real id), `aiRecommendations`, `applyStagnationFloor`, fill-missing.
+
+**מסקנה: אין שום מקום שפותר idx מול `filteredExercises` המקורי או מול עותק אחר.** `filteredExercises` משמש רק כקלט לערבוב ול-`.length` בלוג. **שלמות המיפוי תקינה.**
+
+**רפקטור שומר-התנהגות + טסט:** חולצו `buildPromptExerciseIndex` ו-`remapWorkoutIndicesToIds` (ל-openaiClient) כדי שהפרומפט והמפה יהיו מוכחות מאותו מערך. `tests/aiTrainerIndexIntegrity.spec.ts` (3 בדיקות) עם פרמוטציה הפוכה ידועה: idx1→C, idx3→A. **הוכח RED** — הזרקת הבאג (מפה מהמערך המקורי) מכשילה את כל 3 הבדיקות. הטסט הקיים `poolShuffle.spec` בודק אי-מיון/שינוי-סדר; זה בודק את **שלמות המיפוי** — החור שהמשתמש זיהה.
+
 # אימות (PR-1)
 - ✅ `tests/poolShuffle.spec.ts` — 4 בדיקות עוברות (נכשל אם ממוין / אם שתי קריאות זהות).
 - ✅ `npm test` — 347 טסטים עוברים (41 קבצים).
