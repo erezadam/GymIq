@@ -393,7 +393,7 @@ export default function AITrainerModal({ isOpen, onClose }: AITrainerModalProps)
               ציוד זמין
             </label>
             <p className="text-xs text-gray-500 mb-2">
-              לחיצה בוחרת ציוד ספציפי · "הכל" לכל הציוד
+              "הכל" בוחר או מנקה את כל הציוד · לחיצה על פריט מוסיפה או מסירה אותו
             </p>
             <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
               {equipmentOptions.map((opt) => {

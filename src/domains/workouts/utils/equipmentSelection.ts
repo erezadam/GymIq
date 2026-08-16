@@ -58,21 +58,25 @@ export function isAllSelected(selected: Set<string>, selectableIds: string[]): b
 }
 
 /**
- * Selection rules (matches the user's single-select-then-refine mental model):
- * - Clicking "all" selects every item.
- * - Clicking an item while everything is selected selects ONLY that item — so
- *   "click סמית'" means "just Smith", not "everything except Smith".
- * - Otherwise clicking an item toggles it in/out; re-selecting every item is
- *   again equivalent to "all". Disabled/empty items don't toggle (UI layer).
+ * Selection rules (match the app-wide "select-all / clear-all, then refine"
+ * model the user expects):
+ * - Clicking "all" is a real toggle: when everything is selected it CLEARS all;
+ *   otherwise it selects every item.
+ * - Clicking a single item always toggles just that item in/out — so from the
+ *   default "all selected" state, clicking "סמית'" REMOVES Smith (leaving the
+ *   rest), it does not narrow the selection down to only Smith.
+ * - Re-selecting every item is again equivalent to "all". Disabled/empty items
+ *   don't toggle (enforced at the UI layer).
  */
 export function toggleEquipment(
   selected: Set<string>,
   optionId: string,
   selectableIds: string[]
 ): Set<string> {
-  if (optionId === ALL_OPTION_ID) return new Set(selectableIds)
-  // From the "all selected" state, the first item click narrows to just that item.
-  if (isAllSelected(selected, selectableIds)) return new Set([optionId])
+  if (optionId === ALL_OPTION_ID) {
+    // Real toggle: all selected → clear; otherwise → select all.
+    return isAllSelected(selected, selectableIds) ? new Set() : new Set(selectableIds)
+  }
   const next = new Set(selected)
   if (next.has(optionId)) next.delete(optionId)
   else next.add(optionId)

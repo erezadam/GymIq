@@ -34,24 +34,29 @@ describe('equipmentSelection — pure logic', () => {
     expect(SELECTABLE).toEqual(['dumbbell', 'machine', 'graviton'])
   })
 
-  it('first item click from "all" narrows to only that item; then toggles; "all" resets', () => {
+  // NOTE: an earlier version of this test locked in a BUG — it asserted that
+  // clicking one item from "all" narrows to only that item, and that "all" only
+  // ever selects everything. That documented what the code did, not what the
+  // product needs. Per the convention "tests document product intent, not code
+  // behavior", these expectations are inverted to the fixed contract.
+  it('item click from "all" removes just that item; "all" is a real clear/select toggle', () => {
     let sel = new Set(SELECTABLE)
     expect(isAllSelected(sel, SELECTABLE)).toBe(true)
-    // From "all", clicking one item selects ONLY it (not "all except it").
+    // From "all", clicking one item REMOVES only it (not narrow-to-single).
     sel = toggleEquipment(sel, 'machine', SELECTABLE)
-    expect([...sel]).toEqual(['machine'])
-    // Now clicking another item adds it (multi-select from here on).
-    sel = toggleEquipment(sel, 'graviton', SELECTABLE)
-    expect([...sel].sort()).toEqual(['graviton', 'machine'])
-    // Clicking a selected item removes it.
+    expect([...sel].sort()).toEqual(['dumbbell', 'graviton'])
+    // Clicking it again adds it back → all selected.
     sel = toggleEquipment(sel, 'machine', SELECTABLE)
-    expect([...sel]).toEqual(['graviton'])
-    // Re-selecting everything is equivalent to "all".
-    sel = toggleEquipment(new Set(['dumbbell', 'machine']), 'graviton', SELECTABLE)
     expect(isAllSelected(sel, SELECTABLE)).toBe(true)
-    // Clicking "all" from any state selects everything.
-    sel = toggleEquipment(new Set(['dumbbell']), 'all', SELECTABLE)
+    // "all" while everything is selected → CLEAR all.
+    sel = toggleEquipment(sel, 'all', SELECTABLE)
+    expect([...sel]).toEqual([])
+    // "all" while nothing/partial selected → select everything.
+    sel = toggleEquipment(sel, 'all', SELECTABLE)
     expect(isAllSelected(sel, SELECTABLE)).toBe(true)
+    // Individual toggle still adds/removes a single item.
+    sel = toggleEquipment(new Set(['dumbbell']), 'graviton', SELECTABLE)
+    expect([...sel].sort()).toEqual(['dumbbell', 'graviton'])
   })
 
   it('request field: undefined when all selected (or none loaded); actual selection when partial', () => {
@@ -151,14 +156,16 @@ describe('AITrainerModal — equipment selector', () => {
     expect(generateMock.mock.calls[0][0]).not.toHaveProperty('equipmentFilter')
   })
 
-  it('partial selection → equipmentFilter sent as marked (click = select only that)', async () => {
+  it('removing one item from "all" sends everything except that item', async () => {
     await openModal()
-    // From the default "all", clicking machine narrows to ONLY machine.
+    // From the default "all", clicking machine REMOVES machine (it does not
+    // narrow the selection down to only machine).
     fireEvent.click(screen.getByRole('button', { name: 'מכשירים' }))
     fireEvent.click(generateBtn())
     await waitFor(() => expect(generateMock).toHaveBeenCalled())
     const req = generateMock.mock.calls[0][0]
-    expect(req.equipmentFilter).toEqual(['machine'])
+    expect(req.equipmentFilter).not.toContain('machine')
+    expect(req.equipmentFilter).toContain('dumbbell')
   })
 
   it('an option with zero available exercises is disabled', async () => {
@@ -168,7 +175,8 @@ describe('AITrainerModal — equipment selector', () => {
 
   it('scarcity alert appears only when too few strength exercises, and cancel preserves the selection', async () => {
     await openModal()
-    // Click graviton from "all" → only graviton (1 strength) → below the 9 required.
+    // Clear all ("הכל" toggle), then select only graviton (1 strength) → below the 9 required.
+    fireEvent.click(screen.getByRole('button', { name: 'הכל' }))
     fireEvent.click(screen.getByRole('button', { name: 'גרביטון' }))
     fireEvent.click(generateBtn())
     // Alert shown, generation NOT started.
