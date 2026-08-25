@@ -1,0 +1,83 @@
+{
+  "DvybM8iqKpakRh5yC8jf": {
+    "exercises": [],
+    "name": "אימון 4.2.2026",
+    "totalExercises": 0,
+    "completedSets": 0,
+    "endTime": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1770218973,
+      "nanoseconds": 164000000
+    },
+    "totalSets": 0,
+    "completedExercises": 0,
+    "lastUpdated": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1770218973,
+      "nanoseconds": 165000000
+    },
+    "startTime": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1770218941,
+      "nanoseconds": 485000000
+    },
+    "personalRecords": 0,
+    "status": "in_progress",
+    "duration": 0,
+    "userId": "OHxRVH3RdUP8k7xQBuAa5ZXvfrI2",
+    "date": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1770218941,
+      "nanoseconds": 485000000
+    },
+    "totalVolume": 0,
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1770218838,
+      "nanoseconds": 124000000
+    }
+  },
+  "iCmuUyTCX3mVoPVpQNzO": {
+    "totalVolume": 0,
+    "date": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1782360918,
+      "nanoseconds": 657000000
+    },
+    "totalExercises": 0,
+    "startTime": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1782360918,
+      "nanoseconds": 657000000
+    },
+    "completedSets": 0,
+    "totalSets": 0,
+    "exercises": [],
+    "source": "ai_trainer",
+    "status": "in_progress",
+    "userId": "lNUzUket0uRTo8giIp0y9YnmhaK2",
+    "duration": 60,
+    "completedExercises": 0,
+    "deletedByTrainee": {
+      "deletedAt": {
+        "type": "firestore/timestamp/1.0",
+        "seconds": 1782361055,
+        "nanoseconds": 316000000
+      }
+    },
+    "name": "אימון AI #1",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1782360908,
+      "nanoseconds": 153000000
+    },
+    "personalRecords": 0,
+    "endTime": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1782360908,
+      "nanoseconds": 153000000
+    },
+    "aiWorkoutNumber": 1,
+    "notes": "אימון שנוצר ע\"י מאמן AI"
+  }
+}
