@@ -42,7 +42,7 @@ function validateImageFile(file: File): { valid: boolean; error?: string } {
  * Compress and resize an image file using HTML5 Canvas
  * Mobile photos can be 5-10MB, this shrinks them to ~200KB
  */
-function compressImage(file: File): Promise<Blob> {
+export function compressImage(file: File, targetSize: number = TARGET_SIZE): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image()
     const url = URL.createObjectURL(file)
@@ -50,13 +50,13 @@ function compressImage(file: File): Promise<Blob> {
     img.onload = () => {
       URL.revokeObjectURL(url)
 
-      // Calculate new dimensions (fit within TARGET_SIZE square)
+      // Calculate new dimensions (fit within targetSize square)
       let width = img.width
       let height = img.height
       const maxDim = Math.max(width, height)
 
-      if (maxDim > TARGET_SIZE) {
-        const scale = TARGET_SIZE / maxDim
+      if (maxDim > targetSize) {
+        const scale = targetSize / maxDim
         width = Math.round(width * scale)
         height = Math.round(height * scale)
       }
