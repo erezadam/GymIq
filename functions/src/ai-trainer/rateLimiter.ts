@@ -19,6 +19,9 @@ const USAGE_COLLECTION = 'aiTrainerUsage'
 export interface RateLimitOptions {
   collection?: string
   dailyLimit?: number
+  // 'open' (default, ai-trainer behavior): a Firestore failure allows the
+  // request. 'closed': the failure is rethrown so the caller can refuse.
+  failMode?: 'open' | 'closed'
 }
 
 /**
@@ -87,7 +90,10 @@ export async function checkRateLimit(userId: string, options?: RateLimitOptions)
     }
   } catch (error: any) {
     functions.logger.error('Rate limit check failed', { userId, error: error.message })
-    // On error, allow the request (fail open)
+    if (options?.failMode === 'closed') {
+      throw error
+    }
+    // On error, allow the request (fail open — ai-trainer default)
     return {
       allowed: true,
       remaining: limit,

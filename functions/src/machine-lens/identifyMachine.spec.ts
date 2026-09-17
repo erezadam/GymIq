@@ -19,6 +19,7 @@ vi.mock('firebase-admin', () => {
         return {
           id,
           async get() {
+            if (store.has('__failReads')) throw new Error('simulated firestore outage')
             return { exists: store.has(key), data: () => store.get(key) }
           },
           async set(data: any, _opts?: any) {
@@ -78,6 +79,13 @@ beforeEach(() => {
 })
 
 describe('identifyMachine', () => {
+  it('fails closed when the quota check cannot read Firestore — OpenAI is never called', async () => {
+    store.set('__failReads', true)
+    const d = deps()
+    await expect(handleIdentifyMachine(authed, d)).rejects.toMatchObject({ code: 'unavailable' })
+    expect(d.callVision).not.toHaveBeenCalled()
+  })
+
   it('rejects unauthenticated calls', async () => {
     await expect(handleIdentifyMachine({ auth: null, data: validImage }, deps()))
       .rejects.toMatchObject({ code: 'unauthenticated' })

@@ -17,7 +17,12 @@ import {
 import { MACHINE_LENS_PROMPT } from './prompt'
 
 // Daily limit per user, tracked in machineLensUsage/{uid}_{YYYY-MM-DD}
-const MACHINE_LENS_RATE_LIMIT = { collection: 'machineLensUsage', dailyLimit: 20 }
+const MACHINE_LENS_RATE_LIMIT = {
+  collection: 'machineLensUsage',
+  dailyLimit: 20,
+  // Fail closed: a broken quota check must not let requests through to OpenAI.
+  failMode: 'closed' as const,
+}
 
 // Max accepted base64 payload length (~1.5MB binary)
 const MAX_BASE64_LENGTH = 2_097_152
@@ -251,7 +256,16 @@ export async function handleIdentifyMachine(
 
   const data = validateRequest(request.data)
 
-  const rateLimitResult = await checkRateLimit(userId, MACHINE_LENS_RATE_LIMIT)
+  let rateLimitResult
+  try {
+    rateLimitResult = await checkRateLimit(userId, MACHINE_LENS_RATE_LIMIT)
+  } catch (error: any) {
+    functions.logger.error('Machine Lens: quota check failed — refusing request', {
+      userId,
+      error: error.message,
+    })
+    throw new HttpsError('unavailable', 'בדיקת המכסה נכשלה, נסה שוב')
+  }
   if (!rateLimitResult.allowed) {
     functions.logger.warn('Machine Lens: rate limit exceeded', { userId })
     throw new HttpsError('resource-exhausted', 'הגעת למגבלה היומית של זיהוי מכשירים. נסה שוב מחר.')
