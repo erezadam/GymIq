@@ -308,7 +308,7 @@ describe('videoWebpUrl propagates through workout lifecycle - Phase 1 (30/04/202
   });
 
   it('ExerciseForm zod schema validates videoWebpUrl as optional WebP URL', async () => {
-    const content = await readFile('src/domains/admin/components/ExerciseForm.tsx');
+    const content = await readFile('src/domains/exercises/validation/exerciseSchema.ts');
     // Zod field with .webp regex + .or(z.literal('')).optional()
     expect(content).toMatch(/videoWebpUrl:\s*z[\s\S]*?\.url\(/);
     expect(content).toMatch(/\\\.webp/);
