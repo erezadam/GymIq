@@ -13,6 +13,14 @@ const DAILY_LIMIT = 3
 // Collection name for tracking usage
 const USAGE_COLLECTION = 'aiTrainerUsage'
 
+// Optional overrides so other features (e.g. machine-lens) can reuse the same
+// mechanism with their own collection/limit. Defaults preserve ai-trainer
+// behavior exactly.
+export interface RateLimitOptions {
+  collection?: string
+  dailyLimit?: number
+}
+
 /**
  * Get Firestore instance
  */
@@ -40,20 +48,22 @@ function getNextMidnight(): Date {
 /**
  * Check if user has reached daily rate limit
  */
-export async function checkRateLimit(userId: string): Promise<RateLimitResult> {
+export async function checkRateLimit(userId: string, options?: RateLimitOptions): Promise<RateLimitResult> {
   const db = getDb()
   const today = getTodayString()
   const docId = `${userId}_${today}`
+  const collection = options?.collection ?? USAGE_COLLECTION
+  const limit = options?.dailyLimit ?? DAILY_LIMIT
 
   try {
-    const usageRef = db.collection(USAGE_COLLECTION).doc(docId)
+    const usageRef = db.collection(collection).doc(docId)
     const doc = await usageRef.get()
 
     if (!doc.exists) {
       // First generation of the day
       return {
         allowed: true,
-        remaining: DAILY_LIMIT,
+        remaining: limit,
         resetAt: getNextMidnight(),
       }
     }
@@ -61,8 +71,8 @@ export async function checkRateLimit(userId: string): Promise<RateLimitResult> {
     const data = doc.data()
     const count = data?.generationsCount || 0
 
-    if (count >= DAILY_LIMIT) {
-      functions.logger.info('Rate limit reached', { userId, count, limit: DAILY_LIMIT })
+    if (count >= limit) {
+      functions.logger.info('Rate limit reached', { userId, count, limit })
       return {
         allowed: false,
         remaining: 0,
@@ -72,7 +82,7 @@ export async function checkRateLimit(userId: string): Promise<RateLimitResult> {
 
     return {
       allowed: true,
-      remaining: DAILY_LIMIT - count,
+      remaining: limit - count,
       resetAt: getNextMidnight(),
     }
   } catch (error: any) {
@@ -80,7 +90,7 @@ export async function checkRateLimit(userId: string): Promise<RateLimitResult> {
     // On error, allow the request (fail open)
     return {
       allowed: true,
-      remaining: DAILY_LIMIT,
+      remaining: limit,
       resetAt: getNextMidnight(),
     }
   }
@@ -89,13 +99,13 @@ export async function checkRateLimit(userId: string): Promise<RateLimitResult> {
 /**
  * Increment usage count after successful generation
  */
-export async function incrementUsage(userId: string): Promise<void> {
+export async function incrementUsage(userId: string, options?: RateLimitOptions): Promise<void> {
   const db = getDb()
   const today = getTodayString()
   const docId = `${userId}_${today}`
 
   try {
-    const usageRef = db.collection(USAGE_COLLECTION).doc(docId)
+    const usageRef = db.collection(options?.collection ?? USAGE_COLLECTION).doc(docId)
 
     await usageRef.set(
       {
