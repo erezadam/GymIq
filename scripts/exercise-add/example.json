@@ -1,0 +1,28 @@
+{
+  "name": "Seated Leg Curl",
+  "nameHe": "כפיפת ברכיים בישיבה במכונה",
+  "category": "legs",
+  "primaryMuscle": "hamstrings",
+  "secondaryMuscles": [],
+  "secondaryMuscleCredits": [],
+  "equipment": "machine",
+  "difficulty": "beginner",
+  "complexity": "simple",
+  "reportType": "weight_reps",
+  "instructions": [
+    "Sit on the machine with your back against the pad",
+    "Place your lower legs on top of the padded lever",
+    "Curl your legs down and back as far as possible",
+    "Return slowly to the starting position with control"
+  ],
+  "instructionsHe": [
+    "שב על המכונה כשהגב צמוד למשענת",
+    "הנח את השוקיים מעל גלגלת הריפוד",
+    "כופף את הרגליים מטה ואחורה עד הסוף",
+    "חזור באיטיות ובשליטה למצב ההתחלה"
+  ],
+  "targetMuscles": ["hamstrings"],
+  "imageUrl": "https://raw.githubusercontent.com/erezadam/exercise-images-en/main/Leg_Curl_Machine_1.jpeg",
+  "tips": ["Keep your hips pressed into the seat", "Avoid using momentum"],
+  "tipsHe": ["שמור על הירכיים צמודות למושב", "הימנע משימוש במומנטום"]
+}
