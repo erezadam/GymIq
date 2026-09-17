@@ -31,3 +31,6 @@ export { approveTrainerRequest } from './trainer-approval/approveRequest'
 
 // Export Admin functions
 export { updateUserEmail } from './admin/updateUserEmail'
+
+// Export Machine Lens function
+export { identifyMachine } from './machine-lens/identifyMachine'
