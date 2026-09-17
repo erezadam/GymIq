@@ -20,7 +20,8 @@
     "smart-deploy": "claude chat 'הפעל: deployment'",
     "migrate:release-notes": "npx tsx scripts/migrateLastSeenReleaseNotes.ts",
     "sync:release-notes": "npx tsx scripts/syncChangelogToReleaseNotes.ts",
-    "draft:release-note": "npx tsx scripts/draftReleaseNoteFromPR.ts"
+    "draft:release-note": "npx tsx scripts/draftReleaseNoteFromPR.ts",
+    "exercise:write": "tsx --env-file=.env.local scripts/exercise-add/writeExercise.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
