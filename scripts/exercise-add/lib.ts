@@ -27,17 +27,10 @@ export interface ExerciseInput {
   tipsHe?: string[]
 }
 
-// lowercase, trim, collapse whitespace, strip parenthesized content,
-// strip punctuation from both ends.
-export function normalizeName(s: string): string {
-  return s
-    .toLowerCase()
-    .replace(/\([^)]*\)/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/^[\p{P}\p{S}]+|[\p{P}\p{S}]+$/gu, '')
-    .trim()
-}
+// normalizeName moved to the shared matching module (single source of truth);
+// re-exported here so existing imports keep working.
+import { normalizeName } from '../../src/domains/exercises/matching/similarExercises'
+export { normalizeName }
 
 export interface ExistingExercise {
   id: string

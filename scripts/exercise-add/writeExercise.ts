@@ -34,6 +34,8 @@ import {
   validateControlledValues,
   type ExistingExercise,
 } from './lib'
+import { findSimilarExercises } from '../../src/domains/exercises/matching/similarExercises'
+import { writeFileSync } from 'node:fs'
 
 function getFlag(name: string): boolean {
   return process.argv.includes(name)
@@ -92,15 +94,37 @@ async function main() {
 
   await signInWithEmailAndPassword(auth, email, password)
 
-  // --dedupe-only: duplicate check against live exercises, nothing else.
+  // --dedupe-only: duplicate + similarity check against live exercises, nothing else.
   if (dedupeOnly) {
     const exercisesOnlySnap = await getDocs(collection(db, 'exercises'))
-    const existingOnly: ExistingExercise[] = exercisesOnlySnap.docs.map((d) => ({
+    const fullCatalog = exercisesOnlySnap.docs.map((d) => ({
       id: d.id,
       name: d.data().name || '',
       nameHe: d.data().nameHe || '',
+      category: d.data().category || '',
+      equipment: d.data().equipment || '',
     }))
-    const dupOnly = findDuplicate(existingOnly, parsed.data)
+    const similar = findSimilarExercises(
+      {
+        name: parsed.data.name,
+        nameHe: parsed.data.nameHe,
+        category: parsed.data.category,
+        equipment: parsed.data.equipment,
+      },
+      fullCatalog,
+      3
+    )
+    const similarJsonPath = getOption('--similar-json')
+    if (similarJsonPath) {
+      writeFileSync(similarJsonPath, JSON.stringify(similar, null, 2))
+    }
+    const dupOnly = findDuplicate(fullCatalog as ExistingExercise[], parsed.data)
+    if (similar.length > 0) {
+      console.log('דומים קיימים:')
+      for (const s of similar) {
+        console.log(`  - ${s.nameHe} / ${s.name} (id: ${s.id}, score: ${s.score}) — ${s.reasons.join(' · ')}`)
+      }
+    }
     if (dupOnly) {
       console.error(`❌ קיים תרגיל בשם ${dupOnly.nameHe} / ${dupOnly.name} (id: ${dupOnly.id})`)
       process.exit(3)
