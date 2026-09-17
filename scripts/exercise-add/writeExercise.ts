@@ -2,8 +2,10 @@
  * writeExercise.ts — the ONLY sanctioned path for an agent to write an
  * exercise document to Firestore.
  *
- * Run: npm run exercise:write -- --input <file.json> [--write] [--skip-image-check]
+ * Run: npm run exercise:write -- --input <file.json> [--write] [--dedupe-only] [--skip-image-check]
  * Without --write this is a dry run: everything validates, nothing is written.
+ * --dedupe-only: schema + duplicate check only — no catalog validation, no
+ * image check, no payload print. 0 = no duplicate, 3 = duplicate exists.
  *
  * Exit codes: 0 ok/dry-run · 1 env/auth missing · 2 schema/controlled-values
  * invalid · 3 duplicate exists · 4 imageUrl not reachable · 5 unexpected error.
@@ -60,6 +62,7 @@ function printablePayload(payload: Record<string, unknown>): Record<string, unkn
 async function main() {
   const inputPath = getOption('--input')
   const doWrite = getFlag('--write')
+  const dedupeOnly = getFlag('--dedupe-only')
   const skipImageCheck = getFlag('--skip-image-check')
 
   if (!inputPath) {
@@ -87,8 +90,26 @@ async function main() {
     process.exit(2)
   }
 
-  // 3. Live controlled vocabularies
   await signInWithEmailAndPassword(auth, email, password)
+
+  // --dedupe-only: duplicate check against live exercises, nothing else.
+  if (dedupeOnly) {
+    const exercisesOnlySnap = await getDocs(collection(db, 'exercises'))
+    const existingOnly: ExistingExercise[] = exercisesOnlySnap.docs.map((d) => ({
+      id: d.id,
+      name: d.data().name || '',
+      nameHe: d.data().nameHe || '',
+    }))
+    const dupOnly = findDuplicate(existingOnly, parsed.data)
+    if (dupOnly) {
+      console.error(`❌ קיים תרגיל בשם ${dupOnly.nameHe} / ${dupOnly.name} (id: ${dupOnly.id})`)
+      process.exit(3)
+    }
+    console.log('✅ אין כפילות')
+    process.exit(0)
+  }
+
+  // 3. Live controlled vocabularies
   const musclesSnap = await getDocs(collection(db, 'muscles'))
   const muscleIds = new Set<string>()
   const subMuscleIds = new Set<string>()

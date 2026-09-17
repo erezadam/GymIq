@@ -12,8 +12,8 @@ description: |
 
 ## שלב 0 — ניפוי כפילויות
 הרשומה נבנית קודם (שלב 1) — הניפוי משתמש בשמות שלה.
-לכל תרגיל: `npm run exercise:write -- --input <record.json>` (dry-run).
-יציאה 3 ⇒ "קיים תרגיל בשם … (id)" ⇒ התרגיל יוצא מהאצווה; השאר ממשיכים.
+לכל תרגיל: `npm run exercise:write -- --input <record.json> --dedupe-only`.
+יציאה 0 ⇒ אין כפילות, ממשיכים. יציאה 3 ⇒ "קיים תרגיל בשם … (id)" ⇒ התרגיל יוצא מהאצווה; השאר ממשיכים.
 
 ## שלב 1 — רשומה
 הפעל את הסקיל `gymiq-exercise-record-builder` לכל תרגיל.
@@ -27,10 +27,10 @@ description: |
 
 ## שלב 2 — תמונות
 לכל תרגיל, בסדר הזה (הסקיל `openai-image-gen`, המודל gpt-image-2.5-sunburst):
-1. `generate` — תנוחת **הסיום**, עם `--style-file assets/image-style/gymiq-style-v3-prompt.md`, פורמט webp, `--max-kb 200`.
-2. `edit` — תנוחת **ההתחלה** מתוך תמונת הסיום, `--quality high`, `--max-kb 200`.
-3. `compose` — `--layout horizontal --rtl --gap 32 --arrow --max-kb 250` (התחלה מימין, סיום משמאל).
-4. הפלט הסופי: `<English Name>.webp` ב-workspace.
+1. `generate` — תנוחת **הסיום**, עם `--style-file assets/image-style/gymiq-style-v3-prompt.md`, `--format png` (ללא `--max-kb`), פלט `end.png`.
+2. `edit` — תנוחת **ההתחלה** מתוך `end.png`, `--quality high`, `--format png` (ללא `--max-kb`), פלט `start.png`.
+3. `compose` — מקבל את שני ה-PNG: `--layout horizontal --rtl --gap 32 --arrow --format webp --compression 80 --max-kb 250` (התחלה מימין, סיום משמאל).
+4. הפלט הסופי: `<English Name>.webp` ב-workspace — **דחיסה אחת בלבד — בתוצר הסופי** (הביניים PNG ללא איבוד).
 
 כשל בתרגיל ⇒ מסומן ומדווח; השאר ממשיכים.
 כל הקבצים מועתקים ל-`~/Downloads/gymiq-imggen-test/<slug>/` ו-Finder נפתח (`open`).

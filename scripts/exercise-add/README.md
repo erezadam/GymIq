@@ -16,6 +16,7 @@ npm run exercise:write -- --input my-exercise.json --write                   # �
 |-----|--------|
 | `--input <path>` | חובה. קובץ JSON של התרגיל |
 | `--write` | בלעדיו — dry-run: הכל מאומת, כלום לא נכתב |
+| `--dedupe-only` | סכמה + בדיקת כפילות בלבד (0 = אין, 3 = קיים); בלי קטלוגים/תמונה/payload |
 | `--skip-image-check` | מדלג על HEAD ל-imageUrl. לבדיקות בלבד (מודפסת אזהרה) |
 
 ## חוזה הקלט
