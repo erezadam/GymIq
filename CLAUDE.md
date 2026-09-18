@@ -663,6 +663,7 @@ The label + hidden input pattern is the standard, accessible solution.
 - שני גייטים של אישור ארז: אחרי הרשומות ואחרי התמונות — לפני כל כתיבה.
 - **ציוד הוא חלק מזהות התרגיל**: אותו שם תרגיל על ציוד אחר = תרגיל אחר.
 - כתיבה ל-Firestore אך ורק דרך `scripts/exercise-add/writeExercise.ts` — לא ידנית.
+- **שני מסלולי הוספת תרגיל (18/09/2026):** טרמינל (`/exercise-add`) ואדמין — רצים במקביל ומייצרים רשומה זהה מאותם קבצי מקור ב-`assets/` (`exercise-record-rules.md`, `gymiq-style-v3-prompt.md`); שינוי כלל = שינוי בקובץ המקור בלבד. הזיהוי החי במכון בוטל (18/09/2026).
 
 ### ד. הכרעות תמונת תרגיל
 - מודל היצירה: `gpt-image-2.5-sunburst`.

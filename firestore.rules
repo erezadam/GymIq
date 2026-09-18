@@ -486,6 +486,27 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // ============ EXERCISE DRAFTS (Admin Add Exercise) ============
+    // Draft records for the admin add-exercise flow. Created by an admin
+    // (via client) with createdBy pinned to their own uid; all state
+    // transitions (draft_ready / image_* / failed / saved) are written by
+    // Cloud Functions (Admin SDK) only — no client update/delete.
+    match /exerciseDrafts/{draftId} {
+      allow read: if isAdmin() && request.auth.uid == resource.data.createdBy;
+      allow create: if isAdmin() && request.auth.uid == request.resource.data.createdBy;
+      allow update, delete: if false;
+    }
+
+    // ============ AI DRAFT / IMAGE USAGE (Rate Limiting) ============
+    // Quota docs for generateExerciseDraft (30/day) and generateExerciseImage
+    // (20/day). Cloud Functions only (Admin SDK) — fail-closed on read errors.
+    match /aiDraftUsage/{usageId} {
+      allow read, write: if false;
+    }
+    match /aiImageUsage/{usageId} {
+      allow read, write: if false;
+    }
+
     // ============ DIAGNOSTIC LOGS ============
     match /diagnosticLogs/{logId} {
       // Users can write logs only with their own auth uid as actor.
