@@ -39,6 +39,7 @@ description: |
 
 ## 🛑 גייט 2 — אישור תמונות
 **עצור.** "מאושר" ⇒ ממשיכים; "תייצר מחדש את X" ⇒ מריצים מחדש **רק את X** וחוזרים לגייט.
+**פסילה בגלל ציוד** (המכשיר בתמונה לא תואם את המכון) ⇒ בטבלת הסיום הסוכן מציע שורה חדשה ל-`assets/image-style/gym-equipment-notes.md`; היא נכנסת לקובץ **רק באישור ארז**.
 
 ## שלב 3 — העלאה
 לכל תרגיל מאושר: `bash scripts/exercise-add/upload-image.sh --file "<workspace>/<English Name>.webp" --name "<English Name>"`.
