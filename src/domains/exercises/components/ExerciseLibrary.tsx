@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronRight, Check, Home, Calendar } from 'lucide-react'
-import { MachineLensButton } from './MachineLens/MachineLensButton'
 import toast from 'react-hot-toast'
 import type { Exercise, MuscleGroup } from '../types'
 import type { PrimaryMuscle } from '../types/muscles'
@@ -876,14 +875,6 @@ export function ExerciseLibrary({
             <h1 className="text-xl font-bold text-white">
               {programMode ? 'בחירת תרגילים לאימון' : isAddingToWorkout ? 'הוספת תרגילים לאימון' : 'בחירת תרגילים'}
             </h1>
-            <div className="ms-auto">
-              <MachineLensButton
-                onSelectExercise={(exerciseId) => {
-                  const exercise = exercises.find((ex) => ex.id === exerciseId)
-                  if (exercise) handleToggleExercise(exercise)
-                }}
-              />
-            </div>
           </div>
 
           {/* Tab Toggle: Library / Quick Plan */}

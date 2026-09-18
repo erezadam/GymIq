@@ -12,6 +12,7 @@ export default defineConfig({
     alias: [
       { find: 'firebase-functions/v2/https', replacement: path.resolve(__dirname, 'tests/_mocks/firebase-functions-https.ts') },
       { find: 'firebase-functions', replacement: path.resolve(__dirname, 'tests/_mocks/firebase-functions.ts') },
+      { find: 'firebase-admin/firestore', replacement: path.resolve(__dirname, 'tests/_mocks/firebase-admin-firestore.ts') },
       { find: 'firebase-admin', replacement: path.resolve(__dirname, 'tests/_mocks/firebase-admin.ts') },
     ],
   },
