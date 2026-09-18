@@ -18,6 +18,10 @@ import { SUB_MUSCLE_TO_CATEGORY } from '@/lib/firebase/exercises'
 import type { PrimaryMuscle } from '@/domains/exercises/types/muscles'
 import type { ReportType } from '@/domains/exercises/types/reportTypes'
 import type { BandType } from '@/domains/exercises/types/bands'
+import { DraftPanel } from './ExerciseForm/DraftPanel'
+import { SimilarExercisesCard } from './ExerciseForm/SimilarExercisesCard'
+import { ImageGate } from './ExerciseForm/ImageGate'
+import { useExerciseDraft } from './ExerciseForm/useExerciseDraft'
 
 // Schema, assistance enum and payload transform live in the shared
 // validation module so scripts/cloud functions can import them too.
@@ -249,10 +253,81 @@ export default function ExerciseForm() {
     }
   }, [existingExercise, musclesData, reset])
 
+  // ---- AI draft flow (create mode only) ----
+  const exerciseDraft = useExerciseDraft()
+  const { draft: aiDraft, draftId: aiDraftId } = exerciseDraft
+  const [lastFilledDraftId, setLastFilledDraftId] = useState('')
+
+  // Second init source for the reset effect: fill the form from an AI draft
+  // (draft_ready). Same category/primaryMuscle normalization as edit mode.
+  useEffect(() => {
+    if (isEditing || !aiDraft || !aiDraftId || musclesData.length === 0) return
+    if (aiDraftId === lastFilledDraftId) return
+
+    let categoryToSet = ''
+    const primaryMuscleToSet = aiDraft.primaryMuscle || ''
+    const originalCategory = aiDraft.category || ''
+
+    if (musclesData.some(m => m.id === originalCategory)) {
+      categoryToSet = originalCategory
+    }
+    if (!categoryToSet && musclesData.some(m => m.id === primaryMuscleToSet)) {
+      categoryToSet = primaryMuscleToSet
+    }
+    if (!categoryToSet && primaryMuscleToSet) {
+      for (const muscle of musclesData) {
+        if (muscle.subMuscles?.some(sub => sub.id === primaryMuscleToSet)) {
+          categoryToSet = muscle.id
+          break
+        }
+      }
+    }
+    if (!categoryToSet && originalCategory) {
+      categoryToSet = originalCategory
+    }
+    if (categoryToSet && !validMuscleIds.has(categoryToSet)) {
+      const mappedCategory = SUB_MUSCLE_TO_CATEGORY[categoryToSet]
+      if (mappedCategory && validMuscleIds.has(mappedCategory)) {
+        categoryToSet = mappedCategory
+      }
+    }
+
+    const toFieldArray = (arr: string[]) =>
+      arr.length > 0 ? arr.map((v) => ({ value: v })) : [{ value: '' }]
+
+    reset({
+      name: aiDraft.name || '',
+      nameHe: aiDraft.nameHe || '',
+      category: categoryToSet,
+      primaryMuscle: primaryMuscleToSet,
+      secondaryMuscles: aiDraft.secondaryMuscles || [],
+      secondaryMuscleCredits: aiDraft.secondaryMuscleCredits || [],
+      equipment: aiDraft.equipment || '',
+      difficulty: aiDraft.difficulty || 'beginner',
+      complexity: aiDraft.complexity || 'compound',
+      reportType: aiDraft.reportType || 'weight_reps',
+      assistanceTypes: (aiDraft.assistanceTypes || []).filter(
+        (t: string) => t === 'graviton' || t === 'bands'
+      ) as ('graviton' | 'bands')[],
+      availableBands: aiDraft.availableBands || [],
+      instructions: toFieldArray(aiDraft.instructions || []),
+      instructionsHe: toFieldArray(aiDraft.instructionsHe || []),
+      targetMuscles: aiDraft.targetMuscles || [],
+      imageUrl: '',
+      videoWebpUrl: '',
+      tips: toFieldArray(aiDraft.tips || []),
+      tipsHe: toFieldArray(aiDraft.tipsHe || []),
+    })
+    setLastFilledDraftId(aiDraftId)
+  }, [isEditing, aiDraft, aiDraftId, musclesData, validMuscleIds, reset, lastFilledDraftId])
+
   // Create/Update mutations
   const createMutation = useMutation({
     mutationFn: exerciseService.createExercise,
-    onSuccess: () => {
+    onSuccess: (created) => {
+      if (exerciseDraft.draftId && created?.id) {
+        void exerciseDraft.markSaved(created.id)
+      }
       queryClient.invalidateQueries({ queryKey: ['exercises'] })
       toast.success('התרגיל נוצר בהצלחה')
       navigate('/admin/exercises')
@@ -423,6 +498,17 @@ export default function ExerciseForm() {
           </p>
         </div>
       </div>
+
+      {/* AI draft panel — create mode only */}
+      {!isEditing && (
+        <DraftPanel
+          status={exerciseDraft.status}
+          error={exerciseDraft.error}
+          generating={exerciseDraft.generating}
+          onGenerateDraft={(input) => void exerciseDraft.generateDraft(input)}
+        />
+      )}
+      {!isEditing && <div className="mb-8"><SimilarExercisesCard similar={exerciseDraft.similar} /></div>}
 
       <form onSubmit={handleSubmit(onSubmit, (errors) => {
         console.error('🔥 ExerciseForm: Validation errors:', Object.entries(errors).map(([k, v]) => `${k}: ${(v as { message?: string })?.message}`).join(', '))
@@ -737,6 +823,16 @@ export default function ExerciseForm() {
         {/* Image + WebP animation */}
         <section className="card-neon">
           <h2 className="text-lg font-semibold text-text-primary mb-6">תמונה ואנימציה</h2>
+
+          {/* AI image generation gate — draft mode only */}
+          {!isEditing && exerciseDraft.draftId && (
+            <ImageGate
+              status={exerciseDraft.status}
+              image={exerciseDraft.image}
+              onGenerate={() => void exerciseDraft.generateImage()}
+              onApprove={(url) => setValue('imageUrl', url)}
+            />
+          )}
 
           {/* Static image */}
           <div className="flex gap-6 mb-6">

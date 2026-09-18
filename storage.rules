@@ -45,5 +45,20 @@ service firebase.storage {
       allow read: if request.auth != null;
       allow write: if isAdmin() && isValidImage(10 * 1024 * 1024);
     }
+
+    // Machine photos uploaded by an admin for the add-exercise flow
+    // (generateExerciseDraft input). Admin-only, image/*, under 3MB.
+    match /machine-photos/{fileName} {
+      allow read: if isAdmin();
+      allow write: if isAdmin() && isValidImage(3 * 1024 * 1024);
+    }
+
+    // Exercise images (final <slug>.webp + work/<slug>/*.png intermediates).
+    // Written exclusively by Cloud Functions via the Admin SDK (bypasses
+    // rules) — any client write is denied. Read: any authenticated user.
+    match /exercise-images/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
   }
 }

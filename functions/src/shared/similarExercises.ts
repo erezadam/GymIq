@@ -1,4 +1,4 @@
-// מקור: src/domains/exercises/matching/similarExercises.ts — לסנכרן ידנית
+// GENERATED copy of src/domains/exercises/matching/similarExercises.ts — DO NOT EDIT (see scripts/generate-function-prompts.cjs)
 /**
  * Pure similarity matching between a candidate exercise and the live catalog.
  * No firebase imports — usable from the app, scripts, and (copied) functions.

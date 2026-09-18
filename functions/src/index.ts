@@ -34,3 +34,10 @@ export { updateUserEmail } from './admin/updateUserEmail'
 
 // Export Machine Lens function
 export { identifyMachine } from './machine-lens/identifyMachine'
+
+// Export Exercise Image generation function (admin add-exercise flow)
+export { generateExerciseImage } from './exercise-image/generateExerciseImage'
+
+// Export Exercise Draft functions (admin add-exercise flow)
+export { generateExerciseDraft } from './exercise-draft/generateExerciseDraft'
+export { markDraftSaved } from './exercise-draft/markDraftSaved'
