@@ -17,9 +17,6 @@ const dropdownMuscles = [
 ]
 
 async function checkCategories() {
-  const app = initializeApp(firebaseConfig)
-  const db = getFirestore(app)
-
   const exercisesRef = collection(db, 'exercises')
   const snapshot = await getDocs(exercisesRef)
 

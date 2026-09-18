@@ -21,7 +21,11 @@
     "migrate:release-notes": "npx tsx scripts/migrateLastSeenReleaseNotes.ts",
     "sync:release-notes": "npx tsx scripts/syncChangelogToReleaseNotes.ts",
     "draft:release-note": "npx tsx scripts/draftReleaseNoteFromPR.ts",
-    "exercise:write": "tsx --env-file=.env.local scripts/exercise-add/writeExercise.ts"
+    "exercise:write": "tsx --env-file=.env.local scripts/exercise-add/writeExercise.ts",
+    "check:categories": "tsx --env-file=.env.local scripts/checkCategories.ts",
+    "check:muscles": "tsx --env-file=.env.local scripts/checkPrimaryMuscles.ts",
+    "check:images": "tsx --env-file=.env.local scripts/checkMissingImages.ts",
+    "check:all": "npm run check:categories && npm run check:muscles && npm run check:images"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

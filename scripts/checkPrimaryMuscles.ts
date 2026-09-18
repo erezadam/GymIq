@@ -36,5 +36,9 @@ async function check() {
     console.log('\n⚠️ ' + orphaned.length + ' orphaned:')
     orphaned.forEach(o => console.log('  - ' + o))
   } else console.log('\n✅ All valid')
+  process.exit(0)
 }
-check().catch(console.error)
+check().catch(error => {
+  console.error('שגיאה:', error)
+  process.exit(1)
+})
