@@ -4,6 +4,10 @@
  */
 
 import * as admin from 'firebase-admin'
+// Direct import: the `admin.firestore.FieldValue` namespace pattern resolves to
+// undefined under the local emulator (importStar interop, see 18/09/2026 incident);
+// the direct modular import works in both GCF and local Node.
+import { FieldValue } from 'firebase-admin/firestore'
 import * as functions from 'firebase-functions'
 import type { RateLimitResult } from './types'
 
@@ -117,8 +121,8 @@ export async function incrementUsage(userId: string, options?: RateLimitOptions)
       {
         userId,
         date: today,
-        generationsCount: admin.firestore.FieldValue.increment(1),
-        lastGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
+        generationsCount: FieldValue.increment(1),
+        lastGeneratedAt: FieldValue.serverTimestamp(),
       },
       { merge: true }
     )
