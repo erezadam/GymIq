@@ -49,9 +49,6 @@ const categoryFallbacks: Record<string, string> = {
 async function updateExerciseImages() {
   console.log('Starting exercise image update...\n')
 
-  const app = initializeApp(firebaseConfig)
-  const db = getFirestore(app)
-
   try {
     const exercisesRef = collection(db, 'exercises')
     const snapshot = await getDocs(exercisesRef)
