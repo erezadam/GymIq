@@ -41,6 +41,20 @@ vi.mock('firebase-admin', () => {
         }
       },
     }),
+    // Naive serial transaction over the same in-memory store — atomic enough
+    // for these tests because store ops are synchronous.
+    async runTransaction(cb: any) {
+      const tx = {
+        get: async (ref: any) => ref.get(),
+        update: (ref: any, data: any) => {
+          const key = `exerciseDrafts/${ref.id}`
+          const prev = store.get(key)
+          if (prev === undefined) throw new Error(`tx.update on missing doc ${key}`)
+          store.set(key, { ...prev, ...data })
+        },
+      }
+      return cb(tx)
+    },
   })
   firestore.FieldValue = {
     increment: (n: number) => ({ __inc: n }),
@@ -132,9 +146,14 @@ describe('generateExerciseImage', () => {
     expect(store.get(`exerciseDrafts/${DRAFT_ID}`).status).toBe('pending')
   })
 
-  it('regeneration: image_ready draft is accepted', async () => {
+  // Contract changed in PR-H: image_ready without {regenerate:true} is now
+  // idempotent (returns the existing image); regeneration is explicit opt-in.
+  it('regeneration: image_ready draft is accepted with regenerate:true', async () => {
     store.set(`exerciseDrafts/${DRAFT_ID}`, { ...draftDoc(), status: 'image_ready' })
-    const res = await handleGenerateExerciseImage(authedAdmin, await deps())
+    const res = await handleGenerateExerciseImage(
+      { auth: { uid: 'admin1' }, data: { draftId: DRAFT_ID, regenerate: true } },
+      await deps()
+    )
     expect(res).toEqual({ ok: true })
   })
 
@@ -256,5 +275,56 @@ describe('(ה) composePanels — real sharp on synthetic panels', () => {
     expect(result.ok).toBe(false)
     if (result.ok) return
     expect(result.error).toContain('exceeds limit')
+  })
+})
+
+describe('generateExerciseImage — idempotency (PR-H)', () => {
+  it('two concurrent calls: OpenAI is called exactly once; second gets already-exists', async () => {
+    const png = await tinyPng()
+    let release!: () => void
+    const gate = new Promise<void>((r) => { release = r })
+    const d = await deps()
+    d.generateEnd = vi.fn(async () => { await gate; return { png, usage: { input_tokens: 1, output_tokens: 1 } } })
+
+    const p1 = handleGenerateExerciseImage(authedAdmin, d)
+    await new Promise((r) => setTimeout(r, 10)) // let call 1 claim the draft
+    const p2 = handleGenerateExerciseImage(authedAdmin, d)
+    await expect(p2).rejects.toMatchObject({ code: 'already-exists' })
+    release()
+    await expect(p1).resolves.toEqual({ ok: true })
+    expect(d.generateEnd).toHaveBeenCalledTimes(1)
+  })
+
+  it('image_ready without regenerate: returns the existing image, OpenAI not called', async () => {
+    const existing = { url: 'https://dl.example/old.webp', bytes: 7, costUsd: 0.1 }
+    store.set(`exerciseDrafts/${DRAFT_ID}`, { ...draftDoc(), status: 'image_ready', image: existing })
+    const d = await deps()
+    const res: any = await handleGenerateExerciseImage(authedAdmin, d)
+    expect(res.ok).toBe(true)
+    expect(res.image).toEqual(existing)
+    expect(d.generateEnd).not.toHaveBeenCalled()
+  })
+
+  it('image_ready with regenerate:true: OpenAI is called', async () => {
+    store.set(`exerciseDrafts/${DRAFT_ID}`, { ...draftDoc(), status: 'image_ready', image: { url: 'x' } })
+    const d = await deps()
+    const res = await handleGenerateExerciseImage(
+      { auth: { uid: 'admin1' }, data: { draftId: DRAFT_ID, regenerate: true } }, d)
+    expect(res).toEqual({ ok: true })
+    expect(d.generateEnd).toHaveBeenCalledTimes(1)
+  })
+
+  it('stale image_pending (>10min) is restarted', async () => {
+    store.set(`exerciseDrafts/${DRAFT_ID}`, {
+      ...draftDoc(),
+      status: 'image_pending',
+      imageJobId: 'old-job',
+      imagePendingAt: { toMillis: () => Date.now() - 11 * 60 * 1000 },
+    })
+    const d = await deps()
+    const res = await handleGenerateExerciseImage(authedAdmin, d)
+    expect(res).toEqual({ ok: true })
+    expect(d.generateEnd).toHaveBeenCalledTimes(1)
+    expect(store.get(`exerciseDrafts/${DRAFT_ID}`).status).toBe('image_ready')
   })
 })

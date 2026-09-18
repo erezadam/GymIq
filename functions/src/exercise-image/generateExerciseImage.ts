@@ -19,6 +19,7 @@ import * as crypto from 'crypto'
 import * as admin from 'firebase-admin'
 import * as functions from 'firebase-functions'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
+import { Timestamp } from 'firebase-admin/firestore'
 import { checkRateLimit, incrementUsage } from '../ai-trainer/rateLimiter'
 import { STYLE_PROMPT_MD } from '../generated/promptSources.generated'
 import { composePanels, type ComposeResult } from './composePanels'
@@ -44,6 +45,8 @@ const OUTPUT_TOKEN_USD_PER_M = 40
 
 export interface GenerateExerciseImageRequest {
   draftId: string
+  // Explicit opt-in to regenerate when the draft already has an image.
+  regenerate?: boolean
 }
 
 interface PoseSpec {
@@ -185,6 +188,8 @@ export interface GenerateExerciseImageDeps {
 export interface GenerateExerciseImageResponse {
   ok: boolean
   error?: string
+  // Present when an image_ready draft is returned idempotently (no regenerate).
+  image?: unknown
 }
 
 export async function handleGenerateExerciseImage(
@@ -225,19 +230,54 @@ export async function handleGenerateExerciseImage(
     throw new HttpsError('resource-exhausted', 'הגעת למגבלה היומית של יצירת תמונות. נסה שוב מחר.')
   }
 
-  // Load draft — must be draft_ready (first run) or image_ready (regeneration).
+  // Load + claim the draft in a transaction so concurrent calls can't both
+  // start a generation (the client double-fired 4 identical calls on 18/09).
   const draftRef = db.collection('exerciseDrafts').doc(draftId)
-  const draftSnap = await draftRef.get()
-  if (!draftSnap.exists) {
-    throw new HttpsError('not-found', `Draft ${draftId} not found`)
+  const regenerate = data.regenerate === true
+  const imageJobId = crypto.randomUUID()
+  const STALE_PENDING_MS = 10 * 60 * 1000
+
+  let draft: any
+  let existingImage: any = null
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(draftRef)
+    if (!snap.exists) {
+      throw new HttpsError('not-found', `Draft ${draftId} not found`)
+    }
+    draft = snap.data() as any
+
+    if (draft.status === 'image_pending') {
+      const pendingMs = draft.imagePendingAt?.toMillis?.() ?? 0
+      const stale = Date.now() - pendingMs > STALE_PENDING_MS
+      if (!stale) {
+        throw new HttpsError('already-exists', 'יצירת תמונה כבר רצה')
+      }
+      functions.logger.warn('Exercise Image: stale image_pending — restarting', {
+        draftId,
+        pendingMs,
+      })
+    } else if (draft.status === 'image_ready' && !regenerate) {
+      // Idempotent success: return the existing image without touching OpenAI.
+      existingImage = draft.image ?? null
+      return
+    } else if (draft.status !== 'draft_ready' && draft.status !== 'image_ready') {
+      throw new HttpsError(
+        'failed-precondition',
+        `Draft status must be draft_ready or image_ready, got '${draft.status}'`
+      )
+    }
+
+    tx.update(draftRef, {
+      status: 'image_pending',
+      imageJobId,
+      imagePendingAt: Timestamp.now(),
+    })
+  })
+  if (existingImage !== null || (draft.status === 'image_ready' && !regenerate)) {
+    functions.logger.info('Exercise Image: returning existing image (idempotent)', { draftId })
+    return { ok: true, image: existingImage }
   }
-  const draft = draftSnap.data() as any
-  if (draft.status !== 'draft_ready' && draft.status !== 'image_ready') {
-    throw new HttpsError(
-      'failed-precondition',
-      `Draft status must be draft_ready or image_ready, got '${draft.status}'`
-    )
-  }
+
   const name: string = draft.draft?.name
   const pose: PoseSpec = draft.poseSpec || {}
   if (!name) {
@@ -245,11 +285,24 @@ export async function handleGenerateExerciseImage(
   }
   const slug = slugify(name)
 
-  await draftRef.update({ status: 'image_pending' })
+  // Only the call that holds imageJobId may finalize the draft.
+  const finalizeIfOwner = async (payload: Record<string, unknown>): Promise<boolean> => {
+    let owned = false
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(draftRef)
+      if (snap.data()?.imageJobId !== imageJobId) {
+        functions.logger.warn('Exercise Image: job superseded — skipping finalize', { draftId })
+        return
+      }
+      owned = true
+      tx.update(draftRef, payload)
+    })
+    return owned
+  }
 
   const markFailed = async (error: string) => {
     try {
-      await draftRef.update({ status: 'failed', error })
+      await finalizeIfOwner({ status: 'failed', error })
     } catch (e: any) {
       functions.logger.error('Exercise Image: failed to mark draft as failed', {
         draftId,
@@ -285,9 +338,9 @@ export async function handleGenerateExerciseImage(
     const startUrl = await upload(`exercise-images/work/${slug}/start.png`, start.png, 'image/png')
     const url = await upload(`exercise-images/${slug}.webp`, composed.buffer, 'image/webp')
 
-    // 5. Finalize draft
+    // 5. Finalize draft — only if this call still owns the job.
     const { costUsd, estimated } = computeCostUsd(end.usage, start.usage)
-    await draftRef.update({
+    await finalizeIfOwner({
       status: 'image_ready',
       image: {
         url,

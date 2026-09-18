@@ -226,7 +226,7 @@ describe('admin AI draft flow', () => {
     )
 
     act(() => snapshotCb!({ status: 'image_pending', draft: sampleDraft }))
-    expect(screen.getByText(/1–2 דקות/)).toBeTruthy()
+    expect(screen.getByText(/עד 2 דקות/)).toBeTruthy()
 
     act(() =>
       snapshotCb!({
