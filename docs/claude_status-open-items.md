@@ -10,6 +10,6 @@
 | 6 | 8 יתומי primaryMuscle (biceps/glutes/adductors) | ✅ נסגר — מופו לפי ההכרעה (biceps_brachii/gluteus_maximus/legs+adductor); checkPrimaryMuscles: **All valid** | dry-run + החלה + ולידציה (דוח B) |
 | 7 | התנגשות case בריפו התמונות (Assisted Pull-Up Machine) | ✅ נסגר — נמחק ה-lowercase שאף תרגיל לא מפנה אליו (commit `9e3d5a2`); הנשאר HTTP 200 | gh api DELETE + HEAD |
 | 8 | היגיינה: סקריפטי check שבורים, פקודות npm, טסטים ב-CI, ענפים ישנים | ✅ נסגר — checkCategories/updateExerciseImages תוקנו, exit מפורש, `check:*` ב-package.json; **התברר שה-CI כבר מריץ vitest** (385/385, 1m07s); 16 ענפים merged נמחקו (stash לא נגעו) | PR #185 |
-| 9 | thumbnail של תמונות 2:1 חותך את מרכז התמונה (החץ) | 🕐 ממתין לארז — object-left לפאנל הסיום ב-thumbnail בלבד, 3 טסטים, CI ירוק; **PR #186 לא מוזג**, אישור בעין בערוץ | https://gymiq-e8b4e--thumb-2-1-5ysfgmf2.web.app |
+| 9 | thumbnail של תמונות 2:1 חותך את מרכז התמונה (החץ) | ✅ נסגר — אושר בערוץ ומוזג (#186, 18/09) — object-left לפאנל הסיום ב-thumbnail בלבד, 3 טסטים, CI ירוק; **PR #186 לא מוזג**, אישור בעין בערוץ | https://gymiq-e8b4e--thumb-2-1-5ysfgmf2.web.app |
 
 הערות: ADC היה זמין (לא נדרש מצב מוגבל). 7 תרגילי biceps הם כעת `primaryMuscle=''` — תקין למערכת (כמו כל תרגילי היד), אך אם יתווספו תת-שרירי יד בעתיד יש לאכלס.
