@@ -1,5 +1,21 @@
 # Changelog
 
+## [2026-09-17/18] — צינור הוספת תרגילים + Machine Lens + מסלול אדמין (B.2) — נפרס לפרודקשן ✅
+
+### Added
+- **צינור `/exercise-add` מלא (טרמינל):** PR #175 חילץ את `exerciseSchema`+`toExercisePayload` למודול משותף (`src/domains/exercises/validation/`); PR #176 הוסיף את `scripts/exercise-add/writeExercise.ts` — המסלול היחיד לכתיבת תרגיל מסקריפט (סכמה, קטלוגים חיים, כפילויות בשם מנורמל, HEAD על התמונה, dry-run כברירת מחדל, קודי יציאה 0-5); PR #177 הוסיף את הסקיל המנצח `/exercise-add` (שני גייטים של אישור), סקיל `gymiq-exercise-record-builder` בריפו, `upload-image.sh` וקובצי הסגנון; PR #178 — `--dedupe-only` + ביניים PNG ללא איבוד; PR #179 — זיהוי "תרגילים דומים" בגייט 1 (`src/domains/exercises/matching/similarExercises.ts`, מקור יחיד ל-normalizeName). הוקמו בפועל: Standing Dumbbell Shoulder Press, Lat Pulldown (עם תמונות התחלה/סיום שנוצרו ב-gpt-image-2.5-sunburst).
+- **Machine Lens B.1 (PR #180, נפרס):** Cloud Function `identifyMachine` — זיהוי מכשיר מצילום (gpt-4.1 vision) + התאמת דמיון לקטלוג; אומת בפרודקשן על צילום אמיתי. הזיהוי החי בספריית המתאמן **בוטל ב-18/09** (אין קליטה במכון) — הפונקציה משמשת את מסלול האדמין.
+- **מסלול אדמין B.2 (PR #182, נפרס):** הוספת תרגיל מטופס האדמין משם או מצילום שמור — `generateExerciseDraft` (gpt-4.1, מכסה 30/יום fail-closed, ולידציה מול הסכמה והקטלוגים החיים, דומים), `generateExerciseImage` (sunburst end→edit start→compose ב-sharp ל-webp ≤250KB RTL, ל-Firebase Storage, מכסה 20/יום), `markDraftSaved`; DraftPanel/SimilarExercisesCard/ImageGate בטופס; rules ל-exerciseDrafts/מכסות/machine-photos/exercise-images (69 טסטי rules ירוקים). מקורות אמת יחידים: `assets/prompts/exercise-record-rules.md` + `assets/image-style/gymiq-style-v3-prompt.md` מוטמעים ב-functions ב-prebuild עם טסט hash נגד סחיפה; הערות ציוד המכון הועברו ל-`settings/gymEquipmentNotes` (PR #181 + מיגרציה).
+
+### Fixed
+- **fail-closed למכסות החדשות:** rateLimiter קיבל `failMode:'closed'` אופציונלי (ברירת המחדל של ai-trainer לא השתנתה); identifyMachine והפונקציות החדשות מסרבות ב-unavailable כשבדיקת המכסה נכשלת — בלי להגיע ל-OpenAI (הוכח RED→GREEN).
+- **`admin.firestore.FieldValue` דרך importStar** נשבר באמולטור — הוחלף בייבוא ישיר `firebase-admin/firestore` בפונקציות החדשות (בפרודקשן GCF הדפוס הישן עובד; אומת בלוגים: 4/4 יצירות ai-trainer נרשמו במכסה).
+
+### פריסות
+- 17/09: #175→#180 מוזגו; `identifyMachine` נפרסה (+שיעור invoker: פונקציית v2 חדשה דורשת `gcloud functions add-invoker-policy-binding`).
+- 18/09: #181+#182 מוזגו; 3 פונקציות B.2 + rules נפרסו; פרודקשן `v2026.09.18-2b56834`; smoke draft אומת בפרודקשן.
+
+
 ## [2026-08-16] — נפרס לפרודקשן ✅
 
 - **פריסה:** PR #172 מוזג ל-main (`0b5f118`), `hosting,functions` נפרס בהצלחה. revision חדש `generateaiworkout-00041-faf` (קודם `00040-ziw`). כרטיס גלגול: `docs/rollback/2026-08-16-generateAIWorkout.md`.
