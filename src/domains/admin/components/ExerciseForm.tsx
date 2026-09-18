@@ -829,7 +829,9 @@ export default function ExerciseForm() {
             <ImageGate
               status={exerciseDraft.status}
               image={exerciseDraft.image}
-              onGenerate={() => void exerciseDraft.generateImage()}
+              imageGenerating={exerciseDraft.imageGenerating}
+              approved={Boolean(exerciseDraft.image?.url) && imageUrl === exerciseDraft.image?.url}
+              onGenerate={(regenerate) => void exerciseDraft.generateImage(regenerate)}
               onApprove={(url) => setValue('imageUrl', url)}
             />
           )}

@@ -3,4 +3,9 @@ export const FieldValue = {
   serverTimestamp: () => ({ __sentinel: 'serverTimestamp' }),
   increment: (n: number) => ({ __inc: n }),
 }
-export const Timestamp = { now: () => ({ toDate: () => new Date(0) }) }
+export const Timestamp = {
+  now: () => {
+    const ms = Date.now()
+    return { toDate: () => new Date(ms), toMillis: () => ms }
+  },
+}

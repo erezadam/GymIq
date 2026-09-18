@@ -24,3 +24,7 @@
 - הוספת/עריכת תרגיל רגילה דרך ExerciseForm עובדת.
 - `firebase functions:list` — שלוש הפונקציות לא מופיעות; `identifyMachine` כן (אם לא גולגלה בנפרד).
 - תמונות תרגילים קיימות ב-`exercise-images/` עדיין נקראות באפליקציה.
+
+## PR-H (18/09) — generateExerciseImage אידמפוטנטית
+- Revision לפני פריסת PR-H: `generateexerciseimage-00002-sef`.
+- גלגול אחורה: revert הקומיט של PR-H + `firebase deploy --only functions:generateExerciseImage`.

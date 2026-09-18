@@ -37,16 +37,31 @@ export interface UseExerciseDraftResult {
   error: string | null
   generating: boolean
   generateDraft: (input: { name?: string; photo?: DraftPhotoInput }) => Promise<void>
-  generateImage: () => Promise<void>
+  generateImage: (regenerate?: boolean) => Promise<void>
+  imageGenerating: boolean
   markSaved: (exerciseId: string) => Promise<void>
 }
 
+// Survives a form unmount/remount mid-generation (~60s) — without this the
+// gate vanished and a finished image was never shown (incident 18/09).
+const ACTIVE_DRAFT_KEY = 'gymiq-active-exercise-draft'
+
 export function useExerciseDraft(): UseExerciseDraftResult {
-  const [draftId, setDraftId] = useState<string | null>(null)
+  const [draftId, setDraftIdState] = useState<string | null>(
+    () => sessionStorage.getItem(ACTIVE_DRAFT_KEY) || null
+  )
   const [docState, setDocState] = useState<ExerciseDraftDoc | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
+  const [imageGenerating, setImageGenerating] = useState(false)
   const unsubRef = useRef<(() => void) | null>(null)
+  const imageInFlightRef = useRef(false)
+
+  const setDraftId = (id: string | null) => {
+    if (id) sessionStorage.setItem(ACTIVE_DRAFT_KEY, id)
+    else sessionStorage.removeItem(ACTIVE_DRAFT_KEY)
+    setDraftIdState(id)
+  }
 
   // Subscribe to the draft doc whenever a draftId exists.
   useEffect(() => {
@@ -85,13 +100,20 @@ export function useExerciseDraft(): UseExerciseDraftResult {
     []
   )
 
-  const generateImage = useCallback(async () => {
+  const generateImage = useCallback(async (regenerate = false) => {
     if (!draftId) return
+    // Ref (not state) so a double-click in the same tick can't fire twice.
+    if (imageInFlightRef.current) return
+    imageInFlightRef.current = true
+    setImageGenerating(true)
     setError(null)
     try {
-      await generateExerciseImage({ draftId })
+      await generateExerciseImage({ draftId, ...(regenerate ? { regenerate: true } : {}) })
     } catch (err) {
       setError(mapErrorToHebrew(err))
+    } finally {
+      imageInFlightRef.current = false
+      setImageGenerating(false)
     }
   }, [draftId])
 
@@ -102,6 +124,9 @@ export function useExerciseDraft(): UseExerciseDraftResult {
         await markDraftSaved({ draftId, exerciseId })
       } catch {
         // Non-blocking bookkeeping — the exercise itself was already saved.
+      } finally {
+        // The draft is done — stop resurrecting it after remounts.
+        sessionStorage.removeItem(ACTIVE_DRAFT_KEY)
       }
     },
     [draftId]
@@ -117,6 +142,7 @@ export function useExerciseDraft(): UseExerciseDraftResult {
     generating,
     generateDraft,
     generateImage,
+    imageGenerating,
     markSaved,
   }
 }

@@ -93,10 +93,14 @@ export async function generateExerciseDraft(request: {
 
 export async function generateExerciseImage(request: {
   draftId: string
+  regenerate?: boolean
 }): Promise<{ ok: boolean }> {
+  // Generation runs ~60s on the server; the SDK default timeout is 70s —
+  // too tight. 180s matches the function's own 300s ceiling with margin.
   const callable = httpsCallable<typeof request, { ok: boolean }>(
     functions,
-    'generateExerciseImage'
+    'generateExerciseImage',
+    { timeout: 180000 }
   )
   const result = await callable(request)
   return result.data
