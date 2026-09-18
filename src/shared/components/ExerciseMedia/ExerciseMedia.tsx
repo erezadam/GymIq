@@ -29,6 +29,10 @@ export function ExerciseMedia({
   placeholder,
 }: ExerciseMediaProps) {
   const [webpFailed, setWebpFailed] = useState(false)
+  // 2:1 exercise images (start panel right, end panel left, arrow center):
+  // a square thumbnail crop must anchor on the END panel (physical left) —
+  // otherwise object-cover shows the arrow. Detected at load time.
+  const [isWideImage, setIsWideImage] = useState(false)
 
   const allowAnimation = variant !== 'thumbnail'
   const hasImageUrl = !!(imageUrl && imageUrl.trim() !== '')
@@ -44,10 +48,16 @@ export function ExerciseMedia({
 
   // Hero variants must show the whole exercise — swap object-cover (which crops)
   // for object-contain so head/feet stay in frame. Letterbox bars are acceptable.
-  const finalClassName =
+  let finalClassName =
     variant === 'hero' && className
       ? className.replace(/\bobject-cover\b/g, 'object-contain')
       : className
+
+  // Thumbnail-only: anchor the crop on the end panel (physical left — NOT
+  // logical start/end, the panels in the image are physical so RTL must not flip it).
+  if (variant === 'thumbnail' && isWideImage) {
+    finalClassName = finalClassName ? `${finalClassName} object-left` : 'object-left'
+  }
 
   return (
     <img
@@ -56,6 +66,12 @@ export function ExerciseMedia({
       className={finalClassName}
       loading={loading}
       onClick={onClick}
+      onLoad={(e) => {
+        if (variant !== 'thumbnail') return
+        const { naturalWidth, naturalHeight } = e.currentTarget
+        const wide = naturalHeight > 0 && naturalWidth / naturalHeight >= 1.8
+        if (wide !== isWideImage) setIsWideImage(wide)
+      }}
       onError={(e) => {
         const target = e.currentTarget
         if (allowAnimation && hasVideoWebp && !webpFailed) {
